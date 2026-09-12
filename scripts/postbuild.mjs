@@ -1,22 +1,32 @@
 /**
  * Post-build artefacts, written into dist/ after `vitepress build`.
  *
- *   dist/llms.txt            index of every PUBLIC page (admin guide, en + el)
- *   dist/llms-full.txt       full text of those public pages
- *   dist/dev/llms.txt        index of the developer docs
- *   dist/dev/llms-full.txt   full text of the developer docs
- *   dist/sitemap.xml         public pages only, with hreflang alternates
- *   dist/robots.txt          allows the guide, disallows /dev/
+ *   <route>.md              raw markdown twin of every page
+ *   dist/llms.txt           sectioned index of the PUBLIC pages
+ *   dist/llms-full.txt      full text of those pages
+ *   dist/dev/llms.txt       sectioned index of the developer docs
+ *   dist/dev/llms-full.txt  full text of the developer docs
+ *   dist/sitemap.xml        public pages only, with hreflang alternates
+ *   dist/robots.txt         allows the guide, disallows /dev/
  *
- * The /dev prefix sits behind basic-auth at the ingress, so the split keeps
- * internal architecture out of the public corpus while still giving an
- * authenticated agent one file to load. llms.txt follows https://llmstxt.org.
+ * Three decisions worth knowing, all made for machine readers:
  *
- * The sitemap is built here rather than by VitePress's own `sitemap` option:
- * on the 2.x line that option logs "generating sitemap ✓" and writes nothing
- * (verified against this exact version in a clean container), and even when it
- * works it would list the credentialed /dev/ pages, which must never appear in
- * a public sitemap.
+ * 1. ONE LOCALE. The guide is mirrored 1:1 in Greek, which is the point for a
+ *    shop owner and pure duplication for a model: it doubled the corpus for no
+ *    new information, and Greek is wider in UTF-8, so it dominated the bytes.
+ *    The corpora carry the root locale only and say where the translation is.
+ *    The SITEMAP is the opposite case and still carries both, because search
+ *    engines must see the Greek pages.
+ * 2. SECTIONED INDEXES. llmstxt.org groups links under H2s so a reader can
+ *    take one section instead of the whole file. A flat list of ninety-odd
+ *    entries is an all-or-nothing read.
+ * 3. MARKDOWN TWINS. Index entries point at `<route>.md`, served next to the
+ *    HTML, so a model never parses a rendered page to read a document. The
+ *    HTML URL is named alongside it for humans.
+ *
+ * The /dev prefix sits behind basic-auth at the ingress, so its corpora and
+ * markdown twins inherit that gate; the split keeps internal architecture out
+ * of the public corpus while still giving an authenticated agent one file.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -63,21 +73,81 @@ function parse(file) {
     rel,
     route,
     url: `${SITE_URL}${route}`,
+    // The markdown twin sits beside the HTML. An index route (`/admin/`)
+    // has no filename to hang `.md` on, so it becomes `/admin/index.md`.
+    mdUrl: `${SITE_URL}${route.endsWith('/') ? `${route}index.md` : `${route}.md`}`,
+    mdPath: rel,
     title: fm.title ?? h1?.[1] ?? route,
     description: fm.description ?? '',
     body: body.trim(),
     isDev: rel.startsWith('dev/'),
+    isGreek: rel.startsWith('el/'),
   }
 }
 
-const pages = [...walk(SRC)].map(parse).sort((a, b) => a.route.localeCompare(b.route))
-const publicPages = pages.filter(p => !p.isDev)
-const devPages = pages.filter(p => p.isDev)
+/** Heading a page is filed under in the index. */
+const SECTION_TITLES = {
+  'admin/getting-started': 'Getting started',
+  'admin/catalog': 'Catalog',
+  'admin/storefront': 'Storefront',
+  'admin/blog': 'Blog',
+  'admin/sales': 'Sales',
+  'admin/b2b': 'B2B (wholesale)',
+  'admin/shipping': 'Shipping',
+  'admin/customers': 'Customers',
+  'admin/loyalty': 'Loyalty',
+  'admin/localization': 'Localization',
+  'admin/settings': 'Settings',
+  'admin/system': 'System',
+  'dev/platform': 'Platform',
+  'dev/flows': 'End-to-end flows',
+  'dev/django': 'Django API',
+  'dev/operations': 'Operations',
+  'dev/api': 'API reference',
+  'dev/nuxt': 'Other services',
+  'dev/gateway': 'Other services',
+  'dev/media': 'Other services',
+  'dev/infra': 'Other services',
+}
 
-function index(title, summary, list) {
-  const lines = [`# ${title}`, '', `> ${summary}`, '', '## Pages', '']
-  for (const p of list) {
-    lines.push(`- [${p.title}](${p.url})${p.description ? `: ${p.description}` : ''}`)
+function sectionFor(page) {
+  if (page.rel.includes('/reference/')) return 'Per-service reference (synced from the owning repository)'
+  const dir = page.rel.replace(/\/[^/]+\.md$/, '')
+  if (SECTION_TITLES[dir]) return SECTION_TITLES[dir]
+  if (page.rel === 'admin/index.md' || page.rel === 'dev/index.md') return 'Start here'
+  if (page.rel === 'index.md') return 'Start here'
+  if (page.rel === 'admin/faq.md') return 'Help'
+  return 'Other'
+}
+
+/** Sections in reading order; anything unlisted sorts to the end. */
+const SECTION_ORDER = [
+  'Start here', 'Getting started', 'Catalog', 'Storefront', 'Blog', 'Sales',
+  'B2B (wholesale)', 'Shipping', 'Customers', 'Loyalty', 'Localization',
+  'Settings', 'System', 'Help',
+  'Platform', 'End-to-end flows', 'Django API',
+  'Per-service reference (synced from the owning repository)',
+  'Operations', 'API reference', 'Other services', 'Other',
+]
+
+function index(title, summary, list, notes = []) {
+  const lines = [`# ${title}`, '', `> ${summary}`, '']
+  for (const note of notes) lines.push(note, '')
+  const grouped = new Map()
+  for (const page of list) {
+    const section = sectionFor(page)
+    if (!grouped.has(section)) grouped.set(section, [])
+    grouped.get(section).push(page)
+  }
+  const sections = [...grouped.keys()].sort(
+    (a, b) => (SECTION_ORDER.indexOf(a) + 1 || 99) - (SECTION_ORDER.indexOf(b) + 1 || 99),
+  )
+  for (const section of sections) {
+    lines.push(`## ${section}`, '')
+    for (const p of grouped.get(section)) {
+      lines.push(`- [${p.title}](${p.mdUrl})${p.description ? `: ${p.description}` : ''}`)
+    }
+    lines.push('')
   }
   return `${lines.join('\n')}\n`
 }
@@ -122,30 +192,66 @@ function write(rel, text) {
   const target = join(DIST, rel)
   mkdirSync(dirname(target), { recursive: true })
   writeFileSync(target, text)
-  console.log(`postbuild: ${rel} (${Buffer.byteLength(text)} bytes)`)
+  return Buffer.byteLength(text)
 }
 
-write('llms.txt', index(
-  'GrooveShop documentation',
-  'Tenant-admin guide for the GrooveShop e-commerce platform, in Greek and English. Developer documentation lives under /dev/ and requires credentials.',
-  publicPages,
-))
-write('llms-full.txt', full('GrooveShop documentation (public pages)', publicPages))
-write('dev/llms.txt', index(
-  'GrooveShop developer documentation',
-  'Architecture, flows, per-service reference and operations for the GrooveShop platform. Every page names the source files it describes; the code is the source of truth.',
-  devPages,
-))
-write('dev/llms-full.txt', full('GrooveShop developer documentation', devPages))
-write('sitemap.xml', sitemap(publicPages))
-write('robots.txt', [
-  'User-agent: *',
-  'Allow: /',
-  '# Credentialed developer documentation — never indexable.',
-  'Disallow: /dev/',
-  '',
-  `Sitemap: ${SITE_URL}/sitemap.xml`,
-  '',
-].join('\n'))
+const pages = [...walk(SRC)].map(parse).sort((a, b) => a.route.localeCompare(b.route))
 
-console.log(`postbuild: ${publicPages.length} public page(s), ${devPages.length} developer page(s)`)
+// Markdown twins: every page, both locales. A Greek reader's agent should be
+// able to fetch the Greek page it is looking at, even though the corpora index
+// the English one.
+let twinBytes = 0
+for (const page of pages) {
+  const heading = [
+    '<!--',
+    `  ${page.url}`,
+    '  Markdown source of this page. The rendered page is at the URL above.',
+    '-->',
+    '',
+  ].join('\n')
+  twinBytes += write(page.mdPath, heading + page.body + '\n')
+}
+console.log(`postbuild: ${pages.length} markdown twin(s) (${twinBytes} bytes)`)
+
+const publicPages = pages.filter(p => !p.isDev && !p.isGreek)
+const devPages = pages.filter(p => p.isDev)
+const greekCount = pages.filter(p => p.isGreek).length
+
+for (const [rel, text] of [
+  ['llms.txt', index(
+    'GrooveShop documentation',
+    'Tenant-admin guide for the GrooveShop e-commerce platform: how to run a store from its admin panel.',
+    publicPages,
+    [
+      `Every page is also published in Greek at the same path under \`/el/\`, and those ${greekCount} translations are omitted here because they duplicate the English text.`,
+      'Links point at the markdown source of each page. Drop the `.md` for the rendered page.',
+      'Developer documentation (architecture, flows, per-service reference, operations) lives under `/dev/` and requires credentials.',
+    ],
+  )],
+  ['llms-full.txt', full('GrooveShop documentation (tenant-admin guide)', publicPages)],
+  ['dev/llms.txt', index(
+    'GrooveShop developer documentation',
+    'Architecture, flows, per-service reference and operations for the GrooveShop platform. Every page names the source files it describes; the code is the source of truth.',
+    devPages,
+    ['Links point at the markdown source of each page. Drop the `.md` for the rendered page.'],
+  )],
+  ['dev/llms-full.txt', full('GrooveShop developer documentation', devPages)],
+  ['sitemap.xml', sitemap(pages.filter(p => !p.isDev))],
+  ['robots.txt', [
+    'User-agent: *',
+    'Allow: /',
+    '# Credentialed developer documentation — never indexable.',
+    'Disallow: /dev/',
+    '',
+    `Sitemap: ${SITE_URL}/sitemap.xml`,
+    '',
+  ].join('\n')],
+]) {
+  console.log(`postbuild: ${rel} (${write(rel, text)} bytes)`)
+}
+
+console.log(
+  `postbuild: ${publicPages.length} public page(s) indexed, `
+  + `${greekCount} Greek translation(s) excluded from the corpora, `
+  + `${devPages.length} developer page(s)`,
+)
