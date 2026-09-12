@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.2...v1.0.3) (2026-09-12)
+
+
+### Bug Fixes
+
+* **docs:** say plainly that a wholesale reorder is still charged correctly ([4841e9b](https://github.com/vasilistotskas/grooveshop-docs/commit/4841e9b1517085cf37d7e901d8ad51a1760c566e))
+
 ## [1.0.2](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.1...v1.0.2) (2026-09-12)
 
 
