@@ -65,9 +65,16 @@ from the private `grooveshop-infrastructure` repository; publishing that source
 publicly would defeat the basic-auth gate on `/dev/`. The published admin guide
 at `docs.grooveshop.space` is public regardless of repository visibility.
 
-Consequences: there is no `editLink` in the theme (it would 404 for readers),
-and the release image contains the developer pages, so the registry repositories
-holding it must not be world-readable either.
+Consequence: there is no `editLink` in the theme, since it would 404 for every
+reader who is not a collaborator.
+
+The release image is a deliberate exception. It contains the developer pages,
+and the Docker Hub repository holding it is **public** (decided 2026-09-12), so
+the cluster keeps pulling anonymously like every other image and needs no
+`imagePullSecrets`. The material is architecture and procedure, never
+credentials or tenant data, and the basic-auth gate still keeps it off the open
+web. If that trade is ever revisited, making the image private means a sealed
+pull secret and the only authenticated pull in the cluster.
 
 ## Deployment
 
