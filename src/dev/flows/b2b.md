@@ -196,6 +196,13 @@ wholesale buyer's reordered lines are snapshotted at **retail** — and
 Treat this as a known gap in the invariant below, not as a counter-example
 to it.
 
+**The buyer is still charged correctly.** Both order-creation paths bind
+before any pricing maths, and the cart views bind on read, so the price the
+buyer sees and pays is the wholesale one. Only the frozen `price_at_add`
+snapshot is retail, which makes the resulting drift warning noise rather
+than evidence of a mispriced order. The symptom is a log full of false
+drift on wholesale reorders, not money lost.
+
 `CartItem.price` and `CartItem.final_price` read
 `getattr(self.cart, "_b2b_pricing", None)` and fall back to retail. The
 fallback is safe — never wrong-priced — which is exactly why a missing
