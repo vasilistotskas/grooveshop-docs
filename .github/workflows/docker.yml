@@ -111,8 +111,16 @@ jobs:
           output: trivy-image-results.sarif
           limit-severities-for-sarif: true
 
+      # Non-fatal on purpose. This repository is PRIVATE, and code scanning
+      # only accepts SARIF from a private repository with GitHub Advanced
+      # Security, so the upload 403s with "Resource not accessible by
+      # integration" and would fail an otherwise successful publish. The scan
+      # itself still runs and its findings are in the job log. If the
+      # repository is ever made public, this starts populating the Security
+      # tab again with no further change.
       - name: Upload Trivy image scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
         if: always()
+        continue-on-error: true
         with:
           sarif_file: trivy-image-results.sarif
