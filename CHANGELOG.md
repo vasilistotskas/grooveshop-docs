@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.1...v1.0.2) (2026-09-12)
+
+
+### Bug Fixes
+
+* **docs:** late verification corrections to catalog, blog and analytics ([5e27adb](https://github.com/vasilistotskas/grooveshop-docs/commit/5e27adb79de8972ed22253a71c1f587e35841997))
+
 ## [1.0.1](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.0...v1.0.1) (2026-09-12)
 
 
