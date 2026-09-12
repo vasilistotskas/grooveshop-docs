@@ -68,7 +68,7 @@ The value form has **Value Information** (**Attribute**, **Value** per language,
 
 ## Things to know
 
-- Values are shown in the language of the storefront visitor, with English as the fallback for a missing translation.
+- Values are shown in the visitor's own language, with no fallback: a value you never translated renders empty for them. Fill in every language your store serves.
 - Deleting an attribute deletes all of its values and removes them from every product. Deleting a value removes it from every product. Neither can be undone, so check the **Usage** column first.
 - Deactivating removes nothing. The attribute or value stays on every product it was assigned to and keeps showing in that product's specifications; it only stops being offered as a filter.
 - **Deactivating a variant axis does not switch the selector off.** A variant group keeps rendering its selector from the values its members carry, whether the attribute is active or not. Clear **Is Variant Axis** instead.

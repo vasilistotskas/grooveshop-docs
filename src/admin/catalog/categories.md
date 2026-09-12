@@ -63,10 +63,11 @@ Categories do not list their products for editing. Open each product from [Produ
 
 - **Deleting a category deletes its whole subtree.** Children are removed with the parent. Products in a deleted category keep existing with no category.
 - **Active does not hide a category from shoppers.** Every category is served to the storefront whatever the flag says, so switching it off changes nothing a customer sees. To make a category disappear, move its products elsewhere and delete it.
-- **Where categories show on the storefront**: the category navigation on the products listing page, category pages at `/products/category/<id>/<slug>`, the category filter on the search page, and the **Product Categories** section when a page layout includes it (see [Page layouts](/admin/storefront/page-layouts)). The header menu does not list categories unless you put them in a navigation menu yourself (see [Navigation](/admin/storefront/navigation)).
+- **Where categories show on the storefront**: the category navigation and the sidebar category filter on the products listing page, category pages at `/products/category/<id>/<slug>`, and the **Product Categories** section when a page layout includes it (see [Page layouts](/admin/storefront/page-layouts)). The header menu does not list categories unless you put them in a navigation menu yourself (see [Navigation](/admin/storefront/navigation)).
 - **Cache**: category data is cached for 1 hour on the storefront and 2 hours in the API by default, and edits do not purge it. Purge the **Categories** surface from the [Cache](/admin/system/cache) tool to publish a change immediately.
 - The slug is unique across all categories. A blank slug is generated from the name on save.
-- The Greek name is the default; when it is empty the storefront falls back to the English name.
+- **A missing name does not fall back to another language.** Where the visitor's language has no name, the category renders with an empty one rather than borrowing the Greek or English text. Name every category in every language your store serves.
+- The search page has no category filter, so a shopper who searches cannot narrow the results by category.
 
 ## Related
 

@@ -56,7 +56,9 @@ categories are on).
 
 ### Consent as a load trigger
 
-`app/composables/setups.ts: useAdStorageConsent()` is the shared gate for
+`app/composables/setups.ts: useAdStorageConsent()` — declared without
+`export`, so it is private to that module despite the name — is the shared
+gate for
 every advertising pixel, and it requires **both** conditions:
 
 - `isConsentGiven` is true, so nothing fires for a visitor who never chose.

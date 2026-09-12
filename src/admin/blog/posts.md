@@ -30,7 +30,7 @@ The sidebar entry carries a yellow badge with the number of unpublished posts. T
 | Action | Effect |
 |---|---|
 | **Mark selected posts as featured** / **Remove featured mark from selected posts** | Toggle the Featured flag. |
-| **Publish selected posts** | Sets Is Published on **and Published At to now**. |
+| **Publish selected posts** | Sets Is Published on **and overwrites Published At with the current time**, on every post selected, including ones already published. It will re-date your archive; use the form instead unless you mean that. |
 | **Unpublish selected posts** | Sets Is Published off. |
 | **Increment view count by 100** / **Reset view count to zero** | Adjust the counter. |
 | **Export csv** / **Export xml** | Download the selection (up to 10,000 rows). |
@@ -51,7 +51,7 @@ Language tabs (Greek default, English, German) apply to **Title**, **Subtitle** 
 
 Tabs under the form: **Translations** (one row per language with title and subtitle, with a link to edit) and **Comments** (user, preview, **Approved**, created; see [Comments](/admin/blog/comments)).
 
-**SEO Score** awards 25% each for a title between 11 and 59 characters, a subtitle, a cover image and at least one tag. 75% and above shows green.
+**SEO Score** awards 25% each for a title between 11 and 59 characters, a subtitle, a cover image and at least one tag. 75% and above shows green, 50 to 74 amber, below that red. It scores only those four things and never looks at the body, the slug or the SEO fields.
 
 ## Tasks
 
@@ -59,7 +59,7 @@ Tabs under the form: **Translations** (one row per language with title and subti
 1. Make sure an author exists for you or the writer; see [Categories, authors & tags](/admin/blog/categories-authors-tags).
 2. Click **Add**, write the Greek **Title**, **Subtitle** and **Body**, switch language tabs for the others.
 3. Upload the cover **Image**, pick **Category** and **Tags**, set **Author**.
-4. Tick **Is Published** and save. **Published At** is filled with the current time when left empty.
+4. Tick **Is Published** and save. **Published At** is filled with the current time when you leave it empty. Saving a post with **Is Published** off leaves that field empty instead, so a draft has no date until the day you publish it.
 
 ### Schedule a post
 1. Tick **Is Published** and set **Published At** to a future date and time.
@@ -70,14 +70,15 @@ Tabs under the form: **Translations** (one row per language with title and subti
 Tick **Featured** in the list or on the form. Featured posts are exposed to the storefront for the featured rails and listings that use the flag.
 
 ### Take a post down
-Untick **Is Published**. Visitors get a 404 at `/blog/post/<id>/<slug>`; staff can still open it. The post is removed from the search index.
+Untick **Is Published**. Visitors get a 404 at `/blog/post/<id>/<slug>` and so do you, and the post leaves the search index. Purge the **Blog** surface in the [Cache](/admin/system/cache) tool, or a cached listing can keep showing it for a few minutes.
 
 ## Things to know
 
-- **Storefront visibility** needs Is Published on and Published At not in the future. Store staff see drafts on the storefront too.
-- **Search index**: only posts with Is Published on are indexed. The index does not look at the date, so a scheduled post can surface in search results before its publication time; keep long-lead posts as drafts until close to the date.
-- **Comments on a post cannot be switched off per post.** The store-wide setting `BLOG_COMMENTS_ENABLED` under <span class="sidebar-path">Settings → Extra Settings</span> hides comments everywhere.
-- Deleting a category or an author does not delete posts; the field is cleared. Deleting a post deletes its comments.
+- **Storefront visibility** needs Is Published on and Published At not in the future. A draft is invisible to everyone, you included: signing in to the admin does not let you preview one on the storefront, so the only way to see a post as a reader is to publish it.
+- **Search index**: only posts with Is Published on are indexed, and the index ignores the date. A scheduled post can therefore turn up in search results before its publication time, even though the blog pages still hide it. Keep long-lead posts as drafts until close to the date.
+- **Comments cannot be switched off for one post.** There is no per-post setting; the store-wide **BLOG_COMMENTS_ENABLED** under <span class="sidebar-path">Settings → Extra Settings</span> is all or nothing. To close one conversation, unapprove its comments; see [Comments](/admin/blog/comments).
+- Deleting a category or an author does not delete posts; the field is simply cleared.
+- **Deleting a post does not delete its comments.** They stay behind with no post attached. Clear them from [Comments](/admin/blog/comments) first if you want them gone.
 - **Cache**: blog pages and lists are cached on the storefront; purge the **Blog** surface from the [Cache](/admin/system/cache) tool to show an edit immediately.
 - The slug is unique and part of the URL; a blank slug is generated on save.
 - Likes are given by customers on the storefront; the admin only shows the count.
