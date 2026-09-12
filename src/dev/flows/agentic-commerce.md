@@ -1,0 +1,438 @@
+---
+title: Agentic commerce
+description: "The Go agent gateway: MCP tools, UCP checkout and its payment handler, ACP, catalog feeds, the storefront chatbot, identity linking and order events."
+---
+
+# Agentic commerce
+
+One Go binary serves five protocol surfaces on each tenant's **own**
+storefront domain, path-routed there by Traefik. It is a **protocol adapter**
+and nothing else: all commerce state lives in Django's REST API, sessions and
+caches live in Redis, and it holds no database and no payment-provider
+secrets.
+
+| Path | Surface |
+|---|---|
+| `POST /mcp` | MCP server, stateless streamable HTTP |
+| `GET /.well-known/ucp` | UCP business profile |
+| `/acp/*` | ACP agentic-checkout REST |
+| `/feeds/*` | `google.xml`, `meta.xml`, `tiktok.xml`, `acp.json` |
+| `POST /chat` | First-party shopping chatbot, SSE |
+| `/internal/*` | Cluster-only: Django order events and feed invalidation |
+
+## Diagram
+
+```mermaid
+flowchart TD
+  Agent["AI agent"] --> Host["tenant.example / mcp"]
+  Host --> MW["tenant middleware: real Host only"]
+  MW --> Res["Resolver: memory to Redis to Django"]
+  Res --> Django["GET /api/v1/tenant/resolve"]
+  MW --> Gate{"AgentCommerceOn?"}
+  Gate -- "no" --> NF["404"]
+  Gate -- "yes" --> Ident["optional bearer verify"]
+  Ident --> Tools["MCP tools"]
+  Tools --> API["Django REST, X-Forwarded-Host"]
+  Tools --> Sess["Redis ag:schema:cs:id"]
+
+  Platform["UCP / ACP platform"] --> Profile["/.well-known/ucp"]
+  Platform --> ACP["/acp/checkout_sessions"]
+  DJ["Django order task"] --> Int["POST /internal/events/order-status"]
+  Int --> Queue["ag:events:orders"]
+  Queue --> Hook["signed webhook to platform"]
+```
+
+## How it works
+
+### Tenant resolution is one path
+
+`internal/tenant/middleware.go` resolves from the **real `Host` header only**
+and deliberately ignores any inbound `X-Forwarded-Host` — Traefik sets `Host`,
+and trusting a client-supplied forwarded host would let a caller pivot between
+tenant schemas.
+
+`internal/tenant/resolver.go` layers three tiers: process memory with a TTL
+(plus stale-if-error retention), Redis at `ag:tenant:{host}` shared across
+pods, then Django. Lookups are collapsed with `singleflight`; a confirmed
+unknown host gets a short negative TTL under a sentinel so scanner traffic
+cannot stampede Django; a Django outage serves the last known config marked
+`Stale`.
+
+The upstream call is `internal/django/client.go: ResolveTenant`, and it is the
+**only host-unscoped call the gateway makes**: the platform API host satisfies
+Django's `ALLOWED_HOSTS` while the domain being resolved rides the query
+string. It sends `X-Internal-Token`, which is what makes Django include the
+tenant's secret fields.
+
+Secrets are kept **out of the shared Redis tier** on purpose, so a config
+served from there arrives with `ChatAPIKey` and `ACPBearerToken` empty —
+indistinguishable, to a handler, from a tenant that never configured the
+feature. Routes that need one (`/chat`, `/acp`) use
+`MiddlewareWithSecrets`, which tops them up through `EnsureSecrets` before the
+handler runs.
+
+Every tenant-scoped Django call then sends `X-Forwarded-Host: <tenant
+domain>`, `X-Forwarded-Proto: https` and `X-Language`. GETs retry twice on 5xx
+or network errors; mutations never retry at transport level.
+
+### The gates
+
+Django serves **effective** booleans — plan flag AND merchant extra-setting,
+folded in `TenantConfigSerializer` — so the gateway reads one authoritative
+value per surface and a payload missing a field decodes as off.
+
+| Field | Accessor | Guards |
+|---|---|---|
+| `agentCommerceEnabled` | `AgentCommerceOn()` | `/mcp`, `/.well-known/ucp`, `/acp/*`, `/chat` |
+| `productFeedsEnabled` | `ProductFeedsOn()` | `/feeds/*`, subordinate to agent commerce |
+| `agentHostedPaymentEnabled` | `HostedPaymentOn()` | The hosted-selection extension, subordinate to agent commerce |
+
+`tenant.RequireAgentCommerce` and `RequireProductFeeds` answer **404**, not
+403, mirroring Django's feature gates: a disabled surface is
+indistinguishable from a route that never existed. Always read through the
+accessors — they encode the subordination.
+
+### MCP
+
+`internal/mcpsrv/server.go` registers the tool surface. One server is built
+per tenant (they differ only in the store name advertised at `initialize`) and
+cached by schema.
+
+Ergonomic commerce tools: `search_products`, `get_product`,
+`list_categories`, `get_trending_searches`, `get_product_reviews`,
+`get_shipping_options`, `find_pickup_points`, `get_payment_methods`,
+`create_cart`, `get_cart`, `add_to_cart`, `update_cart_item`,
+`remove_cart_item`, `get_checkout_link`, `track_order`,
+`subscribe_product_alert`.
+
+Account tools, which need a linked credential: `my_orders`,
+`my_loyalty_points`, `my_favourites`.
+
+The UCP checkout capability's five canonical tools plus `get_order`:
+`create_checkout`, `get_checkout`, `update_checkout`, `complete_checkout`,
+`cancel_checkout`.
+
+Business failures surface as `CallToolResult{IsError: true}` with actionable
+text. Returning a plain Go error from a typed handler is fine — the SDK wraps
+it into exactly that. Only a `*jsonrpc.Error` becomes a protocol error, so
+never return one for a business condition.
+
+### UCP
+
+`GET /.well-known/ucp` renders a per-tenant business profile
+(`internal/ucp/profile.go`): the `dev.ucp.shopping` service pointing at that
+tenant's own `/mcp` endpoint, the `checkout` and `order` capabilities, the
+payment-handler registry, and the tenant's own signing key as a JWK. It is
+served with `Cache-Control: public, max-age=300`.
+
+The canonical tools take the wire shapes from the OpenRPC document: `meta`
+(carrying `ucp-agent.profile`, plus `idempotency-key` on complete and cancel),
+`id` for the target session, and `checkout` for the domain object with
+snake_case members. Extensions compose **flat** onto `checkout`, never nested
+under capability names.
+
+The service `schema` URL may appear **only** while every method it defines for
+an advertised capability exists — the five checkout tools plus `get_order`.
+Declaring it asserts a machine-checkable contract. Its cart and catalog
+methods belong to capabilities the profile does not advertise, so a
+negotiating platform never calls them.
+
+`get_order` sources the required `checkout_id` from the gateway's own order
+index (`ag:{schema}:order:{uuid}`, retained a year, because the link must
+outlive the 24-hour session). An order placed on the web has no checkout to
+name and is refused with that explanation, never a fabricated id.
+`order.fulfillment` stays `{}`: an expectation needs a destination the order
+detail deliberately does not decode, and an event needs a shipment timestamp
+upstream does not expose.
+
+### An ONLINE payment method is not an instrument
+
+This is the sharpest rule in the gateway, and it fails closed.
+
+Payment is selected by submitting an **advertised** instrument from
+`checkout.payment.instruments`, which the business resolves back to a
+pay-way. An ONLINE method is not an instrument: there is nothing for a
+platform to acquire, because the buyer authenticates on the PSP's page. It
+cannot be an Action either, since both standard payment Action types require
+a `payment_instrument_id`. UCP models that case as `requires_escalation` plus
+a `continue_url`.
+
+`internal/ucp/handler.go: paymentHandlers` therefore advertises only pay-way
+codes with a **modelled instrument** — today that is
+`cash_on_delivery` — and returns an **empty registry** for a store whose only
+active methods are online. Empty is the honest answer, and the registry is
+required even when empty. Instrument order follows the merchant's own pay-way
+ordering, which UCP reads as the business's preferred presentation.
+
+Choosing an online method travels as a **declared extension**,
+`space.grooveshop.payments.hosted_selection`, carrying a `pay_way_id`. It is
+advertised and accepted only while `HostedPaymentOn()` is true, and a gated
+`pay_way_id` is **refused, never ignored** — ignoring it would complete the
+checkout against a stale selection.
+
+The platform authors its own handler because neither published alternative is
+usable: Stripe's is in private preview and its schema origin fails UCP's
+namespace authority binding, and Viva publishes no UCP handler at all. The
+handler's name (`space.grooveshop.payments`) is the reverse of the host that
+serves its schema (`payments.grooveshop.space`) — the exact-match case of the
+authority binding. The namespace is **platform-owned rather than derived per
+tenant**: the binding check ignores the Public Suffix List, so a namespace
+derived from an arbitrary tenant domain would let co-tenants under a shared
+suffix satisfy the same prefix.
+
+`responsePaymentHandlers` renders the authoritative per-checkout declaration:
+it drops `spec` and `schema` (a platform that reached a checkout has already
+composed the handler from discovery) and adds `settlement: on_delivery` so the
+platform can tell the buyer when money moves.
+
+### ACP
+
+`internal/acp/handler.go` mounts five routes:
+`POST /acp/checkout_sessions`, `GET`/`POST /acp/checkout_sessions/{id}`,
+and `.../complete` and `.../cancel`.
+
+Access is bearer-authenticated with the **tenant's own** `acpBearerToken`,
+issued at enrollment and served on `tenant/resolve`, so a platform enrolled
+with one store can never drive another's checkout by switching `Host`. An
+empty token means ACP is disabled for that tenant and every bearer gets the
+same 401 as a wrong one. Idempotency keys are namespaced per schema and
+operation at `ag:{schema}:acp:idem:{op}:{key}`.
+
+### Catalog feeds
+
+`internal/feeds/` streams four artifacts per tenant, cached in Redis at
+`ag:{schema}:feed:{kind}` with a fresh and a stale TTL and an ETag.
+
+The RSS dialect (RSS 2.0 plus `xmlns:g`) is what Meta Commerce Manager,
+TikTok Ads Manager and Google Merchant Center all ingest. The constants that
+matter are listed at the top of `internal/feeds/rss.go`:
+
+- **`g:id` is always the product id**, formatted as a number — never a SKU,
+  never a UUID — because it must equal the `content_ids` the pixel and the
+  Conversions API send, or attribution breaks.
+- **Prices are VAT-inclusive.** `newFeedItem` computes
+  `regular = price + vat_value` and `sale = final_price`, and emits
+  `g:sale_price` only when a markdown actually lowers it. Amounts are integer
+  minor units internally and rendered as `12.34 EUR` at the edge.
+- **No `g:mpn` is emitted at all.** There is no manufacturer part number on
+  the product model, and a SKU is not one — putting a SKU there is a
+  merchant-identifier collision, not a part number.
+- Availability is the enum `in stock` / `out of stock`; condition is `new`;
+  `g:item_group_id` carries the variant group; `g:brand` falls back to the
+  store name.
+- A product with no default-locale name or no image is **skipped**, because
+  the platforms would reject it anyway. A malformed money field is an error,
+  because it would corrupt every consumer's feed.
+
+`acp.json` follows the ACP feed schema: one Product per catalog row with a
+single self-Variant, since variant grouping across a streamed catalog would
+require full buffering and the RSS feeds already carry `item_group_id`.
+
+Image origins go through `internal/media/url.go: Host`, which returns the
+tenant's own assets domain **only when it opted into white-label assets** and
+the platform origin otherwise. The comment records the bug: deriving
+`assets.{tenant-domain}` produced a hostname standard onboarding never
+creates, and the gateway emitted NXDOMAIN image URLs into every feed — which
+Meta and TikTok reject silently, because nothing here ever fetches what it
+emits.
+
+### The chatbot
+
+`POST /chat` is a first-party shopping assistant over SSE, speaking the
+OpenAI-compatible chat-completions protocol (`CHAT_BASE_URL` selects the
+provider). The credential is **per tenant**: `chatApiKey` from
+`tenant/resolve`, attached per turn. A tenant without one gets a localized
+404, so the route is always mounted and the handler rejects keyless tenants.
+Chat carries its own stricter per-IP rate limiter on top of the global one,
+because it pays per token. Conversations live at `ag:{schema}:chat:{id}` with
+a configurable TTL and turn cap.
+
+`internal/chat/bridge.go` connects an in-process MCP client to the **same**
+tool server over in-memory transports, so the chatbot's tool definitions are
+derived from the server's own schemas and the two can never drift. Three
+groups are withheld:
+
+- **`checkoutTools`** — the five canonical UCP tools. Their arguments are
+  shaped for a platform generating calls from an OpenRPC document, not for a
+  conversational model, and the assistant hands over a checkout link instead
+  of placing orders.
+- **`accountTools`** — they need an OAuth-linked agent credential on the MCP
+  HTTP request; the chat widget's shopper authenticates through the storefront
+  session, which already shows orders and loyalty.
+- Cart tools are kept but flagged, so a successful call tells the widget to
+  refresh its cart store.
+
+### Identity linking
+
+Django is the OAuth 2.1 authorization server through `allauth.idp`, and the
+storefront advertises it. `server/routes/.well-known/oauth-protected-resource/mcp.get.ts`
+returns the RFC 9728 document naming the tenant's **own API origin**
+(`TenantConfig.apiDomain`) as the authorization server, with
+`scopes_supported` of `openid`, `profile`, `email`, `orders:read`,
+`loyalty:read` and `favourites:read`.
+`server/routes/.well-known/mcp/server-card.json.get.ts` points at `/mcp`.
+
+`internal/identity` is **optional** auth on `/mcp`: anonymous shopping stays
+open, a present bearer is verified against Django's `/agent/me`, and an
+invalid one gets 401 plus the RFC 9728 `WWW-Authenticate` challenge so the
+client can re-run its OAuth flow. Verdicts are cached 60 seconds, keyed by
+**SHA-256 of (schema, token)** — never the token alone. The comment records
+why: a bearer valid for tenant A, replayed against tenant B inside the TTL,
+was admitted with A's shopper profile attached, and every tenant's ingress
+targets the same pod pool.
+
+Account tools forward the bearer to `/api/v1/agent/*` and **Django enforces
+the scopes**. `agent/views.py` accepts OIDC bearer tokens only — never Knox,
+never session auth — and tenant scoping is structural rather than a
+permission: the OIDC token tables live in the tenant schema, so a token
+issued by one store cannot be found on another's host.
+
+### Order events
+
+`order/tasks.py` POSTs to `/internal/events/order-status` with the shared
+`X-Internal-Token`, carrying `schemaName`, `orderUuid`, `status`,
+`paymentStatus` and `trackingNumber`. The schema comes from the live
+connection, because the task runs inside the schema captured at dispatch.
+A 5xx from the gateway is raised so Celery retries; a 4xx is logged.
+
+`internal/server/internalapi.go` checks the token with a constant-time compare
+**before reading the body**, so an unauthenticated caller cannot distinguish a
+malformed body from a valid one. It applies the event to any matching checkout
+session and queues a platform webhook.
+
+The webhook queue is deliberately **not** per schema: one work queue
+(`ag:events:orders`) for the whole pod pool, with each event carrying its own
+schema, from which the signing key and target URL are resolved. Delivery runs
+in a bounded worker pool because inline delivery let one undeliverable
+endpoint stall every tenant's webhooks. Semantics are at-least-once: an event
+moves to a processing list before delivery and is removed only on a terminal
+outcome, and a shutdown mid-delivery leaves it for `reclaim()` on the next
+boot.
+
+Django can also drop a tenant's cached feeds through
+`POST /internal/feeds/invalidate` (`core/cache/gateway.py`), which requires
+the schema **explicitly** — guessing would drop another tenant's feeds.
+
+### Health
+
+`/healthz` is process-only liveness: no dependency checks, because a Django
+or Redis outage must never restart pods.
+
+`/readyz` gates on **Redis only**. `internal/obs/health.go: Readyz` pings both
+and reports both in the body, but only the Redis error sets the 503 status —
+the Django result is informational and never flips readiness. With Django
+down the gateway still serves actionable tool errors and stale feeds, which
+beats Traefik 502s.
+
+### Routing and release
+
+Each tenant's ingress path-routes five prefixes to `agent-gateway-service`:
+`/mcp`, `/.well-known/ucp`, `/feeds`, `/acp` and `/chat`
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml`).
+The payment-handler documents are served host-scoped on
+`payments.grooveshop.space`, which the mux binds explicitly and which takes no
+tenant middleware — it is a platform artifact, not a tenant.
+
+Releases are **manual**. `.github/workflows/ci.yml` runs lint, tests and a
+build on every push to `main`, but `.github/workflows/release.yml` triggers
+only on a pushed `v*.*.*` tag. Unlike the other repositories there is no
+semantic-release on `main`: cutting a gateway image means tagging it
+yourself, then bumping the pin in the infrastructure repo.
+
+## Invariants
+
+- **The real `Host` decides the tenant.** Inbound `X-Forwarded-Host` is
+  ignored; spoofing it must never switch schemas.
+- **`tenant/resolve` is the one resolution path.** There is no second lookup,
+  no env-configured tenant, and no tenant name anywhere in gateway code — not
+  even the first one. Tests use `demostore`, `acme`, `alpha`, and a literal
+  schema name in non-test code is a bug.
+- **Platform defaults are never a tenant host.** The platform origins are
+  `*.grooveshop.space`; a tenant's own domain arrives in its config. Never
+  build an asset host by prefixing a tenant domain.
+- **An ONLINE method is not an instrument and fails closed.** No instrument,
+  no handler entry; hosted selection is a gated declared extension and a gated
+  `pay_way_id` is refused.
+- **Every tenant gate is read through its accessor**, which encodes the
+  subordination to agent commerce; a missing field decodes as off.
+- **A disabled surface answers 404.**
+- **`/readyz` never fails on Django.** Only Redis flips it.
+- **Redis keys are `ag:{schema}:…`**, except the tenant cache
+  (`ag:tenant:{host}`) and the shared order-event queue.
+- **No tenant label on Prometheus metrics** — unbounded cardinality; tenant
+  goes in the logs.
+- **The gateway is retail-only.** Every catalog, cart and checkout call is
+  anonymous and forwards no bearer, so B2B prices never reach an MCP tool, a
+  UCP/ACP checkout or a feed, and totals stay self-consistent end to end. Only
+  `/api/v1/agent/*` forwards a bearer, and those endpoints carry no pricing.
+- **No fallback or backward-compatibility code paths.** Environment
+  differences are config values, not conditionals.
+
+## Failure modes
+
+- **A tenant's agent surfaces all 404.** `agentCommerceEnabled` is off at one
+  of its two tiers, or the host resolved to no tenant. Check the resolve
+  payload first; the negative cache holds a confirmed-unknown host briefly.
+- **`/chat` 404s with a localized message.** The tenant has no `chatApiKey`.
+  Remember that the key only arrives on an internally-authenticated resolve,
+  so a config served from the Redis tier has it empty — `/chat` uses the
+  secrets middleware for exactly that reason.
+- **Every ACP bearer gets 401.** The tenant has no `acpBearerToken`, which is
+  how ACP is disabled. It is not a credential mismatch.
+- **A feed publishes broken image URLs.** Check `ASSETS_HOST` and the tenant's
+  `assetsDomain`; an empty media host yields an empty URL by design, dropping
+  the image rather than publishing an unreachable one, and a product with no
+  image is skipped entirely.
+- **A platform never calls the checkout tools.** The OpenRPC `schema` URL is
+  only published while every method it defines for an advertised capability
+  exists. Dropping one of the five tools without removing the URL breaks the
+  contract the profile asserts.
+- **`get_order` refuses with "no checkout".** The order was placed on the web
+  and has no session in the order index, or the index entry aged out past its
+  one-year retention. It is a refusal, not a bug.
+- **Order webhooks stop for one tenant.** The delivery pool bounds the damage
+  to one worker per stuck endpoint, so the symptom is usually that tenant's
+  platform endpoint blackholing. Events stay on the processing list and
+  `reclaim()` rescues them on the next boot.
+- **Deploy changed nothing.** The gateway image is not released by pushing to
+  `main`. Tag `vX.Y.Z`, then update the pin in the infrastructure repo.
+
+## Related
+
+- [Multi-tenancy](/dev/platform/multi-tenancy)
+- [Checkout and payment](/dev/flows/checkout-and-payment)
+- [Order lifecycle](/dev/flows/order-lifecycle)
+- [B2B](/dev/flows/b2b)
+- [Agent gateway service](/dev/gateway/)
+- [Deploying](/dev/operations/deploying)
+
+## Source
+
+| File | Role |
+|---|---|
+| `grooveshop-agent-gateway/CLAUDE.md` | Surface map, conventions, cross-repo contracts |
+| `grooveshop-agent-gateway/internal/server/routes.go` | Mux assembly and middleware order |
+| `grooveshop-agent-gateway/internal/server/internalapi.go` | Order events, feed invalidation, token check |
+| `grooveshop-agent-gateway/internal/tenant/` | Resolver, middleware, feature requirements |
+| `grooveshop-agent-gateway/internal/django/client.go` | `ResolveTenant`, retries, forwarded headers |
+| `grooveshop-agent-gateway/internal/django/dto.go` | `TenantConfig` and the gate accessors |
+| `grooveshop-agent-gateway/internal/django/client_agent.go` | `/agent/me` and the scoped resources |
+| `grooveshop-agent-gateway/internal/identity/identity.go` | Optional bearer verification, per-tenant cache key |
+| `grooveshop-agent-gateway/internal/mcpsrv/server.go` | Tool registration |
+| `grooveshop-agent-gateway/internal/ucp/profile.go` | Business profile document |
+| `grooveshop-agent-gateway/internal/ucp/handler.go` | Payment handler, instruments, hosted selection |
+| `grooveshop-agent-gateway/internal/ucp/webhook.go` | Order-event queue and signed delivery |
+| `grooveshop-agent-gateway/internal/acp/handler.go` | ACP routes and bearer auth |
+| `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, VAT-inclusive prices, skip rules |
+| `grooveshop-agent-gateway/internal/feeds/acp.go` | ACP feed shape |
+| `grooveshop-agent-gateway/internal/media/url.go` | Asset origin fallback |
+| `grooveshop-agent-gateway/internal/chat/handler.go`, `bridge.go` | Chatbot and withheld tools |
+| `grooveshop-agent-gateway/internal/checkout/store.go` | Redis keys and TTLs |
+| `grooveshop-agent-gateway/internal/obs/health.go` | `/healthz`, `/readyz` |
+| `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
+| `grooveshop-django-api/tenant/views.py`, `tenant/serializers.py` | `tenant_resolve` and the folded gates |
+| `grooveshop-django-api/agent/views.py`, `agent/oidc.py` | Agent resources and scopes |
+| `grooveshop-django-api/order/tasks.py` | Order-event push |
+| `grooveshop-django-api/core/cache/gateway.py` | Feed invalidation call |
+| `grooveshop-storefront-ui-node-nuxt/server/routes/.well-known/` | Server card and OAuth resource metadata |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml` | Path routing |

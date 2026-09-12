@@ -1,0 +1,13 @@
+node_modules
+dist
+.vitepress/cache
+.vitepress/generated
+
+# Per-service reference docs are copied in by scripts/sync-sources.mjs
+# from the sibling repositories; the canonical files live there.
+src/dev/*/reference/
+
+.env*
+*.log
+.DS_Store
+/.idea

@@ -1,0 +1,7 @@
+# The site is authored and built on Windows but served from a Linux image and
+# built in Linux CI. Normalise to LF in the repository so a CRLF checkout never
+# reaches the YAML frontmatter parser or the llms/sitemap generators.
+* text=auto eol=lf
+*.woff2 binary
+*.png binary
+*.svg text eol=lf

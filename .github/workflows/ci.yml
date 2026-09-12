@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Same Node line as docker/Dockerfile's NODE_VERSION
+  NODE_VERSION: 24.19.0
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # The site pulls per-service reference docs from sibling checkouts
+      # (see .vitepress/sources.ts), so this repo and every source repo
+      # are checked out side by side under the workspace, exactly like
+      # the local monorepo layout.
+      - name: Checkout docs
+        uses: actions/checkout@v6
+        with:
+          path: grooveshop-docs
+
+      - name: Checkout grooveshop-django-api (reference docs)
+        uses: actions/checkout@v6
+        with:
+          repository: vasilistotskas/grooveshop-django-api
+          path: grooveshop-django-api
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          package_json_file: grooveshop-docs/package.json
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: grooveshop-docs/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: grooveshop-docs
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        working-directory: grooveshop-docs
+        run: pnpm typecheck
+
+      - name: Sync reference sources
+        working-directory: grooveshop-docs
+        env:
+          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
+        run: pnpm sync:sources
+
+      - name: Build
+        working-directory: grooveshop-docs
+        run: pnpm build
+
+      - name: Upload site
+        uses: actions/upload-artifact@v6
+        with:
+          name: site
+          path: grooveshop-docs/dist
+          retention-days: 7
+
+  release:
+    name: Release
+    needs: [build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency: release
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      # DOCS_TOKEN is a personal access token, NOT the default GITHUB_TOKEN, and
+      # that is load-bearing: a release published using GITHUB_TOKEN does not
+      # trigger further workflow runs, so docker.yml would never fire and no
+      # image would ever be built. Same reason the other repos carry their own
+      # token. Scopes needed: repo (+ workflow if a workflow file ever changes
+      # in a release commit).
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.DOCS_TOKEN }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # No release assets: the deployable is the Docker image built by
+      # docker.yml on the published release.
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.DOCS_TOKEN }}
+        run: pnpm run semantic-release

@@ -1,0 +1,20 @@
+# Docker
+.dockerignore
+
+# Git / CI / editors / agents
+.git
+.gitignore
+.github
+.editorconfig
+.idea
+.claude
+
+# Build output and caches (the image builds its own)
+dist
+node_modules
+.vitepress/cache
+
+# Repo-level docs about the repo, not site content
+CLAUDE.md
+README.md
+CHANGELOG.md

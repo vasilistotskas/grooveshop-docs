@@ -1,0 +1,118 @@
+name: Publish Docker image
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Explicit image tag for branch builds (e.g. v1.2.3-preview.1)"
+        required: true
+        type: string
+
+jobs:
+  push_to_registries:
+    name: Push Docker image to multiple registries
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      packages: write
+      contents: read
+      security-events: write
+    steps:
+      # Same side-by-side layout as ci.yml: the reference docs are synced
+      # into the build context before the image is built, because the
+      # sibling repositories are not reachable from inside `docker build`.
+      - name: Check out the repo
+        uses: actions/checkout@v6
+        with:
+          path: grooveshop-docs
+
+      - name: Checkout grooveshop-django-api (reference docs)
+        uses: actions/checkout@v6
+        with:
+          repository: vasilistotskas/grooveshop-django-api
+          path: grooveshop-django-api
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          package_json_file: grooveshop-docs/package.json
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+
+      - name: Sync reference sources
+        working-directory: grooveshop-docs
+        env:
+          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
+        run: node scripts/sync-sources.mjs
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            gro0ve/grooveshop-docs
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+            type=raw,value=${{ inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v7
+        with:
+          context: ./grooveshop-docs
+          file: ./grooveshop-docs/docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          target: production
+          build-args: |
+            NODE_VERSION=24.19.0
+          sbom: true
+          provenance: mode=max
+
+      - name: Run Trivy image scan
+        # SHA-pinned: trivy-action's mutable tags were hijacked in the
+        # 2026-03 supply-chain incident, so tags are not trusted.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '0'
+          format: sarif
+          output: trivy-image-results.sarif
+          limit-severities-for-sarif: true
+
+      - name: Upload Trivy image scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-image-results.sarif

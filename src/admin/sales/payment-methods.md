@@ -1,0 +1,86 @@
+---
+title: Payment methods
+description: The payment methods offered at checkout, what each settlement type means, fees and free thresholds, the instructions text, and which parts are configured elsewhere.
+---
+
+# Payment methods
+
+<span class="sidebar-path">Sales → Payment Methods</span>
+
+A payment method is one option the shopper sees at checkout: Viva Wallet, Stripe, cash on delivery, BoxNow's pay-on-pickup, bank transfer and so on. This screen controls which are offered, in what order, what they cost the shopper and what the customer is told. It does not hold credentials: API keys for Viva Wallet, Stripe and the carriers live on the store's platform record and are managed by the platform team, and an online method whose credentials are missing is hidden from shoppers automatically.
+
+## What you see
+
+### The list
+
+| Column | Meaning |
+|---|---|
+| **Name** | The customer-facing label, resolved from a fixed list of keys (Credit Card, Pay On Delivery, BOX NOW PAY ON THE GO!, Pay On Store, PayPal, Stripe, Bank Transfer, Apple Pay, Google Pay, Viva Wallet). |
+| **Provider** | The provider code the platform uses to route the charge, e.g. `stripe`, `viva_wallet`, or "No provider". |
+| **Type** | The settlement type (table below). |
+| **Cost** | The fee added to the order, or **Free**. |
+| **Free Threshold** | "Free above X" when the fee is waived over an order amount, or **No threshold**. |
+| **Icon** | The logo shown at checkout. |
+| **Order** | Position in the checkout list. Rows can be dragged to reorder. |
+
+Filters: **Active**, **Payment Type** (settlement), **Configuration Status** (Configured, Not Configured, No Configuration Needed), **Cost Range**, **Free Threshold Range**, created and updated dates. Search by the name key (for example `PAY_ON_DELIVERY`, not the Greek label), provider code, description and instructions.
+
+Bulk actions: **Activate selected payment methods**, **Deactivate selected payment methods**, **Move selected items up in sort order**, **Move selected items down in sort order**, **Reset sort order to default**.
+
+### The payment method page
+
+- **Basic Information**: **Active**, sort order.
+- **Display & Branding**: **Name** (one of the keys above, translated per language) and **Icon**.
+- **Content**: **Description** and **Payment Instructions**, a rich-text field. The instructions are rendered in the order-received email, which is where bank-transfer details or "have the exact amount ready for the courier" belong.
+- **Payment Configuration**: **Provider Code** and **Settlement**.
+- **Pricing**: **Cost**, **Free Threshold**, and the computed effective cost.
+- **Advanced Configuration**: the provider's non-secret configuration (read-only for staff, editable by superusers), a preview of its keys and the **Ready Status** (Ready to use / Requires setup). Keys that look like secrets (api_key, secret, token, password) are rejected on save.
+- **Payment-method exclusions**: rows that block this method for a given shipping provider and shipping kind, with a private note. An empty table means the method is offered with every carrier that supports its settlement.
+
+## Settlement types
+
+| Settlement | Meaning | Order behaviour |
+|---|---|---|
+| **Paid online at checkout** | A payment provider charges the shopper before the order is confirmed (Viva Wallet, Stripe). | The order waits in Pending until the provider confirms; then it moves to Processing and the courier voucher is created. Unpaid orders are auto-canceled after the grace period. Needs credentials. |
+| **Cash or card to the courier on delivery** | Classic cash on delivery (αντικαταβολή) with ACS. | Voucher is created immediately with the amount to collect. Payment status stays Pending until ACS pays out, days later, then flips to Completed automatically. |
+| **Paid to the carrier before pickup** | BoxNow collects payment online after dispatch and activates the locker PIN when it clears. | Voucher is created immediately with the amount. Payment status stays Pending until the carrier settles. |
+| **Settled off-platform (e.g. bank transfer)** | The shopper pays outside the platform. | Order and voucher are created immediately; nothing marks it paid. You confirm the payment on the order page. |
+
+Only the online settlement needs provider configuration; the other three collect money without the platform calling anyone.
+
+## Tasks
+
+### Offer or hide a method
+1. Tick the method in the list and run **Activate selected payment methods** or **Deactivate selected payment methods**, or open it and toggle **Active**.
+2. The change is visible at checkout within the cache lifetime; purge the cache under [Cache](/admin/system/cache) to see it immediately.
+
+### Charge a fee for cash on delivery
+1. Open **Pay On Delivery** and set **Cost** to the fee.
+2. Optionally set **Free Threshold** so orders above that amount pay no fee.
+3. The fee is copied onto each order as its payment-method fee and included in the courier's collection amount.
+
+### Write the bank-transfer instructions
+1. Open **Bank Transfer**, tab **Content**.
+2. Put the IBAN, beneficiary and the reference the customer should use in **Payment Instructions**, per language.
+3. When a transfer arrives, open the order and set **Payment status** to **Completed**. See [Orders](/admin/sales/orders).
+
+### Block a method for a carrier
+1. Open the method and add a row under **Payment-method exclusions**: choose the shipping provider and shipping kind, write a note for your colleagues.
+2. Save. The combination disappears from checkout without a deployment. The same rows can be edited from the carrier's page under [Shipping providers](/admin/shipping/providers).
+
+## Things to know
+
+- **Viva Wallet is the primary online provider and Stripe the secondary.** Both are per-store accounts. If a store has not given its keys to the platform, the method is not shown to shoppers even if it is Active here, and checkout refuses to start a session for it.
+- **Cash on delivery and BoxNow pay-on-pickup are different products** even though both are collected on delivery: one is cash to a courier, the other a payment link from the carrier. Keep both rows; do not point a courier method at a locker.
+- **The name is a key, not free text.** Pick the key that matches the product; the Greek and English labels come with it. The storefront uses the same key to translate the label.
+- **Fees are VAT-inclusive amounts** in the store currency and appear on the invoice as a separate line.
+- **Search by key.** The search box queries the stored key, so searching "Αντικαταβολή" finds nothing; search `PAY_ON_DELIVERY`.
+- Two legacy checkboxes ("Is online payment", "Requires confirmation") are derived from **Settlement** on save and cannot be edited.
+
+## Related
+
+- [Orders](/admin/sales/orders)
+- [Shipping providers](/admin/shipping/providers)
+- [ACS Courier](/admin/shipping/acs)
+- [BoxNow](/admin/shipping/boxnow)
+- [Cache](/admin/system/cache)
