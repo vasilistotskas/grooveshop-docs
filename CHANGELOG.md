@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.3...v1.1.0) (2026-09-12)
+
+
+### Features
+
+* **docs:** make the machine-readable corpora usable by agents ([b70d86a](https://github.com/vasilistotskas/grooveshop-docs/commit/b70d86a7d3a613e418bc94f5d2da2cfaee77812f))
+
 ## [1.0.3](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.2...v1.0.3) (2026-09-12)
 
 
