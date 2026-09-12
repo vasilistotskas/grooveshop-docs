@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.0...v1.0.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** the admin-prose gate must not half-apply on a partial checkout ([ebc091f](https://github.com/vasilistotskas/grooveshop-docs/commit/ebc091f75b2d7c7ccde36daeef17a22a7d3984da))
+* **docs:** write the admin guide for shop owners, and re-verify every page ([01befed](https://github.com/vasilistotskas/grooveshop-docs/commit/01befed390757bdcc64580ba72278a3ee49d77b5))
+
 # 1.0.0 (2026-09-12)
 
 
