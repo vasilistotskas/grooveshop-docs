@@ -33,13 +33,14 @@ jobs:
         with:
           path: grooveshop-docs
 
+      # Full checkout, not sparse: sync:sources only needs `docs/`, but the
+      # admin-prose gate derives its allowlist of owner-visible names from the
+      # Django source, and a sparse tree gives it half the answer.
       - name: Checkout grooveshop-django-api (reference docs)
         uses: actions/checkout@v6
         with:
           repository: vasilistotskas/grooveshop-django-api
           path: grooveshop-django-api
-          sparse-checkout: docs
-          sparse-checkout-cone-mode: true
 
       - name: Install pnpm
         uses: pnpm/action-setup@v5

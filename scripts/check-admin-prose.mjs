@@ -69,10 +69,22 @@ function allowedUppercaseTokens() {
   }
 
   // TextChoices / Choices members: `PAY_ON_DELIVERY = "PAY_ON_DELIVERY", _("…")`
+  let enumFiles = 0
   for (const file of walk(djangoRoot, /[\\/]enum[\\/][\w-]+\.py$|[\\/]enums?\.py$/)) {
+    enumFiles++
     for (const m of readFileSync(file, 'utf8').matchAll(/^\s{4}([A-Z][A-Z0-9_]+)\s*=\s*["(]/gm)) {
       allowed.add(m[1])
     }
+  }
+
+  // A PARTIAL checkout must not half-apply this rule. `settings.py` sits at the
+  // repository root, so a sparse checkout of `docs/` still exposes it while the
+  // per-app enum modules are absent — which allowlisted the setting keys but
+  // not the stored choice values, and failed CI on prose that is correct.
+  // Either the whole source is present or the uppercase rule is skipped.
+  if (!enumFiles) {
+    console.warn('check-admin-prose: no enum modules found (partial checkout?) — skipping the uppercase-token check')
+    return null
   }
   return allowed
 }
