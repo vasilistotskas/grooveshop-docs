@@ -1,13 +1,13 @@
 ---
 title: Reconciliation
-description: ACS pickup lists, ACS cash-on-delivery payouts and the invoice counter — what each is, the daily routine behind it, and how to read the numbers.
+description: "ACS pickup lists, ACS cash-on-delivery payouts and the invoice counter — what each is, the daily routine behind it, and how to read the numbers."
 ---
 
 # Reconciliation
 
 <span class="sidebar-path">System → Reconciliation</span>
 
-**Platform operators only.** These three screens are gated on the platform superuser flag (`shipping_acs/admin.py`, `order/admin.py`, `IsSuperuserOnlyModelAdmin`). Owners see the effect of the routines on their orders and shipments; this page explains what happens behind them and what an operator does when asked.
+**Platform operators only.** These three screens refuse to open for anyone else. Owners see the effect of the routines on their orders and shipments; this page explains what happens behind them and what an operator does when asked.
 
 Pickup lists and cash-on-delivery payouts are explained in depth, from the store's side, in [ACS Courier](/admin/shipping/acs). This page covers the two ledgers themselves and the Invoice Counter.
 
@@ -15,32 +15,40 @@ Pickup lists and cash-on-delivery payouts are explained in depth, from the store
 
 A pickup list (manifest) is the daily document that tells ACS which vouchers to collect. **A voucher that is never on a pickup list is never collected.**
 
-Columns: **Pickup list no**, **Issued at**, **Voucher count**, **Issued by** (a person, or empty when the scheduled task did it). Search by number. The detail page also shows the billing code used and ACS's raw response.
+Columns: **Pickup list no**, **Issued at**, **Voucher count**, **Issued by** (a person, or empty when the scheduled job did it). Search by number. Every field is read-only; the detail page also shows the billing code used and ACS's raw answer.
 
 ### The routine
 
 1. During the day, ACS vouchers are issued per shipment from [ACS Courier](/admin/shipping/acs) and printed.
-2. **Mon–Fri 15:45** a task emails the store if any voucher due today is still unprinted, because ACS rejects the whole list if one voucher on it is unprinted, and its API cannot issue a partial list.
-3. **Mon–Fri 16:30** the task issues the list for every voucher awaiting collection and stores a row here.
-4. If the list must go out earlier, or after fixing an unprinted label, open <span class="sidebar-path">Shipping → ACS Shipments</span> and click **Issue ACS pickup list now**. Messages: "Pickup list … issued for … voucher(s)", "No vouchers are waiting for a pickup list", or ACS's own rejection text naming what has to be printed.
+2. **Mon–Fri 15:45** a job emails the store if any voucher due today is still unprinted, because ACS rejects the whole list if one voucher on it is unprinted, and its interface cannot issue a partial list.
+3. **Mon–Fri 16:30** the job issues the list for every voucher awaiting collection and writes a row here.
+4. If the list must go out earlier, or after fixing an unprinted label, open <span class="sidebar-path">Shipping → ACS Shipments</span> and click **Issue ACS pickup list now**. That button is deliberately on the shipments screen, not on this one, so the person who prints the labels can reach it.
 
-Issuing is single-flight: if the scheduled run and a manual click overlap, the second one is skipped rather than double-issuing.
+The messages it can return:
+
+| Message | Meaning |
+|---|---|
+| "Pickup list … issued for … voucher(s)." | Done. A row appears here. |
+| "No vouchers are waiting for a pickup list." | Nothing to collect. No row is written. |
+| "ACS did not issue the pickup list: …" | ACS refused; its own wording follows, usually naming a voucher that has to be printed. |
+
+Issuing is single-flight: a lock is taken for five minutes, so if the scheduled run and a manual click overlap, the second one is skipped rather than double-issuing.
 
 ## ACS COD Payouts
 
-A read-only ledger of the cash-on-delivery money ACS has paid out, one row per voucher and payout date (`shipping_acs/services.py`, `reconcile_cod_payouts`).
+A read-only ledger of the cash-on-delivery money ACS has paid out, one row per voucher and payout date.
 
-Columns: **Voucher no**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment**, **Customer ref no 1** (the order id sent with the voucher). Filters: payment date, delivery date. Search: voucher, reference numbers, receiver name. The detail page splits the amount into cash and card and keeps the raw ACS row.
+Columns: **Voucher no**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment**, **Customer ref no 1** (the order id sent with the voucher). Filters: payment date, delivery date. Search: voucher, both reference numbers, receiver name. Every field is read-only; the detail page splits the amount into cash and card and keeps the raw ACS record.
 
 ### The routine
 
-1. **Daily 02:30** the task asks ACS for the previous day's payouts and upserts them here. Re-running is harmless; the key is voucher plus payment date.
-2. Each row is linked to its **Shipment** by voucher number, or by the order references when the voucher is missing.
-3. For a linked order still in payment status Pending, the order flips to **Completed**. No email goes to the customer for this flip; they already paid the courier in person. Internally the order history gets a row and the order may auto-advance from Delivered to Completed.
-4. Rows that match no shipment and no order reference are counted as skipped and an alert email is sent to the platform administrators: unattributed money must be investigated.
-5. **Daily 03:00** a second task emails a list of delivered COD parcels that ACS has not paid out yet.
+1. **Daily 02:30** the job asks ACS for the previous day's payouts and writes them here. Re-running is harmless: a row is identified by voucher plus payment date, so a repeat updates rather than duplicates.
+2. Each row is linked to its **Shipment** by voucher number; failing that, by the order id, and failing that by the order's reference. When the shipment is found, its voucher number is taken as the truthful one for the row.
+3. For a linked order still in payment status Pending, the order flips to **Completed**. No email goes to the customer for this flip; they already paid the courier in person. Internally the order history gets a row and the order may auto-advance from Delivered to Completed, also silently.
+4. Rows that match no shipment and no order reference are counted as skipped and an alert email goes to the store's operators: unattributed money must be investigated.
+5. **Daily 03:00** a second job emails a list of delivered COD parcels that ACS has not paid out yet.
 
-To run the import outside the schedule, open a payout row and click **Run COD reconciliation now**; the message "COD reconciliation task dispatched" confirms the task was queued.
+To run the import outside the schedule, open a payout row and click **Run COD reconciliation now**; the message "COD reconciliation task dispatched" confirms it was queued. This button is on this screen, so only a platform operator can press it.
 
 ### Reading the numbers
 
@@ -50,13 +58,13 @@ To run the import outside the schedule, open a payout row and click **Run COD re
 
 ## Invoice Counter
 
-One row per year with **Year** and **Next Number** (`order/models/invoice.py`). Every invoice takes the next number atomically, so the sequence has no gaps even when invoices are issued at the same moment.
+One row per year, with **Year** and **Next Number**. Every invoice takes the next number under a row lock, so two invoices issued at the same moment cannot receive the same number and the sequence has no gaps.
 
-The only reason to edit it is to reserve a range, for example when numbers up to a certain point were issued by a previous system. Set **Next Number** to the first free number **before** the first invoice of the year. Never lower it: two invoices would receive the same number, and the tax authority sees the sequence.
+Unlike the two ledgers above, this row **is** editable, and only a platform operator can reach it. The only reason to edit it is to reserve a range, for example when numbers up to a certain point were issued by a previous system. Set **Next Number** to the first free number **before** the first invoice of the year. Never lower it: two invoices would receive the same number, and the tax authority sees the sequence.
 
 ## Things to know
 
-- ACS is used for cash-on-delivery in this platform; online payments settle through the payment provider, not here.
+- ACS is the cash-on-delivery carrier here; online payments settle through the payment provider, not through this ledger.
 - A pickup list row is written only when ACS accepted the list. No row for a working day means nothing was awaiting collection or the issue failed; the failure text is in the store's email and in the application log.
 - Deleting an invoice does not give its number back. The counter only moves forward.
 

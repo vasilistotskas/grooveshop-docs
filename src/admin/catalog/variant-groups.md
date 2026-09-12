@@ -13,7 +13,7 @@ A variant group links sibling products that are the same item in different varia
 
 - **Every variant is a full product.** Each colour or size is its own row in [Products](/admin/catalog/products), with its own SKU, price, stock, images, slug and SEO. Carts and orders reference the specific product.
 - **The group is only an identity.** It has a translatable **Name** (an admin label, not shown to customers) and an **Active** flag. Products join it through their own **Variant Group** field.
-- **The axes are attributes.** Which selector appears (Colour, Memory) comes from [Attributes & values](/admin/catalog/attributes-and-values): only attributes with **Is Variant Axis** on are rendered as selectors, and each member must carry one value of that attribute so the storefront can tell the siblings apart. Other attributes stay read-only specifications.
+- **The axes are attributes.** Which selector appears (Colour, Memory) comes from [Attributes & values](/admin/catalog/attributes-and-values): only attributes with **Is Variant Axis** on become selectors, and each member must carry one value of that attribute so the storefront can tell the siblings apart. Attributes without that flag never become selectors. Every attribute, flagged or not, also stays in the product's specifications list.
 
 ## What you see
 
@@ -45,8 +45,9 @@ Deleting the group does not delete the products; their **Variant Group** field i
 
 ## Things to know
 
-- Members of a group are still separate products in listings and search. If you want only one to appear in listings, deactivate the others; the selector on the active product only links to active, non-deleted siblings.
-- A product with no variant group and a variant-axis attribute value shows the value as a plain specification, not as a selector.
+- Members of a group are still separate products in listings and search. The selector only offers active, non-deleted siblings.
+- **The selector needs at least two live siblings.** Deactivate all but one member and the remaining product loses its selector entirely, because there is nothing left to switch to. It still sells normally.
+- A product with no variant group shows its variant-axis values as plain specifications. A group of one behaves the same way.
 - The **Variants** column on the product list shows the group name and sibling count, and filters exist there to find every product of a group.
 - Group names are per language but customers never see them; a Greek name is enough.
 

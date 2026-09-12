@@ -42,8 +42,9 @@ flowchart TD
 ### The consent categories
 
 `nuxt.config.ts` configures `cookieControl` with two necessary categories —
-`necessary` (which lists the real cookie ids `i18n_redirected`, `ncc_c`,
-`ncc_e`) and `functionality_storage` — and six optional ones that mirror
+one whose id is the single letter **`n`** (it lists the real cookie ids
+`i18n_redirected`, `ncc_c`, `ncc_e`) and `functionality_storage` — and six
+optional ones that mirror
 Google Consent Mode v2: `ad_storage`, `ad_user_data`,
 `ad_personalization`, `analytics_storage`, `personalization_storage`,
 `security_storage`.
@@ -116,16 +117,25 @@ entry carries `trigger: false` and `proxy: false`.
   only registry-registered domains — so the non-registry Meta and TikTok
   pixels chain-loaded resources that 403'd. A composable-level opt-out cannot
   fix this; `isProxyDisabled` reads exclusively from the config.
-- **`bundle: false`** everywhere. Bundling fetches the vendor script at image
-  build time, and for gtag the asset even embeds the building tenant's
-  container config — one tenant's analytics baked into the shared image.
+- **`bundle: false` on the Google Analytics entry**, and again at every
+  pixel composable call site (`useMetaPixel`, `useTikTokPixel` and the three
+  setups all pass it in `scriptOptions`). Bundling fetches the vendor script
+  at image build time, and for gtag the asset even embeds the building
+  tenant's container config — one tenant's analytics baked into the shared
+  image. Two scripts deliberately go without it: the `stripe` registry entry
+  sets only `trigger: false` and `proxy: false`, and the Google Sign-In
+  client registered by `setupSocialLogin` passes neither option. Both serve
+  the same asset to every tenant, so there is nothing tenant-specific to
+  bake in.
 
 ### Google Analytics
 
 GA is consent-**mode**, not consent-triggered: `setupGoogleAnalyticsConsent`
-registers `useScriptGoogleAnalytics` with every storage denied by default and
-`wait_for_update: 500`, then watches `cookiesEnabledIds` and calls
-`consent.update(...)` mapping each category to `granted` or `denied`.
+registers `useScriptGoogleAnalytics` with `wait_for_update: 500` and every
+storage denied by default **except `functionality_storage`, which starts
+`granted`** — it is a necessary category, so there is nothing to ask for. The
+composable then watches `cookiesEnabledIds` and calls `consent.update(...)`
+mapping each of the seven categories to `granted` or `denied`.
 
 The script is skipped entirely when the tenant has no measurement id, when it
 does not match `/^G-[A-Z0-9]{8,}$/`, or when it is the placeholder
@@ -163,8 +173,10 @@ Meta counts the conversion twice.
 
 **Browser-only** events live entirely in `useMetaPixel`: `ViewContent`,
 `AddToCart`, `Search`, `AddPaymentInfo`, `CompleteRegistration`, `Lead`.
-**Browser plus server** events need the same id on both:
-`InitiateCheckout`, `Purchase`, `Refund`.
+**Browser plus server** events need the same id on both: `InitiateCheckout`
+and `Purchase`. `Refund` is the one the comment in `useMetaPixel` groups with
+them but which has no browser leg — `meta_capi/services.py: build_refund_event`
+mints a fresh `uuid4().hex`, so there is nothing to deduplicate against.
 
 `app/composables/useCheckoutSubmit.ts: buildMetaPayload` mints them at
 checkout and returns **`null` when `ad_storage` is not granted**, so no dedup
@@ -172,6 +184,12 @@ ids are leaked server-side for a shopper who refused marketing cookies. The
 `Purchase` id is fresh on every submit, so a retry does not dedup against a
 previous failed attempt; the `InitiateCheckout` id is sticky for the
 checkout page's lifetime.
+
+One id looks orphaned and is not. `add_payment_info` is minted, forwarded,
+allowed through `_META_EVENT_ID_KEYS` and persisted on the order, yet no
+server leg ever dispatches `AddPaymentInfo` — the event is browser-only
+today. The stored id is the dedup key a future server leg would need, so do
+not prune it as dead data.
 
 `server/api/orders/index.post.ts` enriches that payload server-side and
 explicitly **does not trust the client** for `client_ip_address` or
@@ -200,6 +218,13 @@ The success page reads the ids back through the order serializer's
 | `order_refunded` | `Refund` (custom) |
 | `user_signed_up` | `CompleteRegistration` |
 
+`CompleteRegistration` carries a consent gate of its own, separate from the
+order-based one. `meta_capi/signals.py: _on_user_signed_up` reads the
+`ad_storage` cookie off the signup request and sends only on an explicit
+`granted`; a signup with no request at all, such as a programmatic one,
+returns early. It fails closed because there is no order to carry a consent
+snapshot.
+
 The offline-pay-way branch exists because for cash on delivery the
 confirmation page **is** the conversion: no webhook ever fires at purchase
 time (the ACS reconcile emits `order_paid` days later at cash remittance, and
@@ -219,9 +244,17 @@ order, nothing is sent.
 **The log table** is `meta_capi/models.py: MetaCapiEventLog`, one row per
 `(event_name, event_id)` attempt with a **unique** `event_id`. It carries the
 status (`pending`, `sent`, `failed`, `skipped`), Meta's `fbtrace_id` for
-support tickets, `events_received`, the error message, and the full event body
-in `payload` for replay debugging. It holds no personal data — the user-data
-fields are SHA-256 hashed before they leave the building.
+support tickets, `events_received`, the error message, and a **PII-stripped
+copy** of the event body in `payload` for replay debugging.
+
+That copy holds no plaintext personal data, and it takes two mechanisms to
+get there. The SDK SHA-256 hashes the user identifiers (`em`, `ph` and the
+rest) before anything is sent. The other four are not hashed at all:
+`client_ip_address`, `client_user_agent`, `fbp` and `fbc` go to Meta **in
+the clear**, because hashing them would break attribution. So
+`meta_capi/tasks.py: _serialize_event_payload` pops exactly those four from
+the persisted copy. The audit log is clean; the wire is not, and that is
+deliberate.
 
 `_dispatch` short-circuits when a row is already `SENT` (idempotency), then
 `update_or_create`s a `PENDING` row, sends, and writes the terminal state. A
@@ -303,7 +336,8 @@ The script refuses to run unless the tenant's primary domain carries the
 - **Ad pixels need both `isConsentGiven` and `ad_storage`.** Either alone is
   insufficient.
 - **Every tracker id is per tenant.** No platform or env fallback, anywhere.
-- **`bundle: false` and `proxy: false` on every vendor script.**
+- **`proxy: false` on every registry entry**, and `bundle: false` on the
+  Google Analytics entry and every pixel composable call site.
 - **Server-side event ids are never emitted without consent.**
   `buildMetaPayload` returns `null`, and the order then carries no `meta`.
 - **The server never trusts the client for IP or user agent.**

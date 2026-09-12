@@ -15,7 +15,9 @@ this page are not style: each one closes a failure that happened.
 ```
 tests/
   conftest.py        # settings overrides + fixtures for the main suite
-  unit/<app>/        # one directory per app, plus admin/, asgi/, config/, helpers/
+  unit/<app>/        # one directory per app (admin/, asgi/ and wsgi/ included),
+                     # plus app/, authentication/, config/ and helpers/ for
+                     # cross-cutting tests that belong to no single app
   integration/<app>/ # API-level tests through the DRF client
   utils/
 tests_mt/

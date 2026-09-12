@@ -210,6 +210,7 @@ What does exist:
 |---|---|
 | `POST /api/v1/order-items/{id}/refund` (`order/views/item.py: refund`) | Staff only. Requires the order in DELIVERED, COMPLETED or RETURNED. Restocks the units and raises `refunded_quantity`. Does not touch `Order.payment_status` |
 | Cancel a paid order with `refundPayment` true | Calls the provider's refund API through `OrderService.refund_order`, writes `payment_status`, appends to `metadata["refunds"]`, fires `order_refunded` |
+| The admin's `mark_as_canceled` bulk action | The same path. It calls `cancel_order(order)` with no `refund_payment` argument, and the parameter **defaults to `True`** — so bulk-cancelling a paid order does issue a provider refund. This is the closest thing to an admin refund button, and it is not labelled as one |
 | Stripe `charge.refunded` webhook | Full refund → REFUNDED and `order_refunded` fires; partial → PARTIALLY_REFUNDED and **no signal**, so no email |
 | Viva event 1797 | Verified against Viva, then REFUNDED and `order_refunded` fires. A partial reversal carrying gift-card value issues **no** gift-card credit and logs at ERROR, because the event does not say how much came back |
 
@@ -221,19 +222,29 @@ a business call an operator makes from the order page.
 
 `order/tasks.py: auto_cancel_stuck_pending_orders` runs every 15 minutes
 through the tenant fanout (`settings.py`, beat entry
-`auto-cancel-stuck-pending-orders`). Two buckets, both restricted to
-online settlement:
+`auto-cancel-stuck-pending-orders`). Two buckets, and only the second is
+restricted to online settlement:
 
 | Bucket | Selector | Window |
 |---|---|---|
-| Failed payment | `status=PENDING`, `payment_status=FAILED`, `updated_at` older than the cutoff | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`, default 30 |
+| Failed payment | `status=PENDING`, `payment_status=FAILED`, `updated_at` older than the cutoff. No settlement filter | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`, default 30 |
 | Never completed | `status=PENDING`, `payment_status=PENDING`, `created_at` older than the cutoff, `pay_way__settlement=online` | `ORDER_AUTO_CANCEL_PENDING_HOURS`, default 24 |
 
-Both settings are `extra_settings` rows, so a merchant can change them
-without a deploy. Cash on delivery is excluded by the positive
-settlement filter, which also excludes orders whose `pay_way` is null.
-Orders carrying `AMOUNT_MISMATCH_FLAG` are excluded from both buckets and
-logged — a charged customer must not be auto-cancelled without a refund.
+Note which timestamp each bucket reads: the failed bucket measures the
+grace window from `updated_at`, so it runs from the failure, while the
+never-completed bucket measures from `created_at`.
+
+Both windows are `EXTRA_SETTINGS_DEFAULTS` rows (`settings.py`), read
+through `Setting.get`, so a merchant can change them without a deploy.
+
+Collect-on-delivery orders are excluded from the **never-completed**
+bucket by its positive settlement filter, which also excludes orders
+whose `pay_way` is null; they legitimately sit PENDING until the carrier
+remits. The failed-payment bucket carries no such filter, but an offline
+order has nothing that can report a FAILED payment, so it does not select
+one in practice. Orders carrying `AMOUNT_MISMATCH_FLAG` are excluded from
+both buckets and logged — a charged customer must not be auto-cancelled
+without a refund.
 
 Each cancel re-fetches under `select_for_update(skip_locked=True)`, so
 two beat workers cannot both close the same order, and delegates to
@@ -307,7 +318,7 @@ online payment. Nothing happens at the moment the payment fails.
 | `grooveshop-django-api/order/models/order.py` | `Order.save()` timestamp rules, `mark_as_paid`, `can_be_canceled`, `awaits_online_payment`, `calculate_order_total_amount`, `AMOUNT_MISMATCH_FLAG` |
 | `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `refund_order`, `add_tracking_info` |
 | `grooveshop-django-api/order/signals/handlers.py` | `handle_order_post_save` fan-out and every domain receiver |
-| `grooveshop-django-api/order/signals/__init__.py` | The eight order signals |
+| `grooveshop-django-api/order/signals/__init__.py` | The ten order signals |
 | `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `check_pending_orders`, `push_order_event_to_gateway`, every email task |
 | `grooveshop-django-api/order/views/order.py` | `cancel`, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/order/views/item.py` | The order-item refund action |

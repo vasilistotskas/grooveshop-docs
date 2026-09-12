@@ -14,7 +14,7 @@ all data calls to the Django API.
 
 - Resolve the tenant from the request host and render the store's
   branding, locales and feature set from the resolve payload
-  (`server/middleware/0.tenant.ts`, `app/stores/tenant`).
+  (`server/middleware/0.tenant.ts`, `app/plugins/tenant.ts`, `app/stores/tenant.ts`).
 - Proxy `/api/...` to Django: validate input with the generated Zod
   schemas, forward with tenant headers, validate the response
   (`server/api/**`, `server/utils/auth.ts`, `shared/openapi/`).
@@ -23,7 +23,7 @@ all data calls to the Django API.
   (`server/api/_allauth/**`, `app/composables/useAllAuth*.ts`).
 - Cache anonymous renders per tenant and per device class in Redis, and
   expose the purge route Django calls (`nuxt.config.ts: routeRules`,
-  `server/api/admin/cache/purge`).
+  `server/api/admin/cache/purge.post.ts`).
 - Build image URLs for the media stream, emit the CSP, sitemap, RSS, PWA
   manifest and the `.well-known` metadata that points agents at the
   gateway and the OAuth server (`app/providers/media-stream.ts`,

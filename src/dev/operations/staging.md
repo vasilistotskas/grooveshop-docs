@@ -11,9 +11,10 @@ RabbitMQ, Redis and Meilisearch. It is defined by the `overlays/staging`
 kustomize overlay plus the `app-grooveshop-staging` Argo Application, which
 is **manual sync only**. After a refresh it mirrors production's tenant
 topology: the same stores, each on a `-staging` hostname, plus the platform
-control plane at `platform-staging.grooveshop.space` and the shared asset
+control plane at `platform-staging.grooveshop.space`, the shared asset
 origins `assets-staging.grooveshop.space` and
-`static-staging.grooveshop.space`.
+`static-staging.grooveshop.space`, and this documentation site at
+`docs-staging.grooveshop.space`.
 
 ## Access
 
@@ -36,8 +37,11 @@ separate Ingress objects **without** the basic-auth middleware:
 | `/mcp`, `/.well-known/ucp`, `/feeds`, `/acp`, `/chat` on the storefront host | Agent-gateway surfaces called by external agents; they have their own rate-limit middlewares. |
 | `/stripe/webhook`, `/viva-wallet/webhook/`, `/boxnow/webhook/` on the API host | Provider webhooks cannot send basic-auth (`overlays/staging/ingress-webhooks.yaml`). |
 
-Everything else, including the API host, the platform host and the
-static host, keeps the gate.
+Everything else keeps the gate: the API host, the platform host, the
+static host, and the documentation host. Production splits the docs host
+so only `/dev` needs credentials; staging does not bother, because the
+whole host is already behind the staging gate
+(`overlays/staging/ingress-docs.yaml`).
 
 ## Hostnames
 
@@ -63,8 +67,11 @@ other kubectl context, then:
    size before anything irreversible.
 2. Drops and recreates the staging database.
 3. `pg_restore`s into it.
-4. Rsyncs the production media PVC into staging's through a temporary
-   busybox pod that mounts both.
+4. Copies the production media across. Longhorn does not cross namespaces
+   without explicit CSI configuration, so this is a `tar` stream out of the
+   production backend pod to a local archive, then a one-shot busybox pod
+   in the staging namespace that mounts **only** the staging media PVC,
+   wipes it and extracts the archive.
 5. Rewrites every production hostname to its staging twin and re-provisions
    the platform control-plane host, without which the backend startup
    probe never passes.
@@ -72,10 +79,16 @@ other kubectl context, then:
    the search indexes from the restored rows.
 7. Runs `manage.py seed_demo_store --schema demo` to refresh the demo
    tenant.
-8. Runs `scripts/staging-arm-features.py` against the first store's clone:
-   every plan flag and `extra_settings` row on, Viva forced to demo mode,
-   Meta CAPI off, one promotion of each kind, a B2B price list, then a
-   purge of every tenant's caches.
+8. Pipes `scripts/staging-arm-features.py` into `manage.py shell` against
+   the first store's clone: every plan flag and `extra_settings` row on,
+   Viva forced to demo mode, Meta CAPI off, one promotion of each kind, a
+   B2B price list. The script supplies no third-party credentials, is
+   idempotent, and refuses to run against a non-staging primary domain.
+   Two things follow it, both part of the same step: `clear_cache --all`,
+   which walks every active tenant schema itself, and a rollout restart of
+   the frontend Deployment so the Nuxt pods drop any half-warm
+   tenant-resolve state from before the database was swapped underneath
+   them.
 
 Wall time is 15 to 30 minutes. It **wipes staging**: anything created
 there since the last refresh is gone. It is for making a dry-run realistic,
@@ -122,8 +135,12 @@ The admin's site dropdown links to it when `ADMIN_MAILPIT_URL` is set.
   [Caches & purging](/dev/operations/caches).
 - **Real carrier and payment traffic.** ACS is off, Viva is demo, Stripe
   is test.
-- **Production load.** Staging pins the backend HPA to one replica and the
-  frontend Deployment to `replicas: 1` through its overlay patches.
+- **Production load.** The overlay patches pin both HPAs to a single
+  replica rather than removing them: `backend-hpa-patch.yaml` and
+  `frontend-hpa-patch.yaml` each set `minReplicas` and `maxReplicas` to 1,
+  so the autoscaler still exists and can never scale. The backend,
+  frontend, celery-worker, media-stream, static and docs Deployments are
+  each patched to `replicas: 1` as well.
 
 ## Sync
 
@@ -156,6 +173,8 @@ PreSync hook runs the same steps as production. Watch it with
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/middleware-basic-auth.yaml` | BasicAuth middleware |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-staging.yaml` | Ingresses and exemptions |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-webhooks.yaml` | Webhook exemptions |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-docs.yaml`, `ingress-platform-assets.yaml` | Documentation host and the neutral platform asset origins |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/patches/backend-hpa-patch.yaml`, `frontend-hpa-patch.yaml` | HPAs pinned to one replica |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/mailpit.yaml`, `patches/backend-deployment-patch.yaml` | Mailpit |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/tenants/` | Per-tenant Ingress overlays |
 | `grooveshop-infrastructure/scripts/staging-refresh.sh` | Refresh script |

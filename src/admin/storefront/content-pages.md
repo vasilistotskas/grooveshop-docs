@@ -24,9 +24,10 @@ The form has **Content** (**Title** and **Body** per language through the Greek 
 
 ## Where a page shows on the storefront
 
-- Every published page is served at `/info/<slug>` in the visitor's language. An unpublished page answers 404 for visitors; store staff can still open it.
+- Every published page is served at `/info/<slug>` in the visitor's language. An unpublished page answers 404 on the storefront, and it does so **for everyone**, including you while signed in to the admin. Preview by publishing, or read the page here.
 - The footer's automatic **Pages** column lists every published page.
-- Four slugs replace the platform's built-in legal text on its own routes instead of getting an `/info/` link: `terms` on `/terms-of-use`, `privacy` on `/privacy-policy`, `cookies` on `/cookies-policy`, `return-policy` on `/return-policy`. The built-in text is used while the page is unpublished or its body is empty. The page's own last-modified date is shown as the document date.
+- **Three slugs take over a built-in legal page** instead of only getting an `/info/` link: `terms` on `/terms-of-use`, `privacy` on `/privacy-policy`, `cookies` on `/cookies-policy`. On those three the platform's own boilerplate is shown while your page is unpublished or its body is empty, and your text replaces it the moment you publish. The date at the top then becomes your page's own last-modified date. Because the footer already links those three routes, your `/info/` copy is dropped from the **Pages** column so the same document is not listed twice.
+- **`return-policy` is not one of them.** There is a `/return-policy` address, but it shows a heading and nothing else whatever you publish, it is kept out of search engines, and nothing links to it. Your returns policy reaches shoppers at `/info/return-policy`, which the footer's **Pages** column links like any other page. Link to `/info/return-policy`, never to `/return-policy`.
 
 ## Seeded pages
 
@@ -58,14 +59,14 @@ Deleting one of them and re-provisioning would recreate it; simply leave a page 
 2. Publish when ready. Link to it from a menu with `"to": "/info/<slug>"` (see [Navigation](/admin/storefront/navigation)); the footer **Pages** column links it automatically.
 
 ### Take a page down
-Untick **Is Published**. Visitors get a 404 at `/info/<slug>`; the legal routes fall back to the built-in text.
+Untick **Is Published**. Visitors get a 404 at `/info/<slug>`, and `/terms-of-use`, `/privacy-policy` and `/cookies-policy` go back to the platform's boilerplate. Purge **Pages & navigation** or the old text lingers in the cache.
 
 ## Things to know
 
-- **There is no feature flag for content pages.** Publishing is the only gate. Nothing in the tenant plan or the store settings switches them off.
-- **Published At** is set automatically the first time you publish and is not scheduled: a page is live as soon as **Is Published** is on.
-- **Cache**: page lists are cached for 10 minutes on the storefront and served stale for up to a day while refreshing. Saving does not purge; use the Cache tool.
-- The Greek text is the default. A visitor on another language sees that language's text if it exists, otherwise English, otherwise Greek.
+- **There is no switch for content pages.** Publishing is the only gate. Nothing in your plan or your store settings turns them off.
+- **Published At** is filled in automatically the first time you publish. It is not a schedule: a page goes live the moment **Is Published** is on, whatever date sits in that field.
+- **Cache**: the page list is kept 10 minutes on the storefront and served stale for up to a day while it refreshes; a single page is kept 10 minutes and served stale for up to two hours. Saving purges neither. Use the Cache tool.
+- **There is no language fallback on the storefront.** A visitor sees the text written in their own language and nothing else: where it is missing the page renders with an empty title and an empty body, and the footer shows the raw slug in place of a title. Fill in every language your store serves, not just Greek. This screen is more forgiving and will show you any language it has, so a page that looks complete here can still be blank to a shopper.
 - The slug is unique and becomes part of the public URL; changing it breaks existing links.
 
 ## Related

@@ -14,7 +14,7 @@ Every order shipped with ACS has one ACS shipment record. The record is created 
 ```mermaid
 flowchart LR
   A[Order placed] --> B[Pending creation]
-  B -->|voucher task| C[New]
+  B -->|voucher issued| C[New]
   C -->|print label| D[Label printed]
   D -->|pickup list 16:30| E[On pickup list]
   E -->|poll| F[In transit / At destination / Out for delivery]
@@ -27,11 +27,11 @@ flowchart LR
 What the platform does automatically:
 
 1. **At checkout** the shipment row is created in state **Pending creation** with the delivery kind, the chosen Smartpoint (if any), the parcel weight from the cart, one parcel, and the charge type.
-2. **Voucher creation** runs as a background task: immediately for cash-on-delivery and other offline orders, after the payment succeeds for online orders. On success the row gets its **Voucher number**, moves to **New**, the order's tracking number is set and the order moves from Pending to Processing.
+2. **The voucher** is requested in the background: straight away for cash on delivery, bank transfer and orders paid entirely with a gift card, and only after the payment succeeds for card orders. On success the row gets its **Voucher number**, moves to **New**, the order's tracking number is set and the order moves from Pending to Processing.
 3. **Printing** the label records **Label printed at** on the row.
 4. **The pickup list** (manifest) is issued Monday to Friday at 16:30 Athens time, or on demand with the button on this page. ACS does not collect parcels that are not on a pickup list.
 5. **Tracking** is polled every fifteen minutes for every non-final shipment. The shipment state follows ACS, and the order status follows the shipment state.
-6. **Cash on delivery** is settled days later: a nightly task pulls ACS's payout report and marks the matching orders paid.
+6. **Cash on delivery** is settled days later: a nightly job pulls ACS's payout report and marks the matching orders paid.
 
 ## What you see
 
@@ -44,7 +44,7 @@ Columns of the list:
 | **State** | See the state table below. |
 | **Delivery kind** | Home delivery or Pickup point / locker. |
 | **Pickup list** | The manifest the voucher was issued on. Empty until the daily list runs. |
-| **Label printed at** | When the label was last downloaded through the platform. Empty means ACS will reject the pickup list. |
+| **Label printed at** | When the label was **first** downloaded through the platform. Later downloads do not change it. Empty means ACS will reject the pickup list. |
 | **Last polled at** | When tracking was last refreshed. |
 
 Filters: **Shipment state**, **Delivery kind**, **Label printed at** (empty or not), **Created at** range. The search box matches the voucher number, the order number and the customer email.
@@ -76,7 +76,7 @@ Buttons on this page:
 | Each row | **Re-poll ACS tracking** | Queues one tracking refresh for that shipment. |
 | Each row | **Issue ACS voucher now** | Queues voucher creation. On a Canceled shipment it first clears the old voucher so a fresh one can be issued. |
 | Bulk action | **Re-poll tracking for selected shipments** | Queues one refresh per selected row. |
-| Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Local bookkeeping only. Marks the rows Canceled so the poller and the stale alert stop. Does not call ACS and does not change the order. |
+| Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Local bookkeeping only. Marks the rows Canceled so tracking checks and the stale alert stop. Does not call ACS and does not change the order. Rows already in a final state are skipped. |
 
 ## Tasks
 
@@ -85,10 +85,14 @@ Buttons on this page:
 Nothing to do in the normal case: the voucher is minted automatically. If an order shows **Pending creation** for more than a minute:
 
 1. Open the order in <span class="sidebar-path">Sales → Orders</span> and check the email you received about the failed voucher, or the **Metadata** section of the shipment, where the last ACS error and the request that failed are stored.
-2. Fix the cause on the order. Typical rejections: a postcode with letters or spaces (ACS accepts digits only), a phone number that is not a 10-digit Greek number, an unknown Smartpoint.
+2. Fix the cause on the order. The postcode is not usually the problem: the platform strips spaces and anything that is not a digit before sending, and keeps the first five digits. What ACS does reject is a phone number that is not a plain 10-digit Greek number, an address it cannot place, and a Smartpoint it does not recognise.
 3. Back on <span class="sidebar-path">Shipping → ACS Shipments</span>, click **Issue ACS voucher now** on the row.
 
+A missing ACS credential is a different failure. Nothing is retried, because credentials do not appear on their own; the store's admins are emailed at once and the order waits. Tell the platform team.
+
 ### Print the voucher
+
+The voucher is printed from the **order**, not from the shipment. There is no download button on <span class="sidebar-path">Shipping → ACS Shipments</span>.
 
 1. In <span class="sidebar-path">Sales → Orders</span>, click **Download shipping voucher (PDF)** on the order row or at the top of the order page.
 2. Print the PDF on the thermal roll printer. The layout is the thermal one (one voucher per page) unless the ACS provider's metadata sets `print_type` to `2` for laser, four per A4. See [Shipping providers](/admin/shipping/providers).
@@ -108,11 +112,11 @@ To issue earlier, or again after fixing a rejection:
 
 Why it matters:
 
-- ACS collects only vouchers that are on an issued pickup list.
+- ACS collects only vouchers that are on an issued pickup list. Handing a parcel to the driver without one does not get it collected.
 - A voucher on a list can no longer be cancelled through the platform and can no longer be reprinted through ACS.
-- ACS scopes the list to today's pickup date. A voucher created on an earlier day that missed its list is not picked up by a later list.
+- **A missed list is not caught up later.** ACS builds each list for one pickup date only. A voucher that missed the list for its own day stays unlisted: tomorrow's list covers tomorrow's vouchers, not yesterday's. The **Pickup list** column stays empty on those rows, which is how you find them. Ask ACS to collect them against their voucher numbers.
 
-Issued lists are visible to superusers at <span class="sidebar-path">System → Reconciliation → ACS Pickup Lists</span> with the **Pickup list number**, **Issued at**, **Voucher count** and **Issued by** (empty when the scheduled task issued it). The rows are read-only. See [Reconciliation](/admin/system/reconciliation).
+Issued lists are visible to superusers at <span class="sidebar-path">System → Reconciliation → ACS Pickup Lists</span> with the **Pickup list number**, **Issued at**, **Voucher count** and **Issued by** (empty when the 16:30 run issued it). Search matches the pickup list number. The rows are read-only, and there is no button here to reprint the manifest as a PDF: print it from the ACS portal if the driver asks for it. See [Reconciliation](/admin/system/reconciliation).
 
 ### Cancel a voucher
 
@@ -122,7 +126,7 @@ Issued lists are visible to superusers at <span class="sidebar-path">System → 
 
 ### Deal with a shipment that stopped moving
 
-A daily task at 09:00 emails the store's admins about shipments with no tracking movement for three days, and about rows stuck in Pending creation for more than a day. Each shipment is reported once; a new tracking event re-arms the alert.
+A daily check at 09:00 emails the store's own admins about shipments with no tracking movement for three days, and about rows stuck in Pending creation for more than a day. Each shipment is reported once; a new tracking event re-arms the alert. The alert does not stop the polling: only marking the row final does that.
 
 1. Search the voucher on the ACS portal or call ACS.
 2. If the parcel was never handed over and never will be, select the row and run **Retire selected shipments**. The order is not changed; cancel it separately if needed.
@@ -130,7 +134,7 @@ A daily task at 09:00 emails the store's admins about shipments with no tracking
 
 ### Cash on delivery
 
-The store's ACS contract is cash-on-delivery only. Every voucher is created with **Charge type** Cash on delivery. The **COD amount** is the order's paid amount for orders whose payment method is courier cash, and 0,00 for orders paid online or by bank transfer, so the courier collects nothing on those. The payment way is only sent when an amount is due.
+The store's ACS contract is cash on delivery only. ACS refuses a prepaid voucher outright, so **Charge type** is not really a choice: every voucher goes out as Cash on delivery. The **COD amount** is the order's paid amount for orders whose payment method is courier cash, and 0,00 for orders paid online or by bank transfer, so the courier collects nothing on those. The payment way is sent only when there is an amount to collect, so the driver is never told to collect zero.
 
 How a COD order gets paid:
 
@@ -139,7 +143,7 @@ How a COD order gets paid:
 3. Every night at 02:30 the platform pulls yesterday's payouts from ACS and stores one row per voucher and payout date in <span class="sidebar-path">System → Reconciliation → ACS COD Payouts</span>.
 4. Each payout matched to a shipment flips the order's payment status to Completed and the order to Completed. Customers are not emailed for this step; they were already notified at delivery.
 
-The payouts screen (superusers) shows **Voucher number**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment** and **Customer reference 1** (the order number sent to ACS). Filters: **COD payment date** and **Parcel delivery date** ranges. Search matches the voucher, both customer references and the receiver name. Rows are read-only. The row button **Run COD reconciliation now** re-runs the nightly pull for yesterday's date.
+The payouts screen (superusers) shows **Voucher number**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment** and **Customer reference 1** (the order number sent to ACS). Filters: **COD payment date** and **Parcel delivery date** ranges. Search matches the voucher, both customer references and the receiver name. Rows are read-only. The row button **Run COD reconciliation now** re-runs the nightly pull for yesterday's date; it is safe to press twice, as a payout already recorded is simply updated in place.
 
 Alerts you may receive:
 
@@ -152,7 +156,7 @@ See [Reconciliation](/admin/system/reconciliation) for the finance view.
 
 ### Smartpoint stations
 
-<span class="sidebar-path">Shipping → ACS Stations</span> is a local copy of ACS shops and Smartpoint lockers, refreshed daily at 03:00. Columns: **External ID** (the area station code), **Name**, **Shop kind**, **City**, **Postal code**, **Country code**, **Is active**. Filters: **Shop kind**, **Country code**, **Is active**. Search matches ID, name, city and postcode. **Last synced at** is read-only. There is no manual sync button; the daily task does it.
+<span class="sidebar-path">Shipping → ACS Stations</span> is a local copy of ACS shops and Smartpoint lockers, refreshed daily at 03:00. Columns: **External ID** (the area station code), **Name**, **Shop kind**, **City**, **Postal code**, **Country code**, **Is active**. Filters: **Shop kind**, **Country code**, **Is active**. Search matches ID, name, city and postcode. **Last synced at** is read-only. There is no sync button on this screen; the nightly refresh is the only way the list changes.
 
 Notes:
 
@@ -164,7 +168,7 @@ Notes:
 
 ### Tracking events
 
-<span class="sidebar-path">System → Audit & Logs → ACS Tracking Events</span> (superusers) lists every checkpoint the poller has recorded: **Shipment**, **Event time**, **Checkpoint action**, **Checkpoint location**, **Received at**. Filters: **Checkpoint action**, **Received at** range. The rows are read-only and are the same events shown in the tab on the shipment page. See [Audit & logs](/admin/system/audit-and-logs).
+<span class="sidebar-path">System → Audit & Logs → ACS Tracking Events</span> (superusers) lists every checkpoint the tracking checks have recorded: **Shipment**, **Event time**, **Checkpoint action**, **Checkpoint location**, **Received at**. Filters: **Checkpoint action**, **Received at** range. The rows are read-only and are the same events shown in the tab on the shipment page. See [Audit & logs](/admin/system/audit-and-logs).
 
 ## Things to know
 

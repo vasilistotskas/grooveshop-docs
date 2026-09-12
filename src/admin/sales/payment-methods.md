@@ -34,7 +34,7 @@ Bulk actions: **Activate selected payment methods**, **Deactivate selected payme
 - **Content**: **Description** and **Payment Instructions**, a rich-text field. The instructions are rendered in the order-received email, which is where bank-transfer details or "have the exact amount ready for the courier" belong.
 - **Payment Configuration**: **Provider Code** and **Settlement**.
 - **Pricing**: **Cost**, **Free Threshold**, and the computed effective cost.
-- **Advanced Configuration**: the provider's non-secret configuration (read-only for staff, editable by superusers), a preview of its keys and the **Ready Status** (Ready to use / Requires setup). Keys that look like secrets (api_key, secret, token, password) are rejected on save.
+- **Advanced Configuration**: the provider's non-secret configuration (read-only for staff, editable by superusers), a preview of its keys and the **Ready Status** (Ready to use / Requires setup). Anything whose name reads like a secret (api key, secret, password, token, private key, client secret, webhook secret) is refused on save and named in the error, because this box is not encrypted.
 - **Payment-method exclusions**: rows that block this method for a given shipping provider and shipping kind, with a private note. An empty table means the method is offered with every carrier that supports its settlement.
 
 ## Settlement types
@@ -43,7 +43,7 @@ Bulk actions: **Activate selected payment methods**, **Deactivate selected payme
 |---|---|---|
 | **Paid online at checkout** | A payment provider charges the shopper before the order is confirmed (Viva Wallet, Stripe). | The order waits in Pending until the provider confirms; then it moves to Processing and the courier voucher is created. Unpaid orders are auto-canceled after the grace period. Needs credentials. |
 | **Cash or card to the courier on delivery** | Classic cash on delivery (αντικαταβολή) with ACS. | Voucher is created immediately with the amount to collect. Payment status stays Pending until ACS pays out, days later, then flips to Completed automatically. |
-| **Paid to the carrier before pickup** | BoxNow collects payment online after dispatch and activates the locker PIN when it clears. | Voucher is created immediately with the amount. Payment status stays Pending until the carrier settles. |
+| **Paid to the carrier before pickup** | BoxNow collects payment online after dispatch: it sends a payment link when it picks the parcel up, and the locker PIN activates once the shopper pays. | Voucher is created immediately with the amount. Payment status stays Pending until BoxNow reports the parcel delivered, which it can only be after payment; it then flips to Completed. |
 | **Settled off-platform (e.g. bank transfer)** | The shopper pays outside the platform. | Order and voucher are created immediately; nothing marks it paid. You confirm the payment on the order page. |
 
 Only the online settlement needs provider configuration; the other three collect money without the platform calling anyone.
@@ -52,7 +52,7 @@ Only the online settlement needs provider configuration; the other three collect
 
 ### Offer or hide a method
 1. Tick the method in the list and run **Activate selected payment methods** or **Deactivate selected payment methods**, or open it and toggle **Active**.
-2. The change is visible at checkout within the cache lifetime; purge the cache under [Cache](/admin/system/cache) to see it immediately.
+2. **The two routes differ.** Opening the method and saving clears the checkout's cached copy for you, so the change shows at once. The bulk activate and deactivate actions write straight to the rows and skip that, so afterwards purge the **Payment methods** entry under [Cache](/admin/system/cache), and the **Shipping** entry with it, since the delivery step shows which methods each option allows.
 
 ### Charge a fee for cash on delivery
 1. Open **Pay On Delivery** and set **Cost** to the fee.
@@ -75,7 +75,7 @@ Only the online settlement needs provider configuration; the other three collect
 - **The name is a key, not free text.** Pick the key that matches the product; the Greek and English labels come with it. The storefront uses the same key to translate the label.
 - **Fees are VAT-inclusive amounts** in the store currency and appear on the invoice as a separate line.
 - **Search by key.** The search box queries the stored key, so searching "Αντικαταβολή" finds nothing; search `PAY_ON_DELIVERY`.
-- Two legacy checkboxes ("Is online payment", "Requires confirmation") are derived from **Settlement** on save and cannot be edited.
+- **Settlement is the only switch that decides how money is collected.** Two older flags meaning "is online payment" and "requires confirmation" are still kept in step behind the scenes, but they are not on the form and there is nothing to set.
 
 ## Related
 

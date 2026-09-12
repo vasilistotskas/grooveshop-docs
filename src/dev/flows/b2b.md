@@ -77,10 +77,14 @@ decision, never a self-service edit.
 
 The VIES call (`b2b/vies.py: ViesClient`) runs **before** the row lock so a
 five-second upstream timeout never holds a transaction open, and it is
-skipped entirely when identity is unchanged and the last verdict is fresh
-(`VIES_RECHECK_AFTER`) — every check is an outbound request, so unconditional
-refreshing would turn the endpoint into a request amplifier. An outage
-degrades to `ViesStatus.UNAVAILABLE`; a human decides either way.
+skipped entirely when identity is unchanged, the last verdict is fresh
+(`VIES_RECHECK_AFTER`), a check has actually happened before, and that
+verdict was neither `UNCHECKED` nor `UNAVAILABLE`. Every check is an
+outbound request, so unconditional refreshing would turn the endpoint into a
+request amplifier; equally, a verdict that never resolved is worth retrying
+however recent it is. An outage degrades to `ViesStatus.UNAVAILABLE`, which
+is why such a profile re-checks on every resubmit; a human decides either
+way.
 
 Because the HTTP call sits between the unlocked read and the locked row,
 every decision that depends on the previous status is **re-derived from the
@@ -130,14 +134,25 @@ and updated counts plus a per-line error list.
 
 ### Resolving a price
 
-`B2BPricingService.resolve(product, group, override_net=None)`:
+`B2BPricingService.resolve(product, group, *, override_net=None)`:
 
 1. Net is the override when there is a usable one, otherwise
    `product.price * (100 - group.discount_percent) / 100`.
 2. The final price is net times the product's own VAT factor.
 3. The retail `discount_percent` is **never stacked on top**.
-4. The result is floored at the retail final price — a wholesale tier may
-   never undercut a running retail sale.
+4. The result is **capped** at the retail final price. `resolve` compares
+   the computed wholesale final against `product.final_price` and, when the
+   wholesale figure is the greater, replaces it with retail and back-solves
+   the net. So a wholesale buyer can never pay **more** than a retail
+   shopper — which is exactly what a deep retail sale would otherwise
+   cause, since step 3 keeps the retail markdown out of the wholesale
+   calculation. Going below retail is the normal case and is never
+   clamped.
+
+   Read the docstring on `resolve` with care: it describes this as
+   "floored … so a retail sale can't be undercut", which is the opposite of
+   what the code does. `_usable_override` states it correctly — `resolve`
+   "clamps a final price from ABOVE (at retail) and from nowhere else".
 
 All rounding is two decimal places, `ROUND_HALF_UP`, through
 `product/models/product.py: _quantize_cents`, the same convention every other
@@ -160,15 +175,26 @@ product added after the bind — the very add-to-cart request whose
 `price_at_add` snapshot it feeds, or an item slipping into the order-create
 lock window — can never be priced at retail on a bound cart.
 
-There are exactly two `bind_cart` call sites, and three transplant sites that
-carry an existing context onto a re-materialised instance:
+There are exactly three `bind_cart` call sites, and two transplant helpers
+that carry an existing context onto a re-materialised instance:
 
 | Where | What it does |
 |---|---|
 | `cart/services.py: CartService._bind_pricing` | Both materialisation methods route through here, so every instance a cart view receives is bound: retrieve, update, destroy, coupon apply and remove, payment-intent creation |
 | `order/services.py` (both order-create paths) | `bind_cart(cart, user)` at the top of the transaction, before any pricing maths |
-| `cart/views/cart.py: _carry_b2b_pricing` | The `for_detail()` reloads exist for prefetching; a fresh instance would price at retail, so the context is transplanted when the primary keys match — and the prefetched items are re-pointed at the bound cart, because `CartItem.objects.for_list()`'s `select_related("cart")` hands every line its own unbound cart |
-| `cart/views/item.py: _repoint_to_bound_cart` | Same problem on the item endpoints, for `get_object` and `list`; only items of the request's own cart are re-pointed, so staff listings of other carts stay untouched |
+| `cart/views/cart.py: _carry_b2b_pricing` (three call sites) | The `for_detail()` reloads exist for prefetching; a fresh instance would price at retail, so the context is transplanted when the primary keys match — and the prefetched items are re-pointed at the bound cart, because `CartItem.objects.for_list()`'s `select_related("cart")` hands every line its own unbound cart |
+| `cart/views/item.py: _repoint_to_bound_cart` (two call sites) | Same problem on the item endpoints, for `get_object` and `list`; only items of the request's own cart are re-pointed, so staff listings of other carts stay untouched |
+
+**One path materialises a cart and does not bind.**
+`OrderService.reorder_to_cart`, behind `POST /api/v1/order/{id}/reorder`,
+does `Cart.objects.get_or_create(user=user)` and then
+`CartItem.objects.create(...)` with no bind and no transplant. Because
+`CartItem.save()` snapshots `price_at_add` from `final_price`, and
+`final_price` reads `cart._b2b_pricing` through a `getattr`, an approved
+wholesale buyer's reordered lines are snapshotted at **retail** — and
+`_log_price_drift_if_needed` then warns on every one of them at checkout.
+Treat this as a known gap in the invariant below, not as a counter-example
+to it.
 
 `CartItem.price` and `CartItem.final_price` read
 `getattr(self.cart, "_b2b_pricing", None)` and fall back to retail. The
@@ -179,7 +205,7 @@ binding is invisible until someone compares a preview to a charge.
 
 | Concern | Behaviour | Switch |
 |---|---|---|
-| Promotions | Dropped for a bound cart; attached codes surface as `combination_disallowed` (non-blocking) | `B2B_ALLOW_PROMOTIONS` |
+| Promotions | Dropped for a bound cart; attached codes surface as `COMBINATION_DISALLOWED`, wire value `discount_code_combination_disallowed` (non-blocking) | `B2B_ALLOW_PROMOTIONS` |
 | Loyalty | Earning **and** redeeming dropped | `B2B_LOYALTY_ENABLED` |
 | Minimum order value | Order create and payment-intent creation both refuse below the group's minimum | `CustomerGroup.min_order_value` |
 
@@ -194,8 +220,10 @@ points basis is the retail price. `suppresses_loyalty(cart)` is true only for
 a cart actually bound to wholesale pricing while the merchant keeps wholesale
 out of the program, and it is applied at payment-intent creation
 (`cart/views/cart.py`) and at the top of both order-create paths
-(`order/services.py`), before any pricing maths, so the verified intent
-amount, the order total and the redemption all agree.
+(`order/services.py`). On the order-create paths it runs before any pricing
+maths; at payment-intent creation it runs after promotions, shipping and the
+pay-way fee, but still before the loyalty maths. Either way the verified
+intent amount, the order total and the redemption agree.
 
 The minimum-order gate is `min_order_value_unmet(cart)`, one authority for
 three consumers: the cart payload's `belowMinimum` flag,
@@ -225,8 +253,13 @@ survive later profile edits, and the tax register attaches to the order row.
    onto the order. A **partial** explicit address is rejected, because the
    invoice would otherwise mix the billing street with the shipping city.
 
-`billing_country` pairs with the VAT id to decide which AADE invoice type
-applies (1.1 domestic, 1.2 intra-EU, 1.3 third-country).
+`billing_country` is stored against the VAT id so the AADE invoice type can
+be chosen from it. Only two types are implemented today:
+`order/mydata/builder.py: _pick_invoice_type` returns 11.1 for B2C retail or
+1.1 for domestic B2B, and nothing else. Intra-EU (1.2) and third-country
+(1.3) are deferred, so a non-domestic B2B order currently falls back to
+11.1. The `billing_country` help text on the model claims otherwise and is
+wrong.
 
 ### Storefront
 
@@ -262,16 +295,18 @@ points-earned promise and the redemption widget.
 
 ## Invariants
 
-- **The binding rides every cart materialisation.** Nothing is stored on the
-  cart row; a fresh instance prices at retail. Any new path that produces a
-  `Cart` object must bind or transplant.
+- **The binding must ride every cart materialisation.** Nothing is stored on
+  the cart row; a fresh instance prices at retail. Any new path that produces
+  a `Cart` object must bind or transplant. Every priced path does today
+  except `OrderService.reorder_to_cart`, described above.
 - **Re-pointing matters as much as binding.** A prefetch or a
   `select_related("cart")` hands lines an unbound cart instance, and the
   serializer then prices lines at retail while the cart totals say wholesale.
 - **A price-list override is net and positive and in the default currency**,
   or it is ignored at read time with an error log.
 - **Retail markdown never stacks on a wholesale price**, and the wholesale
-  final price never goes below retail final.
+  final price never rises above retail final. The clamp is an upper bound
+  only.
 - **The plan gate is checked in the service, not only at the endpoint.** Cart
   resolution and order create run for everyone, including guests with no
   permission classes.
@@ -297,7 +332,7 @@ points-earned promise and the redemption widget.
   order-create paths bind before any pricing maths for exactly this reason.
 - **A coupon is accepted and then ignored.** The cart is bound and
   `B2B_ALLOW_PROMOTIONS` is off. `evaluate` reports every attached code as
-  `combination_disallowed`, which is non-blocking, so order create proceeds
+  `COMBINATION_DISALLOWED`, which is non-blocking, so order create proceeds
   without a discount — matching what the preview showed. The storefront hides
   the input when `allowPromotions` is false; a direct API caller will not see
   that.

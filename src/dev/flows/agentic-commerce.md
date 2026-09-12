@@ -13,7 +13,7 @@ secrets.
 
 | Path | Surface |
 |---|---|
-| `POST /mcp` | MCP server, stateless streamable HTTP |
+| `/mcp` | MCP server, stateless streamable HTTP. Registered without a method, unlike every other route, because streamable HTTP uses POST, GET and DELETE on the one path |
 | `GET /.well-known/ucp` | UCP business profile |
 | `/acp/*` | ACP agentic-checkout REST |
 | `/feeds/*` | `google.xml`, `meta.xml`, `tiktok.xml`, `acp.json` |
@@ -72,8 +72,10 @@ feature. Routes that need one (`/chat`, `/acp`) use
 handler runs.
 
 Every tenant-scoped Django call then sends `X-Forwarded-Host: <tenant
-domain>`, `X-Forwarded-Proto: https` and `X-Language`. GETs retry twice on 5xx
-or network errors; mutations never retry at transport level.
+domain>` and `X-Forwarded-Proto: https`, plus `X-Language` when the request
+carries a language (`internal/django/client.go` omits the header on an empty
+value rather than sending a blank one). GETs retry twice on 5xx or network
+errors; mutations never retry at transport level.
 
 ### The gates
 
@@ -139,7 +141,8 @@ negotiating platform never calls them.
 
 `get_order` sources the required `checkout_id` from the gateway's own order
 index (`ag:{schema}:order:{uuid}`, retained a year, because the link must
-outlive the 24-hour session). An order placed on the web has no checkout to
+outlive the session itself — `internal/checkout/store.go` holds an active
+session for 30 minutes and a terminal one for 24 hours). An order placed on the web has no checkout to
 name and is refused with that explanation, never a fabricated id.
 `order.fulfillment` stays `{}`: an expectation needs a destination the order
 detail deliberately does not decode, and an event needs a shipment timestamp
@@ -249,8 +252,8 @@ a configurable TTL and turn cap.
 
 `internal/chat/bridge.go` connects an in-process MCP client to the **same**
 tool server over in-memory transports, so the chatbot's tool definitions are
-derived from the server's own schemas and the two can never drift. Three
-groups are withheld:
+derived from the server's own schemas and the two can never drift. Two
+groups are withheld, and a third is kept but marked:
 
 - **`checkoutTools`** — the five canonical UCP tools. Their arguments are
   shaped for a platform generating calls from an OpenRPC document, not for a
@@ -326,9 +329,12 @@ beats Traefik 502s.
 
 ### Routing and release
 
-Each tenant's ingress path-routes five prefixes to `agent-gateway-service`:
-`/mcp`, `/.well-known/ucp`, `/feeds`, `/acp` and `/chat`
-(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml`).
+Each tenant path-routes five prefixes to `agent-gateway-service`, split
+across **two** Ingress objects in
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml`:
+`TENANT_SLUG-ingress-agent` carries `/mcp`, `/.well-known/ucp`, `/feeds` and
+`/acp`, while `/chat` gets its own `TENANT_SLUG-ingress-agent-chat` so it can
+take the `rate-limit-chat` Traefik middleware the other four must not.
 The payment-handler documents are served host-scoped on
 `payments.grooveshop.space`, which the mux binds explicitly and which takes no
 tenant middleware — it is a platform artifact, not a tenant.

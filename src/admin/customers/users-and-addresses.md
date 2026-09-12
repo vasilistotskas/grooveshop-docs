@@ -20,7 +20,7 @@ Columns of the user list:
 | **Location** | City and country. |
 | **Active** | Can the account sign in. |
 | **Staff**, **Superuser** | Privilege flags. Customers have both off. |
-| **Social** | Which social links are filled in. |
+| **Social** | Which of Website, LinkedIn, GitHub and Twitter are filled in. The full set of links is on the account page. |
 | **Engagement** | Active and total newsletter subscriptions, number of saved addresses. |
 | **Last Activity** | Last change to the account, absolute and relative. |
 | **Created at** | Registration date. A date drill-down sits above the list. |
@@ -41,7 +41,7 @@ The account page has these sections:
 
 Two tabs on the same page list the customer's saved addresses (Title, First Name, Last Name, City, Country, Is Main, Phone) and newsletter subscriptions (Topic, Status, Subscribed At, Unsubscribed At), each with a link to the full record.
 
-Buttons: the account page has **Adjust loyalty points for this user** (superusers only). The list has bulk actions to export the selected rows as CSV or XML, capped at ten thousand rows.
+Buttons: the account page has **Adjust loyalty points for this user**. It is shown to anyone who can edit the account, but only a superuser's click does anything; for everyone else it answers that only superusers may adjust points. The list has bulk actions to export the selected rows as CSV or XML. Select more than ten thousand rows and the export is refused rather than truncated, so narrow the filter first. The password is never written into an export file.
 
 ## Addresses
 
@@ -58,7 +58,9 @@ Buttons: the account page has **Adjust loyalty points for this user** (superuser
 
 Filters: **Is Main**, **Floor**, **Location Type**, **Country**, **Region**, **Created at** range. Search matches the owner's email and username, the title, recipient name, street and city.
 
-The form groups **Address Owner** (user, title), **Contact Person**, **Address Details** (street, number, city, zip code, country, region), **Additional Information** (floor, location type, notes, is main) and **Contact Information** (phone). Ticking **Is Main** on one address automatically clears it on the customer's other addresses.
+The form groups **Address Owner** (user, title), **Contact Person**, **Address Details** (street, number, city, zip code, country, region), **Additional Information** (floor, location type, notes, is main), **Contact Information** (phone) and a collapsed **System Information**.
+
+A customer can have only one main address, and the form enforces it rather than sorting it out for you: tick **Is Main** on a second address and saving fails with "There can only be one main address per user." Untick it on the current main address first, save, then set the new one.
 
 ## Tasks
 
@@ -87,10 +89,10 @@ Use this for abuse or on the customer's request. It is not the deletion route: c
 ## Things to know
 
 - **Do not set passwords for customers.** The change-password link exists on the form, but a password typed by staff is a password staff know. Ask the customer to use the storefront's forgotten-password flow instead.
-- **Do not tick Staff or Superuser on a customer.** Staff is the API's admin flag, so it grants far more than a sidebar. Team access goes through [Roles & team](/admin/getting-started/roles-and-team). The fields are read-only for non-superusers for exactly this reason.
-- **Email verification** is not resent from this screen. Verified addresses live under <span class="sidebar-path">System → Security & Access → Email Addresses</span>, which superusers can inspect; see [Security & access](/admin/settings/security-and-access). An unverified customer can request a new verification email from the storefront's sign-in page.
+- **Do not tick Staff or Superuser on a customer.** Staff is not a cosmetic label: it grants administrative access to the store's whole data set, not just a menu. **Groups** and **User permissions** are the same thing by another route. Team access goes through [Roles & team](/admin/getting-started/roles-and-team). All four fields are read-only unless you are a superuser, for exactly this reason.
+- **There is no resend-verification button here.** Nothing on the account page or in the bulk actions sends a new verification email. Verified addresses are visible to superusers under <span class="sidebar-path">System → Security & Access → Email Addresses</span>; see [Security & access](/admin/settings/security-and-access). An unverified customer requests a new verification email themselves from the storefront.
 - **Changing the email** changes the login. Do it only on the customer's explicit request, and remember the old address stays on past orders.
-- **Language** on the account is the language used for that customer's emails.
+- **The email language is not set here.** Customer emails go out in the language the customer chose on the storefront, and that choice is not shown on this screen.
 - The **Last Activity** column is the last time the record itself changed, not the last login.
 - **Guest orders** have no user row. They appear only in [Orders](/admin/sales/orders).
 

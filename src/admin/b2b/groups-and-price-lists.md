@@ -37,7 +37,7 @@ For each product in an approved customer's cart:
 3. The product's retail markdown, if any, is never stacked on top of the wholesale price.
 4. The result is capped at the retail final price: a wholesale tier can never charge more than a retail sale would.
 
-A price-list row whose net price cannot be honoured is ignored and the percentage applies instead.
+A price-list row whose net price cannot be honoured is ignored and the percentage applies instead. That means a row in another currency, or a negative amount, both of which would otherwise be charged wrongly rather than not at all.
 
 ## When pricing applies
 

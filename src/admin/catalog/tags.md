@@ -21,7 +21,7 @@ Tags are short translatable labels that can be attached to products from the pro
 | **Sort Order** | Drag rows to reorder. |
 | **Created** | Timestamp. |
 
-**Search** matches label text and id. **Filters**: **Tag Status** (active, inactive, used, unused, popular with more than 10 uses, created in the last 7 days), **Usage Range**, **Content Type** (which kind of item the tag is attached to), Active, date ranges.
+**Search** matches label text and id. **Filters**: **Tag Status** (**Active Tags**, **Inactive Tags**, **Used Tags**, **Unused Tags**, **Popular (>10 uses)**, **Recently Created**, meaning the last seven days), **Usage Range**, **Content Type**, Active, and created and updated date ranges. **Content Type** only ever offers **Product**, because products are the only thing these tags attach to.
 
 **Bulk actions**:
 
@@ -41,17 +41,21 @@ The tag form has **Tag Information** (**Label** per language, **Active**), **Org
 2. Open each product from [Products](/admin/catalog/products), go to the **Tags** tab, add a row, pick the tag through the autocomplete, save.
 
 ### Merge two tags
-Not available as an action. To merge, open the products carrying the tag you want to drop (filter by **Content Type** and check **Usage**, or use the tag autocomplete on each product), attach the surviving tag, then delete the old one. Deleting a tag removes it from every item.
+Not available as an action, and there is no undo, so work in this order.
+
+1. Open the tagged-items list at `/admin/tag/taggeditem/` and filter **Tag** to the one you want to drop. It lists every product carrying it.
+2. Open each of those products and add the surviving tag in its **Tags** tab.
+3. Only when all of them carry the survivor, delete the old tag. That removes it from every product at once.
 
 ### Retire a tag
 Switch **Active** off. The assignments stay in place, so you can re-enable later.
 
 ## Things to know
 
-- **Tags are not rendered on the storefront product page**, and the product listing does not filter by them. They are exposed through the API and are otherwise an internal organisation tool today.
-- Only products use these tags. The blog has its own tag model with its own list.
-- A tag label is per language; the storefront and the admin fall back to any available language when the current one is empty.
-- The sort order is global across all tags.
+- **Customers never see these tags.** Nothing on the storefront shows them: not the product page, not the listing, and there is no way for a shopper to filter or browse by one. They are an internal label for your own team, and **Active** and **Sort Order** only affect how this screen presents them.
+- Only products can carry these tags. Blog posts have a separate set of tags with their own list, and the two never mix.
+- A tag label is per language. Where the current language has none, both the storefront and this screen fall back to whichever language does have one.
+- The sort order is global across all tags, not per language and not per kind of item.
 
 ## Related
 

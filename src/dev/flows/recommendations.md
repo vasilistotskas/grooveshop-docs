@@ -24,8 +24,7 @@ flowchart TD
   Chain --> Avail{"is_available(ctx)?"}
   Avail -- "no" --> Skip["skipped silently"]
   Avail -- "yes, live" --> Live["candidates_for(seeds)"]
-  Avail -- "yes, precompute" --> Table["RecommendationCandidate"]
-  Nightly["recompute_all_candidates"] --> Table
+  Avail -- "yes, precompute" --> Table["RecommendationCandidate (unused today)"]
   Live --> Merge["blend by weight"]
   Table --> Merge
   Merge --> Guard["stock + price band"]
@@ -83,15 +82,17 @@ schema-scoped default cache key `recs:tenant_context`, and strategies read it
 rather than running those queries themselves.
 
 Plan gating is by **rank**, not equality: `plan_allows` treats `min_plan` as
-"this plan or above", and an unknown plan ranks as the Free tier, so a typo
-in a `Tenant` row degrades the capability set instead of unlocking
-everything.
+"this plan or above", and an unknown plan ranks as `TenantPlan.TRIAL`, the
+lowest of the four (`trial`, `basic`, `pro`, `enterprise`), so a typo in a
+`Tenant` row degrades the capability set instead of unlocking everything.
+All four registered strategies declare `min_plan = TenantPlan.TRIAL`, so
+none of them is plan-gated in practice yet.
 
 Registered today (`recommendation/strategies/__init__.py`):
 
 | Code | Module | Precompute | Notes |
 |---|---|---|---|
-| `curated` | `curated.py` | no | `ProductRelation` only; never declines; leads every preset chain |
+| `curated` | `curated.py` | no | `ProductRelation` only; never declines; leads most preset chains |
 | `variant_group` | `variant_group.py` | no | Same `ProductVariantGroup`; nothing for a product with no group |
 | `category` | `category.py` | no | Same category, then siblings, then the parent subtree; exactly three queries whatever the seed count |
 | `popular` | `popular.py` | no | Store-wide filler, one query, scores below every real signal |
@@ -128,8 +129,16 @@ Rebuilds are scheduled by `recommendation/signals.py` through
 `tenant.celery.dispatch_on_commit` on `Product` save and on `ProductRelation`
 save or delete (a relation change rebuilds the **source** product).
 `_NOISE_FIELDS` skips saves that only touch `view_count`, `click_score` or
-`updated_at`. `recompute_all_candidates` is the nightly full pass, reached
-through the tenant fanout because beat runs in the public schema.
+`updated_at`.
+
+**None of this moves any data today.** No registered strategy sets
+`precompute = True`, so `compute_candidates_for_product` skips every
+strategy and always writes zero rows, and the engine's precomputed branch
+never has a code to read. `recompute_all_candidates` exists in
+`recommendation/tasks.py` but nothing calls it: there is no fanout wrapper
+in `tenant/tasks.py` and no `CELERY_BEAT_SCHEDULE` entry. The table and its
+rebuild machinery are wired and waiting for the first precomputing
+strategy; treat this whole section as future-tense until one ships.
 
 ### The online engine
 
@@ -184,8 +193,12 @@ and a shell or a preset seeding a bad row is caught the same way.
 `min_fill` may not exceed `limit`.
 
 `recommendation/presets.py` keys a per-surface chain, weights and limits by
-`tenant.models.StoreVertical`. Every preset lists Free-tier strategies first
-and plan-gated ones after; order is priority, not tier. `min_fill` differs by
+`tenant.models.StoreVertical`. Chain order is priority, not tier — a preset
+freely names an unregistered code ahead of a registered one, and the
+unregistered one simply starts contributing the day it ships. Two chains do
+not lead with `curated`: both fashion chains that have a variant group lead
+with `variant_group`, and the `empty_cart` surface is `popular` alone on
+every vertical. `min_fill` differs by
 surface on purpose — a product-page strip of one looks broken so it wants
 two, while a cart cross-sell of one complementary item is a legitimate "add
 this one thing".
@@ -204,8 +217,15 @@ rows without a manual step.
 
 | Tier | Where | Effect |
 |---|---|---|
-| Plan | `Tenant.recommendations_enabled` (default `False`) | `tenant/permissions.py: IsRecommendationsEnabled` answers **404** on both endpoints |
-| Runtime | `PRODUCT_SUGGESTIONS_ENABLED` extra-setting | Storefront only — the pages that mount a strip check it |
+| Plan | `Tenant.recommendations_enabled` (default `False`) | `tenant/permissions.py: IsRecommendationsEnabled` answers **404** on both recommendation endpoints |
+| Runtime | `PRODUCT_SUGGESTIONS_ENABLED` extra-setting (ships `False`) | Storefront only — the pages that mount a strip check it |
+
+Note what the plan tier does **not** cover. It guards the two routes in
+`recommendation/urls.py` and nothing else. The cart's own suggestions come
+from `cart/serializers/cart.py: CartDetailSerializer.get_recommendations`,
+which calls `suggest()` directly with no plan check, so `GET /api/v1/cart`
+still returns a populated `recommendations` array on a tenant with the flag
+off. Only the storefront's own check stops it rendering.
 
 Plus a third, finer gate: which **strategies** run depends on
 `RecommendationStrategy.min_plan` against the tenant's `plan`. The comment on
@@ -238,7 +258,9 @@ kinds with `keepalive: true` and swallows failures. The Nuxt proxy
 (tenant host, client IP) at 60 per minute with an explicit TTL on every hit —
 the storage driver's default is the hour-long cache TTL and would silently
 widen the window — and forwards the cart headers so the event carries the
-same identity the basket does.
+same identity the basket does. Django throttles the same endpoint
+independently at 120 per minute (`recommendation_event` in `settings.py`),
+so the proxy limit is the one that bites first.
 
 ### Carried-impression attribution
 
@@ -271,8 +293,8 @@ runs end to end:
 
 Attribution is idempotent: the unique constraint on
 `(order, product, impression_id)` for `kind="attach"` makes a retried task a
-no-op. Events are recorded on **every plan** — only the reporting is
-plan-gated — so the platform can learn vertical presets from Free stores too.
+no-op. Events are recorded on **every plan**: `record_events` carries no
+plan check, so the platform keeps a usable signal from the cheapest stores.
 
 ### The storefront strip
 
@@ -310,7 +332,8 @@ renders no reason labels and reports no events.
 - **`RecommendationCandidate` is absent from the cache surface's
   `invalidated_by`** on purpose: its rows are rebuilt by queryset delete plus
   `bulk_create`, and a per-row receiver would purge once per product across a
-  nightly pass. The full pass purges once, explicitly, when it finishes.
+  whole-catalogue pass. A full pass is expected to purge once, explicitly,
+  when it finishes — there is no such pass scheduled today.
 
 ## Failure modes
 

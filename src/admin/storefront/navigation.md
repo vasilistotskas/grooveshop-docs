@@ -7,7 +7,9 @@ description: Replace the storefront's built-in header, footer and mobile menus w
 
 <span class="sidebar-path">Not in the sidebar. Open the command palette (Ctrl+K / ⌘K) and type "Navigation", or go to `/admin/page_config/navigationmenu/`.</span>
 
-The storefront ships with a default header (Shop, Blog, Offers when promotions are on), a default burger menu on mobile and a default footer (legal pages, contact, feedback, gift cards). A **Navigation Menu** row replaces one of those slots with links you choose. Store staff, admins and owners can edit them.
+The storefront ships with a built-in header, a built-in burger menu on phones and a built-in footer. A **Navigation Menu** row replaces one of those slots with links you choose. Store staff, admins and owners can edit them.
+
+The built-in header is up to four links: **Shop** always, then **Blog**, **Offers** and **Gift cards**, each appearing only while that feature is switched on for your store.
 
 ## What you see
 
@@ -52,10 +54,11 @@ Footer takes columns, each with children:
 
 Rules enforced on save (the form shows the exact error):
 
-- Every link has a **label** (up to 100 characters) and exactly one of **to** (an internal path starting with `/`) or **href** (an `https://` URL).
-- **icon** is optional and must be an icon name starting with `i-`.
-- A menu holds at most 50 entries; a footer column must have at least one child.
-- No other keys are accepted.
+- Every link has a **label** (up to 100 characters) and exactly one of **to** (an internal path starting with `/`) or **href** (an `https://` URL). Giving both, or neither, is rejected.
+- **icon** is optional. It must start with `i-` and be all lower case; a capital letter is rejected.
+- A menu holds at most 50 top-level entries. Footer columns count towards that; the children inside them do not.
+- A footer column must have at least one child.
+- No other keys are accepted. A misspelled key fails the save rather than being ignored.
 
 ### Locale Overrides
 
@@ -78,9 +81,9 @@ Delete the row for that slot. An empty **Items** list has the same effect: the s
 
 ## Things to know
 
-- **A saved row shadows the code default.** As soon as a Header row exists with items, the storefront stops adding its own Shop/Blog/Offers links and the feature-gated items with them. Include every link you still want.
-- **Cache.** The storefront caches the navigation payload per language for 5 minutes and keeps serving the stale copy for up to an hour while it refreshes, and the rendered pages are cached too. After saving a menu, open the [Cache](/admin/system/cache) tool and purge **Pages & navigation** (this purges the `pageConfigNavigation` entries and the page HTML). Saving the row does not purge anything by itself.
-- The footer keeps one automatic column: **Pages**, listing every published content page. It appears next to your configured columns and drops a legal page that your columns already link, so the same document is not listed twice.
+- **A saved row replaces the built-in menu completely.** The moment a Header row exists with even one item, the storefront stops adding Shop, Blog, Offers and Gift cards. It is all or nothing, not a merge, so list every link you still want. This is the usual reason a shop "loses" its Offers link after a menu edit.
+- **Cache.** The storefront keeps each language's menu for 5 minutes and goes on serving the old copy for up to an hour while it fetches a new one, and the rendered pages are cached on top of that. Saving the row purges nothing by itself. Open the [Cache](/admin/system/cache) tool and purge **Pages & navigation**, which clears both the menus and the cached pages.
+- On the standard footer one column is automatic: **Pages**, listing every published content page. It sits next to your configured columns, and it leaves out a legal page that one of your columns already links so the same document is not listed twice. Some storefront themes drop this column entirely.
 - Labels are your content, not translation keys. Write them exactly as they should appear.
 - The Header slot feeds both the desktop header and the burger menu on phones. The **Mobile** slot is accepted and stored, but the storefront does not read it yet; configuring it changes nothing on screen today.
 

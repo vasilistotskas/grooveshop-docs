@@ -9,18 +9,18 @@ description: The courier rows that switch ACS and BoxNow on or off at checkout, 
 
 One row per courier integration. The row is the master switch for the courier in the storefront checkout and declares which fulfilment kinds it can serve. The same screen is also listed under <span class="sidebar-path">System → Configuration → Shipping Providers</span> for superusers; it is one and the same list.
 
-Two carriers exist today: **ACS Courier** (code `acs`, home delivery and Smartpoint lockers) and **BoxNow** (code `boxnow`, lockers only). There is no generic or flat-rate provider row: every checkout option comes from one of these two rows.
+Two couriers exist today: **ACS Courier** (code `acs`, home delivery and Smartpoint lockers) and **BoxNow** (code `boxnow`, lockers only). There is no generic or flat-rate provider row: every checkout option comes from one of these two rows.
 
 ## What you see
 
 | Column | Meaning |
 |---|---|
-| **Code** | Stable identifier that must match the courier adapter shipped with the platform (`acs`, `boxnow`). Do not rename it. |
+| **Code** | The value by which the platform recognises the courier (`acs`, `boxnow`). Do not change it on an existing row. |
 | **Name** | The name customers see on the checkout card, e.g. "ACS Courier". |
-| **Is Active** | Master switch. Off hides the courier from checkout regardless of the capability flags. |
+| **Is Active** | Master switch. Off hides the courier from checkout whatever the **Capabilities** switches say. |
 | **Supports Home Delivery** | The courier can deliver to the customer's address. |
 | **Supports Pickup Point** | The courier can deliver to a locker or pickup station. |
-| **Live Mode** | Informational only. Off means the store is on sandbox credentials and vouchers will not really ship. It does not change which credentials are used. |
+| **Live Mode** | Informational only. Off means the store is on test credentials and vouchers will not really ship. It does not change which credentials are used. |
 | **Priority** | Sort order in checkout. Lower numbers appear first. |
 | **Logo** / **Pickup logo** | Thumbnails of the uploaded brand assets. |
 
@@ -40,18 +40,18 @@ The edit form has these sections:
 The storefront asks the platform for one option per active provider and supported kind. An option is offered only when all of the following hold:
 
 1. **Is Active** is on and the kind's **Supports …** flag is on.
-2. The courier adapter is installed in the deployment (a row whose code has no adapter is skipped and logged).
+2. The platform recognises the row's **Code**. A row with an unrecognised code is skipped and never offered.
 3. The customer's country is listed in the row's `supported_countries` metadata key, or that key is absent.
-4. The carrier's own per-kind gate passes. ACS Smartpoint pickup additionally needs the **ACS_SMARTPOINT_ENABLED** setting. Both carriers refuse every kind when the store has no carrier credentials.
+4. The courier's own check for that kind passes. ACS Smartpoint pickup additionally needs the **ACS_SMARTPOINT_ENABLED** setting. Both couriers refuse every kind when the store has no credentials for them.
 
-Options are sorted by **Priority**, then code. Each card also carries the payment methods that this carrier and kind can settle, computed from the carrier's declared capabilities and the exclusion rows above:
+Options are sorted by **Priority**, then code. Each card also carries the payment methods that this courier and kind can settle, worked out from what the courier can physically collect and from the exclusion rows above:
 
-| Carrier and kind | Payment settlements offered |
+| Courier and kind | Payment settlements offered |
 |---|---|
 | ACS, home delivery or Smartpoint | Online, courier cash on delivery, offline bank transfer |
 | BoxNow locker | Online, BoxNow PAY ON THE GO (collected by the carrier before pickup), offline bank transfer |
 
-Cash to a courier is never offered on a BoxNow locker, and the BoxNow locker product is never offered on an ACS voucher. Those are physical capabilities, not preferences. A preference such as "do not offer cash on delivery with ACS this month" belongs in **Payment-method exclusions**.
+Cash to a courier is never offered on a BoxNow locker: nobody meets the customer there. The BoxNow locker product is never offered on an ACS voucher either, because it is collected at BoxNow's own machine. Those are physical facts, not preferences. A preference such as "do not offer cash on delivery with ACS this month" belongs in **Payment-method exclusions**.
 
 ## Pricing and free shipping
 
@@ -67,21 +67,22 @@ Prices are not on the provider row. They live in <span class="sidebar-path">Sett
 | **BOXNOW_FREE_SHIPPING_THRESHOLD** | Cart subtotal above which BoxNow ships free. |
 | **CHECKOUT_SHIPPING_PRICE**, **FREE_SHIPPING_THRESHOLD** | Generic fallback used only when an order has no carrier that can price it. |
 
-The storefront advertises "free shipping from X €" using the lowest threshold among the active carriers. See [Store settings](/admin/settings/store-settings) for how settings are edited.
+The storefront advertises "free shipping from X €" using the lowest threshold among the active couriers. Once the cart passes the highest threshold, every active courier ships free. See [Store settings](/admin/settings/store-settings) for how settings are edited.
 
 ## Metadata keys
 
-The **Metadata** JSON is read by the carrier adapters. Keys that matter to an operator:
+**Metadata** is a small block of JSON you type by hand, read only by the courier whose row it sits on. These are the keys worth knowing:
 
 | Key | Used by | Meaning |
 |---|---|---|
-| `supported_countries` | both | List of ISO country codes. When present, the carrier is hidden for other countries. |
-| `shop_kinds_by_country` | ACS | Which ACS station kinds count as lockers per country. Default: Greece 7 and 8, Cyprus 7. |
-| `print_type` | ACS | Label layout for voucher printing: `1` thermal roll (default), `2` laser, four vouchers per A4. |
-| `station_origin` | ACS | The merchant's ACS pickup station code, required for live quotes. When absent it is derived from the billing code. |
+| `supported_countries` | both | List of two-letter country codes. When present, the courier is hidden for every other country. |
+| `shop_kinds_by_country` | ACS | Which kinds of ACS station count as lockers, per country. Default: Greece 7 and 8, Cyprus 7. |
+| `print_type` | ACS | Voucher layout: `1` thermal roll (default), `2` laser, four vouchers per A4. Any other value falls back to `1`. |
+| `station_origin` | ACS | The shop's own ACS pickup branch code, needed for live quotes. When absent it is read from the store's ACS billing code. |
 | `min_weight_kg`, `max_weight_kg` | ACS | Bounds applied to the parcel weight sent to ACS. |
-| `nearest_limit` | ACS | Maximum stations returned by the "nearest lockers" search. |
-| `default_map_center`, `default_map_zoom`, `tile_provider` | ACS | Map chrome for the Smartpoint picker. |
+| `nearest_limit` | ACS | Maximum number of stations returned by the "nearest lockers" search. |
+| `default_voucher_language` | ACS | Language printed on the voucher. Greek unless you change it. |
+| `default_map_center`, `default_map_zoom`, `tile_provider` | ACS | How the map looks in the Smartpoint picker. |
 
 Deleting a key is safe: every key has a built-in default.
 
@@ -112,10 +113,10 @@ Deleting a key is safe: every key has a built-in default.
 
 ## Things to know
 
-- **Credentials are not on this screen.** ACS and BoxNow API keys, company and user IDs, billing code, partner and warehouse IDs and the BoxNow webhook secret live on the store's tenant record, which is managed by the platform team. An admin cannot view or edit them here. When they are missing the carrier is hidden from checkout even with **Is Active** on, and any voucher task for an existing order stops and emails the store's admins instead of retrying.
-- **Live Mode is a label, not a switch.** It exists so an operator can tell that vouchers on this store are sandbox vouchers. Switching credentials between test and live is a platform-side change.
-- Turning **Is Active** off does not touch existing shipments. Vouchers already minted keep being tracked.
-- The provider row can also be deleted, but the two adapters are the only ones the platform ships, so a deleted row simply removes the carrier from checkout until it is recreated with the same code.
+- **Credentials are not on this screen.** The ACS and BoxNow keys, company and user IDs, billing code, partner and warehouse IDs and the BoxNow webhook secret belong to the store's own record with the platform team. You cannot view or edit them here. When they are missing the courier is hidden from checkout even with **Is Active** on, and a voucher for an order that already exists is not issued at all: the attempt stops and emails the store's admins instead of retrying, because credentials do not appear on their own.
+- **Live Mode is a label, not a switch.** It is there so you can tell at a glance that vouchers on this store are test vouchers. Moving between test and live credentials is done by the platform team.
+- Turning **Is Active** off does not touch existing shipments. Vouchers already issued keep being tracked.
+- The row can also be deleted, but ACS and BoxNow are the only couriers the platform supports, so deleting a row simply removes that courier from checkout until it is recreated with the same **Code**.
 
 ## Related
 

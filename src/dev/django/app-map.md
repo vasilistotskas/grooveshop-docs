@@ -86,9 +86,9 @@ Catalogue. Models under `product/models/`: `Product`, `ProductCategory`
 `ProductReview`, `ProductFavourite`, `ProductAlert`, `ProductRelation`
 (curated recommendations). Views under `product/views/`, one module per
 model; `product/tasks.py` sends price-drop, restock and low-stock alerts;
-`product/signals.py` keeps counters and caches in step. Stock lives here
-too: `StockManager` with `reserve_stock()` / `release_stock()` under
-`select_for_update()`. Flow pages: [Search](/dev/flows/search),
+`product/signals.py` keeps counters and caches in step. Stock quantity is
+a column on `Product`, but the reservation logic is not here: it lives in
+`order/stock.py`. Flow pages: [Search](/dev/flows/search),
 [Recommendations](/dev/flows/recommendations).
 
 ### `order/`
@@ -97,10 +97,13 @@ Orders, invoices and stock reservations. Models under `order/models/`:
 `Order`, `OrderItem`, `OrderHistory`, `OrderItemHistory`, `Invoice`,
 `InvoiceCounter`, `StockReservation`, `StockLog`, `VivaWebhookEvent`.
 `order/services.py` holds the creation paths and state machine;
-`order/signals/handlers.py` fires the email, WebSocket and gateway
-side-effects on commit; `order/tasks.py` holds every order email, invoice
-generation, myDATA submission, `check_pending_orders`,
+`order/stock.py` holds `StockManager`, whose `reserve_stock()` and
+`release_stock()` take `select_for_update()` on the product row and the
+reservations; `order/signals/handlers.py` fires the email, WebSocket and
+gateway side-effects on commit; `order/tasks.py` holds every order email,
+invoice generation, myDATA submission, `check_pending_orders`,
 `auto_cancel_stuck_pending_orders` and the abandonment mailer;
+`order/notifications.py` holds the live WebSocket push tasks;
 `order/views/viva_webhook.py` receives Viva Wallet. Read the synced
 [Order / Payment / Shipping / Notification System](/dev/django/reference/order-system)
 reference before touching it. Flow pages:

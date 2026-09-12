@@ -234,11 +234,14 @@ fallback match keys. An implementation that assumed `Voucher_No` silently
 skipped every real payout row for ten weeks.
 
 A matched row flips the order through
-`AcsService._mark_cod_order_paid_if_pending`: `mark_as_paid` with
+`AcsService._mark_cod_order_paid_if_pending`, which moves
+`payment_status` from PENDING to COMPLETED: `mark_as_paid` with
 `payment_method="acs_cod"`, then `order_paid` so the Meta CAPI Purchase
-dispatch runs, then the DELIVERED to COMPLETED auto-advance. Both callers
-pass `silent_for_customer=True` — the shopper paid the courier in person
-and already had the DELIVERED notification.
+dispatch runs, then the DELIVERED to COMPLETED auto-advance. The nightly
+task passes `silent_for_customer=True` — the shopper paid the courier in
+person and already had the DELIVERED notification. The backfill command
+passes it only when given `--silent`, which is why that flag matters
+below.
 
 Unattributable rows are still persisted (it is real money) and reported
 separately: `unmatched` means a legible voucher nobody recognises,
@@ -293,9 +296,10 @@ because the webhook URL is partner-managed by BoxNow support and a single
 misconfiguration would freeze parcel state silently.
 
 `delivered` is proof of payment for `carrier_terminal` orders:
-`_mark_cod_order_paid_on_delivery` flips the order to COMPLETED with
-`payment_method="boxnow_cod"`. `final-destination` triggers
-`boxnow_send_arrival_notification`.
+`_mark_cod_order_paid_on_delivery` moves the order's **payment status**
+from PENDING to COMPLETED with `payment_method="boxnow_cod"`. It does not
+move `Order.status`, which the carrier events drive separately.
+`final-destination` triggers `boxnow_send_arrival_notification`.
 
 ## Invariants
 

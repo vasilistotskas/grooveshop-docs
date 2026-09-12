@@ -199,12 +199,13 @@ models.
 
 ## Composable filter sets (`core/filters/`)
 
-Filter mixins are `FilterSet` subclasses, never plain classes; django-filter
-only collects declared filters from bases that already carry
-`declared_filters`, so a plain-class mixin is silently dropped. The
-module docstring of `core/filters/core.py` records that this happened and
-that `PublishableFilterMixin`, `SoftDeleteFilterMixin` and the
-`Base*FilterSet` classes were deleted rather than repaired. What remains:
+A mixin that *declares filters* must be a `FilterSet` subclass, never a
+plain class; django-filter only collects declared filters from bases that
+already carry `declared_filters`, so a plain-class mixin is silently
+dropped. The module docstring of `core/filters/core.py` records that this
+happened and that `PublishableFilterMixin`, `SoftDeleteFilterMixin` and
+the `Base*FilterSet` classes were deleted rather than repaired. The four
+mixins that remain are all `FilterSet` subclasses:
 
 ```python
 class TimeStampFilterMixin(filters.FilterSet):
@@ -215,11 +216,16 @@ class TimeStampFilterMixin(filters.FilterSet):
 ```
 
 plus `UUIDFilterMixin`, `SortableFilterMixin` and `MetaDataFilterMixin`.
-`CamelCaseFilterMixin` (`core/filters/camel_case_filters.py`) rewrites
-incoming query keys to snake_case and republishes `base_filters` under
-camelCase names, and `CamelCaseTimeStampFilterSet` /
-`CamelCasePublishableTimeStampFilterSet` are the two ready-made bases.
-`CamelCaseOrderingFilter` does the same for `?ordering=`.
+
+`CamelCaseFilterMixin` (`core/filters/camel_case_filters.py`) is the one
+deliberate plain class in the package, and it is safe because it declares
+no filters: it rewrites incoming query keys to snake_case and republishes
+`base_filters` under camelCase names. It is always paired with a
+`FilterSet` base, which is what `CamelCaseTimeStampFilterSet` and
+`CamelCasePublishableTimeStampFilterSet` are for. Both now inherit the
+timestamp filters from `TimeStampFilterMixin` instead of restating them.
+`CamelCaseOrderingFilter` (`core/filters/camel_case_ordering.py`) does the
+same rewrite for `?ordering=`.
 
 ## Pagination envelope (`core/pagination/`)
 
@@ -379,7 +385,8 @@ factory by name.
 - A ViewSet never calls a serializer class directly; it goes through
   `serializers_config` so the OpenAPI schema and the runtime agree
   (`core/api/views.py`).
-- Filter mixins subclass `FilterSet` (`core/filters/core.py`).
+- A filter mixin that declares filters subclasses `FilterSet`
+  (`core/filters/core.py`).
 - `sort_order` is read-only on the API even though the model field is
   editable (serializer `read_only_fields`).
 - Language codes come from `settings.PARLER_DEFAULT_LANGUAGE_CODE`, never

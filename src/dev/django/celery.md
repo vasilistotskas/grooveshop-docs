@@ -80,14 +80,25 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   the operator-generated `backend-message-broker-default-user` secret
   (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`).
   Workers consume the `celery` and `meilisearch` queues.
-- Results: the settings default is `django-db`
-  (`CELERY_RESULT_BACKEND`), which writes `TaskResult` rows into whichever
-  schema the task ran in, so `django_celery_results` is in both
-  `SHARED_APPS` and `TENANT_APPS`. **Production overrides this to a Redis
-  backend** for throughput, so the per-schema tables stay empty there.
-  Check which backend an environment uses before reading task history out
-  of the database; the comment in `settings.py` records an audit that
-  nearly concluded no tasks were running.
+- Results: `CELERY_RESULT_BACKEND` defaults to `django-db`.
+  `django_celery_results` is in `SHARED_APPS` **only**, and `TENANT_APPS`
+  carries a comment saying it is deliberately absent: task results are
+  platform operations rather than one store's data, and
+  `celery.backend_cleanup` is dispatched by beat with no tenant header, so
+  it runs in `public` and could never prune per-tenant tables.
+  `tenant/migrations/0039` drops the ones an earlier `TENANT_APPS` entry
+  created.
+  **No worker Deployment overrides the backend** — `base/backend.yaml` carries an
+  explicit comment saying so on all four backend containers, because the
+  results used to go to Redis DB 1 and shared one `allkeys-lru` budget
+  with the Django cache. The one place that still points at Redis is the
+  PreSync `backend-prepare` Job, which sets `CELERY_RESULT_BACKEND` to
+  Redis DB 1 for its own short life. `settings.py` then narrows what gets
+  written: `CELERY_TASK_IGNORE_RESULT` with
+  `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` is meant to keep failures and
+  drop successes. Read that intent against `core/celery.py`, which passes
+  `task_ignore_result=False` in the same `conf.update()` that wins the
+  time limits above.
 - Scheduler: `django_celery_beat.schedulers:DatabaseScheduler`. The
   `CELERY_BEAT_SCHEDULE` dict is seeded into `PeriodicTask` rows, visible
   in the platform admin under Background Jobs.
@@ -165,6 +176,7 @@ Most entries fall back to hourly when `DEBUG` is on.
 | `core/tasks.py` | health monitor, backups, cache clear, session and history cleanup, abandoned carts, Meilisearch sync, inactive-user mail |
 | `tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
 | `order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each with a Redis reservation key so a duplicate signal cannot send twice), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, checkout abandonment, `push_order_event_to_gateway` |
+| `order/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
 | `shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list, unprinted warning, COD reconciliation and alerts, arrival notification |
 | `shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, arrival notification |
 | `product/tasks.py` | back-in-stock, price-drop and low-stock alerts |
@@ -233,8 +245,12 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 - **`DoesNotExist` inside a task fired from a webhook or command**: the
   schema snapped back to `public` before the commit hook ran; use
   `dispatch_on_commit`.
-- **Task history empty in production**: the result backend is Redis there,
-  not the database.
+- **Task history thinner than expected**: read `TaskResult` in `public`,
+  not in a tenant schema. `tests_mt/test_celery_results_are_public_only.py`
+  asserts a newly provisioned tenant never grows its own copy of the
+  tables, because a tenant copy would sit ahead of `public` on the search
+  path and hide the row from both the control plane and
+  `celery.backend_cleanup`.
 - **Worker stays in English after a Rosetta edit**: the overlay handlers
   were connected without `weak=False`; the AST test
   `tests/unit/core/test_celery_handlers_are_connected.py` guards this.

@@ -36,13 +36,16 @@ flowchart LR
    `schema.yml` at the Django root is validated by the Code Quality CI job.
 2. **The storefront fetches it.** `pnpm generate:schema` runs
    `scripts/fetch-schema.mjs`, which reads `NUXT_DJANGO_URL` (default
-   `http://localhost:8000`), sends `DJANGO_API_TOKEN` (or the
-   `.auth-token` file) and writes `GET /api/v1/schema` to
-   `openapi/schema.json`.
+   `http://localhost:8000`), sends `DJANGO_API_TOKEN` as a `Bearer` header
+   when that variable is set, and writes `GET /api/v1/schema` to
+   `openapi/schema.json`. The token is optional against a local backend
+   with `DEBUG=True`, because `SERVE_PERMISSIONS` only requires
+   authentication outside `DEBUG`.
 3. **Types and Zod are generated.** `pnpm openapi-ts` reads
    `openapi-ts.config.ts`: input `./openapi/schema.json`, output
    `./shared/openapi/` with the `@hey-api/typescript` plugin and the `zod`
-   plugin (requests, responses, definitions, dates with offset), then
+   plugin (requests, responses, definitions, metadata, dates with
+   offset), then
    ESLint `--fix` over the output. The result is `types.gen.ts` and
    `zod.gen.ts`. Nothing in `shared/openapi/` is hand-edited; a missing
    field is fixed in Django and regenerated, never patched locally.

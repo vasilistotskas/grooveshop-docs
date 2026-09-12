@@ -25,6 +25,7 @@ pnpm dev              # sync + dev server
 pnpm build            # vitepress build + postbuild artefacts into dist/
 pnpm build:full       # sync + build (what CI does)
 pnpm preview          # serve dist/
+pnpm check:admin      # fails if the admin guide names anything from the codebase
 pnpm typecheck        # vue-tsc over .vitepress/
 ```
 
@@ -48,6 +49,7 @@ These are the quality gate that makes the docs usable by AI agents. They are not
 - **Source of truth is the code.** Every developer page names the files it describes (repo-relative paths in backticks) in a "Source" line or table, so an agent can verify before acting. If a claim cannot be tied to a file, do not make it.
 - **No dependency versions in prose** (workspace rule). Name a major only where it changes how code is written.
 - **Greek is written natively**, never machine-translated, and every Greek admin page has the same path as its English twin under `/el/`. Add a page to both sidebars in the same change.
+- **The admin guide names NOTHING from the codebase.** No file paths, module, class, constant or app-label names, no "built by"/"rendered by" phrasing. The reader is a shop owner. On-screen labels, sidebar paths, admin URLs and the keys listed in Settings → Extra Settings are allowed, because the reader sees those. Full rule and rewrite examples in `AUTHORING.md`. Developer pages are the opposite and must cite sources.
 - **Admin how-tos name the sidebar path exactly as Unfold renders it**, e.g. `Sales → Orders`. The titles come from `UNFOLD["SIDEBAR"]["navigation"]` in the Django repo's `settings.py`; if a title there changes, the docs change.
 - **Screenshots are optional and never load-bearing.** The text must be correct on its own.
 - **Dead links fail the build.** Keep it that way; the only exemption is the synced `reference/` trees, whose links point at source files in their own repository.

@@ -49,9 +49,9 @@ A pin to a tag that is not there parks the rollout in `ImagePullBackOff`.
 
 `grooveshop-infrastructure/manifests/app-directory/app-grooveshop.yaml`
 (production, automated sync) and `app-grooveshop-staging.yaml` (staging,
-manual sync). Each carries:
+manual sync). Each file carries six pin sites:
 
-- `spec.sources[0].kustomize.images`: one entry per image
+- `spec.sources[0].kustomize.images`: five entries, one per image
   (`grooveshop-django-api`, `grooveshop-storefront-ui-node-nuxt`,
   `grooveshop-media-stream`, `grooveshop-agent-gateway`,
   `grooveshop-docs`).
@@ -59,6 +59,10 @@ manual sync). Each carries:
   `backend-prepare` hook's tag. It lives in its own Helm chart
   (`prepare-helm`) because kustomize rejects the bare `generateName` Argo
   needs for hook resources.
+
+A third source pulls the Meilisearch chart from its upstream repository;
+its `targetRevision` is a chart version, not an image pin, and moving it
+moves the search engine too.
 
 **The Django tag appears twice per file and must move together.** Hook
 bumped but pods not: migrations relocate tables and the old pods query
@@ -99,12 +103,16 @@ kubectl -n grooveshop rollout status deploy/backend --timeout=600s
 
 ## The PreSync job
 
-`prepare-helm/templates/job.yaml` runs once per deploy, before any pod
-rolls: `migrate_schemas`, `collectstatic`, `meilisearch_apply_settings
---all-tenants` (its failure is swallowed so a tenant-less bring-up is not
-blocked) and `backfill_recommendation_slots`. It needs the Redis and
-RabbitMQ secrets to start Django, has `activeDeadlineSeconds: 1800` and
-`backoffLimit: 2`. Because the schema lands before the new code, every
+`prepare-helm/templates/job.yaml` runs one four-step shell script per
+deploy, before any pod rolls. Steps 1 and 2, `migrate_schemas` and
+`collectstatic`, run under `set -e` and abort the sync on failure. Steps 3
+and 4 are convergence, not gates, and the script continues past either:
+`meilisearch_apply_settings --all-tenants` (exit 3 means no active tenants
+yet, which is normal on a fresh bring-up; any other non-zero exit is
+logged as real index drift) and `backfill_recommendation_slots`, which
+seeds the recommendation slot rows for tenants that predate the engine.
+It needs the Redis and RabbitMQ secrets to start Django, has
+`activeDeadlineSeconds: 1800` and `backoffLimit: 2`. Because the schema lands before the new code, every
 migration must be backwards-compatible with the previous release; see the
 synced [Migration Safety Rules](/dev/django/reference/migrations). Do not
 create a tenant while a sync is in flight: the tenant-creation migrate
@@ -115,6 +123,38 @@ Read the hook's log while it is alive:
 ```bash
 kubectl -n grooveshop logs -l app.kubernetes.io/component=backend-prepare -f
 ```
+
+## The documentation site
+
+This site is the sixth repository and deploys the same way as the rest.
+`grooveshop-docs` cuts a version with semantic-release in its own
+`ci.yml`, `docker.yml` publishes the image on the published release, and
+its tag is one of the five kustomize pins in both Argo files.
+
+The workload is `base/docs.yaml` in the shared construct: Deployment
+`docs-deployment` running nginx on port 80 behind Service `docs-svc`, with
+the same `preStop` sleep as every other Traefik-facing pod. Its Ingress is
+**not** in `base/` — each overlay publishes its own host:
+
+- **Production** (`overlays/production/ingress-docs.yaml`) serves
+  `docs.grooveshop.space` as two Ingress objects on one host, because the
+  middleware chains differ. Everything is public except `/dev`, which goes
+  through the `docs-basic-auth` middleware; Traefik matches the longer
+  `PathPrefix` first, so the developer tree takes the gated router. The
+  `llms.txt` corpora follow the same split. Only the first Ingress carries
+  the `cert-manager` annotation; a second owner on the same host would
+  make ingress-shim fight over the `Certificate`.
+- **Staging** (`overlays/staging/ingress-docs.yaml`) serves
+  `docs-staging.grooveshop.space` as a single Ingress with the whole host
+  behind the staging basic-auth, so the production path split is moot
+  there.
+
+One step is specific to this repository: both `ci.yml` and `docker.yml`
+check out `grooveshop-django-api` next to the docs checkout and run
+`scripts/sync-sources.mjs` before building, which is what copies the
+synced reference pages in. The image is built from the result, so the
+reference tree in a published image is as fresh as the Django `main` at
+build time.
 
 ## Staging is its own file and manual
 
@@ -141,11 +181,15 @@ production-pin PR or their own.
 
 ## Storefront deploys serve stale HTML until you purge
 
-A storefront bump does not refresh the routes in
-`shared/constants/prerender.ts`. `nuxt.config.ts` gives them `swr: 3600`
-with `cache: { varies: ['host', 'x-device-class'] }` and the rendered HTML
-lives in shared Redis, so it survives the pod roll: new pods, new image,
-old page, for up to an hour, while Argo reads Healthy. After any
+A storefront bump does not refresh the SSR-cached routes in
+`shared/constants/prerender.ts`. `nuxt.config.ts` builds three sets of
+route rules from that file, all sharing
+`cache: { varies: ['host', 'x-device-class'] }`: the brand pages in
+`PRERENDERED_ROUTES` at `swr: 3600`, the homepage in `SWR_ROUTE_RULES` at
+300 seconds, and the blog and catalogue families in
+`SWR_ROUTE_PATTERN_RULES` at 600 and 300. The rendered HTML lives in
+shared Redis, so it survives the pod roll: new pods, new image, old page,
+for as long as the route's own TTL, while Argo reads Healthy. After any
 storefront deploy purge from inside a frontend pod (the token never leaves
 it):
 
@@ -173,7 +217,8 @@ list of layers is in [Caches & purging](/dev/operations/caches).
 ## Traefik-facing pods need `preStop`
 
 Every Deployment that Traefik routes to (`backend`, `frontend-nuxt`,
-`media-stream`, `agent-gateway`, `static-nginx`, `docs`) carries a native
+`media-stream`, `agent-gateway`, `static-deployment`, `docs-deployment`)
+carries a native
 `lifecycle.preStop.sleep` of 10 seconds so in-flight keep-alive connections
 drain before the endpoint is removed. Without it a rolling update produces
 a burst of 503s on `/_nuxt` chunks. Add it to any new Ingress-backed
@@ -211,6 +256,8 @@ Deployment.
 | `grooveshop-infrastructure/manifests/app-root.yaml` | App-of-apps root |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml` | PreSync hook |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/*.yaml` | Deployments, Reloader annotations, `preStop` |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/docs.yaml` | Documentation Deployment and Service |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-docs.yaml`, `overlays/staging/ingress-docs.yaml` | Documentation hosts and the `/dev` basic-auth split |
 | `grooveshop-infrastructure/docs/deploying.md` | The runbook this page distils |
 | `grooveshop-infrastructure/.claude/skills/update-deploy-version/SKILL.md` | Pin-bump skill |
 | `grooveshop-django-api/.github/workflows/ci.yml`, `docker.yml` | Release and image publish |

@@ -47,7 +47,7 @@ flowchart LR
 - Shipping and payment-method fees are entered as VAT-inclusive amounts and appear as their own invoice lines.
 - Wholesale prices for business customers are net prices too; the product's own rate is applied on top. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
 
-There is no per-country VAT. One rate per product applies whatever the destination; the buyer's country only decides the myDATA invoice type (domestic, intra-EU, third country).
+There is no per-country VAT. One rate per product applies whatever the destination. The buyer's country only affects how the document is reported to myDATA: an invoice for a business in your own country is reported as a business sale, and everything else as a retail receipt. Cross-border business invoicing, with its reverse-charge handling, is not built yet.
 
 There is no "default rate" setting. A new product has no rate until you pick one on the product page.
 

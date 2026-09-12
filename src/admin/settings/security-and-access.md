@@ -1,19 +1,19 @@
 ---
 title: Security & access
-description: The five identity lists under System → Security & Access, whose records they hold on a store's admin, and the safe actions on each.
+description: "The five identity lists under System → Security & Access, whose records they hold on a store's admin, and the safe actions on each."
 ---
 
 # Security & access
 
 <span class="sidebar-path">System → Security & Access</span>
 
-**Platform operators only.** The whole **System** section is gated on the platform superuser flag (`admin/permissions.py`, `admin/mixins.py`). Store Owners and Admins do not see it. This page exists so an Owner knows what the platform can do on request, and so an operator knows what each list contains.
+**Platform operator tools.** The whole **System** section is hidden from the sidebar unless you are a platform operator, so a store Owner, Admin or Staff member never sees these five entries. Hidden is not the same as sealed off, though: unlike the audit and reconciliation screens, these five are not locked at the page itself. The last section explains what that means for you.
 
-On a store's admin these lists show that **store's customers**: the identity apps (`allauth.account`, `allauth.mfa`, `allauth.socialaccount`, `knox`) live inside each store's schema, and the sessions app keeps a copy per store. Platform staff identities live on the platform console instead.
+On a store's admin the lists show that **store's customers**. Platform staff identities live on the platform console instead, and nothing here touches them.
 
 ## User Sessions
 
-Columns: **User**, **Created at**, **Last seen at**, **IP**, **User agent**. Search: user id, username, IP.
+Columns: **User**, **Created at**, **Last seen at**, **IP**, **User agent**. Search: user id, username, IP. No filters.
 
 One row per signed-in browser or app of a customer. Activity tracking is on, so **Last seen at** updates as the customer browses.
 
@@ -24,13 +24,13 @@ Safe actions:
 
 ## MFA Authenticators
 
-Columns: **User**, **Type** (TOTP, recovery codes, WebAuthn), **Created at**, **Last used at**. Filters: type, dates.
+Columns: **User**, **Type** (authenticator app, recovery codes, passkey), **Created at**, **Last used at**. Filters: type, created date, last-used date. There is no search box.
 
 One row per second factor a customer has enrolled. See [Signing in & MFA](/admin/getting-started/login-and-mfa) for what each type is.
 
 Safe actions:
 
-- **Delete** a customer's TOTP or WebAuthn row when they have lost the device and their recovery codes, after verifying their identity through another channel. They can sign in with password alone afterwards and re-enrol.
+- **Delete** a customer's authenticator-app or passkey row when they have lost the device and their recovery codes, after verifying their identity through another channel. They can sign in with password alone afterwards and enrol again.
 - Do not edit rows; the secrets are not meant to be changed by hand.
 
 ## Social Accounts
@@ -53,25 +53,26 @@ A customer may have several addresses; one is primary. Verification is mandatory
 
 Safe actions:
 
-- **Mark selected email addresses as verified** (bulk action) when a customer cannot receive the verification code and you have confirmed the address by other means.
+- **Mark selected email addresses as verified** (bulk action) when a customer cannot receive the verification code and you have confirmed the address by other means. Each address that flips reports back by name.
 - Change **Primary** only from the customer's own request.
 
 ## API Tokens
 
 Columns: **Digest**, **User**, **Created**, **Expiry**. Search: digest, token key, user email.
 
-Bearer tokens issued to a customer's browser or app by the storefront login. A token lives seven days and is extended on use up to thirty days after creation; each user may hold at most ten (`REST_KNOX` in `settings.py`).
+Bearer tokens issued to a customer's browser or app by the storefront login. A token lives seven days, is extended on use up to thirty days after it was created, and each customer may hold at most ten.
 
 Safe actions:
 
 - **Delete** a token to revoke it immediately.
-- Creating a token from the admin shows the secret once in a message; it cannot be recovered later. There is rarely a reason to do this for a customer.
+- Creating a token from this screen shows the secret once, in a message at the top of the page, and it cannot be recovered afterwards. There is rarely a reason to do this for a customer.
 
 ## Things to know
 
+- **These five screens are hidden, not blocked.** The audit ledgers and the reconciliation screens refuse to open for anyone but a platform operator, whatever address you type. These five do not: an Owner or Admin who has the address can open them and delete rows, and Staff can open them and add or edit but not delete. Treat that as a reason to keep the Admin role to people you would trust with a customer's sign-in, not as an invitation.
 - Nothing here touches the platform staff who sign in to the admin. A staff password reset or session revocation is done on the platform console.
-- The **Groups** entry under <span class="sidebar-path">System → Configuration</span> is Django's permission groups; store roles do not use it (see [Roles & team](/admin/getting-started/roles-and-team)).
-- The **Shipping Providers** entry under System → Configuration is the same list as <span class="sidebar-path">Shipping → Shipping Providers</span>.
+- Permission groups are a platform tool and play no part in store roles. The group screen is not in a store's admin at all; see [Roles & team](/admin/getting-started/roles-and-team).
+- <span class="sidebar-path">System → Configuration</span> holds exactly one entry, **Shipping Providers**, and it is the same list as <span class="sidebar-path">Shipping → Shipping Providers</span>, which every admin user can already open.
 
 ## Related
 

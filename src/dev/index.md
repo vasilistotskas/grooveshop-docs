@@ -36,7 +36,9 @@ folder. Each is deployed independently and has its own `CLAUDE.md`.
 | `grooveshop-agent-gateway` | Go protocol adapter: MCP, UCP, ACP, feeds, chat | 8080 |
 | `grooveshop-infrastructure` | Kubernetes manifests, Argo CD, Traefik | — |
 
-This site is a sixth repository, `grooveshop-docs`.
+This site is a sixth repository, `grooveshop-docs`, published at
+`docs.grooveshop.space`. The admin guide there is public; this developer
+tree sits behind basic auth at the ingress.
 
 ## Where to start
 

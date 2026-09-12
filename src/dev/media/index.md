@@ -17,14 +17,16 @@ through Nuxt.
   and the equivalent `static/images/…` route; every segment is mandatory
   and validated, and the tenant is in the path
   (`src/MediaStream/API/config/image-sources.config.ts`).
-- Fetch originals only from an allowlist of hosts: the platform origins
-  from `VALIDATION_ALLOWED_DOMAINS` plus the tenant domains polled from
-  Django's internal domains feed (`Validation/`).
+- Fetch originals only from an allowlist of hosts: the static list in
+  `VALIDATION_ALLOWED_DOMAINS`, which in the cluster holds the in-cluster
+  Service names, plus the tenant domains polled from Django's
+  `GET /api/v1/tenant/internal/domains`
+  (`Validation/services/tenant-domains.service.ts`).
 - Process synchronously with admission control, per-resource
   deduplication and a per-pipeline timeout; overload answers 503 with
   `Retry-After` rather than the default image (`Processing/`).
-- Cache as `image:{schema}:{uuid}` in memory and Redis, with `.rsc`/`.rsm`
-  pairs on disk, and flush one tenant on request
+- Cache under the `image:{schema}:…` namespace in memory and Redis, with
+  `.rsc`/`.rsm` pairs on disk, and flush one tenant on request
   (`POST /admin/cache/flush-tenant` with `x-internal-secret`) (`Cache/`,
   `Storage/`).
 - Report health, Prometheus metrics and a Redis-persisted circuit breaker

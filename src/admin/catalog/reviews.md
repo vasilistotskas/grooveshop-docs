@@ -54,11 +54,11 @@ Not available. There is no reply field or thread on reviews; contact the custome
 
 ## Things to know
 
-- **Rating rules enforced by the storefront**: the rating is a whole number from 1 to 10; a customer may review a product only after an order containing it reached **Completed**; one review per customer per product; a review's product cannot be changed afterwards. Staff can set any rating and status from the admin.
-- **Averages** shown on product cards are computed over every review of the product regardless of status. Reject and then delete a review if it must not count.
-- Reviews can be switched off store-wide with the **PRODUCT_REVIEWS_ENABLED** setting under <span class="sidebar-path">Settings → Extra Settings</span>; when off, the storefront hides the review UI and the API answers 404. See [Store settings](/admin/settings/store-settings).
-- Deleting a product deletes its reviews; deleting a customer account deletes theirs.
-- The badge count and the moderation queue refresh within a minute of a status change.
+- **Rules applied when a customer submits a review**: the rating is a whole number from 1 to 10; the customer must already have an order containing that product which reached **Completed**; one review per customer per product; and the product a review points at can never be changed afterwards. None of these bind you here. From this screen staff can set any rating and any status.
+- **Averages are computed over every review of the product, whatever its status.** A rejected review still drags the score down, and so does one still sitting in **New**. Delete a review, do not merely reject it, if it must not count. The number on a product card is on the same 1-to-10 scale as the **Rating** column, drawn as five stars.
+- Reviews can be switched off store-wide with the **PRODUCT_REVIEWS_ENABLED** setting under <span class="sidebar-path">Settings → Extra Settings</span>, which ships on. With it off, the storefront hides the review section on every product page and the review pages stop answering, exactly as if the feature had never existed. See [Store settings](/admin/settings/store-settings).
+- Deleting a customer account deletes their reviews. Deleting a product is two different things: **Delete** on the product's own page only marks the product deleted and leaves its reviews intact, while the bulk **Delete selected** action on the product list takes the reviews with it.
+- The sidebar badge is recalculated at most once a minute, so it can lag a moderation pass by that long. The list itself is always current.
 
 ## Related
 

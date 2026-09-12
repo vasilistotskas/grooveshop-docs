@@ -16,13 +16,13 @@ secrets.
 
 | Path | Surface |
 |---|---|
-| `POST /mcp` | MCP server (stateless streamable HTTP): the UCP checkout tools, ergonomic commerce tools, account tools for linked shoppers |
+| `/mcp` | MCP server (streamable HTTP): the UCP checkout tools, ergonomic commerce tools, account tools for linked shoppers |
 | `GET /.well-known/ucp` | UCP business profile, including the platform payment handler |
-| `/acp/*` | ACP agentic checkout REST, gated per tenant by the tenant's own bearer |
+| `/acp/checkout_sessions*` | ACP agentic checkout REST (create, get, update, complete, cancel), gated per tenant by the tenant's own `acpBearerToken` |
 | `/feeds/*` | Product feeds: `google.xml`, `meta.xml`, `tiktok.xml`, `acp.json` |
 | `POST /chat` | First-party shopping chatbot (SSE) over an OpenAI-compatible provider; the model key is per tenant |
 | `/internal/*` | Cluster-only: Django's order-event push and feed invalidation, shared-secret header |
-| `/healthz`, `/readyz`, `/metrics` | Process liveness, readiness on Redis only, Prometheus |
+| `/healthz`, `/readyz`, `/metrics` | Process-only liveness, readiness gated on Redis only (Django health is reported in the body but never flips it), Prometheus |
 
 Every tenant gate (`agentCommerceEnabled`, `productFeedsEnabled`,
 `agentHostedPaymentEnabled`) is a boolean Django folds and emits on the

@@ -5,9 +5,7 @@ description: Everything that runs automatically for your store on a schedule, wh
 
 # Background jobs
 
-<span class="sidebar-path">Background Jobs (platform console only)</span>
-
-Scheduled work is run by Celery from one platform-wide schedule (`CELERY_BEAT_SCHEDULE` in `settings.py`). The schedule tables (**Periodic Tasks**, **Crontab Schedules**, **Interval Schedules**, **Clocked Schedules**, **Solar Schedules**) and the result tables (**Task Results**, **Group Results**) exist only on the platform console. A store's admin has no Background Jobs section, by design: one schedule drives every store, so it is not any one store's to edit.
+Scheduled work runs from one platform-wide timetable. The schedule screens (**Periodic Tasks**, **Crontab Schedules**, **Interval Schedules**, **Clocked Schedules**, **Solar Schedules**) and the **Task Results** screens live on the platform console only. A store's admin has no Background Jobs section, by design: one timetable drives every store, so it is not any one store's to edit.
 
 What a store can control is the **behaviour** of those jobs, through [Store settings](/admin/settings/store-settings).
 
@@ -31,14 +29,14 @@ Times are store local time (Athens). Each job runs once per store.
 
 | Job | When | What it does |
 |---|---|---|
-| Poll ACS tracking | every 15 minutes | Fetches checkpoints for every ACS voucher not yet delivered. |
+| Poll ACS tracking | every 15 minutes | Fetches checkpoints for every ACS voucher not yet delivered. ACS sends no notifications, so this is the only source. |
 | Warn about unprinted ACS vouchers | Mon–Fri 15:45 | Emails the store if a voucher on today's list has not been printed, because ACS rejects the whole pickup list otherwise. |
 | Issue ACS pickup list | Mon–Fri 16:30 | Presents the day's vouchers to ACS for collection. See [Reconciliation](/admin/system/reconciliation). |
 | Stale ACS shipments digest | daily 09:00 | Emails a list of vouchers with no movement for several days. |
-| Reconcile ACS COD payouts | daily 02:30 | Imports yesterday's cash-on-delivery payouts and marks the matching orders paid. |
+| Reconcile ACS COD payouts | daily 02:30 | Imports the previous day's cash-on-delivery payouts and marks the matching orders paid. |
 | Alert unremitted COD | daily 03:00 | Emails a list of delivered COD parcels ACS has not paid out yet. |
 | Sync ACS stations | daily 03:00 | Refreshes the Smartpoint list. |
-| Poll BoxNow tracking | every 15 minutes | Fetches parcel state for open BoxNow shipments, independent of webhooks. |
+| Poll BoxNow tracking | every 15 minutes | Fetches parcel state for open BoxNow shipments, alongside BoxNow's own notifications. |
 | Sync BoxNow lockers | daily 02:00 | Refreshes the locker list used by the checkout map. |
 
 ### Loyalty, gift cards, promotions
@@ -56,37 +54,45 @@ Times are store local time (Athens). Each job runs once per store.
 |---|---|---|---|
 | Inactive customer emails | 1st of the month 06:00 | "We miss you" emails. | `INACTIVE_USER_THRESHOLD_DAYS`, `REENGAGEMENT_EMAIL_*` |
 | Expire notifications | 1st and 15th 06:00 | Deletes old in-app notifications. | `NOTIFICATION_EXPIRATION_DAYS` |
-| Clean expired data exports | daily 03:00 | Deletes GDPR export files older than seven days. | |
+| Clean expired data exports | daily 03:00 | Deletes data-export files older than seven days. | |
 | Reap unclaimed contact attachments | hourly | Deletes uploads whose enquiry was never submitted. | |
 | Purge expired attachment files | daily 04:00 | Deletes attachment bytes past the retention window; the enquiry stays. | `CONTACT_ATTACHMENTS_RETENTION_DAYS` |
 | Rebuild search indexes | daily 02:00 | Re-syncs products and posts to the search engine. | |
 | Update search click scores | daily 03:00 | Feeds click data back into ranking. | |
 | Anonymise old search queries | Sunday 03:00 | Strips identifying data from searches older than 90 days. | |
-| Clear expired sessions | Monday 04:00 | Removes expired customer sessions. | |
-| Clear duplicate / old history | daily 05:00 / Sunday 03:00 | Trims the model change history. | |
+| Clear expired customer sessions | Monday 04:00 | Removes expired sessions. | |
+| Clear duplicate / old history | daily 05:00 / Sunday 03:00 | Trims the record change history. | |
 | Clear all cache | 1st of the month 04:00 | A full cache reset. | |
 
 ### Platform-wide (not per store)
 
-System health check every 30 minutes, database backup daily 03:00 with weekly cleanup, tenant billing daily 06:00, archived-store purge daily 03:00.
+Health check every 30 minutes, database backup daily 03:00 with a weekly cleanup on Sunday 05:00, tenant billing daily 06:00, archived-store purge daily 03:00.
 
-## What an admin may safely change
+## Buttons you can press yourself
 
-- Any of the settings named in the tables above, from your own admin.
-- Ask the platform to trigger a job early when needed. The only jobs with an on-demand button in the store admin are **Issue ACS pickup list now** (on ACS Shipments), **Run COD reconciliation now** (on ACS COD Payouts), **Sync lockers from BoxNow API** (on BoxNow Lockers) and **Re-poll ACS tracking** (on ACS Shipments).
+These run the job now instead of waiting, and all of them sit on screens a store's Staff, Admin and Owner can open.
 
-## What never to touch
+| Screen | Button | What it does |
+|---|---|---|
+| ACS Shipments | **Issue ACS pickup list now** | Presents every waiting voucher to ACS without waiting for 16:30. |
+| ACS Shipments | **Issue ACS voucher now** | Creates the voucher for one shipment. |
+| ACS Shipments | **Re-poll ACS tracking** | Re-fetches checkpoints for one shipment. |
+| ACS Shipments | **Re-poll tracking for selected shipments** | The same for several at once. |
+| ACS Shipments | **Retire selected shipments (mark CANCELED, stop polling)** | For vouchers ACS will never advance again. |
+| BoxNow Lockers | **Sync lockers from BoxNow API** | Refreshes the locker list for the checkout map. |
 
-For platform operators on the console:
+**Run COD reconciliation now** is not one of them. It sits on the ACS COD Payouts screen, which only platform operators can open; ask the platform if a payout import must run early. See [Reconciliation](/admin/system/reconciliation).
 
-- Do not disable or re-time the fan-out tasks; every store depends on them.
+## For platform operators
+
+- Do not disable or re-time the fan-out jobs; every store depends on them.
 - Do not change the ACS pickup-list time without agreeing it with the courier's collection window.
-- **Task Results** only fills under the database result backend; in production results go to Redis, so an empty list is normal, not a sign that nothing ran.
+- **Task Results lists failures, not runs.** Successful jobs deliberately write nothing, so an empty list means nothing failed, not that nothing ran. Failure rows are kept for thirty days. To answer "did the nightly job run at all?", read the last-run time on **Periodic Tasks** instead.
 
 ## Things to know
 
 - If a scheduled email did not arrive, check the setting that gates it before assuming the job failed.
-- The dashboard's failed-task counter (platform operators only) covers the last 24 hours.
+- Issuing the ACS pickup list is single-flight: if the scheduled run and someone's click overlap, the second one is skipped rather than issuing twice.
 
 ## Related
 

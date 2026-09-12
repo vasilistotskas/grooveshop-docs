@@ -7,7 +7,7 @@ description: BoxNow locker deliveries, the synced locker list, parcel states and
 
 <span class="sidebar-path">Shipping → BoxNow Shipments</span> and <span class="sidebar-path">Shipping → BoxNow Lockers</span>
 
-BoxNow delivers to automated lockers. A customer picks a locker on the checkout map, the platform creates a delivery request with BoxNow after the order is paid, and BoxNow reports every parcel movement back through a signed webhook. A fifteen-minute poll of BoxNow's parcel API runs as a safety net in case a webhook is lost.
+BoxNow delivers to automated lockers. A customer picks a locker on the checkout map, the platform sends BoxNow a delivery request, and BoxNow reports every parcel movement back through a signed webhook. A check with BoxNow every fifteen minutes runs as a safety net in case a webhook is lost.
 
 ## Lockers
 
@@ -50,7 +50,7 @@ Parcel states:
 | Accepted to locker | Active | Parcel placed in the locker. | Shipped |
 | At locker | Ready for Pickup | Parcel available for pickup; the customer is notified. | Shipped |
 | Delivered | Completed | Customer opened the compartment. | Delivered, then Completed if paid |
-| Accepted for return | Problematic | Customer or BoxNow started a return. | Returned |
+| Accepted for return | Active | Customer or BoxNow started a return. The **Parcel State Group** filter counts this one as Active, not Problematic. | Returned |
 | Returned | Problematic | Back with the sender. | Returned |
 | Expired | Problematic | Not collected within BoxNow's window. | Returned |
 | Missing, Lost | Problematic | Declared missing or lost. | Returned |
@@ -87,7 +87,7 @@ The row stays in **Pending creation** and the store's admins receive an email na
 
 - **P402 invalid locker**: the locker is unknown to the store's BoxNow account. Run **Sync lockers from BoxNow API** and check the locker is active; a catalogue synced under different credentials produces this for every order.
 - **Missing credentials**: the platform team must add the store's BoxNow client ID, secret and partner ID; nothing retries until then.
-- A retry after fixing the data is possible from the order side by the platform team; there is no "issue voucher" button on the BoxNow list.
+- There is no "issue voucher" or retry button anywhere on the BoxNow screens, unlike ACS. Once the data is fixed, only the platform team can send the delivery request again.
 
 ### Cancel a parcel
 
@@ -97,21 +97,22 @@ The row stays in **Pending creation** and the store's admins receive an email na
 
 ### Check what BoxNow reported
 
-Open the shipment and read the events tab, or go to <span class="sidebar-path">System → Audit & Logs → BoxNow Events</span> (superusers) for every event across all parcels: **Voucher**, **Event Type**, **Parcel State**, **Event Time**, **Display Name**, **Received At**, with filters on event type, parcel state and event time, and search by parcel ID or webhook message ID. Events are immutable. Events recorded by the poll instead of the webhook carry a message ID starting with `poll:`.
+Open the shipment and read the events tab, or go to <span class="sidebar-path">System → Audit & Logs → BoxNow Events</span> (superusers) for every event across all parcels: **Voucher**, **Event Type**, **Parcel State**, **Event Time**, **Display Name**, **Received At**, with filters on event type, parcel state and event time, and search by parcel ID or **Webhook Message ID**. Events cannot be added, edited or deleted, not even by a superuser. An event picked up by the fifteen-minute check rather than by a webhook has a **Webhook Message ID** beginning with `poll:`.
 
 ## What the customer sees
 
 - The order's tracking number is the BoxNow parcel ID.
 - When the parcel reaches **At locker**, the customer receives the store's email "Your BOX NOW parcel arrived at the locker" with the locker address, plus an in-app notification if they have an account. BoxNow separately sends its own SMS or Viber message with the pickup PIN.
 - On **Delivered**, account holders get an in-app "parcel collected" notification. Order-status emails (Shipped, Delivered, Returned, Canceled) come from the order system as usual.
-- **PAY ON THE GO** (BoxNow's collect-on-pickup product): BoxNow emails a payment link after collecting the parcel and activates the pickup PIN once the customer pays. The platform marks the order paid when BoxNow reports Delivered, since the compartment cannot open before payment. No later payout reconciliation exists or is needed, unlike ACS cash on delivery.
+- **PAY ON THE GO** (BoxNow's collect-before-pickup product): BoxNow sends the customer a payment link after the parcel is dispatched and activates the pickup PIN once the payment clears. It is not a card reader on the locker. The platform marks the order paid when BoxNow reports Delivered, since the compartment cannot open before payment. No later payout reconciliation exists or is needed, unlike ACS cash on delivery.
 
 ## Things to know
 
-- **Payment mode** on the shipment is derived from the order's payment method: PAY ON THE GO becomes `cod` (BoxNow's wire word for "collect at the locker"); online and bank-transfer orders are `prepaid` with nothing to collect. Courier cash is never allowed on a locker; such an order is refused at checkout.
+- **Payment mode** on the shipment follows the order's payment method. PAY ON THE GO shows as **Cash on delivery**, which is BoxNow's word for "collect at the locker". Online and bank-transfer orders show as **Prepaid**, with nothing to collect. Cash to a courier is never allowed on a locker, so such an order cannot be placed in the first place.
 - **Amount to be collected** is filled in when the delivery request is sent and equals the order's paid amount, so a loyalty discount is reflected.
-- **Weight** is sent in kilograms with three decimals; a zero weight is accepted by BoxNow.
+- **Weight** is sent in kilograms with three decimals, and is capped at BoxNow's own maximum. A zero weight is accepted by BoxNow.
 - **Out-of-order webhooks** cannot move a parcel backwards: the state only changes when the event is newer than the last one applied. Duplicate deliveries are ignored.
+- **"BoxNow: webhook processing failed"** is an email you may receive when BoxNow sent something the platform could not apply. BoxNow has already been told the message arrived and will not send it again, so a parcel movement may be missing. Compare the parcel against the BoxNow portal and reconcile it by hand.
 - The **Locker External ID** field on the form is editable and its help text refers to BoxNow's test environment. Leave it alone on a live store; the voucher is already at BoxNow.
 - The locker map in the storefront is a hosted widget. If it stops rendering after a platform change, the content security policy is the usual cause; that is a platform-team fix.
 

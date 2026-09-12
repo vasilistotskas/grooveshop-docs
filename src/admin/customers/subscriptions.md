@@ -18,14 +18,14 @@ A **topic** is something a customer can opt in to: the weekly newsletter, produc
 | **Topic** | Name and slug. |
 | **Category** | Marketing Campaigns, Product Updates, Account Updates, System Notifications, Newsletter, Promotional, Other. |
 | **Active** | Whether customers can subscribe right now. |
-| **Default Subscription** | New accounts are subscribed automatically. |
+| **Default Subscription** | Every new account is subscribed at registration, provided the topic is also **Active**. |
 | **Requires Confirmation** | Subscribing sends a confirmation email; the subscription stays Pending until the link is clicked. |
 | **Subscribers** | Active over total. |
 | **Created at** | |
 
 Filters: **Category**, **Active**, **Default Subscription**, **Requires Confirmation**, **Created at** range. Search matches the translated name, the slug and the description.
 
-The form has **Topic Information** (name, slug, description, category; name and description are translatable per language) and **Settings** (the three switches above). The slug is the stable identifier the storefront uses; do not change it once customers have subscribed.
+The form has **Topic Information** (name, slug, description, category; name and description are translatable per language), **Settings** (the three switches above) and a collapsed **System Information** carrying the timestamps and the subscriber count. The slug is the stable identifier the storefront uses; do not change it once customers have subscribed.
 
 ### Subscriptions
 
@@ -59,7 +59,9 @@ Bulk actions: **Activate selected subscriptions** and **Deactivate selected subs
 
 1. Open <span class="sidebar-path">Newsletter → Subscription Topics</span> and add a topic with a slug, a category and a name in each language.
 2. Decide the three switches. **Requires Confirmation** on gives you a double opt-in record for marketing topics. **Default Subscription** on subscribes every new account without asking, so keep it for account and system notices, not marketing.
-3. Leave **Active** on. Turning it off later hides the topic from the storefront without touching existing subscriptions.
+3. Leave **Active** on. Turning it off later hides the topic from the storefront and stops new accounts being subscribed to it, without touching existing subscriptions.
+
+Turning both **Default Subscription** and **Requires Confirmation** on is the safe combination for a marketing topic: the new account gets a **Pending Confirmation** row and a confirmation email at registration, and becomes Active only when the customer clicks the link.
 
 ### Unsubscribe a customer on request
 
@@ -86,8 +88,8 @@ A Bounced subscription is set when the mail system reported the address as undel
 
 - Each customer can hold one subscription per topic. Re-subscribing reuses the existing row.
 - Activating or deactivating in bulk does not send any email.
-- The confirmation email for a Pending subscription is sent by a background task when the customer subscribes on the storefront; it is retried on mail failures.
-- Deleting a topic deletes every subscription to it. Deactivate the topic instead.
+- The confirmation email for a Pending subscription is sent in the background, and retried up to three times five minutes apart if the mail fails.
+- Deleting a topic deletes every subscription to it, and with them the consent record. Deactivate the topic instead.
 
 ## Related
 

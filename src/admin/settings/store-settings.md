@@ -1,13 +1,13 @@
 ---
 title: Store settings
-description: Every runtime setting under Settings → Extra Settings, grouped by area, with its meaning, default and whether the storefront can read it; plus how the two-tier feature switches work.
+description: "Every runtime setting under Settings → Extra Settings, grouped by area, with its meaning, default and whether the storefront can read it; plus how the two-tier feature switches work."
 ---
 
 # Store settings
 
 <span class="sidebar-path">Settings → Extra Settings</span>
 
-Extra Settings is the list of runtime knobs of your store: prices and thresholds, feature switches, legal identity, integrations. Admin and Owner can edit them; Staff see the entry but cannot open it. Every row belongs to your store only (`EXTRA_SETTINGS_DEFAULTS` in `settings.py`, admin in `core/admin.py`).
+Extra Settings is the list of runtime knobs of your store: prices and thresholds, feature switches, legal identity, integrations. Admin and Owner can edit them; Staff see the entry but cannot open it. Every row belongs to your store only.
 
 ## What you see
 
@@ -15,7 +15,7 @@ Columns: **Name**, **Category**, **Type**, **Current Value**, **Description**. F
 
 The edit form has three parts: **Setting Information** (name, type, description), **Value** (one input per type; only the one matching the type is used) and a collapsed **Validation** block. Do not change the type of an existing setting.
 
-**Public** in the tables below means the storefront reads the value through the public settings endpoint (`PUBLIC_SETTING_KEYS` in `core/api/views.py`). Non-public settings are read by the server only.
+**Public** in the tables below means the storefront reads the value and may show it to a visitor. Non-public settings are read by the server only and never leave it.
 
 ## Two-tier feature switches
 
@@ -24,20 +24,20 @@ Several features have two switches that must **both** be on:
 1. a **plan flag** on your store profile, set by the platform, which says the feature is included in what you have; and
 2. a **setting** in this list, which says you currently want it on.
 
-The storefront and the API check both (`tenant/membership.py`, `tenant/permissions.py`). If the plan flag is off, turning the setting on does nothing; if the plan flag is on and the setting is off, the feature is hidden and its endpoints answer "not found".
+If the plan flag is off, turning the setting on does nothing. If the plan flag is on and the setting is off, the feature is hidden and its addresses answer "not found" rather than "forbidden", so a disabled feature looks exactly like one that was never built.
 
 | Feature | Plan flag (platform) | Your setting |
 |---|---|---|
-| Loyalty program | Loyalty Enabled | `LOYALTY_ENABLED` |
-| Promotions and coupons | Promotions Enabled | `PROMOTIONS_ENABLED` |
-| Gift cards | Gift Cards Enabled | `GIFT_CARDS_ENABLED` |
-| Wholesale (B2B) | B2B Enabled | `B2B_WHOLESALE_ENABLED` |
-| Product suggestions | Recommendations Enabled | `PRODUCT_SUGGESTIONS_ENABLED` |
-| Agent commerce (AI agents, feeds, chatbot) | Agent Commerce Enabled | `AGENT_COMMERCE_ENABLED` |
-| Hosted payment for agents | Agent Hosted Payment Enabled | `AGENT_HOSTED_PAYMENT_ENABLED` |
-| Blog comments | Blog Enabled | `BLOG_COMMENTS_ENABLED` |
+| Loyalty program | **Loyalty Enabled** | `LOYALTY_ENABLED` |
+| Promotions and coupons | **Promotions Enabled** | `PROMOTIONS_ENABLED` |
+| Gift cards | **Gift Cards Enabled** | `GIFT_CARDS_ENABLED` |
+| Wholesale (B2B) | **B2B Enabled** | `B2B_WHOLESALE_ENABLED` |
+| Product suggestions | **Recommendations Enabled** | `PRODUCT_SUGGESTIONS_ENABLED` |
+| Agent commerce (AI agents, feeds, chatbot) | **Agent Commerce Enabled** | `AGENT_COMMERCE_ENABLED` |
+| Hosted payment for agents | **Agent Hosted Payment Selection** | `AGENT_HOSTED_PAYMENT_ENABLED` |
+| Blog and blog comments | **Blog Enabled** | `BLOG_COMMENTS_ENABLED` |
 
-Commercial features (loyalty, promotions, gift cards, wholesale, suggestions) default to **off** and fail closed: nothing is ever on by accident. Interface toggles (cart, catalogue, bottom nav) default to **on** and fail open, so a temporary error never blanks the storefront.
+Commercial features (loyalty, promotions, gift cards, wholesale, suggestions) default to **off** and fail closed: if the setting cannot be read, the feature stays hidden, so nothing is ever on by accident. Interface toggles (cart, catalogue, bottom nav) default to **on** and fail open, so a temporary error never blanks the storefront.
 
 ## Settings by category
 
@@ -57,7 +57,7 @@ Defaults are what a fresh store starts with. Money is in euro.
 | `PRODUCT_REVIEWS_ENABLED` | Review list and write-review flow on product pages. | on | yes |
 | `BLOG_COMMENTS_ENABLED` | Comments and likes under blog posts. | on | yes |
 | `FAVOURITES_ENABLED` | Wishlist hearts, favourites page, price-drop and back-in-stock emails driven by favourites. | on | yes |
-| `NEWSLETTER_ENABLED` | Topic subscriptions in the account and the subscription API. Existing unsubscribe links keep working. | on | yes |
+| `NEWSLETTER_ENABLED` | Topic subscriptions in the account and the subscription endpoints. Existing unsubscribe links keep working. | on | yes |
 | `FEEDBACK_ENABLED` | The feedback page and its submission endpoint. | on | yes |
 | `PRODUCT_ALERTS_ENABLED` | Explicit back-in-stock and price-drop alerts and their emails. | on | yes |
 
@@ -73,10 +73,10 @@ Defaults are what a fresh store starts with. Money is in euro.
 | `PENDING_ORDER_REMINDER_MAX_COUNT` | Maximum reminder emails for a pending order. | 3 | no |
 | `PENDING_ORDER_REMINDER_INTERVAL_DAYS_1/_2/_3` | Days after placement for the first, second and third reminder. | 1, 3, 7 | no |
 | `CHECKOUT_ABANDONMENT_HOURS` | Hours of inactivity before a checkout counts as abandoned for the reminder email. | 2 | no |
-| `CART_ABANDONED_HOURS` | Hours of inactivity before a cart counts as abandoned (sidebar badge). | 24 | no |
+| `CART_ABANDONED_HOURS` | Hours of inactivity before a cart counts as abandoned, for the Active and Abandoned filters on the carts list. The sidebar badge ignores it and always uses one day. | 24 | no |
 | `ABANDONED_CART_CLEANUP_DAYS` | Days after which abandoned carts are deleted. | 7 | no |
 | `OLD_GUEST_CART_CLEANUP_DAYS` | Days after which guest carts are deleted. | 30 | no |
-| `LOW_STOCK_THRESHOLD` | Present in the list but not read by the hourly low-stock alert, which uses each product's own **Low stock threshold** field. | 10 | no |
+| `LOW_STOCK_THRESHOLD` | Present in the list but read by nothing. The hourly low-stock alert uses each product's own **Low stock threshold** field instead, and the sidebar badge uses a fixed band of 1 to 9. | 10 | no |
 
 ### Shipping
 
@@ -105,7 +105,7 @@ Fill the seller identity **before the first invoice**: the values are printed on
 | `INVOICE_SELLER_ADDRESS_LINE_1/_2`, `_CITY`, `_POSTAL_CODE`, `_COUNTRY` | Registered address. | empty | no |
 | `INVOICE_SELLER_PHONE`, `INVOICE_SELLER_EMAIL` | Seller contact details on the invoice. | empty | no |
 | `INVOICE_SELLER_IN_LIQUIDATION` | Disclose that the business is in liquidation. | off | no |
-| `B2B_INVOICING_ENABLED` | Let customers request an invoice instead of a receipt at checkout. Available on every plan. | on | yes |
+| `B2B_INVOICING_ENABLED` | Let customers request an invoice instead of a receipt at checkout. Available on every plan, with no plan flag behind it. | on | yes |
 | `B2B_WHOLESALE_ENABLED` | Your half of the wholesale switch (business profiles, customer groups, price lists). | off | yes |
 | `B2B_ALLOW_PROMOTIONS` | Let promotions and coupons stack on top of wholesale prices. | off | no |
 | `B2B_LOYALTY_ENABLED` | Let wholesale orders take part in loyalty. One switch for both earning and redeeming. | off | no |
@@ -134,7 +134,7 @@ Fill the seller identity **before the first invoice**: the values are printed on
 |---|---|---|---|
 | `LOYALTY_ENABLED` | Your half of the loyalty switch. | off | yes |
 | `LOYALTY_POINTS_FACTOR` | Points earned per euro. | 1.0 | yes |
-| `LOYALTY_PRICE_BASIS` | Which price earns points (`final_price`). | final_price | no |
+| `LOYALTY_PRICE_BASIS` | Which price earns points. | final_price | no |
 | `LOYALTY_REDEMPTION_RATIO_EUR` | Points needed for one euro of discount. | 100 | yes |
 | `LOYALTY_REDEMPTION_RATIO_USD` | Same for dollars; unused while the store trades in euro. | 100 | no |
 | `LOYALTY_POINTS_EXPIRATION_DAYS` | Days until unused points expire; 0 never. | 0 | yes |
@@ -164,17 +164,17 @@ Fill the seller identity **before the first invoice**: the values are printed on
 
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
-| `CONTACT_ATTACHMENTS_ENABLED` | Let visitors attach files to the contact form. Off by default because it is the only anonymous upload. | off | yes |
+| `CONTACT_ATTACHMENTS_ENABLED` | Let visitors attach files to the contact form. Off by default because it is the only place an anonymous visitor can upload anything. | off | yes |
 | `CONTACT_ATTACHMENTS_MAX_COUNT` | Files per enquiry. | 3 | yes |
-| `CONTACT_ATTACHMENTS_MAX_MB` | Per-file size limit; capped at 25 in code. | 10 | yes |
-| `CONTACT_ATTACHMENTS_TYPES` | Comma-separated MIME types, verified by file signature, not extension. | application/pdf | yes |
+| `CONTACT_ATTACHMENTS_MAX_MB` | Per-file size limit. Values above 25 are ignored; 25 MB is the hard ceiling. | 10 | yes |
+| `CONTACT_ATTACHMENTS_TYPES` | Comma-separated file types, verified by reading the file's own signature, not its extension. | application/pdf | yes |
 | `CONTACT_ATTACHMENTS_RETENTION_DAYS` | Days before the file bytes are deleted while the enquiry stays; 0 keeps forever. | 90 | no |
 
 ### Agent commerce, analytics, search
 
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
-| `AGENT_COMMERCE_ENABLED` | Your half of the agent-commerce switch (AI agent tools, feeds, chatbot). Takes effect when the tenant cache refreshes, which happens automatically on save. | on | no |
+| `AGENT_COMMERCE_ENABLED` | Your half of the agent-commerce switch (AI agent tools, feeds, chatbot). | on | no |
 | `AGENT_HOSTED_PAYMENT_ENABLED` | Let an AI agent choose an online payment method so the buyer pays on the provider's page. Subordinate to agent commerce. | on | no |
 | `PRODUCT_FEEDS_ENABLED` | Catalog feeds for Meta, TikTok and agents. Off whenever agent commerce is off. | on | no |
 | `PRODUCT_SUGGESTIONS_ENABLED` | Your half of the product suggestions switch. | off | yes |
@@ -190,7 +190,7 @@ Fill the seller identity **before the first invoice**: the values are printed on
 2. Search the name, open the row.
 3. Edit the input that matches the **Type** and **Save**.
 
-The storefront reads public settings through one cached request; a change shows within about a minute. To force it, purge **Site settings** on the [Cache](/admin/system/cache) page.
+The storefront reads every public setting in one request and keeps the answer for a minute, so a change shows within about a minute. To force it, purge **Site settings** on the [Cache](/admin/system/cache) page.
 
 ### Turn a commercial feature on
 
@@ -201,7 +201,7 @@ The storefront reads public settings through one cached request; a change shows 
 ## Things to know
 
 - Your store profile (branding, colours, social links, pixels, payment and courier credentials) is a separate form, not a setting. See [Roles & team](/admin/getting-started/roles-and-team) for where it lives.
-- The default currency cannot be changed by the store; every backend money path uses euro.
+- The currency cannot be changed by the store; every money path in the back office uses euro, and a storefront showing another symbol over euro amounts would misprice everything.
 - Settings whose description mentions a validator reject malformed JSON on save with an error message.
 - The dashboard shows a "seller identity missing" warning to platform operators while any of `INVOICE_SELLER_NAME`, `INVOICE_SELLER_VAT_ID`, `INVOICE_SELLER_TAX_OFFICE` is empty.
 

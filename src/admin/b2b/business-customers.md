@@ -75,7 +75,7 @@ flowchart LR
 ### Review an application
 1. Filter **Status → Pending review**, or click the badge.
 2. Open the profile. Compare the company details with the **VIES** tab; a **Valid** result with a matching name is strong evidence. **Invalid** or **Service unavailable** means check the number with the customer or re-run the check.
-3. **Approve** and pick the **Customer group**, or **Reject** with a reason the customer will read.
+3. **Approve** and pick the **Customer group**, or **Reject** with a reason the customer will read. The Approve dialog lists active groups only, so create or reactivate the tier first if it is not there.
 
 ### Change a customer's tier
 1. Open the profile and set **Customer group** on the **Review** tab, then save. The next time the customer loads their cart it is priced with the new group.

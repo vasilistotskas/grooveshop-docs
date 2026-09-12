@@ -43,7 +43,7 @@ both places, and that duplication is deliberate:
 | Lives in | Apps | Why |
 |---|---|---|
 | Public only | `django_tenants`, `tenant`, `country`, `region`, celery beat and results | Platform control plane and reference data identical for every store |
-| Tenant only | `product`, `order`, `cart`, `blog`, `loyalty`, `promotion`, `giftcard`, `b2b`, `page_config`, `knox`, `allauth.*`, `allauth.idp.oidc` | Store data; a Knox token or an OAuth token minted in one schema does not exist in another |
+| Tenant only | `product`, `order`, `cart`, `blog`, `loyalty`, `promotion`, `giftcard`, `b2b`, `page_config`, `agent`, `knox`, `allauth.account`, `allauth.headless`, `allauth.mfa`, `allauth.socialaccount`, `allauth.idp.oidc` | Store data; a Knox token or an OAuth token minted in one schema does not exist in another |
 | Both | `user`, `django.contrib.sessions`, `extra_settings`, `allauth.usersessions`, `admin` log | Platform staff are public-schema users; customers are tenant-schema users. Sessions must be per schema because a session id resolves against whatever user table serves the request. `extra_settings` holds platform defaults in public and merchant overrides per store |
 
 The public schema also carries the platform's own `Tenant` row (created by
@@ -110,7 +110,7 @@ tops the cached public config up with the secret fields.
 
 **Media stream.** Tenancy is in the path (`media/:tenantSchema/uploads/…`),
 so the service needs no host lookup; it validates the schema segment and
-namespaces its cache as `image:{schema}:{uuid}`. Its host allowlist for
+namespaces its cache as `image:{schema}:…`. Its host allowlist for
 upstream fetches is refreshed from
 `GET /api/v1/tenant/internal/domains`, gated by the same internal token
 (`tenant/internal.py`).

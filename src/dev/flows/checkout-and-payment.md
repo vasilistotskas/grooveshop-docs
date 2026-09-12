@@ -225,13 +225,20 @@ advances PENDING to PROCESSING
 `PENDING` until ACS remits, which the nightly reconcile detects —
 measured lag is around four days. That is by design, not a stuck order.
 
+This waiting period is specific to `courier_cash`. It is **not** shared
+by the other collect-on-delivery settlement: `PaySettlement`'s
+`collected_on_delivery()` returns both `courier_cash` and
+`carrier_terminal`, but only the first is settled by a remittance
+reconcile.
+
 **BoxNow PAY ON THE GO.** Settlement `carrier_terminal`. Despite the
 name there is no terminal: BoxNow emails a Viva payment link after
 pickup and activates the collection PIN when it clears. The `delivered`
 webhook event is therefore proof of payment, and
-`BoxNowService._mark_cod_order_paid_on_delivery` flips the order to
-`COMPLETED` with `payment_method="boxnow_cod"`. There is no remittance
-reconcile on this path.
+`BoxNowService._mark_cod_order_paid_on_delivery` moves the order's
+payment status from PENDING to `COMPLETED` with
+`payment_method="boxnow_cod"`. It leaves `Order.status` alone. There is
+no remittance reconcile on this path, and no multi-day wait.
 
 **Bank transfer.** Settlement `offline_transfer` exists and
 `PayWayService.process_payment` handles it (it deliberately does not

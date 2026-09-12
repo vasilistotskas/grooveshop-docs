@@ -109,10 +109,11 @@ manage.py clear_cache --prefixes <raw prefix>    # raw Redis prefixes
 
 ## Layer 3: Nuxt Nitro SWR cache (Redis)
 
-`nuxt.config.ts` route rules give the prerendered marketing routes
-(`shared/constants/prerender.ts`) `swr: 3600` with
-`cache: { varies: ['host', 'x-device-class'] }`, and server handlers use
-`defineCachedEventHandler`. Both store in the `cache:` mount in shared
+`nuxt.config.ts` derives three sets of route rules from
+`shared/constants/prerender.ts`, all with
+`cache: { varies: ['host', 'x-device-class'] }`: the brand pages at
+`swr: 3600`, the homepage at 300 seconds, and the blog and catalogue
+families at 600 and 300. Server handlers use `defineCachedEventHandler`. Both store in the `cache:` mount in shared
 Redis: page renders under `nitro:routes:` (with the host escaped into the
 key, and `/` stored as `index`) and handlers under `nitro:handlers:<name>`.
 

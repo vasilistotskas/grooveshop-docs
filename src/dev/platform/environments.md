@@ -50,7 +50,7 @@ and `go run ./cmd/gateway`.
 | Namespace | `grooveshop-staging`, isolated Postgres, Redis, RabbitMQ and Meilisearch |
 | Argo CD | `app-grooveshop-staging`, **manual sync only**; `appset-grooveshop-staging-tenants` generates one Application per `overlays/staging/tenants/*` |
 | Access | Traefik basic auth (`middleware-basic-auth.yaml`, secret `staging-basic-auth`) on HTML and API hosts; the asset origins and the payment/carrier webhook paths are exempt (`ingress-webhooks.yaml`) |
-| Platform hosts | `platform-staging.grooveshop.space`, `assets-staging.grooveshop.space`, `static-staging.grooveshop.space` |
+| Platform hosts | `platform-staging.grooveshop.space`, `assets-staging.grooveshop.space`, `static-staging.grooveshop.space`, `docs-staging.grooveshop.space` |
 | Email | The backend and Celery worker patches set `EMAIL_HOST=mailpit` (`overlays/staging/patches/backend-deployment-patch.yaml`); the inbox is reached with `kubectl port-forward svc/mailpit 8025:8025`, never through an ingress, because the database is a clone of production |
 | Gateway | `ENV=staging`: production network rules, sandbox payment-handler label |
 
@@ -80,11 +80,12 @@ page is [Staging](/dev/operations/staging).
 | Edge | Cloudflare proxies the zones in front of Traefik; the real client IP arrives in `CF-Connecting-IP` and is forwarded to Django as `X-Real-IP` (`grooveshop-storefront-ui-node-nuxt/server/utils/auth.ts`) |
 | TLS | cert-manager with the `letsencrypt-http01-cluster-issuer` ClusterIssuer, one Certificate per host, HTTP-01 through Traefik; a new host needs DNS pointing at the cluster before its certificate can issue |
 | Ingress middlewares | `redirect-https`, `security-headers`, `compress-responses`, `rate-limit-api`, `rate-limit-agent`, `rate-limit-chat`, `limit-attachment-body` (`base/ingress-traefik.yaml`, `base/middleware-ratelimit.yaml`, `base/middleware-body-limit.yaml`), plus `platform-basic-auth` on the control plane and `docs-basic-auth` on this site's developer tree |
-| Image pins | Five places in `manifests/app-directory/app-grooveshop.yaml`: four kustomize images and the PreSync hook's Helm tag, which must equal the Django tag |
+| Image pins | Six places in `manifests/app-directory/app-grooveshop.yaml`: five kustomize images (Django, storefront, media stream, gateway, docs) and the PreSync hook's Helm tag, which must equal the Django tag |
 
-The PreSync hook Job runs `migrate_schemas`, `collectstatic` and the
-Meilisearch settings apply once per deploy before any pod rolls, so
-migrations must be backwards-compatible with the running image. See
+The PreSync hook Job runs four steps once per deploy before any pod rolls:
+`migrate_schemas`, `collectstatic`, the Meilisearch index-settings apply and
+the recommendation-slot backfill. Migrations must therefore be
+backwards-compatible with the running image. See
 [Deploying](/dev/operations/deploying).
 
 ## Domain families

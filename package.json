@@ -13,6 +13,7 @@
     "build": "vitepress build && node scripts/postbuild.mjs",
     "build:full": "pnpm sync:sources && pnpm build",
     "preview": "vitepress preview",
+    "check:admin": "node scripts/check-admin-prose.mjs",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
     "semantic-release": "semantic-release"
   },

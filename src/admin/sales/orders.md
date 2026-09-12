@@ -44,12 +44,12 @@ The page is split into tabs:
 - **Order Information**: UUID, the editable **Status**, created, updated and status-updated timestamps.
 - **Billing / Invoice**: **Document type** (Receipt or Invoice), and for invoice orders the buyer's company name, VAT ID (ΑΦΜ), tax office (ΔΟΥ), business activity and registered billing address. **Wholesale pricing** shows which B2B group priced the order, or "Retail (no group pricing)".
 - **Customer Information**: linked account (empty for guests), name, email, phone.
-- **Shipping Address**: country, region, city, street, number, postcode, floor, location type.
-- **Payment Information**: the chosen payment method, the editable **Payment status**, the gateway that processed the charge, the provider's payment ID, the paid amount, and the read-only promotion discount, loyalty discount and gift-card amount stamped at checkout.
+- **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty.
+- **Payment Information**: **Pay way** (what the customer chose), the editable **Payment status**, **Payment Method** (the gateway that took the charge), **Payment ID**, **Paid Amount**, and the read-only **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** stamped at checkout.
 - **Shipping & Tracking**: shipping provider, shipping kind, shipping price, tracking number, carrier name.
 - **Additional Information**: the customer's notes from checkout.
 
-Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (last twenty entries: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
+Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
 
 The header carries **Download shipping voucher (PDF)** and an **Invoicing & myDATA** menu with **Generate invoice**, **Regenerate invoice (same number)**, **Send invoice to myDATA** and **Cancel invoice in myDATA**. See [Invoices](/admin/sales/invoices).
 
@@ -73,10 +73,10 @@ stateDiagram-v2
 |---|---|---|
 | **Pending** | Placed, nothing has happened yet. For online payments the money is not in yet; for cash on delivery the courier voucher is being created. | The checkout. |
 | **Processing** | Confirmed and being prepared. | Automatic when an online payment succeeds or when the courier voucher is issued for a cash-on-delivery order; or the bulk action. |
-| **Shipped** | The carrier reports the parcel moving. | Automatic from ACS polling or the BoxNow webhook; or the bulk action. |
+| **Shipped** | The carrier reports the parcel moving. | Automatic, from the regular ACS tracking checks or from BoxNow's own parcel updates; or the bulk action. |
 | **Delivered** | The carrier reports delivery. | Automatic from the carrier; or the bulk action. |
 | **Completed** | Delivered and paid. Final. | Automatic once a delivered order is paid (for cash on delivery, when the courier's payout is reconciled); or the bulk action. |
-| **Canceled** | Closed before shipping. Stock was restored. Final. | The customer from their account, the cancel bulk action, or the automatic cleanup of unpaid online orders. |
+| **Canceled** | Closed before shipping. Stock was restored. Final. | The customer from their account, the cancel bulk action, or the automatic clean-up of unpaid orders. |
 | **Returned** | The carrier brought the parcel back, or the customer returned it. | Automatic from the carrier; otherwise you, by editing **Status** on the order page (there is no bulk action for it). |
 | **Refunded** | A returned order whose money went back. Final. | You, by editing **Status** on a Returned order. |
 
@@ -87,12 +87,12 @@ Only **Pending** and **Processing** orders can be canceled. **Completed**, **Can
 | Payment status | Meaning | What sets it |
 |---|---|---|
 | **Pending** | Nothing collected yet. Normal for cash on delivery until the courier pays out, and for bank transfer until you confirm it. | Checkout. |
-| **Processing** | The provider is still working on the charge. | Provider webhook. |
-| **Completed** | Paid in full. Also used when gift cards, points or a 100% promotion covered the whole total. | Stripe or Viva Wallet webhook, the daily ACS cash-on-delivery reconciliation, or you, by editing the field. |
-| **Failed** | The online charge was declined. The order stays Pending and is auto-canceled after the grace period. | Provider webhook. |
-| **Refunded** | Fully refunded. | A full refund seen on the Stripe webhook. |
-| **Partially Refunded** | Part of the money went back. | A partial refund seen on the Stripe webhook. |
-| **Canceled** | The provider reversed a payment that never completed. | Viva Wallet webhook. |
+| **Processing** | The provider is still working on the charge. | The provider, when it reports back. |
+| **Completed** | Paid in full. Also used when gift cards, points or a 100% promotion covered the whole total. | Viva Wallet or Stripe confirming the charge, the nightly match against the ACS cash-on-delivery payout report, BoxNow reporting a paid parcel delivered, or you, by editing the field. |
+| **Failed** | The online charge was declined. The order stays Pending and is auto-canceled after the grace period. | The provider, when it reports the decline. |
+| **Refunded** | Fully refunded. | Cancelling a paid order, or a full refund made in the Stripe dashboard. |
+| **Partially Refunded** | Part of the money went back. | A partial refund made in the Stripe dashboard. |
+| **Canceled** | The provider reversed a payment that never completed. | Viva Wallet. |
 
 Once a payment is Completed, Refunded, Partially Refunded or Canceled, a late or duplicated provider message can never move it back to Pending or Failed.
 
@@ -115,7 +115,7 @@ Prefer the bulk action over editing the **Status** field on the order page. The 
 2. The platform restores the stock, releases any leftover reservation, records the cancellation in the history, asks the courier to cancel the voucher and emails the customer.
 3. If the courier refuses (for example the parcel is already on a pickup list), the order is still canceled locally and the refusal is noted in the order's data; deal with the parcel through the carrier.
 
-Money is not refunded by this action. See "Refunds" below.
+**This action refunds the money too**, when there is money to refund: an order whose payment status is Completed and that was charged by Viva Wallet or Stripe gets a full provider refund as part of the cancellation, and the payment status becomes Refunded. Cash on delivery, bank transfer and orders settled entirely by gift card have nothing for a provider to send back; the gift-card part goes back to the cards either way. If the provider refuses the refund, the order is still canceled and the failure is logged, so check the payment status afterwards.
 
 ### Confirm a bank transfer or other offline payment
 1. Open the order and go to **Payment Information**.
@@ -133,20 +133,25 @@ Money is not refunded by this action. See "Refunds" below.
 
 ## What happens automatically
 
-- **Stock**: checkout reserves stock for a limited time (the `STOCK_RESERVATION_TTL_MINUTES` setting, 30 minutes by default). Placing the order consumes the reservation; expired reservations are released every hour. A failed online payment does not release stock by itself: that happens when the order is canceled, by you or by the cleanup below.
-- **Unpaid online orders are canceled for you**: every fifteen minutes the platform cancels online-payment orders whose payment **Failed** more than `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` ago (30) and orders still **Pending** with payment **Pending** older than `ORDER_AUTO_CANCEL_PENDING_HOURS` (24). Cash on delivery and bank transfer are never auto-canceled. An order Viva Wallet charged for a different amount than the total is skipped and left for a person.
-- **Reminders**: online orders left unpaid get up to three reminder emails, one, three and seven days apart (the `PENDING_ORDER_REMINDER_*` settings), checked daily at 07:00.
+- **Stock**: checkout reserves stock for a limited time (`STOCK_RESERVATION_TTL_MINUTES`, 30 minutes by default). Placing the order consumes the reservation; expired reservations are released every hour. A failed online payment does not release stock by itself: that happens when the order is canceled, by you or by the cleanup below.
+- **Unpaid orders are canceled for you**: every fifteen minutes the platform runs two rules. Any order still **Pending** whose payment is **Failed** and untouched for `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` (30) is canceled. Separately, an order still **Pending** with payment **Pending**, placed more than `ORDER_AUTO_CANCEL_PENDING_HOURS` (24) ago, is canceled only if it was meant to be paid online: cash on delivery and bank transfer sit unpaid by design and are never touched by that second rule. Neither rule refunds anything. An order Viva Wallet charged for a different amount than the total is skipped and left for a person.
+- **Reminders**: orders meant to be paid online and left unpaid for more than a day get up to three reminder emails, one, three and seven days apart, checked daily at 07:00. How many go out is `PENDING_ORDER_REMINDER_MAX_COUNT`, and the three gaps are the keys whose names start with `PENDING_ORDER_REMINDER_INTERVAL_DAYS_`, all under [Store settings](/admin/settings/store-settings). Cash-on-delivery orders are never chased.
 - **Courier voucher**: created right after checkout for cash on delivery, after the payment succeeds for online orders. Its arrival moves the order to Processing and sets the tracking number.
 - **Carrier tracking** moves the order through Shipped and Delivered, and a delivered, paid order to Completed.
 - **Cash on delivery stays payment-Pending until the courier pays out.** ACS remits collected cash days later; a nightly reconciliation matches the payout report to orders and marks them Completed, silently for the customer. That is by design, not a stuck order.
 - **Invoices** are generated when an order with document type **Invoice** reaches Completed. See [Invoices](/admin/sales/invoices).
-- **Emails** to the customer: order received (immediately for cash on delivery, after payment for online orders), payment failed, shipped (when genuinely in transit), delivered, canceled, completed, refunded, returned, invoice, refund confirmation. **Pending** and **Processing** never email the customer. The store also gets a new-order email. Templates are under [Email templates](/admin/storefront/email-templates).
+- **Emails** to the customer: order received (immediately for cash on delivery, after payment for online orders), payment failed, shipped (when genuinely in transit), delivered, canceled, completed, refunded, returned, invoice, refund confirmation. **Pending** and **Processing** never email the customer, and neither does the automatic step to **Completed**: the customer has just had the delivered message, so only a Completed you trigger yourself emails them. The store also gets a new-order email. Templates are under [Email templates](/admin/storefront/email-templates).
 - **In-app notifications** mirror the same milestones for customers with an account; guests only get email. See [Notifications](/admin/sales/notifications).
 - **History** logs every status change, payment update, shipping update, note and refund, with the user who did it or "System".
 
 ## Refunds
 
-There is no refund button in the admin. A refund issued from the Stripe dashboard reaches the order through the webhook and sets the payment status to Refunded or Partially Refunded, emails the customer and writes a history entry. The order status is not changed automatically: when the goods are back, set **Status** to Returned and then Refunded on the order page (the only two statuses with no bulk action). Money paid through gift cards goes back to the cards automatically when an order is canceled or refunded. See [Gift cards](/admin/sales/gift-cards).
+There is no refund button in the admin: nothing on the order page or in the bulk-action list refunds money on its own. There are exactly two ways money goes back.
+
+- **Cancel the order** while it is still Pending or Processing. If it was paid online, the cancellation includes a full provider refund, as described above.
+- **Refund it in the provider's own dashboard** (Viva Wallet or Stripe). A Stripe refund reaches the order on its own and sets the payment status to Refunded or Partially Refunded, emails the customer and writes a history entry.
+
+Either way the order status is not changed for you: when the goods are back, set **Status** to Returned and then Refunded on the order page. Those are the only two statuses with no bulk action. Money paid through gift cards goes back to the cards automatically when an order is canceled or refunded, split across the cards in proportion to what each gave. See [Gift cards](/admin/sales/gift-cards).
 
 ## Guest orders
 
@@ -154,12 +159,12 @@ A guest order has no account in **Customer Information**. Everything else works 
 
 ## Things to know
 
-- **Editing Status on the order page skips the safety checks.** It still emails the customer, logs history and, for Canceled, asks the courier to cancel, but it does not restore stock and it lets you jump to any state. Use the bulk actions.
-- **Editing money fields does not move money.** Changing the paid amount, discounts or gift-card amount only changes what the screen shows; nothing is charged or refunded. Discount fields are read-only for that reason.
+- **Editing Status on the order page skips the safety checks.** It still emails the customer, logs history and, for Canceled, asks the courier to cancel, but it does not restore stock, it does not refund anything, and it lets you jump to any state. Use the bulk actions.
+- **Editing money fields does not move money.** Changing the paid amount only changes what the screen shows; nothing is charged or refunded. **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** are read-only for that reason: they are stamped at checkout and the matching coupon, points and gift-card records already exist.
 - **Payment status Completed by hand** is right for bank transfers and cash collected in person. Do not use it for card payments still awaited from a provider.
-- **Two "payment method" fields exist.** The one under **Payment Information** with a dropdown is what the customer chose. The gateway field next to it (stripe, viva_wallet, acs_cod) is written by the provider and is used for matching webhooks; leave it alone.
+- **Two fields look like the payment method.** **Pay way** is the dropdown, and it holds what the customer chose at checkout. **Payment Method** next to it is written by the platform and records which gateway took the money (`stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`); it is used to match incoming provider messages, so leave it alone.
 - **Wholesale orders** keep the group name and discount percent they were priced with; changing the customer's group later does not touch old orders. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
-- **A Shipment column without a value** means the carrier task has not run or the order predates the carrier registry. The voucher button will say so.
+- **A Shipment column without a value** means no voucher has been asked for yet, or the order is older than the current carrier setup. The voucher button will say so.
 - Superusers also see the raw **Order History** and **Stock Logs** under [Audit & logs](/admin/system/audit-and-logs).
 
 ## Related

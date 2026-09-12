@@ -36,7 +36,7 @@ Only superusers can delete an invoice, and doing so leaves a gap in the sequence
 | Status | Meaning |
 |---|---|
 | **Not sent** | myDATA is off, or this invoice was never submitted. The resting state for stores without the integration. |
-| **Pending submission** | Queued; the background task has been scheduled. |
+| **Pending submission** | Queued for sending; nothing has gone to AADE yet. |
 | **Submitted** | Sent, waiting for AADE. |
 | **Confirmed (MARK assigned)** | Registered. The PDF was regenerated with the MARK and the QR code. |
 | **Rejected** | AADE returned a validation error. The customer's PDF is still the pre-submission version. Fix the master data (seller details, VAT rates, buyer VAT ID) and resend from the order page. |
@@ -51,7 +51,7 @@ Generation is idempotent: asking again for an order that already has a rendered 
 
 ## Invoice at checkout for businesses
 
-At checkout the shopper chooses **Receipt** or **Invoice**. Choosing Invoice requires a valid VAT ID (a Greek ΑΦΜ is checksum-validated) together with company name, tax office, business activity and the company's registered address, which are snapshotted onto the order in the **Billing / Invoice** tab. The option is controlled by the `B2B_INVOICING_ENABLED` setting (on by default) under [Store settings](/admin/settings/store-settings) and does not depend on the wholesale program: any shopper can ask for an invoice. Approved business customers have these details on their profile; see [Business customers](/admin/b2b/business-customers).
+At checkout the shopper chooses **Receipt** or **Invoice**. Choosing Invoice requires a Greek ΑΦΜ of nine digits that passes its check digit, an EL or GR prefix being stripped for you, plus company name, tax office and business activity. The registered address is optional: left blank it is copied from the delivery address, and a half-filled one is refused rather than mixed with the delivery address. All of it is snapshotted onto the order in the **Billing / Invoice** tab. The option is controlled by `B2B_INVOICING_ENABLED` (on by default) under [Store settings](/admin/settings/store-settings) and does not depend on the wholesale program: any shopper can ask for an invoice. Approved business customers have these details on their profile; see [Business customers](/admin/b2b/business-customers).
 
 ## Tasks
 
@@ -62,7 +62,7 @@ At checkout the shopper chooses **Receipt** or **Invoice**. Choosing Invoice req
 Customers download their own copy from their account or from the invoice email.
 
 ### Fix a wrong invoice PDF
-1. Correct the source: seller details under Store settings (the `INVOICE_SELLER_*` keys), the product VAT rates, or the order's billing fields.
+1. Correct the source: the seller details under Store settings (every key whose name starts with `INVOICE_SELLER_`), the product VAT rates, or the order's billing fields.
 2. On the order page choose **Invoicing & myDATA → Regenerate invoice (same number)**. The number and issue date are kept; the PDF, the snapshots and the totals are recomputed.
 3. If the invoice was already confirmed in myDATA, a regenerated PDF does not change what AADE holds. Use **Cancel invoice in myDATA** while the cancellation window is open, or issue a credit note through your accountant.
 
@@ -78,7 +78,7 @@ Superusers only. Under <span class="sidebar-path">System → Reconciliation → 
 
 - **Numbering is allocated under a lock**, so two invoices generated at the same moment can never share a number. The counter is the only source of truth; the count of invoices in the archive is not.
 - **The VAT table is frozen at issue.** Changing a VAT rate later does not change old invoices; regenerating one recomputes from the order's lines with the rates the products carry now, so regenerate only when that is what you intend.
-- **Seller details come from Store settings**, not from the tenant record: legal name, legal form, VAT ID, tax office, address and so on under the `INVOICE_SELLER_*` keys. Fill them before the first invoice.
+- **Seller details come from Store settings**, not from the store record the platform team keeps: legal name, legal form, VAT ID, tax office, address and so on, under the keys whose names start with `INVOICE_SELLER_`. Fill them before the first invoice.
 - **myDATA settings** live under Store settings too: `MYDATA_ENABLED`, `MYDATA_AUTO_SUBMIT`, `MYDATA_ENVIRONMENT` (dev or prod), `MYDATA_USER_ID`, `MYDATA_SUBSCRIPTION_KEY`, `MYDATA_INVOICE_SERIES_PREFIX`, `MYDATA_ISSUER_BRANCH`. Submission is refused while the integration is off or credentials are missing.
 - **Only VAT rates AADE recognises are accepted** on [VAT rates](/admin/sales/vat-rates); an invoice with an unrecognised rate would be rejected by myDATA.
 - **Gift-card amounts are payment, not a discount.** They never reduce the invoiced value; the invoice shows the full goods value and VAT. The sale of a gift card itself is never submitted to myDATA.

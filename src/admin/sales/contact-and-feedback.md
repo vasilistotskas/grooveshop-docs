@@ -28,8 +28,8 @@ The message page shows **Contact Information** (name, email, company, phone), th
 
 ### What happens automatically
 
-- Every new message triggers an email to the store's contact address (the tenant's contact email, or the `CONTACT_EMAIL` setting), listing the message and any attachments. If no contact address is configured the email is skipped with a warning in the logs, so set one under [Store settings](/admin/settings/store-settings).
-- Attachments are scanned in the background when a scanner is configured. The verdict decides whether you can download the file: **Clean** and **Not scanned** can be downloaded; **Pending scan** and **Scan failed** are withheld until a verdict exists; **Infected** is never served. A file that was never claimed by a submitted form is deleted after a few hours; the bytes of claimed files are deleted after `CONTACT_ATTACHMENTS_RETENTION_DAYS` (90) while the message and the file's name, size and checksum stay.
+- Every new message triggers an email to the store's contact address. That is the contact address on the store's own record, which the platform team sets, and `CONTACT_EMAIL` under [Store settings](/admin/settings/store-settings) when that is empty. With neither filled in, no email is sent at all, so set one.
+- Attachments are scanned in the background when a scanner is configured. The verdict decides whether you can download the file: **Clean** and **Not scanned** can be downloaded; **Pending scan** and **Scan failed** are withheld until a verdict exists; **Infected** is never served. A file uploaded but never sent with a message is deleted six hours later; the bytes of files that did arrive are deleted after `CONTACT_ATTACHMENTS_RETENTION_DAYS` (90) while the message and the file's name, size and checksum stay.
 
 ### Tasks
 
@@ -39,7 +39,7 @@ The message page shows **Contact Information** (name, email, company, phone), th
 
 **Allow attachments on the contact form**
 1. Under Store settings turn on `CONTACT_ATTACHMENTS_ENABLED` (off by default: this is the store's only anonymous upload).
-2. Set `CONTACT_ATTACHMENTS_MAX_COUNT` (3), `CONTACT_ATTACHMENTS_MAX_MB` (10, capped at 25) and `CONTACT_ATTACHMENTS_TYPES` (a list of MIME types; PDF only by default). Types are checked from the file's actual bytes, not its extension.
+2. Set `CONTACT_ATTACHMENTS_MAX_COUNT` (3, capped at 20), `CONTACT_ATTACHMENTS_MAX_MB` (10, capped at 25) and `CONTACT_ATTACHMENTS_TYPES` (file types separated by commas; PDF only by default). The type is read from the file's actual bytes, never from its name or what the browser claims, and a file the platform cannot identify is refused.
 
 **Handle a data-subject request about a message**
 Delete the message; the attachments and their files go with it. Contact messages have no user account behind them, so the customer erasure tools do not touch them.
@@ -60,7 +60,7 @@ Filters: category, rating, created date. Search by name, email, message. Bulk ac
 
 ### What happens automatically
 
-Every submission emails the store's contact address, like a contact message. The storefront feedback page exists only while `FEEDBACK_ENABLED` is on (it is on by default); turning it off hides the page and rejects submissions.
+Every submission emails the store's contact address, like a contact message, and is skipped in the same way when no address is set. The storefront feedback page exists only while `FEEDBACK_ENABLED` is on (it is on by default); turning it off makes the page answer "not found" and rejects submissions.
 
 ## Things to know
 

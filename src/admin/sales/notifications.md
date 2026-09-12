@@ -18,7 +18,7 @@ A notification is the bell in the storefront: a short in-app message a signed-in
 | **Notification** | Title and the start of the message. |
 | **Kind** | **Info**, **Success**, **Warning**, **Error**, **Danger**: the colour of the toast. |
 | **Category** | Order, Payment, Shipping, Cart, Product, Account, Security, Promotion, System, Review, Wishlist, Support, Newsletter, Recommendation. |
-| **Priority** | Low, Normal, High, Urgent, Critical. |
+| **Priority** | **Low Priority**, **Normal Priority**, **High Priority**, **Urgent Priority**, **Critical Priority**. |
 | **Status** | **Active** or **Expired**. |
 | **Engagement** | How many recipients have seen it, out of how many it was delivered to. |
 | **Timing** | Created, relative age, and the expiry date or "no expiry". |
@@ -28,8 +28,8 @@ Filters: **Notification Status** (Active, Expired, Urgent Priority, Recent, Has 
 ### The notification page
 
 - **Notification Content**: **Title** and **Message** per language, and an optional **Link** the toast opens.
-- **Classification**: **Kind**, **Category**, **Priority**, and **Notification Type**, the machine-readable event name. Leave it blank for a manual announcement.
-- **Scheduling**: **Expiry Date**. New rows default to 180 days ahead.
+- **Classification**: **Kind**, **Category**, **Priority**, and **Notification Type**, the event name the platform uses to recognise the messages it sends itself. Leave it blank for an announcement you write.
+- **Scheduling**: **Expiry Date**. New rows are given a date 180 days ahead. See "Things to know" for what it does, and does not, do.
 - **Analytics** and **Timing Information**: read-only counts and timestamps.
 
 ### Recipients
@@ -46,8 +46,8 @@ Each of these creates a notification for the customer who owns the order or acco
 | Payment confirmed / Payment failed | Stripe reports the charge. |
 | Order shipped | The order reaches Shipped. |
 | Order delivered / completed / canceled / refunded | The order reaches that status. |
-| ACS parcel out for delivery | ACS tracking. |
-| BoxNow parcel at locker / delivered | BoxNow webhook. |
+| ACS parcel out for delivery | ACS tracking reports it out for delivery. |
+| BoxNow parcel at locker / delivered | BoxNow reports the parcel. |
 | Price drop / Back in stock | A favourited product changes. |
 | Loyalty tier promotion | The customer reaches a new tier. |
 | Blog comment liked | Someone liked their comment. |
@@ -68,12 +68,15 @@ There is no "send to everyone" button; a store-wide broadcast means one row per 
 2. The **Seen** column and the seen timestamp tell you; the analytics block on the row shows how long they took.
 
 ### Withdraw a notification
-1. Open it and set **Expiry Date** to now, or delete it. Deleting removes it from every recipient's centre.
+1. Delete it. That removes it from every recipient's centre at once.
+2. Setting **Expiry Date** to now does not withdraw anything. The customer keeps seeing the message; only this admin screen starts calling it Expired.
 
 ## Things to know
 
 - **Real-time delivery** uses the storefront's live connection, which only signed-in customers have. If the customer is offline, the notification waits in their centre; nothing is lost.
-- **Expiry hides, it does not delete.** Expired notifications stop showing; they are deleted by a cleanup that runs twice a month. The default lifetime is the `NOTIFICATION_EXPIRATION_DAYS` setting (180) under [Store settings](/admin/settings/store-settings).
+- **Expiry is a label here, not a rule for the customer.** **Expiry Date** drives the **Status** column and the filters on this screen and nothing else: a customer's notification centre shows a message whether or not its date has passed. Deleting is the only way to take one back.
+- **`NOTIFICATION_EXPIRATION_DAYS` does nothing.** The key is listed under [Store settings](/admin/settings/store-settings), but nothing reads it. New notifications always get a date 180 days out; change the date on the notification itself if you want a different one.
+- **Old notifications are cleared out twice a month.** On the 1st and the 15th, notifications created more than a year ago are deleted, whatever their expiry date says.
 - **Languages**: write every language the store serves. When a translation is missing the customer sees English, then Greek.
 - **Editing a delivered notification** changes what recipients see the next time they open the centre; it does not re-push it.
 - **Emails are configured elsewhere.** Transactional emails (order received, shipped, invoice and so on) are templates under [Email templates](/admin/storefront/email-templates) and are not affected by anything on this screen.

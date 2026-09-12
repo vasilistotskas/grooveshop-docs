@@ -7,7 +7,13 @@ description: Define attributes such as Colour or Size, their values, and assign 
 
 <span class="sidebar-path">Catalog → Attributes</span> and <span class="sidebar-path">Catalog → Attribute Values</span>
 
-An **attribute** is a property type (Colour, Size, Capacity). An **attribute value** is one option of it (Red, Large, 256 GB). Products point at values, not at attributes. The storefront uses them for search filters, the specifications panel on the product page and, for attributes flagged as variant axes, the variant selector.
+An **attribute** is a property type (Colour, Size, Capacity). An **attribute value** is one option of it (Red, Large, 256 GB). Products point at values, not at attributes.
+
+On the storefront each value does up to three jobs:
+
+- Every value attached to a product is listed in the **Specifications** panel of that product's page, whatever else it does.
+- Active attributes and active values are offered as filters in the sidebar of the product listing. Inactive ones are left out of the filter list.
+- An attribute marked as a variant axis additionally drives the selector that moves a shopper between the siblings of a variant group.
 
 The two lists and [Variant groups](/admin/catalog/variant-groups) share a tab strip at the top of the page, so you can hop between them.
 
@@ -18,8 +24,8 @@ The two lists and [Variant groups](/admin/catalog/variant-groups) share a tab st
 | Column | Meaning |
 |---|---|
 | **Attribute** | Name and id. |
-| **Active** | Inactive attributes stay in the database but are not meant for display. |
-| **Is Variant Axis** | On: rendered as a selector across a product's variant group instead of a read-only specification. |
+| **Active** | Off keeps the attribute out of the storefront's filter list. Its values stay on every product that carries them and still show as specifications. |
+| **Is Variant Axis** | On: the attribute also drives the selector across a product's variant group. It keeps appearing as a specification as well. |
 | **Values** | Number of values defined. |
 | **Usage** | Number of product assignments across all values. |
 | **Sort Order** | Drag rows to reorder. |
@@ -63,9 +69,10 @@ The value form has **Value Information** (**Attribute**, **Value** per language,
 ## Things to know
 
 - Values are shown in the language of the storefront visitor, with English as the fallback for a missing translation.
-- Deleting an attribute deletes all of its values and removes them from every product. Deleting a value removes it from every product.
-- Deactivating does not remove assignments; it only flags the attribute or value. Check the **Usage** column before deleting anything.
-- Attribute names and values are part of the product search index (including Greeklish variants), so assigning values improves search recall. The product is re-indexed when it is saved, not when a value is renamed; a nightly full re-sync catches the rest.
+- Deleting an attribute deletes all of its values and removes them from every product. Deleting a value removes it from every product. Neither can be undone, so check the **Usage** column first.
+- Deactivating removes nothing. The attribute or value stays on every product it was assigned to and keeps showing in that product's specifications; it only stops being offered as a filter.
+- **Deactivating a variant axis does not switch the selector off.** A variant group keeps rendering its selector from the values its members carry, whether the attribute is active or not. Clear **Is Variant Axis** instead.
+- Attribute names and values are part of the product search index, Greeklish spellings included, so assigning values improves search recall. Attaching or removing a value re-indexes that product straight away. Renaming an attribute or a value does not: the nightly re-sync picks that up.
 - The **Sort Order** of values is scoped per attribute, so reordering the sizes of one attribute never moves the colours of another.
 
 ## Related

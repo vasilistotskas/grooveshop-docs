@@ -5,27 +5,27 @@ description: Preview every transactional email the store sends, in each language
 
 # Email templates
 
-<span class="sidebar-path">Site dropdown (click the store name at the top of the sidebar) → Email Templates</span>
+<span class="sidebar-path">Not in the sidebar. Click the store name at the top of the sidebar and pick **Email Templates**, or go to `/admin/email-templates/management/`.</span>
 
-The Email Template Management page lets staff see exactly what a customer receives. It is a **preview tool**: templates are part of the platform code and cannot be edited, reset or sent from here. The page is available on the store admin only, and it lists recent orders of this store, so treat it as customer data.
+The Email Template Management page lets staff see exactly what a customer receives. It is a **preview tool and nothing else**: the templates belong to the platform, and there is no way to edit one, reset one, or send a test from this page. The page exists on the store admin only, and it shows real orders of this store, so treat what you see on it as customer data.
 
 ## What you see
 
-**Left panel: Available Templates.** A search box (**Ctrl+K** / **⌘K** focuses it) filters by name and description, and the list is grouped by category with collapsible headings. Each template shows an **Active** or **Unused** badge, whether it has an HTML and a text version, and a short description.
+**Left panel: Available Templates.** A search box (**Ctrl+K** / **⌘K** focuses it) filters by name and description, and the list is grouped by category with collapsible headings that open automatically when a search matches inside them. Each template shows a badge, an **HTML** and a **TXT** marker, and a short description. Every template today carries the **Active** badge and has both an HTML and a plain-text version, so neither marker distinguishes anything in practice.
 
 **Right panel: Template Preview.**
 
 | Control | Options |
 |---|---|
 | **Language** | Greek, English, German. |
-| **Data Source** | **Sample Data** (generated on the fly, never saved) or **Real Order** (shown only for order templates). |
-| **Select Order** | Appears with Real Order: the 10 most recent orders of the store. |
+| **Data Source** | **Sample Data** (made up on the spot, never saved) or **Real Order**. The **Real Order** choice is only offered on templates whose name begins `order_`, which leaves out several genuine order emails: the new-order notice to you, payment failed, invoice issued, dispute notification, and the two courier ones. Preview those with sample data. |
+| **Select Order** | Appears with Real Order: the 10 most recent orders of the store, and only those ten. |
 | **Generate Preview** | Renders the template. |
 | **HTML** / **Text** tabs | Switch between the rich and the plain-text version. |
 
 ## Which templates exist
 
-Templates are discovered from the code's email folders, so the list always matches what the platform can send.
+The list is built from the templates the platform actually ships, so it always matches what your store can send.
 
 | Category | Templates |
 |---|---|
@@ -35,11 +35,11 @@ Templates are discovered from the code's email folders, so the list always match
 | Giftcard | Gift card delivery, Gift card purchase receipt, Gift card expiry reminder |
 | B2B | Business profile approved, Business profile rejected, Admin new business profile |
 | Billing | Expiring, Expired, Suspended (platform billing notices) |
-| Shipping ACS | Stale shipments alert, Unprinted vouchers alert (to the store) |
+| Shipping Acs | Stale shipments alert, Unprinted vouchers alert (to the store) |
 | Subscription | Confirmation |
-| User | Data export ready, Inactive user re-engagement |
+| User Management | Data export ready, Inactive user re-engagement |
 
-Templates with a configuration entry carry a description and a subject line pattern such as `Your Order #<id> Has Shipped`; the rest show "Email template" and a generic subject in the preview. Every template has an HTML and a text version.
+Ten templates carry a written description and a real subject pattern such as `Your Order #<id> Has Shipped`. The other twenty-four show the placeholder description "Email template" and a generic subject in the preview. That says nothing about the email itself: those templates are sent just as often, and the real message carries a proper subject.
 
 ## Tasks
 
@@ -58,16 +58,15 @@ Order templates carry the statuses they are sent for. Use the search box with th
 
 ## Variables and language
 
-- The content comes from the order (customer name, items, totals, tracking number, carrier) or, for sample data, from generated Greek names, addresses and products. Nothing you do on this page writes to the database.
-- Customer emails are sent in the customer's language. Emails addressed to the store (new order, low stock, business profile applications, shipping alerts) go to the store contact address and ignore the customer's language.
+- The content comes from the order (customer name, items, totals, tracking number, carrier) or, with sample data, from made-up Greek names, addresses and products. Nothing you do on this page changes any record.
+- Customer emails are sent in the customer's own language. Emails addressed to you instead (new order, low stock, business profile applications, shipping alerts) go to the store contact address, and their subject line is always in English whatever language the body comes out in. That is expected; it is not a translation you can fix.
 
 ## Things to know
 
-- **No editing, no reset to default.** Templates are files in the platform; a change request goes to the platform team. There is also no "send test email" button.
-- **Unused** means the platform has the template but no code path triggers it today; it can still be previewed.
-- The template list is cached per server process; a template added by a deployment appears after the next restart.
-- An unknown order id, or an order from another store, returns "Order not found".
-- Some subjects and strings in the preview are English placeholders when the template has no configured subject; the real email uses the subject set by the sending code.
+- **No editing, no reset to default, no test send.** Changing what an email says is a request to the platform team, not something this page can do.
+- **A bad order id gives you a misleading preview.** Pick an order that has since been deleted, or paste an id belonging to another store, and the preview does not say so. It quietly renders sample data while still labelling itself a real-order preview. If a preview shows names and products you do not recognise, the order id did not resolve.
+- Only the ten most recent orders are offered, so you cannot preview an older one here.
+- The template list is read once when the store's servers start. A template added by a platform release shows up after the next restart, not immediately.
 
 ## Related
 

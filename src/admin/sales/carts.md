@@ -33,9 +33,11 @@ Cart ID, and the owner's email, username, first or last name.
 
 ### The cart page
 
-**Cart Owner** (the linked user), an **Activity** block with the timestamps, a read-only **Summary** (cart summary and financial summary: items, total, discount, VAT, savings percentage) and a **Cart Items** tab listing product, quantity, unit price (showing "old → new" when a markdown applies), line total and discount. The quantity in the tab is editable.
+**Cart Owner** (the linked user), an **Activity** block with the timestamps, a read-only **Summary** (cart summary and financial summary: items, total, discount, VAT, savings percentage) and a **Cart Items** tab listing product, quantity, unit price, line total and discount. The quantity in the tab is editable.
 
-There is also a separate **Cart Items** screen, not on the sidebar but reachable through the search palette, with bulk actions **Increase quantity by 1**, **Decrease quantity by 1** and **Remove from cart**.
+The unit price is written as "net → price paid" whenever the two differ, which is any product carrying VAT or a markdown. The left figure is the price before VAT; the right one is what the shopper is charged, with VAT added and any markdown taken off. It is not an old price next to a new one.
+
+There is also a separate **Cart Items** screen, not on the sidebar but reachable through the search palette, with bulk actions **Increase quantity by 1**, **Decrease quantity by 1** and **Remove from cart**. **Decrease quantity by 1** deletes any selected line that is already at one, so it can empty a basket.
 
 ## Tasks
 
@@ -57,8 +59,9 @@ The platform emails signed-in customers about an abandoned checkout on its own; 
 - **Guest carts are deleted automatically.** Every day at 04:00 empty guest carts idle for more than `ABANDONED_CART_CLEANUP_DAYS` (7) are deleted; every day at 06:00 all guest carts idle for more than `OLD_GUEST_CART_CLEANUP_DAYS` (30), empty or not, are deleted. Customer carts are never deleted.
 - **Abandoned-checkout emails** go out daily at 06:00 to signed-in customers who started checkout (which reserves stock) but never placed the order, once the reservation has been expired for `CHECKOUT_ABANDONMENT_HOURS` (2). Each customer is emailed once per abandoned session. Guests never receive it.
 - **Stock is not held by a cart.** Stock is reserved only when checkout starts, for `STOCK_RESERVATION_TTL_MINUTES` (30) minutes, and released every hour when expired. A large abandoned cart does not block stock for other shoppers.
-- **A cart survives a hosted payment page.** When a shopper goes off to Viva Wallet or Stripe and comes back without paying, the cart is intentionally still there; it is cleared only when the payment completes. For cash on delivery it clears as soon as the order is placed.
-- The storefront cart itself can be hidden for a store that is not selling yet (the `CART_ENABLED` setting under [Store settings](/admin/settings/store-settings)); this screen still works.
+- **A cart survives a hosted payment page.** When a shopper goes off to Viva Wallet or Stripe and comes back without paying, the cart is intentionally still there; it is emptied only when the payment completes. For cash on delivery that happens as soon as the order is placed.
+- **Only the ordered lines leave the cart.** Placing an order removes exactly what it contained and deletes the cart only if nothing is left, so anything the shopper added while a payment page was open stays in their basket.
+- The storefront cart itself can be hidden for a store that is not selling yet (`CART_ENABLED` under [Store settings](/admin/settings/store-settings)); this screen still works.
 
 ## Related
 

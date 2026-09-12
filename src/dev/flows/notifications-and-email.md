@@ -13,8 +13,13 @@ bug. Guests are the deliberate exception — they have no account to
 address a toast to, so they get the email only.
 
 Both channels are asynchronous. Nothing in a request path sends mail or
-pushes a socket message directly; every dispatch is a Celery task
-enqueued through `transaction.on_commit`.
+pushes a socket message directly; every dispatch is a Celery task, and
+every one of them lands after the creating transaction commits. Most
+reach that through `tenant.celery.dispatch_on_commit`. The two
+order-created emails are the exception in mechanism only: they call
+`.delay()` directly, but `handle_order_post_save` has already deferred the
+`order_created` signal itself to `transaction.on_commit`, so they still
+enqueue post-commit.
 
 ## Diagram
 
@@ -49,8 +54,9 @@ row: `link`, `kind`, `category`, `priority`, `notification_type`,
 `NotificationUser` (`notification/models/user.py`) is the join to a user
 with `seen` and `seen_at` — one notification can fan out to many users.
 
-`notification_type` is a free-text column so an ad-hoc admin broadcast
-needs no migration, but every event fired from application code uses a
+`notification_type` is a `CharField` that names `NotificationTypeEnum` in
+`choices` but is not constrained in the database, so an ad-hoc admin
+broadcast needs no migration. Every event fired from application code uses a
 member of `notification/enum.py: NotificationTypeEnum`. That enum is the
 one place new event types are added, and it reaches the storefront as a
 typed union through the OpenAPI contract.
@@ -94,8 +100,9 @@ Knox tokens and cookies are **not** accepted on the socket URL.
 `POST /api/v1/websocket/ticket`
 (`notification/views/websocket.py: create_websocket_ticket`) requires an
 authenticated HTTP request, refuses if the user has no live Knox token,
-and returns a 32-byte URL-safe ticket cached against the user's primary
-key for 60 seconds.
+and returns a URL-safe ticket of 32 bytes of entropy (a 43-character
+string) cached against the user's primary key for 60 seconds
+(`WS_TICKET_TTL_SECONDS`).
 
 `core/middleware/channels.py: TokenAuthMiddleware` reads `?ticket=` and
 consumes it with an atomic Redis `GETDEL` — a compare-then-delete has a
@@ -222,10 +229,11 @@ together.
   `notify_order_status_changed_live` returns a skip. They are internal
   milestones already covered by the order-received or payment-confirmed
   message.
-- **The shipped email self-gates on two conditions.** It is dispatched
+- **The shipped email self-gates on three conditions.** It is dispatched
   from two events — `order_status_changed` reaching SHIPPED, and
   `order_shipment_dispatched` when tracking first lands — and sends only
-  when `status == SHIPPED` **and** a tracking number exists. Whichever
+  when `status == SHIPPED`, a tracking number exists **and** a shipping
+  carrier is set. Whichever
   fires first returns a no-op `True` **without** reserving the flag, so
   the second one can send. Reserving on the deferral would block the real
   send permanently.
@@ -237,7 +245,8 @@ together.
 | Order created, offline or already paid | `send_order_confirmation_email` (`order_received`) | `notify_order_created_live` |
 | Order created, online and unpaid | none, deferred to payment | `notify_order_created_live` |
 | Order created, any | `send_admin_new_order_email` to the merchant | — |
-| Payment succeeded (Stripe) | `send_order_confirmation_email` (`order_payment_confirmed`) | `notify_payment_confirmed_live` |
+| Payment succeeded (Stripe `payment_intent.succeeded`) | `send_order_confirmation_email` (`order_payment_confirmed`) | `notify_payment_confirmed_live` |
+| Payment succeeded (Stripe `checkout.session.completed`) | `send_order_confirmation_email` | none — this handler dispatches no toast |
 | Payment succeeded (Viva) | `send_order_confirmation_email` | none — the toast is Stripe-specific |
 | Payment failed | `send_payment_failed_email` | `notify_payment_failed_live` |
 | → PENDING, → PROCESSING | none | none |
@@ -273,9 +282,16 @@ no credential fields and every `tenant.credentials.*` read would see the
 store as unconfigured. `MonitoredTask` adds success and failure logging
 with arguments scrubbed by `_safe_repr`.
 
-Retry policy differs by intent. Email tasks use
-`max_retries=3, default_retry_delay=300` and catch broadly, releasing the
-reservation flag on permanent failure. Live-notification tasks
+Retry policy differs by intent. The six **reservation-guarded** customer
+emails — confirmation, payment failed, refund confirmation, status update,
+shipping notification and invoice — use
+`max_retries=3, default_retry_delay=300`, catch broadly, and release the
+reservation flag on permanent failure. The rest do not follow that shape:
+the merchant and dispute emails and the two sweep tasks use
+`autoretry_for=(Exception,)` with backoff and jitter and hold no
+reservation flag at all, `send_invoice_to_mydata` uses
+`max_retries=5, default_retry_delay=120`, and the two B2B profile emails
+use `max_retries=5` with backoff and jitter. Live-notification tasks
 (`order/notifications.py: TASK_DEFAULTS`) retry **only** on
 `OperationalError` with backoff and jitter: `IntegrityError` will not
 resolve on retry, and re-running a partially completed task would create
@@ -288,10 +304,13 @@ transaction has not committed.
 ### Mailpit on staging
 
 Staging routes all outbound mail into an in-cluster Mailpit instance:
-`EMAIL_BACKEND` and `EMAIL_HOST=mailpit` are patched onto the backend and
-celery-worker deployments in
+`EMAIL_BACKEND`, `EMAIL_HOST=mailpit`, `EMAIL_PORT=1025` and
+`EMAIL_USE_TLS=False` are patched onto the backend and celery-worker
+deployments in
 `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/`.
-No credentials are set — Mailpit accepts any. Nothing leaves the cluster,
+The credentials are deliberately **not** patched — they stay whatever the
+sealed secret holds, and Mailpit accepts them regardless because it runs
+with `MP_SMTP_AUTH_ACCEPT_ANY`. Mail therefore does not leave the cluster,
 so a staging refresh cannot email real customers. See
 [Staging](/dev/operations/staging).
 
@@ -320,9 +339,10 @@ so a staging refresh cannot email real customers. See
 
 - **Socket closes 4003 immediately.** Either the ticket was already
   consumed (a reconnect reusing a dead URL — automatic reconnect is off
-  for this reason), or the user's Knox tokens were revoked, or the tenant
-  has no `api.<domain>` row so the handshake never reached the right
-  schema.
+  for this reason), the user's account was deactivated, or their Knox
+  tokens were revoked. A missing tenant is **not** a cause here: the
+  tenant middleware runs first and closes 4004 before the ticket is ever
+  read.
 - **Socket closes 4004.** `tenant/middleware_ws.py` found no active
   tenant for the host. See [Multi-tenancy](/dev/platform/multi-tenancy).
 - **No toast but the email arrived.** Expected for a guest order. For a

@@ -11,8 +11,9 @@ tiers. A customer's balance is always the sum of their
 mutation happens under a lock on the customer's own row, because award,
 reverse, redeem and expire can all run concurrently through Celery.
 
-One switch turns the whole program on, and it gates earning, reversing and
-redeeming together.
+One method, `LoyaltyService.is_enabled()`, decides whether the program runs
+at all, and it gates earning, reversing and redeeming together. That method
+reads two tiers, which the gate section below sets out.
 
 ## Diagram
 
@@ -42,7 +43,9 @@ negative for redeem, expire and a negative adjust.
 
 `LoyaltyService.get_user_balance` sums the ledger through
 `PointsTransaction.objects.get_balance`. XP is separate: `UserAccount.total_xp`
-is a counter that only earning moves, and redemption never touches it.
+is a counter that only earning and reversal move, floored at zero on the way
+down. Redemption never touches it, so spending points cannot cost a customer
+a tier.
 
 `loyalty/models/tier.py: LoyaltyTier` is a translatable, sortable model with
 a **unique** `required_level`, a `points_multiplier` (minimum 1.0) and an
@@ -87,7 +90,12 @@ writes a `BONUS` row worth `LOYALTY_NEW_CUSTOMER_BONUS_POINTS` only when the
 customer has no prior `EARN` rows outside this order. The bonus does not
 affect XP, so no further tier recalculation is needed.
 
-`loyalty/tasks.py: process_order_points` calls both, in that order.
+`loyalty/tasks.py: process_order_points` calls both, in that order, but the
+bonus is **conditional**: it runs only when the award returned more than
+zero points and the order has a user. A genuine first order whose items
+compute to zero points — a zero `points_coefficient`, a zero
+`LOYALTY_POINTS_FACTOR`, an entirely free basket — therefore earns no
+welcome bonus either.
 
 ### Reversing
 
@@ -171,13 +179,21 @@ schema. `settings.py` registers one beat entry,
 `process-loyalty-points-expiration`, pointing at
 `tenant.tasks.fanout_process_points_expiration` and scheduled daily at 03:00.
 
-`tenant/tasks.py: run_for_all_tenants` enters each schema in turn. Every
-loyalty task uses `core/tasks.py: MonitoredTask`, which **subclasses
-`TenantTask`** — so `apply_async` stamps the `_schema_name` header and
-`__call__` wraps execution in `schema_context`, while the base adds
-success/failure logging with secret-looking kwargs masked. A loyalty task
-dispatched without that base would execute against whatever schema the worker
-happens to be in.
+`tenant/celery.py: run_for_all_tenants` does not enter schemas itself. It
+iterates the active, non-public, non-suspended tenants and sends **one
+message per tenant**, each stamped with a `_schema_name` header; the
+subtasks enter their own schema later, in the worker.
+
+That entry is `core/tasks.py: MonitoredTask`, which every loyalty task uses
+and which **subclasses `TenantTask`** — so `apply_async` stamps the header
+and `__call__` enters the tenant on the way in, while the base adds
+success/failure logging with secret-looking kwargs masked. `__call__` uses
+`tenant_context` with the real `Tenant` row for a tenant schema, and
+`schema_context` only for the public schema or when no row matches. The
+distinction is load-bearing: `schema_context` alone installs a bare
+`FakeTenant`, under which every `tenant.credentials` helper reads as
+unconfigured. A loyalty task dispatched without that base would execute
+against whatever schema the worker happens to be in.
 
 ### The two-tier gate
 
@@ -313,6 +329,7 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/loyalty/urls.py` | Endpoint paths |
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask`, which extends `TenantTask` |
 | `grooveshop-django-api/tenant/tasks.py` | `fanout_process_points_expiration` |
+| `grooveshop-django-api/tenant/celery.py` | `run_for_all_tenants`, `TenantTask` schema entry |
 | `grooveshop-django-api/tenant/permissions.py` | `IsLoyaltyEnabled` |
 | `grooveshop-django-api/b2b/services.py` | `loyalty_allowed`, `suppresses_loyalty` |
 | `grooveshop-django-api/order/services.py` | Redemption at order create, wholesale suppression |

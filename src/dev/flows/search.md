@@ -21,16 +21,18 @@ Everything else on this page follows from those two.
 ```mermaid
 flowchart TD
   Save["Product / BlogPost save"] --> Sig["meili/apps.py post_save"]
-  Sig --> Filt{"meili_filter()"}
-  Filt -- "true" --> Task["index_document_task"]
+  Sig --> Task["index_document_task"]
+  Task --> Filt{"meili_filter()"}
+  Filt -- "true" --> Ser["meili_serialize + greeklish fields"]
   Filt -- "false" --> Del["delete document"]
-  Task --> Ser["meili_serialize + greeklish fields"]
   Ser --> Idx["schema-prefixed index"]
 
   UI["Nuxt search modal"] --> NR["server/api/search/*"]
   NR --> DV["Django search views"]
-  DV --> Scoped["search_client_for_schema"]
+  DV --> Fed["federated_search"]
+  Fed --> Scoped["search_client_for_schema"]
   Scoped --> Idx
+  DV --> Idx
   DV --> Retry{"zero results?"}
   Retry -- "multi-word" --> Relax["drop leading word, retry"]
   DV --> MW["SearchAnalyticsMiddleware"]
@@ -66,8 +68,11 @@ Two hooks a model overrides:
 - `get_additional_meili_fields()` returns computed attributes — this is
   where every Greeklish shadow field is produced.
 
-`get_meilisearch_queryset()` and `get_search_result_queryset()` are the
-bulk-indexing and hit-hydration querysets; the second is what keeps the
+`get_meilisearch_queryset()` is the bulk-indexing queryset and is declared
+on the mixin. `get_search_result_queryset()` is the hit-hydration queryset
+and is **not** part of the mixin: each indexed model defines its own
+(`product/models/product.py`, `blog/models/post.py`) and
+`meili/querysets.py` reaches it through `getattr`. It is what keeps the
 federated view from running four queries per hit.
 
 ### Index-time Greeklish, in three layers
@@ -147,6 +152,13 @@ code ever mis-prefixes an index name. It falls back to the unscoped search
 client in three documented cases: the public schema, no dedicated search key
 provisioned, and `OFFLINE` mode.
 
+`federated_search` is its **only** caller. Product and blog search go
+through the model managers into `meili/querysets.py`, which uses the
+client's plain read-only `search_client`. Tenant isolation on those two
+paths therefore rests on the schema-prefixed index name alone, not on a
+token rule. Worth knowing before you assume the token is a second line of
+defence everywhere.
+
 Blog gating in federated search is a **drop, not a refusal**. The view is
 not gated on `IsBlogEnabled`, because 404-ing it would take product search
 down with it for a blog-disabled store. Instead the blog index is only added
@@ -180,23 +192,27 @@ already-submitted ones.
 Django's default weak references would garbage-collect them and silently
 stop all indexing.
 
-On save the handler branches on `meili_filter()`: qualifying instances are
-indexed, non-qualifying ones have any existing document **deleted**, so a
-deactivated product stops being searchable instead of lingering. Outside
-`DEBUG`, and when `MEILI_ASYNC_INDEXING` allows, the work is dispatched
-through `tenant.celery.dispatch_on_commit` to `meili/tasks.py:
-index_document_task`, whose base class `MeiliTask` carries the tenant schema
-on the message. Task waits are bounded at five seconds so a backlogged
+Either way the outcome is the same: qualifying instances are indexed,
+non-qualifying ones have any existing document **deleted**, so a
+deactivated product stops being searchable instead of lingering. Where the
+`meili_filter()` branch runs differs by path. Outside `DEBUG`, and when
+`MEILI_ASYNC_INDEXING` allows, the handler dispatches through
+`tenant.celery.dispatch_on_commit` to `meili/tasks.py:
+index_document_task` **unconditionally**, and the task itself calls
+`meili_filter()` and deletes on a false. Only the synchronous
+DEBUG / no-Celery path branches before dispatching. `MeiliTask`, the task's
+base class, carries the tenant schema on the message. Task waits are bounded at five seconds so a backlogged
 engine cannot pin a worker slot; the timeout raises and the task retries
 with backoff.
 
 ### Analytics
 
 `search/middleware.py: SearchAnalyticsMiddleware` records a `SearchQuery`
-row for every successful request whose path contains `/search/`, minus the
-two non-query endpoints (`/trending`, `/analytics`) it excludes explicitly.
-It parses the response body for `results`, `estimatedTotalHits`,
-`processingTimeMs` and the `queryId` the view minted, then fires
+row for every request that answers exactly 200 and whose path contains
+`/search/`, minus the two non-query endpoints (`/trending`, `/analytics`)
+it excludes explicitly.
+It parses the response body for `results`, `estimatedTotalHits` and the
+`queryId` the view minted, then fires
 `search/tasks.py: save_search_query` with `.delay()` — fire and forget, off
 the response path. Client IP comes from the **rightmost** `X-Forwarded-For`
 entry when `REMOTE_ADDR` is a private address, because that is the one the
@@ -216,8 +232,17 @@ ranking reflects it without a resync. Both models list `click_score:desc` in
 their `ranking_rules`; products also rank `in_stock:desc` above it and
 `discount_percent:desc` below.
 
-`anonymize_old_search_queries` nulls the IP, user agent, session key and
-user FK on rows past the retention window, keeping the aggregate value.
+`anonymize_old_search_queries` scrubs rows past the retention window,
+keeping the aggregate value. It nulls `ip_address` and the user FK, and
+sets `user_agent` and `session_key` to the **empty string** rather than
+null. The empty string is how "already scrubbed" is spelled, and it is
+what the task's own exclusion clause keys on, so do not relax either
+column back to null.
+
+`SearchQuery.processing_time_ms` is worth one warning. The middleware
+parses a processing-time field out of the response, but no search view
+emits one, so the column is always null and the average that
+`search_analytics` reports over it always aggregates an empty set.
 
 ### Management commands and the deploy hook
 
@@ -248,8 +273,8 @@ query traffic, so the master key never serves an untrusted path.
 **The search key never leaves Django.** The storefront holds no Meilisearch
 credential and never talks to the engine: `server/api/search/*` and
 `server/api/products/search.get.ts` proxy to Django, which queries the
-engine. A grep for a Meilisearch client, host or key in the Nuxt tree finds
-only generated response types.
+engine. The Nuxt tree carries no Meilisearch dependency, no client, no host
+and no key — the name survives only in type declarations and comments.
 
 ### The storefront side
 
@@ -279,8 +304,9 @@ every failure — tracking must never affect the shopper. It no-ops without a
   federation.** Today that is `{4, 8}` on both `ProductTranslation` and
   `BlogPostTranslation`. Changing one without the other lets the looser
   index win on noise.
-- **Every index name is `{schema}__{base}`**, and query traffic goes through
-  a tenant-token client scoped to that prefix.
+- **Every index name is `{schema}__{base}`** on a tenant schema; the public
+  schema gets the bare base name. Federated query traffic additionally goes
+  through a tenant-token client scoped to that prefix.
 - **Only the read-only key serves queries.** The master key is for
   administration and indexing.
 - **A save that fails `meili_filter` deletes the document.** Returning early
@@ -293,8 +319,9 @@ every failure — tracking must never affect the shopper. It no-ops without a
 ## Failure modes
 
 - **A blog post is searchable before it is published.**
-  `BlogPostTranslation.meili_filter` returns `master.is_published` and
-  nothing else, and both the blog and federated views filter on
+  `BlogPostTranslation.meili_filter` returns `master.is_published` once it
+  has a master to read (it returns false for an unset `master_id` and
+  catches a missing row), and both the blog and federated views filter on
   `is_published = true`. But `blog/managers/post.py: published()` — what
   every public blog endpoint uses — additionally requires `published_at` to
   be null or already past. A post scheduled for next week with
@@ -339,6 +366,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 |---|---|
 | `grooveshop-django-api/meili/models.py` | `IndexMixin`, `MeiliMeta`, `get_meili_index_name`, serialization |
 | `grooveshop-django-api/meili/_client.py` | Master and search clients, tenant tokens, index settings, paged `get_indexes` |
+| `grooveshop-django-api/meili/querysets.py` | `IndexQuerySet.search`, hit hydration through each model's `get_search_result_queryset` |
 | `grooveshop-django-api/meili/_settings.py` | Search-key fallback |
 | `grooveshop-django-api/meili/apps.py` | Signal wiring, index-or-delete branch |
 | `grooveshop-django-api/meili/tasks.py` | `index_document_task`, `delete_document_task`, `reindex_model_task` |

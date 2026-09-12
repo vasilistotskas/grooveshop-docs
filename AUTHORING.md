@@ -36,6 +36,47 @@ page templates and the list of facts to verify.
 9. Prefer short paragraphs, numbered steps for tasks, tables for options and
    statuses. Bold the on-screen button or field name the reader must click.
 
+## The admin guide names nothing from the codebase
+
+The reader is a shop owner or their staff. They will never open the repository,
+so a file name, a class, a Django setting or an app label is noise that makes
+the page look like it was written for someone else. This is a hard rule, not a
+preference.
+
+**Never** in `src/admin/**` or `src/el/admin/**`:
+
+- source paths of any kind (`tenant/role_scopes.py`, `admin/dashboard.py`,
+  `core/templates/admin/index.html`)
+- module, class, function or constant names from the code (`settings.py`,
+  `SESSION_COOKIE_AGE`, `UNFOLD["COMMAND"]`, `TENANT_SELF_EDITABLE_FIELDS`,
+  `PLATFORM_ONLY_APP_LABELS`, `DJANGO_ADMIN_FORCE_ALLAUTH`)
+- app labels, model class names, signal or task names
+- "it is built by", "rendered by", "declared in", "derived at request time"
+
+**Allowed**, because the reader sees them on screen or types them:
+
+- on-screen labels, exactly as the admin renders them, in bold
+- sidebar paths in the `sidebar-path` span
+- keys shown in **Settings → Extra Settings**, because that screen lists the key
+  name itself, so the owner reads and edits them by that name
+- admin URLs they may need to paste, for screens absent from the sidebar
+- storefront-visible names: order statuses, payment statuses, courier names
+
+Rewrite, do not delete the meaning. The behaviour is still worth documenting;
+say it in the owner's terms and drop the citation.
+
+| Instead of | Write |
+|---|---|
+| It is built by `admin/dashboard.py` and rendered by `core/templates/admin/index.html`. | (delete — the reader gains nothing) |
+| refreshed on every write (`admin/signals.py`) | refreshed whenever an order, payment or stock change is saved |
+| Sessions expire after two weeks (`SESSION_COOKIE_AGE` in `settings.py`) | Sessions expire two weeks after you sign in, and using the panel does not extend them |
+| `settings.py` declares `DJANGO_ADMIN_FORCE_ALLAUTH`, but nothing reads it | The admin sign-in has no second factor today |
+| only fields in the merchant allowlist are editable (`tenant/role_scopes.py`, `TENANT_SELF_EDITABLE_FIELDS`) | you can edit only some fields; plan, billing and feature switches are set by the platform and shown read-only |
+| The rules come from `tenant/role_scopes.py` and `tenant/auth_backends.py`: Staff gets view, add and change… | Staff can view, add and edit everything in the store except its settings… |
+
+Developer pages under `src/dev/**` are the opposite: they MUST cite source
+files. Never move a citation from a dev page into an admin page to "save" it.
+
 ## Template — admin guide page (en; the el twin mirrors it)
 
 ```md

@@ -11,14 +11,14 @@ The loyalty programme rewards signed-in customers with **points** they can spend
 
 ## Is it on?
 
-Two switches must both be on, and one of them is yours:
+Two switches must both be on, and only one of them is yours:
 
-1. The store's plan must include loyalty. This is set by the platform team on the store record.
+1. The store's plan must include loyalty. That is set by the platform team and you cannot change it here.
 2. **LOYALTY_ENABLED** in <span class="sidebar-path">Settings → Extra Settings</span>, off by default.
 
-This is one switch for the whole programme. When it is off, no points are earned on completed orders, no points are reversed on cancellations, and the checkout refuses to redeem points with the message "Loyalty system is currently disabled." Balances are kept, so turning it back on resumes where it stopped.
+**LOYALTY_ENABLED** is one switch for the whole programme, covering earning and redeeming together. There is no way to let customers earn but not spend, or the other way round. When it is off, no points are earned on completed orders, no points are reversed on cancellations, and the checkout refuses to redeem points with the message "Loyalty system is currently disabled." Balances are kept, so turning it back on resumes where it stopped.
 
-Wholesale customers have their own single switch: **B2B_LOYALTY_ENABLED** decides whether orders priced through a customer group both earn and redeem. It is off by default because points are computed on retail prices. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
+Wholesale customers have their own single switch, with the same all-or-nothing shape: **B2B_LOYALTY_ENABLED** decides whether orders priced through a customer group both earn and redeem. It is off by default because points are worked out from retail prices, so a negotiated price would earn full retail points. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
 
 ## How points are earned
 
@@ -34,7 +34,7 @@ floor( price basis × LOYALTY_POINTS_FACTOR × product Points Coefficient × qua
 - Each product has a **Points Coefficient** (0 disables calculated points for it) and fixed **Bonus Points**. See [Products](/admin/catalog/products).
 - The **tier multiplier** applies only when **LOYALTY_TIER_MULTIPLIER_ENABLED** is on and the customer's tier has a multiplier above 1.
 
-The points awarded are also added to the customer's **Total XP**. A first order can additionally grant a one-off **new customer bonus** when **LOYALTY_NEW_CUSTOMER_BONUS_ENABLED** is on; the amount is **LOYALTY_NEW_CUSTOMER_BONUS_POINTS**, default 100. The bonus does not add XP.
+The points awarded are also added to the customer's **Total XP**. A first order can additionally grant a one-off **new customer bonus** when **LOYALTY_NEW_CUSTOMER_BONUS_ENABLED** is on; the amount is **LOYALTY_NEW_CUSTOMER_BONUS_POINTS**, default 100. The bonus does not add XP, and it rides on the first order that actually earns points: an order that earns nothing (every product on it has a **Points Coefficient** of 0) does not trigger the bonus either.
 
 Guest orders earn nothing. Points are awarded once per order; a repeated job run is ignored.
 
@@ -57,7 +57,7 @@ When an order is cancelled or refunded, a job reverses it: points spent on the o
 
 ## Expiry
 
-A nightly job at 03:00 expires points older than **LOYALTY_POINTS_EXPIRATION_DAYS**. The default is 0, which means points never expire. Each expired earning is recorded as an **Expire** transaction, capped at what the customer still holds, so an already-spent earning does not push the balance negative.
+A nightly job at 03:00 expires points older than **LOYALTY_POINTS_EXPIRATION_DAYS**. The default is 0, which means points never expire. Each expired earning is recorded as an **Expire** transaction, capped at what the customer still holds, so an already-spent earning does not push the balance negative. An earning that was fully spent still gets a zero **Expire** row, which is how it is not considered again.
 
 ## What you see
 
@@ -70,7 +70,7 @@ A nightly job at 03:00 expires points older than **LOYALTY_POINTS_EXPIRATION_DAY
 | **Points Multiplier** | Applied to earned points when the tier multiplier setting is on. Minimum 1.0. |
 | **Icon** | Thumbnail of the uploaded badge. |
 
-Search matches the translated name. The form holds the translatable **Name** and **Description**, **Required Level**, **Points Multiplier** and **Icon** (PNG, JPG or SVG).
+There are no filters on this list; search matches the translated name. The form holds the translatable **Name** and **Description**, **Required Level**, **Points Multiplier** and **Icon** (PNG, JPG or SVG).
 
 ### Points Transactions
 
@@ -97,7 +97,7 @@ Filters: **Transaction Type**, **User**, **Created at** range. Search matches th
 
 ### Add or remove points for a customer
 
-1. Open the customer in <span class="sidebar-path">Customers → Users</span> and click **Adjust loyalty points for this user**. Only superusers can use it.
+1. Open the customer in <span class="sidebar-path">Customers → Users</span> and click **Adjust loyalty points for this user**. The button is visible to anyone who can edit the account, but only a superuser's click does anything.
 2. The default is 100 points; the range is minus to plus ten thousand. The change appears at once as an **Adjust** row with your account as creator and cannot be undone except by a further adjustment.
 
 Adjustments change the balance only, never XP, level or tier.

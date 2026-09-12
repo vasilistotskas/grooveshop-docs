@@ -47,7 +47,7 @@ Django app that owns each capability is named so you can find it.
 | Recommendations | `recommendation/` | Typed product relations plus scored strategies; strategies are further gated by plan rank |
 | Agentic commerce | `grooveshop-agent-gateway`, `agent/` | MCP tools, UCP and ACP checkout, product feeds, chatbot — see [Agentic commerce](/dev/flows/agentic-commerce) |
 | Notifications and email | `notification/`, `core/templates/emails/` | WebSocket notifications and transactional email, branded per tenant |
-| Analytics | `meta_capi/`, `Tenant` pixel fields | Meta CAPI, Meta/TikTok/GA pixels; ids are tenant-only, consent-gated in the storefront |
+| Analytics | `meta_capi/`, `Tenant` pixel fields | Meta Conversions API server-side, plus the Meta, TikTok, OpenAI and Google Analytics browser ids (`meta_pixel_id`, `tiktok_pixel_id`, `openai_pixel_id`, `ga_tracking_id`); all tenant-only and consent-gated in the storefront |
 
 Which of these a given store can use is a **two-tier** decision: a
 plan-level flag on the `Tenant` row set by the operator, and a runtime

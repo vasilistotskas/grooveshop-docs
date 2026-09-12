@@ -21,15 +21,23 @@ Their role is Staff. Staff sees the entry but cannot open it; only Admin and Own
 
 Only an Owner can edit an Owner's membership, and an Admin cannot pick the Owner role. If you are an Owner and still cannot, check that you are signed in as the right account. See [Roles & team](/admin/getting-started/roles-and-team).
 
+### We removed our last Owner by mistake
+
+Nothing prevents that, and no Admin can undo it. Ask the platform to grant an Owner membership again, and promote a second person once it is back. See [Roles & team](/admin/getting-started/roles-and-team).
+
 ### Where is the System section? I only see up to Settings
 
-The System section (audit logs, reconciliation, identity lists) is for platform operators. Store roles do not see it. Ask the platform when you need something from there. See [Welcome](/admin/).
+The System section (audit logs, reconciliation, identity lists) is for platform operators and is hidden from store roles. Ask the platform when you need something from there. See [Welcome](/admin/).
+
+### Does the admin have two-factor authentication?
+
+No. The admin login is email and password only. Your storefront customers do get authenticator apps, passkeys and login-by-code, but staff sign-in does not. Use strong, unique passwords and one membership per person. See [Signing in & MFA](/admin/getting-started/login-and-mfa).
 
 ## Storefront not reflecting changes
 
 ### I edited a product but the storefront still shows the old price
 
-The storefront caches rendered pages for a few minutes, and your browser may cache them too. Reload with Ctrl+Shift+R first; then purge **Products** on the Cache page. See [Cache](/admin/system/cache).
+Saving a product does not purge its cache: catalogue pages are rebuilt at most every five minutes, and your browser may cache them too. Reload with Ctrl+Shift+R first; then purge **Products** on the Cache page. See [Cache](/admin/system/cache).
 
 ### I changed a setting and nothing happened
 
@@ -41,7 +49,7 @@ Check, in order: the plan flag on the store profile, the `PROMOTIONS_ENABLED` se
 
 ### My navigation menu edit is not visible
 
-Menus and page layouts are cached as rendered HTML. Purge **Pages & navigation** on the Cache page. See [Navigation](/admin/storefront/navigation) and [Cache](/admin/system/cache).
+Menus and page layouts are cached as rendered pages. Purge **Pages & navigation** on the Cache page. See [Navigation](/admin/storefront/navigation) and [Cache](/admin/system/cache).
 
 ### A product image does not appear
 
@@ -55,7 +63,7 @@ There is no English translation of that record, so the fallback is shown. Open t
 
 ### A cash-on-delivery order has been delivered but its payment is still Pending
 
-That is by design. The payment flips to Completed when ACS pays out the collected cash, which the nightly reconciliation imports; it usually takes several days after delivery. See [Reconciliation](/admin/system/reconciliation).
+That is by design. The payment flips to Completed when ACS pays out the collected cash, which the 02:30 reconciliation imports; it usually takes several days after delivery. See [Reconciliation](/admin/system/reconciliation).
 
 ### An online order has been Pending for hours
 
@@ -79,23 +87,27 @@ Numbers are taken from a per-year counter that only moves forward; a deleted inv
 
 Vouchers are collected only when they are on a pickup list. The list is issued Mon–Fri at 16:30 and is rejected as a whole if any voucher on it is unprinted. Print the missing label and click **Issue ACS pickup list now** on ACS Shipments. See [ACS Courier](/admin/shipping/acs) and [Reconciliation](/admin/system/reconciliation).
 
+### ACS tracking looks out of date
+
+ACS sends no notifications at all, so every checkpoint arrives through a poll that runs every fifteen minutes. Click **Re-poll ACS tracking** on the shipment if you need it now. See [ACS Courier](/admin/shipping/acs).
+
 ### The Smartpoint option does not show at checkout
 
 `ACS_SMARTPOINT_ENABLED` is off by default; turn it on after the station sync has run. See [Store settings](/admin/settings/store-settings).
 
 ### A BoxNow parcel state looks stale
 
-Parcel state comes from BoxNow's webhooks and from a poll every fifteen minutes, so a delay of up to fifteen minutes is normal. Platform operators can read every delivery in BoxNow Events. See [BoxNow](/admin/shipping/boxnow).
+Parcel state comes from BoxNow's notifications and from a poll every fifteen minutes, so a delay of up to fifteen minutes is normal. Platform operators can read every delivery in BoxNow Events. See [BoxNow](/admin/shipping/boxnow).
 
 ## Customers and emails
 
 ### A customer cannot receive the verification code
 
-Verification is mandatory. After confirming the address through another channel, a platform operator can mark it verified from the Email Addresses list. See [Security & access](/admin/settings/security-and-access).
+Verification is mandatory. After confirming the address through another channel, mark it verified from the Email Addresses list. That screen is a platform-operator tool and is not in your sidebar, so ask the platform rather than hunting for it. See [Security & access](/admin/settings/security-and-access).
 
 ### A customer lost their authenticator app
 
-A platform operator can delete the customer's MFA authenticator so they can sign in with the password and enrol again. See [Security & access](/admin/settings/security-and-access).
+The customer's second factor can be deleted so they can sign in with the password and enrol again. It is done from the MFA Authenticators list, a platform-operator screen; ask the platform. See [Security & access](/admin/settings/security-and-access).
 
 ### A customer asked for a copy of their data
 
@@ -109,7 +121,11 @@ They request it from their account; the file is ready for seven days. Platform o
 
 ### The dashboard numbers look a few minutes old
 
-They are cached for five minutes and refreshed on order and stock writes. See [Dashboard](/admin/getting-started/dashboard).
+They are cached for five minutes and refreshed whenever an order, invoice, product, review, customer or contact message is saved. See [Dashboard](/admin/getting-started/dashboard).
+
+### The Contact Messages badge never goes down
+
+It counts every enquiry you have, not the unread ones: there is no read flag. It only falls when messages are deleted. See [Welcome](/admin/).
 
 ### How do I find an order by voucher number or an email quickly?
 
@@ -117,4 +133,4 @@ Press Ctrl+K (⌘K on a Mac) and type it. See [Search & command palette](/admin/
 
 ### An admin label is wrong or in English
 
-Interface strings are edited in Rosetta on the platform console; a store cannot change them. Tell the platform the screen and the text. See [Languages & translations](/admin/localization/languages-and-translations).
+The admin's wording is edited on the platform console and is shared by every store, so a store cannot change it. Tell the platform the screen and the text. See [Languages & translations](/admin/localization/languages-and-translations).

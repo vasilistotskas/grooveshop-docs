@@ -44,9 +44,14 @@ flowchart TD
 
 ### One engine, four callers, one answer
 
-`PromotionEngine.evaluate(cart)` is the only place a discount is computed,
-and four surfaces call it: the cart serializer (preview), the payment-intent
-amount, the order-create verification guard, and order-create itself. The
+`PromotionEngine.evaluate(cart)` is the only place a discount is computed.
+Four surfaces call it: the cart serializer (preview), the payment-intent
+amount, `CouponService.apply` when a code is attached, and
+`OrderService._evaluate_promotions` — which both order-create paths, the
+intent-first one and the offline one, go through. The verification guard and
+the recorded discount are not two calls: they are one locked evaluation
+inside `create_order_from_cart`, whose result feeds both the
+`PaymentAmountMismatchError` check and `record`. The
 module docstring states the contract — **all of them must agree to the cent**,
 and `PaymentAmountMismatchError` is the alarm that fires when they do not.
 
@@ -238,10 +243,16 @@ crediting the full redemption for a partial refund would put money on the
 card that was never returned. The provider refund only ever covers the
 provider-charged remainder.
 
-Three daily sweeps run as Celery beat tasks:
-`deliver_scheduled_gift_cards`, `send_gift_card_expiry_reminders` (each card
-warned exactly once via `expiry_reminder_sent_at`; `GIFT_CARD_EXPIRY_REMINDER_DAYS`
-of 0 disables) and `expire_gift_cards`.
+Three daily sweeps run, each reached through a per-tenant fanout wrapper
+rather than scheduled directly — beat fires in the public schema, where the
+gift-card tables are empty. The beat entries point at
+`tenant.tasks.fanout_deliver_scheduled_gift_cards`,
+`fanout_send_gift_card_expiry_reminders` and `fanout_expire_gift_cards`,
+which dispatch `giftcard.tasks.deliver_scheduled_gift_cards`,
+`send_gift_card_expiry_reminders` (each card warned exactly once via
+`expiry_reminder_sent_at`; `GIFT_CARD_EXPIRY_REMINDER_DAYS` of 0 disables)
+and `expire_gift_cards` per schema. Expiry runs at 03:00 Athens, the other
+two at 06:00.
 
 ### The gates
 
@@ -258,8 +269,9 @@ that matters.
 
 Endpoints answer **404**, never 403: `PublicPromotionListView` chains
 `IsPromotionsEnabled` and `IsPromotionsRuntimeEnabled`, and `GiftCardViewSet`
-chains `IsGiftCardsEnabled` (with `IsAuthenticated` on the account actions and
-`AllowAny` on check and purchase).
+chains `IsGiftCardsEnabled`, adding `IsAuthenticated` on exactly one action,
+`mine`. Everything else, including `purchase_status`, is `AllowAny` and
+relies on a tight throttle instead.
 
 On the storefront, `app/middleware/promotions-enabled.ts` and
 `app/middleware/gift-cards-enabled.ts` apply the same two tiers. Both ship
@@ -289,8 +301,14 @@ whose plan enables it, and Django still gates the data.
 ## Failure modes
 
 - **The offers page is stale after editing a promotion.** The `promotions`
-  cache surface in `core/cache/surfaces.py` has an **empty `invalidated_by`
-  tuple** — no signal, admin hook or save purges it. Its `django_patterns` is
+  cache surface in `core/cache/surfaces.py` declares **no `invalidated_by` at
+  all**, so it takes the `CacheSurface` default of an empty tuple. Signal
+  wiring in `core/cache/invalidation.py` only ever connects the models a
+  surface lists, so no signal, admin hook or save purges it — the
+  `promotion` app ships no signals module at all, `promotion/apps.py`
+  defines no `ready()`, and nothing under `promotion/` calls
+  `CacheService.purge`.
+  Its `django_patterns` is
   also empty, because `PublicPromotionListView` is a plain `APIView` with no
   response cache; the entries that exist are the Nuxt `PublicPromotionList`
   handler and the rendered `/offers` route. **Purging is a manual operator
@@ -347,7 +365,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/giftcard/tasks.py` | Delivery, receipts, reminders, expiry, refund credit |
 | `grooveshop-django-api/giftcard/admin.py` | `save_model` issuing, Resend delivery action |
 | `grooveshop-django-api/giftcard/views.py` | `check`, `purchase`, `purchase_status`, `mine` |
-| `grooveshop-django-api/core/cache/surfaces.py` | The `promotions` surface and its empty `invalidated_by` |
+| `grooveshop-django-api/core/cache/surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
 | `grooveshop-django-api/tenant/permissions.py` | The plan and runtime permission classes |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/offers/index.vue` | The offers page |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/promotions-enabled.ts` | Two-tier route gate |

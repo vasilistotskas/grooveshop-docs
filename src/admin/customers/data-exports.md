@@ -21,7 +21,7 @@ The right of access is self-service: a customer requests a copy of their data fr
 
 Filters: **Status**, **Created at** and **Expires At** ranges. Search matches the customer's email and username, and the download token.
 
-The record shows the same fields plus **File Path** (the file's location inside the store's private media folder), **Download Token** and **Error Message**. Everything is read-only and new rows cannot be added here.
+The record shows the same fields plus **File Path** (where the file sits inside the store's private media area), **Download Token**, **Error Message** and the timestamps. Every field is read-only, and the screen has no **Add** button: a request can only come from the customer.
 
 Statuses:
 
@@ -47,7 +47,7 @@ The ledger does not record downloads. If the row is Ready and not yet expired, t
 
 ### Handle a request outside the storefront
 
-If the customer cannot sign in (lost credentials, closed account), the export cannot be produced by the platform. Help them recover access first through the storefront's forgotten-password flow. Erasure requests follow the same rule: account deletion is self-service and requires the customer's password.
+If the customer cannot sign in (lost credentials, closed account), the export cannot be produced by the platform. Help them recover access first through the storefront's forgotten-password flow. Erasure requests follow the same rule: account deletion is self-service, and the customer has to have signed in very recently, so the storefront asks them to confirm who they are before it proceeds.
 
 ## What the bundle contains
 
@@ -62,7 +62,7 @@ One JSON file with these sections, each limited to data about the requesting cus
 - Notifications received and whether they were seen.
 - Newsletter subscriptions and their status.
 - Loyalty points transactions and the current balance.
-- Search history made while signed in, including the IP address and browser recorded at search time.
+- Search history made while signed in, including the query, the number of results, and the IP address and browser recorded at search time.
 - The current shopping cart.
 
 Other people's data is never included, for example the author of a comment the customer replied to.

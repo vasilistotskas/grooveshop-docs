@@ -164,7 +164,7 @@ admission control and per-resource deduplication.
 | Nuxt SWR pages | Nitro cache | `varies: ['host', 'x-device-class']` | Homepage, brand pages, blog and catalogue families (`nuxt.config.ts: routeRules`, `shared/constants/prerender.ts`); cached HTML is rendered anonymously by contract |
 | Gateway tenant config | Process memory 5 min, then Redis `ag:tenant:{host}`, then Django | host | Singleflight, negative cache, stale-if-error (`internal/tenant`) |
 | Gateway feeds and sessions | Redis | `ag:{schema}:...` | Feeds have fresh and stale TTLs; checkout sessions expire after a day |
-| Media stream | Memory, then Redis, then disk `.rsc`/`.rsm` pairs | `image:{schema}:{uuid}` | Per-tenant flush via `POST /admin/cache/flush-tenant` with the internal secret |
+| Media stream | Memory, then Redis, then disk `.rsc`/`.rsm` pairs | `image:{schema}:…` from `Cache/utils/cache-namespace.util.ts: imageNamespace` | Per-tenant flush via `POST /admin/cache/flush-tenant` with the internal secret |
 
 Purging procedures are in [Caches & purging](/dev/operations/caches).
 
@@ -176,9 +176,9 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 | Nuxt storefront | 3000 | `frontend-nuxt-service:80` | `pnpm dev` |
 | Media stream | 3003 | `media-stream-service:80` | `pnpm run dev` |
 | Agent gateway | 8080 | `agent-gateway-service:80` | `go run ./cmd/gateway` |
-| Static nginx | 80 | `static-nginx` | — |
+| Static nginx | 80 | `static-svc:80` | — |
 | Meilisearch | 7700 | `app-grooveshop-meilisearch:7700` | compose |
-| Flower | 5555 | — | compose |
+| Flower | 5555 | `celery-flower-service:80` | compose |
 
 ## Invariants
 

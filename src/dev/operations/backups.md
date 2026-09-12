@@ -84,7 +84,7 @@ statement of the gap.
 | Product and blog images, uploads | `grooveshop-backend-media-pvc` (60Gi, `longhorn-rwx`) | no backup; single Longhorn replica |
 | Invoice PDFs | `grooveshop-backend-media-private-pvc` (10Gi) | no backup; these are tax records |
 | Collected static files | `grooveshop-backend-static-pvc` (30Gi) | rebuildable by the PreSync `collectstatic` |
-| Redis (cache, Nitro SWR pages, Channels layer, Celery results in production) | Redis CR PVC (5Gi) | no backup; all of it is rebuildable from the database on the next request |
+| Redis (cache, Nitro SWR pages, Channels layer) | Redis CR PVC (5Gi) | no backup; all of it is rebuildable from the database on the next request |
 | RabbitMQ queues | RabbitmqCluster PVC (5Gi) | no backup; in-flight tasks are lost on volume loss, `acks_late` limits the damage |
 | Meilisearch index | chart PVC on `longhorn-rwx` | no backup; rebuild with `meilisearch_sync_all_indexes --all-tenants` |
 | Logs | VictoriaLogs, 14-day retention capped at 8GiB | not a backup |
