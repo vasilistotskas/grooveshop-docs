@@ -71,6 +71,15 @@ jobs:
           GROOVESHOP_WORKSPACE: ${{ github.workspace }}
         run: pnpm check:admin
 
+      # Fails the build when a page cites a file or an admin screen that no
+      # longer exists. It cannot judge whether a sentence is true, only that
+      # what it names is still there — which is the half that rots silently.
+      - name: Check documentation citations
+        working-directory: grooveshop-docs
+        env:
+          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
+        run: pnpm check:claims
+
       - name: Sync reference sources
         working-directory: grooveshop-docs
         env:

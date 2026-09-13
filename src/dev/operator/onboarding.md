@@ -48,7 +48,7 @@ changed afterwards without recreating the store.
 | Primary domain | The storefront host. `api.<domain>` is derived from it | **No, in practice** — it anchors the API host, the Site row and every issued certificate |
 | Owner email | Receives the OWNER membership (`tenant/provisioning.py: provision_owner_membership`) | Yes |
 | Plan | One of `TenantPlan` — `trial`, `basic`, `pro`, `enterprise` | Yes |
-| Trial length | `--trial-days` sets `paid_until` so dunning covers the trial from day one; `0` means never expires | Yes |
+| Trial length | `--trial-days` (default 30) sets `paid_until` so dunning covers the trial from day one; `0` means never expires. It applies **only** when `--plan trial` — a paid plan is created with no term, and staff record `paid_until` when the first payment lands | Yes |
 | Vertical | `StoreVertical` — picks the recommendation preset the store starts from | Yes, but see below |
 | Locales | `Tenant.available_locales`; empty means single-language on `default_locale` | Yes |
 
@@ -227,12 +227,15 @@ naming convention:
 
 Two traps:
 
-- `Tenant.from_email` is **inert today**. All mail leaves through the
-  platform transport, the only domain its relay is SPF/DKIM-authorised
-  for, and `tenant/credentials.py: tenant_from_email` deliberately builds
-  `"{store name}" <DEFAULT_FROM_EMAIL>` instead. The merchant's own
-  address belongs in `Reply-To`, which is `contact_email`. Setting
-  `from_email` changes nothing about what a customer sees.
+- `Tenant.from_email` does nothing on its own. It takes effect only once
+  the platform ticks `from_email_verified`, which may be done **after**
+  the store's sending domain is authenticated on the mail relay — SPF and
+  DKIM published and confirmed. Until then
+  `tenant/credentials.py: tenant_from_email` builds
+  `"{store name}" <DEFAULT_FROM_EMAIL>` and the merchant's own address
+  rides in `Reply-To`, which is `contact_email`. Ticking the flag early
+  makes every message from that store fail DMARC, so onboarding leaves it
+  clear.
 - `default_currency` is not merchant-editable and should stay `EUR`: the
   storefront reads it for price formatting while every backend money path
   uses `settings.DEFAULT_CURRENCY`, so a mismatch renders one currency and
@@ -396,8 +399,9 @@ Run after the sync completes and the certificates are `Ready=True`.
 7. **Email.** Trigger a password reset: the link must point at
    `https://example.com/account/password/reset…`, built from the store's
    own primary domain (`core/utils/tenant_urls.py`). The `From:` header
-   is the platform sender with the store name as display name — that is
-   correct, not a misconfiguration.
+   is the platform sender with the store name as display name — correct
+   for any store whose `from_email_verified` is not ticked, which is every
+   store at onboarding.
 8. **Providers that should be live actually are.** For each of Viva,
    Stripe, ACS and BoxNow the merchant enabled, confirm the credential
    helper reports it configured; an empty field is silent.
@@ -436,7 +440,7 @@ and manifests, these parts of it are wrong today:
 
 | It says | Actually |
 |---|---|
-| Set `defaultFromEmail` so outbound email shows the tenant's address; verify the `From:` header matches | `Tenant.from_email` is inert — the platform relay always sends as `DEFAULT_FROM_EMAIL` with the store name as display name, for DMARC alignment (`tenant/credentials.py: tenant_from_email`) |
+| Set `defaultFromEmail` so outbound email shows the tenant's address; verify the `From:` header matches | There is no `defaultFromEmail` field. `Tenant.from_email` is honoured only once the platform ticks `from_email_verified` — until then mail goes out as `DEFAULT_FROM_EMAIL` with the store name as display name, for DMARC alignment (`tenant/credentials.py: tenant_from_email`) |
 | The ingress template produces four Ingress objects | Five — the contact-attachment body-limit router was added, and every chain now includes `compress-responses` |
 | OAuth uses a single platform-level client; per-tenant apps would need a migration | Per-tenant `SocialApp` rows already work, keyed on the Site row `ensure_site` creates |
 | Register `https://<domain>/auth/callback/<provider>` | The callback is allauth's, on the **API** host: `https://api.<domain>/accounts/<provider>/login/callback/` |
@@ -447,10 +451,16 @@ and manifests, these parts of it are wrong today:
 | Rollback: `Tenant.objects.filter(...).update(is_active=False)` and `cleanup_tenant_schema` wipes the schema on the next weekly sweep; or `DROP SCHEMA … CASCADE` in psql | **There is no `cleanup_tenant_schema` command anywhere in the codebase**, and a raw update or a manual `DROP SCHEMA` bypasses every safety gate, the erasure record and the file/index cleanup. Use the lifecycle path — see [Suspend, export & destroy](/dev/operator/lifecycle) |
 | `BOXNOW_WEBHOOK_SECRET` has no Tenant field counterpart | `Tenant.box_now_webhook_secret` exists and is tenant-only with no settings fallback; the same document's own field table already lists it |
 | The Viva legacy shared webhook path still works on a settings-fallback key, and the BoxNow handler falls back to settings | Neither falls back. `viva_wallet_credentials` and `box_now_credentials` are tenant-only; an empty webhook secret means the BoxNow webhook view answers 503, because it cannot verify a signature it has no secret for |
-| The tenants ApplicationSet renders zero instances | Three production tenant directories exist |
 
 Its DNS, certificate-ownership and blast-radius sections are still
 accurate and are the reason this page repeats them.
+
+One stale comment sits outside that runbook: the header of
+`manifests/app-directory/appset-grooveshop-tenants.yaml` still says "Zero
+instances render today (only TEMPLATE exists, and it is excluded)". Three
+production tenant directories exist under
+`overlays/production/tenants/`, so the generator renders three
+Applications.
 
 ## Source
 

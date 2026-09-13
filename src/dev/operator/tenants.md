@@ -182,9 +182,11 @@ sold this store.
 
 Two more booleans belong to agentic commerce:
 `agent_hosted_payment_enabled` (default `True`, runtime twin
-`AGENT_HOSTED_PAYMENT_ENABLED`, and `TenantConfigSerializer` serves the
-**AND** of the two) and `agent_stripe_delegated_enabled` (default `False`,
-needs the tenant's Stripe account enrolled in Stripe Agentic Commerce).
+`AGENT_HOSTED_PAYMENT_ENABLED`; `TenantConfigSerializer` serves the
+**AND** of three — the effective agent-commerce gate, this flag and the
+extra-setting — so switching agent commerce off withdraws hosted payment
+with it) and `agent_stripe_delegated_enabled` (default `False`, needs the
+tenant's Stripe account enrolled in Stripe Agentic Commerce).
 
 How the two tiers combine:
 
@@ -266,13 +268,29 @@ an embedded player — usually means adding every CDN hop it uses here.
 
 `contact_email` is the public reply-to and the inbox for contact-form
 submissions; empty means the store has no contact address, submissions are
-not delivered and outbound mail carries no `Reply-To`. `from_email` is
-**reserved and inert**: all mail leaves through the platform transport,
-whose domain is the only one SPF/DKIM-authorised on the relay, so
-`tenant/credentials.py: tenant_from_email` builds
-`"<store name>" <DEFAULT_FROM_EMAIL>` and puts the store's own address in
-`Reply-To`. `totp_issuer` is the name shown in authenticator apps, falling
-back to the store name.
+not delivered and outbound mail carries no `Reply-To`.
+
+`from_email` is the store's **proposed** sender address and it is inert on
+its own — it takes effect only once `from_email_verified` is ticked.
+`tenant/credentials.py: tenant_from_email` reads the pair and produces one
+of three `From` headers:
+
+| Condition | `From` |
+|---|---|
+| `from_email` set **and** `from_email_verified` true | `"<store name>" <from_email>` — the relay holds a DKIM key for that domain, so the message is signed and DMARC-aligned. This is the white-label case |
+| Any other tenant | `"<store name>" <DEFAULT_FROM_EMAIL>` — the platform's authenticated envelope with the store's brand in the sender line; the store's own address rides in `Reply-To` |
+| No tenant context (public schema, management commands) | a bare `DEFAULT_FROM_EMAIL` |
+
+The flag **is** the safety property, which is why it is platform-only:
+`from_email` is in `TENANT_SELF_EDITABLE_FIELDS` and
+`from_email_verified` deliberately is not, so a merchant may name an
+address but cannot certify a domain the relay has no key for — ticking it
+early makes every message from that store fail DMARC. It is absent from
+`TenantAdminSerializer` too, so the admin form is the only place it can be
+set. `DEFAULT_FROM_EMAIL` must itself be a **platform** address.
+
+`totp_issuer` is the name shown in authenticator apps, falling back to the
+store name.
 
 ### Per-tenant credentials
 
@@ -344,16 +362,25 @@ Three mechanisms combine (`tenant/admin.py`):
    later is read-only to merchants until someone decides it is theirs to
    change. A denylist would silently expose it.
 
-The allowlist covers branding, theme, socials, contact and from address,
-`default_locale`, the pixel ids, `totp_issuer`, and **all of the merchant's
-own payment and carrier credentials** — those are that merchant's accounts,
-and per-tenant credentials exist precisely so a store can be onboarded
-without an operator handling somebody else's secrets.
+The allowlist covers branding, theme, the socials, contact and from
+address, `default_locale`, the pixel ids, `totp_issuer`, and **all of the
+merchant's own payment and carrier credentials** — those are that
+merchant's accounts, and per-tenant credentials exist precisely so a store
+can be onboarded without an operator handling somebody else's secrets.
+
+Two of those groups are narrower than the group name suggests, and the
+file is the authority rather than the shape of the field names:
+`socials_linkedin` is the one social field **not** in the allowlist, and
+of the four pixel ids only `meta_pixel_id`, `tiktok_pixel_id` and
+`ga_tracking_id` are there — `openai_pixel_id` is platform-only.
 
 Deliberately withheld from merchants (the file names them): `schema_name`,
 `slug`, `plan`, `paid_until`, `is_active`, `suspended_at`, `owner_email`,
 `allowed_csp_sources`, `agent_stripe_delegated_enabled`, `blog_enabled`,
-`loyalty_enabled` — commercial terms, security policy, or identity.
+`loyalty_enabled` — commercial terms, security policy, or identity. Being
+an allowlist, it withholds everything else it does not name as well,
+`from_email_verified`, `vertical`, `openai_pixel_id`, `is_demo`,
+`is_protected` and `is_platform_storefront` among them.
 `default_currency` is withheld for a subtler reason: the storefront formats
 prices from it while every backend money path uses
 `settings.DEFAULT_CURRENCY`, so a merchant setting another currency would
@@ -375,7 +402,7 @@ a common bug:
 |---|---|---|
 | `TenantAdmin.fieldsets` | The admin form | Grouped as identity, Plan & Billing, Branding, Theme, Features, Analytics, Social Links, Email, Authentication, Agentic Commerce, Security, Viva, ACS, BoxNow, Stripe, Timestamps. **`available_locales` and `openai_pixel_id` are in no fieldset**, so they cannot be set from the admin form at all — use the platform API or a shell |
 | `TenantConfigSerializer` | Anonymous `GET /api/v1/tenant/resolve` | Public-safe only: branding, locales, currency, domains, plan flags, pixel ids, CSP sources. Cached for an hour under a key that fingerprints the serializer's field names, so a release that adds a field never serves the old shape |
-| `TenantAdminSerializer` | `api/v1/tenant/admin/…` on the platform host | Everything including secrets. `is_active`, `suspended_at` and `suspended_reason` are read-only here: writing them through the serializer bypassed every gate `tenant/lifecycle.py` enforces, leaving `suspended_at` null so the store could never be destroyed through the gated path. `b2b_enabled`, `is_demo` and `is_protected` are not in this serializer |
+| `TenantAdminSerializer` | `api/v1/tenant/admin/…` on the platform host | Everything including secrets. `is_active`, `suspended_at` and `suspended_reason` are read-only here: writing them through the serializer bypassed every gate `tenant/lifecycle.py` enforces, leaving `suspended_at` null so the store could never be destroyed through the gated path. `b2b_enabled`, `is_demo`, `is_protected` and `from_email_verified` are not in this serializer, so a store's sender domain can only be certified on the admin form |
 
 ## Invariants
 

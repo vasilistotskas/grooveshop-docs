@@ -200,8 +200,19 @@ breaking.
 `auth` is in `PLATFORM_ONLY_APP_LABELS` (`tenant/role_scopes.py`) with the
 reason stated inline: "A store admin who can mint Groups can mint
 themselves any permission that exists." So no store role is ever granted
-`auth.*`, and the <span class="sidebar-path">Identity → Groups</span> screen is reachable only on the
-control plane.
+`auth.*`, and since 2026-09-12 the store sidebar does not link the screen
+either: <span class="sidebar-path">Identity → Groups</span> is a control-plane entry only.
+
+Be precise about what closes it, because the two mechanisms on this page do
+*not*. `auth` sits in **both** `SHARED_APPS` and `TENANT_APPS`, so it is
+absent from `shared_only_app_labels()` and `WithheldOnTenantHostModelAdmin`
+does **not** withhold it — a platform superuser who types
+`/admin/auth/group/` on a store host still gets a page. That is acceptable
+rather than overlooked: `auth_group` genuinely exists per tenant, so the page
+shows that schema's own (empty) table and no other store's data. The commit
+that moved the entry calls this a privilege surface, not a data leak. What
+keeps merchants out is the permission set; removing the link is what stops an
+operator landing there by accident.
 
 Groups are not used for store roles either, and the reason is structural
 rather than stylistic (`TenantRolePermissionBackend` docstring):

@@ -161,12 +161,17 @@ Two properties to rely on:
 
 ## Activate
 
-`activate_tenant(tenant)` is the exact reverse and returns `True` when it
-changed state: refused for protected tenants, otherwise `is_active = True`
-with `suspended_at` and `suspended_reason` cleared **together**. An active
-tenant carries neither, and clearing `suspended_at` is what removes the
-destroy cooldown anchor — a store that is reactivated and later suspended
-again starts a fresh 24 hours.
+`activate_tenant(tenant)` is the reverse: refused for protected tenants
+(`False`), otherwise `is_active = True` with `suspended_at` and
+`suspended_reason` cleared **together**. An active tenant carries neither,
+and clearing `suspended_at` is what removes the destroy cooldown anchor —
+a store that is reactivated and later suspended again starts a fresh 24
+hours.
+
+Unlike `suspend_tenant` it carries **no already-in-that-state guard**: it
+returns `True` for any tenant that is not protected, and writes the row
+every time, so it reports "activated" for a store that was already
+running. Read its `True` as "not refused", not as "something changed".
 
 ## Export
 
@@ -185,9 +190,13 @@ What it does (`tenant/lifecycle.py`):
 - Writes to
   `{private media root}/_tenant_exports/{schema}/{schema}-{YYYYMMDDTHHMMSSZ}.json`.
   In the cluster the private tree is the `grooveshop-backend-media-private-pvc`
-  volume mounted at `/home/app/web/mediafiles_private` on both the backend
-  and the Celery worker — the only volume both mount, which is why the
-  dump lands there.
+  volume, mounted at `/home/app/web/mediafiles_private` on both the
+  `backend` and `celery-worker` Deployments, so a dump written by a worker
+  is readable from a backend pod. `export_tenant_data`'s own docstring
+  calls it "the only volume both the backend and the celery worker mount";
+  it is not — those two Deployments also share the public media and the
+  backups PVCs. The private tree is the right destination because nothing
+  serves it over HTTP, not because it is the only shared one.
 - Logs the schema, the path and the requesting actor, and returns the
   path. The admin action reports the path in a success message.
 

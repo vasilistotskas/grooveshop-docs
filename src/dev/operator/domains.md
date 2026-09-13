@@ -309,8 +309,7 @@ indefinitely. Verify with `dig +short example.com` for all three hosts
 before pushing.
 
 The standard tenant gets three secrets: `<slug>-tls`, `<slug>-www-tls`,
-`<slug>-api-tls`. Issuance takes roughly a minute per certificate once DNS
-is live.
+`<slug>-api-tls`.
 
 Two hazards worth carrying in your head:
 

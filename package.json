@@ -14,6 +14,7 @@
     "build:full": "pnpm sync:sources && pnpm build",
     "preview": "vitepress preview",
     "check:admin": "node scripts/check-admin-prose.mjs",
+    "check:claims": "node scripts/check-claims.mjs",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
     "semantic-release": "semantic-release"
   },

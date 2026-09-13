@@ -73,8 +73,10 @@ deletes it.
 
 The upstream admin ships four actions: **enable**, **disable**, **toggle**
 and **run**. `run_tasks` calls `apply_async()` with the row's own args,
-kwargs and queue and **no `_schema_name` header**, so the task executes in
-`public`.
+kwargs and queue, and the only header it sets is `periodic_task_name` —
+**never `_schema_name`**. `TenantTask.apply_async` then fills that header
+in from `connection.schema_name`, which on the control plane is `public`,
+so the task runs there.
 
 That is correct for every row this platform declares, because every
 store-touching job is scheduled as a `fanout_*` wrapper that runs in

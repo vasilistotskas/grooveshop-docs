@@ -36,7 +36,7 @@ Sections appear in this order. Each one below Dashboard is collapsible.
 - **Shipping**. Shipping Providers, BoxNow Shipments, ACS Shipments, BoxNow Lockers, ACS Stations. See [Shipping providers](/admin/shipping/providers).
 - **Customers**. Users, User Addresses, Subscriptions. See [Users & addresses](/admin/customers/users-and-addresses).
 - **Loyalty**. Loyalty Tiers, Points Transactions. See [Tiers & points](/admin/loyalty/tiers-and-points).
-- **Newsletter**. Subscription Topics. See [Countries & regions](/admin/localization/countries-and-regions), which also covers this screen.
+- **Newsletter**. Subscription Topics, and nothing else. See [Countries & regions](/admin/localization/countries-and-regions), which also covers this screen. Countries, Regions and Sites used to share this group; they are platform screens now — see below.
 - **Settings**. Extra Settings. The entry is shown to everyone; only Admin and Owner can open it. See [Store settings](/admin/settings/store-settings).
 - **System**. Platform operators only. Configuration, Security & Access, Audit & Logs, Reconciliation. See [Security & access](/admin/settings/security-and-access), [Audit & logs](/admin/system/audit-and-logs) and [Reconciliation](/admin/system/reconciliation).
 
@@ -55,6 +55,23 @@ Nine entries carry a count badge. Each is refreshed about once a minute, and dis
 | **Contact Messages** | Every enquiry on file. There is no read/unread flag, so this number only falls when you delete messages. |
 
 Above the sections there is a filter box that narrows the sidebar as you type. The command palette is a faster way to jump anywhere; see [Search & command palette](/admin/getting-started/search-and-command-palette).
+
+### Screens the platform keeps
+
+Six screens a store's sidebar used to offer are managed on the platform console now, and none of them is listed in a store's admin any more.
+
+Five of the six are a single list shared by the whole platform: one merchant's change would land on every other store, and the list itself mixes every store's records together. Those five now refuse to open even if you paste the address. The sixth, permission groups, is simply not how store access works — see [Roles & team](/admin/getting-started/roles-and-team).
+
+| Screen | Where it used to be | What to do instead |
+|---|---|---|
+| **Countries** | The Localization group, which no longer exists | Ask the platform to enable, disable or reorder a country. The change applies to every store. |
+| **Regions** | Same group | Ask the platform. Regions are the list your customers pick from at checkout. |
+| **Sites** | Same group | Nothing to maintain: these are the store addresses the platform keeps. Ask the platform if one of yours looks wrong. |
+| **Background Jobs** — the schedule of recurring work, and its results | The System section | Ask the platform. One schedule drives the recurring work of every store, so it was never a per-store setting. |
+| **Cache Purge Log** | System → Audit & Logs | Purging itself has not moved; see [Cache](/admin/system/cache). For the record of who purged what, see [Audit & logs](/admin/system/audit-and-logs). |
+| **Groups** — permission groups | System → Configuration | Nothing to do. Store access comes from the three roles above, never from a group. See [Roles & team](/admin/getting-started/roles-and-team). |
+
+Only the first three were ever open to an Owner or an Admin. The other three were already reserved for platform operators, so nothing a store role could previously reach has been taken away.
 
 ## The site dropdown
 

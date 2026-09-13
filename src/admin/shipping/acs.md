@@ -75,6 +75,7 @@ Buttons on this page:
 | Top of the list | **Issue ACS pickup list now** | Runs the daily manifest immediately for today's vouchers. |
 | Each row | **Re-poll ACS tracking** | Queues one tracking refresh for that shipment. |
 | Each row | **Issue ACS voucher now** | Queues voucher creation. On a Canceled shipment it first clears the old voucher so a fresh one can be issued. |
+| Bulk action | **Print labels for selected shipments** | Downloads one PDF holding every selected label, in order-number order. Pair it with the **Label printed at: empty** filter to clear everything outstanding in a single print job. |
 | Bulk action | **Re-poll tracking for selected shipments** | Queues one refresh per selected row. |
 | Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Local bookkeeping only. Marks the rows Canceled so tracking checks and the stale alert stop. Does not call ACS and does not change the order. Rows already in a final state are skipped. |
 
@@ -92,11 +93,17 @@ A missing ACS credential is a different failure. Nothing is retried, because cre
 
 ### Print the voucher
 
-The voucher is printed from the **order**, not from the shipment. There is no download button on <span class="sidebar-path">Shipping → ACS Shipments</span>.
+One parcel at a time, the voucher is printed from the **order**:
 
 1. In <span class="sidebar-path">Sales → Orders</span>, click **Download shipping voucher (PDF)** on the order row or at the top of the order page.
 2. Print the PDF on the thermal roll printer. The layout is the thermal one (one voucher per page) unless the ACS provider's metadata sets `print_type` to `2` for laser, four per A4. See [Shipping providers](/admin/shipping/providers).
 3. **Label printed at** is now set. Print every voucher before 16:30; ACS refuses the whole day's pickup list if even one voucher on it is unprinted.
+
+**Printing everything outstanding at once.** On <span class="sidebar-path">Shipping → ACS Shipments</span>, filter by **Label printed at: empty**, tick the rows and choose the bulk action **Print labels for selected shipments**. ACS has no bulk print of its own, so the platform fetches each label and merges them into a single PDF ordered by order number: one file, one job on the thermal roll, instead of opening one order page per parcel. The single voucher you miss holds back every other parcel that day, so prefer this over working through them by hand.
+
+Downloading the merged file sets **Label printed at** by exactly the same route as the per-order button, so the 15:45 warning and the 16:30 pickup list see the same truth either way.
+
+If a voucher cannot be fetched — none has been minted yet, or ACS refuses that one — it is named on screen with its order number and **the others still print**. Only when every selected voucher fails is there no download at all: you get the error messages instead of an empty PDF, which would look like a successful print of nothing.
 
 A label printed from ACS's own portal is not visible to the platform, so the column stays empty in that case. Nothing blocks on the column; it is a pre-flight check.
 
@@ -106,9 +113,13 @@ Automatic on working days at 16:30. You get a warning email at 15:45 listing vou
 
 To issue earlier, or again after fixing a rejection:
 
-1. Filter the list by **Label printed at: empty** and print whatever is listed.
+1. Filter the list by **Label printed at: empty**, select every row shown, run **Print labels for selected shipments** and print the PDF it downloads.
 2. Click **Issue ACS pickup list now**.
-3. Read the message. "Pickup list … issued for N voucher(s)" is success. "No vouchers are waiting for a pickup list" means every voucher already belongs to a list. "ACS did not issue the pickup list: …" quotes ACS's own reason, usually naming the unprinted vouchers.
+3. Read the message. "Pickup list … issued for N voucher(s)" is success. "ACS did not issue the pickup list: …" quotes ACS's own reason, usually naming the unprinted vouchers. "No vouchers are waiting for a pickup list" means there was nothing for ACS to collect: either every voucher already belongs to a list, or the only ones left are vouchers ACS will never collect — see "An empty day is not a failure" below.
+
+If the 16:30 run is rejected because a label is missing, the store's admins get a second email, **"ACS pickup list NOT issued — N voucher(s) need printing"**. It names the same vouchers and orders as the 15:45 warning and quotes ACS's reply. Either email has the same fix, and it takes a minute: on <span class="sidebar-path">Shipping → ACS Shipments</span> select the rows it names, run **Print labels for selected shipments**, print the one PDF that downloads, then click **Issue ACS pickup list now**. The day is not lost until the courier leaves. Those two are the only emails the pickup list ever sends you; anything else that goes wrong is recorded for the platform team, not mailed to you.
+
+**An empty day is not a failure.** ACS builds each list for one pickup date and chooses the vouchers itself, so on a day with no new parcels it correctly answers that there is nothing eligible. When the only vouchers still waiting are ones ACS has never scanned — typically a parcel that was never actually handed over — the run ends quietly with no list and no email, and the button reports "No vouchers are waiting for a pickup list". Those rows are reported by the 09:00 stale-shipment email instead, and retiring them is what clears them.
 
 Why it matters:
 
@@ -127,6 +138,8 @@ Issued lists are visible to superusers at <span class="sidebar-path">System → 
 ### Deal with a shipment that stopped moving
 
 A daily check at 09:00 emails the store's own admins about shipments with no tracking movement for three days, and about rows stuck in Pending creation for more than a day. Each shipment is reported once; a new tracking event re-arms the alert. The alert does not stop the polling: only marking the row final does that.
+
+This email is also the only place a voucher ACS never collected is reported. Until you retire it, it stays on the list of vouchers offered to ACS every working day — and on a day with no other parcels it is why the pickup list comes back empty.
 
 1. Search the voucher on the ACS portal or call ACS.
 2. If the parcel was never handed over and never will be, select the row and run **Retire selected shipments**. The order is not changed; cancel it separately if needed.

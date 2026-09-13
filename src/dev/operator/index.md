@@ -119,6 +119,27 @@ One exemption, `admin/mixins.py: STORE_SELF_SERVICE_APP_LABELS`: the
 merchant self-service surface — see
 [The tenant record](/dev/operator/tenants).
 
+`role_scopes.PLATFORM_ONLY_APP_LABELS` looks like the tenant-host set and is
+not; do not substitute it. It also names `allauth_idp_oidc`, whose tables are
+tenant-only, so withholding on it would hide OIDC clients a store genuinely
+owns. It also names `auth`, which is dual-listed and therefore absent from
+`shared_only_app_labels()`: `Group` is **not** withheld on a store host, only
+unlinked from that sidebar and denied to every store role — see
+[Platform staff & access](/dev/operator/team). The two sets answer different
+questions: `PLATFORM_ONLY_APP_LABELS` is "may a role hold permissions here",
+`shared_only_app_labels()` is "does this store have its own copy of the
+table".
+
+The tenant-host mixin has to be applied at four places that share no base
+class — `BaseModelAdmin`, the five celery-beat admins in `core/admin.py`,
+`CachePurgeLogAdmin`, and the `override_third_party_admins()` factory, where
+it goes first in the bases so its permission overrides win the MRO. "Did we
+miss one" is therefore answered against the live registry rather than by
+reading the code:
+`tests/integration/admin/test_tenant_host_model_visibility.py` walks
+`admin.site._registry` and asserts every shared-only model is refused on a
+tenant host, by module permission and by view permission.
+
 ### Who can sign in
 
 `PlatformAdminSite.has_permission` requires three things in order:
@@ -172,7 +193,7 @@ in settings, so an unpinned link turns any local error into
 | Entry | Model | What it is for |
 |---|---|---|
 | **Platform Staff** | `user.UserAccount` (public rows) | Platform identities. On this host these are operators and store owners, never a store's shoppers — those live in each tenant's own schema |
-| **Groups** | `auth.Group` | Django groups. `auth` is in `role_scopes.PLATFORM_ONLY_APP_LABELS` precisely because a store admin who can mint groups can mint themselves any permission that exists |
+| **Groups** | `auth.Group` | Django groups. `auth` is in `role_scopes.PLATFORM_ONLY_APP_LABELS` precisely because a store admin who can mint groups can mint themselves any permission that exists. The store sidebar linked this until 2026-09-12; nothing in the repository creates a `Group`, so the section listed a table nothing reads while offering exactly that escalation |
 
 ### Platform
 
@@ -265,8 +286,14 @@ provisions through `tenant/provisioning.py` — see
   (`_withheld_on_public`). If it 500s with a missing column instead, the
   guard did not fire — check that `request.tenant` is set.
 - **A platform model page opened on a store host**: 403 by design
-  (`WithheldOnTenantHostModelAdmin`). The exception is `tenant`, which is
-  the merchant's own settings screen.
+  (`WithheldOnTenantHostModelAdmin`). Two exceptions: `tenant`, which is the
+  merchant's own settings screen, and `auth`, which is dual-listed and so
+  never reaches the guard at all.
+- **A merchant reports seeing another store's rows on a screen that is not a
+  changelist.** The guard is a `ModelAdmin` permission hook, so it covers
+  changelists and detail pages and nothing else. A custom admin view that
+  queries a `SHARED_APPS`-only model directly still falls through the tenant
+  search path into `public` and must scope itself.
 - **A sidebar entry 404s**: the model is not registered on this site.
   Check `PLATFORM_APP_LABELS` and `PLATFORM_EXCLUDED_MODELS`.
 - **The dashboard shows `—` in Orders or Revenue**: that store's schema
@@ -291,7 +318,10 @@ provisions through `tenant/provisioning.py` — see
 | `grooveshop-django-api/admin/permissions.py` | `platform_environment` badge |
 | `grooveshop-django-api/admin/apps.py` | Calls `register_platform_models()` after autodiscovery |
 | `grooveshop-django-api/tenant/app_labels.py` | `tenant_only_app_labels`, `shared_only_app_labels` |
-| `grooveshop-django-api/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS` |
+| `grooveshop-django-api/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS` — role scope, not the withhold set |
+| `grooveshop-django-api/core/admin.py` | `override_third_party_admins()`, the celery-beat admins and `CachePurgeLogAdmin` — three of the four mixin application points |
+| `grooveshop-django-api/tests/integration/admin/test_tenant_host_model_visibility.py` | Registry-walking coverage for the tenant-host guard |
+| `grooveshop-django-api/tests/integration/admin/test_platform_console.py` | Pins the store/control-plane sidebar split |
 | `grooveshop-django-api/tenant/urls_public.py` | Mounts the site and the platform API on `PUBLIC_SCHEMA_URLCONF` |
 | `grooveshop-django-api/tenant/auth_backends.py` | `PlatformStaffBackend`, `is_platform_staff_session` |
 | `grooveshop-django-api/tenant/management/commands/bootstrap_platform.py` | The public tenant row and its host |

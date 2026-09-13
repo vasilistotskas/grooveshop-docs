@@ -71,7 +71,8 @@ Safe actions:
 
 - **These five screens are hidden, not blocked.** The audit ledgers and the reconciliation screens refuse to open for anyone but a platform operator, whatever address you type. These five do not: an Owner or Admin who has the address can open them and delete rows, and Staff can open them and add or edit but not delete. Treat that as a reason to keep the Admin role to people you would trust with a customer's sign-in, not as an invitation.
 - Nothing here touches the platform staff who sign in to the admin. A staff password reset or session revocation is done on the platform console.
-- Permission groups are a platform tool and play no part in store roles. The group screen is not in a store's admin at all; see [Roles & team](/admin/getting-started/roles-and-team).
+- Permission groups are a platform tool and play no part in store roles. The group screen is not listed anywhere in a store's admin any more, and a store role cannot open it whatever address is typed; it is managed on the platform console. See [Roles & team](/admin/getting-started/roles-and-team).
+- The other platform-owned lists a store's admin used to show — store addresses, the record of cache purges, the schedule of recurring work, countries and regions — now refuse to open on a store's address too. They are listed under [Welcome](/admin/).
 - <span class="sidebar-path">System → Configuration</span> holds exactly one entry, **Shipping Providers**, and it is the same list as <span class="sidebar-path">Shipping → Shipping Providers</span>, which every admin user can already open.
 
 ## Related

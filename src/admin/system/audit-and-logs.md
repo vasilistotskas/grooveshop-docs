@@ -83,7 +83,7 @@ Data-export requests customers make from their storefront account. Only a custom
 ## Things to know
 
 - A missing row is itself information: a notification that never arrived, or a stock change made outside the store.
-- **Cache purges are not here.** Who purged what is recorded, but the record is platform-wide — one list covering every store — so it lives on the platform console. Your store's own twenty most recent purges are shown at the bottom of the [Cache](/admin/system/cache) page, which every admin user can open.
+- **Cache purges are not here.** Who purged what is recorded, but the record is platform-wide — one list covering every store, with the name of whoever ran each purge — so it lives on the platform console, and on a store's address the list refuses to open at all, platform operators included. The twenty most recent purges shown at the bottom of the [Cache](/admin/system/cache) page come from that same platform-wide record, so they are not limited to your store; purging itself is unchanged and every admin user can still do it.
 - Order pages show a **Stock Logs** and **Order History** tab to platform operators only; store staff see the inline history on the order instead.
 - Nothing in these lists is deleted automatically except expired data exports.
 

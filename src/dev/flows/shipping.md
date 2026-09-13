@@ -175,6 +175,42 @@ print_type`), overridable per tenant through
 `ShippingProvider.metadata["print_type"]`. Value 2 is the laser layout,
 four vouchers per A4. ACS accepts nothing else.
 
+**`_mark_label_printed` is the one choke point.** Every label download —
+the order API, the carrier adapter, both admin paths — goes through
+`AcsService.fetch_label_bytes`, which stamps `label_printed_at` on the
+cache-hit path as well as the miss, and is idempotent (first print
+wins). That is why "printed" means the same thing to the 15:45
+pre-flight and the 16:30 manifest whichever button the merchant used.
+
+**Bulk print is ours, not ACS's.** `ACS_Print_Voucher` takes a single
+`Voucher_No` and no alias in the manual prints more than one, so
+`AcsService.fetch_labels_pdf` makes N calls — each already cached for an
+hour by `fetch_label_bytes` — and concatenates the pages with `pypdf`
+into one document. One file is one job on the thermal roll, which is the
+point: the operation that unblocks a manifest is "print everything
+outstanding", and doing it one change page at a time is how the voucher
+that gets missed holds back every other parcel that day. WeasyPrint was
+already a dependency but renders HTML to PDF and cannot concatenate
+existing documents, hence the new pin.
+
+Two failure shapes are deliberate, and pinned by
+`tests/unit/shipping_acs/test_admin_bulk_print_labels.py`:
+
+- **A voucher that fails is collected and named, never raised.** It
+  returns `(pdf_bytes, failures)`, each failure carrying
+  `shipment_id`/`order_id`/`voucher_no`/`error`; a row with no voucher
+  yet is reported without an API call. Letting one bad row abort the
+  batch would reproduce the all-or-nothing failure this path exists to
+  cure.
+- **An empty merge returns `b""`, not a valid PDF of nothing.**
+  `shipping_acs/admin.py: bulk_print_labels` then returns `None` so the
+  browser gets no download and the per-failure `message_user` errors
+  stand — a zero-page PDF would read as a successful print.
+
+The action pairs with the existing `label_printed_at` /
+`EmptyFieldListFilter` on the changelist, which is how the merchant
+selects exactly the unprinted rows.
+
 **The pickup list is mandatory.** A voucher that is not on an issued
 pickup list is not presented to the courier for collection, so the parcel
 never moves. `AcsService.issue_daily_pickup_list` runs Mon–Fri at 16:30
@@ -187,7 +223,9 @@ Two ACS behaviours make this fragile, and both are handled:
 - **ACS rejects the whole list if any voucher on it is unprinted**, and
   offers no partial issue. `warn_unprinted_acs_vouchers` runs at 15:45,
   45 minutes earlier, and emails the tenant's operators the exact orders
-  that still need a label.
+  that still need a label. The remedy both that mail and the 16:30
+  failure mail point at is the bulk print action above — one filter, one
+  selection, one PDF.
 - **ACS scopes a list to that day's pickup date.** On one production run
   the manifest covered 2 of 9 candidates. Vouchers minted on earlier days
   are simply not on it, and **they are not swept up by a later list** —
@@ -198,10 +236,38 @@ Two ACS behaviours make this fragile, and both are handled:
   manifest the courier never received them on and hide them from the run
   that could still get them collected.
 
-A response with no `PickupList_No` is a failure, not a no-op — but ACS
-has been observed creating the manifest and not echoing the number back,
-so `_adopt_pickup_lists_from_acs` asks ACS what it holds for the date
-before raising.
+A response with no `PickupList_No` is not automatically a failure. Two
+exits are tried before the raise, in this order:
+
+1. **ACS may have built the manifest and not echoed the number back.**
+   Observed 2026-09-02: the call created list `9803819281` over two
+   vouchers and answered without a `PickupList_No`, and believing the
+   response left the manifest invisible to us while ACS refused to
+   reprint those labels. `_adopt_pickup_lists_from_acs` asks ACS what it
+   actually holds for the date first, and returns the adopted list.
+2. **An empty pickup day is not a refusal.** The call takes a date and
+   no voucher list, so the local candidate query is only a pre-flight.
+   When *every* candidate row is a voucher ACS will never collect —
+   `last_event_at is None`, `created_at` older than
+   `ACS_STALE_SHIPMENT_DAYS`, and not a re-mint — and
+   `Unprinted_Found` is falsy, the service logs the vouchers at WARNING
+   and returns `None`. A single live candidate still makes the refusal a
+   hard failure, because then something genuinely was waiting.
+
+The re-mint exclusion is load-bearing. `created_at` dates the **row**,
+not the voucher, and `reset_shipment_for_remint` leaves it untouched, so
+a voucher minted today on a month-old row whose predecessor never
+scanned would read as dead on day one. That reset records
+`metadata["previous_vouchers"]`, which identifies exactly those rows and
+needs no migration; a `voucher_minted_at` column is the honest model and
+would also fix the same `created_at` fallback in
+`check_stale_acs_shipments`.
+
+When it does raise, the ERROR log names every candidate as
+`<voucher> (order #<id>)`, not just `len(candidates)`. ACS can refuse
+with `Unprinted_Found=0` and an empty `Error_Message`, and a bare count
+cannot be acted on — working out which parcel blocked the manifest meant
+re-running the candidate query by hand against production.
 
 ### Tracking and order status
 
@@ -322,6 +388,11 @@ move `Order.status`, which the carrier events drive separately.
   and re-dispatch".
 - **An ACS voucher that missed its pickup list stays uncollected** until
   a list is issued for its own pickup date.
+- **A pickup day with nothing live waiting is a `None`, not a raise**,
+  and one live candidate is enough to make a refusal a failure again.
+- **Exactly one task owns a dead voucher: `check_stale_acs_shipments`.**
+  Every other task that trips over one defers to it rather than raising
+  a second alarm.
 - **Cancelling an order cascades to the carrier from two entry points**,
   guarded by the `shipment_cancel` breadcrumb so it fires once.
 
@@ -335,10 +406,20 @@ move `Order.status`, which the carrier events drive separately.
   save. The next mint logs a stale-claim WARNING naming
   `Reference_Key1=<order id>`; search the ACS dashboard for it and retire
   the duplicate.
-- **Pickup list not issued.** Either ACS rejected unprinted vouchers (the
-  15:45 warning already named them, and the 16:30 failure names them
-  again with the ACS message) or the response carried no number, in which
-  case the adopt path asks ACS what it actually holds before raising.
+- **Pickup list not issued.** Three shapes. ACS rejected unprinted
+  vouchers: the 15:45 warning already named them and the 16:30 failure
+  mails them again with the ACS message, through
+  `_alert_unprinted_vouchers(blocked=True)`; the fix is the bulk print
+  action plus a manual re-issue. Or the response carried no
+  number, in which case the adopt path asks ACS what it actually holds.
+  Or ACS named nothing unprinted at all — then `_unprinted_rows` is
+  empty, `_alert_unprinted_vouchers` returns early and **no email goes
+  out**: either the day was empty and the service already returned
+  `None` (a `noop`, nobody to tell), or a live candidate was waiting and
+  the ERROR log plus the failed task row are deliberately the whole
+  record. There is no separate refusal email; a dead voucher belongs to
+  `check_stale_acs_shipments`, and a second alarm on a later schedule
+  for a problem another task already reports is noise.
 - **Stale shipment.** `check_stale_acs_shipments` runs daily at 09:00 and
   emails the tenant's operators about non-terminal shipments with no
   event for `ACS_STALE_SHIPMENT_DAYS` (default 3) days, plus mints stuck
@@ -347,7 +428,9 @@ move `Order.status`, which the carrier events drive separately.
   fails; the poller re-arms the flag when a new event arrives. Dead
   vouchers are retired by a human through the admin's retire action,
   which cancels locally and stops the poller without calling
-  `ACS_Delete_Voucher`.
+  `ACS_Delete_Voucher`. This task is the **only** reporter of a dead
+  voucher: `issue_daily_acs_pickup_list` finds the same rows (they stay
+  candidates until listed or terminal) and deliberately stays silent.
 - **Carrier permanently rejects a shipment.** Bad address, unacceptable
   destination station, invalid locker id. The task logs and gives up, the
   shipment strands at `pending_creation`, the order strands at PENDING,
@@ -374,7 +457,8 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping/alerts.py` | `send_ops_alert` and the two operational alerts |
 | `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
 | `grooveshop-django-api/shipping/urls.py` | Options, free-shipping-info, providers |
-| `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel, pickup list, polling, COD reconcile, status mapping |
+| `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel, pickup list, polling, COD reconcile, status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
+| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments` and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |
 | `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
 | `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `supported_settlements`, `is_kind_enabled` |

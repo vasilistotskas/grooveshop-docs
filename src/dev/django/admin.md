@@ -1,6 +1,6 @@
 ---
 title: Admin (Unfold)
-description: The two Unfold admin sites, BaseModelAdmin conventions, action and dialog rules, drag-and-drop ordering, dashboards, sidebar permissions, the site dropdown tools and how to add a new admin section.
+description: The two Unfold admin sites, BaseModelAdmin conventions, what each console withholds from the other, action and dialog rules, drag-and-drop ordering, dashboards, sidebar permissions, the site dropdown tools and how to add a new admin section.
 ---
 
 # Admin (Unfold)
@@ -95,6 +95,59 @@ Conventions the base enforces or expects:
   `_withheld_on_public()` answers 403 for any model whose app label is in
   `tenant_only_app_labels()` when `request.tenant` is positively the
   public schema, instead of querying legacy `public.*` tables and 500ing.
+- **Platform-only models are withheld on a tenant host.** `BaseModelAdmin`
+  is declared `class BaseModelAdmin(WithheldOnTenantHostModelAdmin, ModelAdmin)`,
+  so every admin that extends it also carries the mirror guard below.
+
+## Withholding, in both directions
+
+Two guards, same shape, opposite sides. Both derive their set from
+`tenant/app_labels.py` rather than enumerating it, so a new app is covered
+without editing a list.
+
+| Guard | Declared in | Fires when | Withholds |
+|---|---|---|---|
+| `BaseModelAdmin._withheld_on_public` | `admin/base.py` | `request.tenant` is positively the public schema | app labels in `tenant_only_app_labels()` — in `TENANT_APPS`, not in `SHARED_APPS` |
+| `WithheldOnTenantHostModelAdmin` | `admin/mixins.py` | `request.tenant` is positively a real store | app labels in `shared_only_app_labels()` — in `SHARED_APPS`, not in `TENANT_APPS` |
+
+Each overrides `has_module_permission` **and** the four object permissions.
+`has_module_permission` returning `False` is what makes one mechanism close
+both paths: Django's `_build_app_dict` drops the model from the app list, and
+the typed URL becomes a clean 403 instead of a page of the other side's rows.
+Both only withhold on *positive* knowledge of which side they are on — keying
+on `connection.schema_name` instead fires during tests, management commands
+and Celery work, where no tenant is bound, and once denied 35 valid
+changelists.
+
+Three things about the tenant-host direction are easy to get wrong:
+
+- **`role_scopes.PLATFORM_ONLY_APP_LABELS` is not the same set** and must not
+  be substituted. It also names `allauth_idp_oidc`, whose tables are
+  tenant-only, so using it would hide OIDC clients a store genuinely owns.
+  Membership of `TENANT_APPS` is the honest test of "does this store have its
+  own copy". The converse also holds: `auth` is dual-listed, so `Group` is
+  **not** withheld by this guard — no store role is granted `auth.*` and the
+  store sidebar no longer links it, but a superuser who types
+  `/admin/auth/group/` on a store host still gets that schema's own (empty)
+  `auth_group`.
+- **The comparison is on labels, not on `INSTALLED_APPS` entries.**
+  `unfold.contrib.simple_history` and `simple_history` sit in opposite lists
+  and reduce to the same label; comparing entries put a per-tenant app in the
+  withhold set. Collapsing to labels also errs safely — if any tenant entry
+  yields a label it is never withheld.
+- **`tenant` is exempt**, via `admin/mixins.py: STORE_SELF_SERVICE_APP_LABELS`.
+  `TenantAdmin.get_queryset` scopes a store operator to their own row and
+  `get_readonly_fields` allowlists `role_scopes.TENANT_SELF_EDITABLE_FIELDS`,
+  so hiding the app would remove merchant self-service rather than a leak.
+
+The mixin has to be applied at four places that share no base class —
+`BaseModelAdmin`, the five celery-beat admins in `core/admin.py`,
+`CachePurgeLogAdmin`, and the `override_third_party_admins()` factory (where
+it goes **first** in the bases so its permission overrides win the MRO). "Did
+we miss one" therefore cannot be answered by reading the code, so
+`tests/integration/admin/test_tenant_host_model_visibility.py` walks the live
+registry and asserts every shared-only model is refused on a tenant host, by
+module permission and by view permission.
 
 ## Actions must return a response
 
@@ -204,6 +257,31 @@ dotted path. The callables are:
 The sidebar titles are what the admin guide names as
 `Sales → Orders`; change a title in `settings.py` and the docs change.
 
+### Which console links what
+
+A `permission` callable hides a group; it does not decide which console the
+group belongs to. That is a separate, editorial split, and it was wrong until
+2026-09-12: the store sidebar linked changelists whose tables exist only in
+`public`, which 403'd for every store role and, for a platform superuser,
+rendered the platform's rows dressed as that merchant's — reported from
+`api.webside.gr/admin` ("should I see five Sites here?").
+
+Moved out of `UNFOLD["SIDEBAR"]` and into `UNFOLD_PLATFORM["SIDEBAR"]`:
+
+| Was | Now | Why |
+|---|---|---|
+| `Localization` group — Countries, Regions, Sites | `Platform` group on the control plane | Public-schema reference data shared by every store. The `Localization` group is gone; what remained of it is now a `Newsletter` group holding only Subscription Topics |
+| `System → Background Jobs` — the five `django_celery_beat` schedule models plus `TaskResult` and `GroupResult` | `Background Jobs` group on the control plane | One public-schema beat schedule drives every store's fan-out tasks |
+| `System → Configuration → Groups` | `Identity → Groups` on the control plane | Not a data leak (`auth_group` exists per tenant) but a privilege surface: nothing in this repository creates a `Group`, and a store admin who reached the section could mint themselves any permission |
+| `System → Audit & Logs → Cache Purge Log` | `Platform → Cache Purge Log` on the control plane | `core` is `SHARED_APPS`-only, so the section showed one merchant every purge across the estate, actor column included. The store keeps its own Cache Management view |
+
+Two tests in `tests/integration/admin/test_platform_console.py` pin the split
+by walking both navigation trees: no changelist of an
+`INFRA_LABELS` app (`sites`, `country`, `region`, `django_celery_beat`,
+`django_celery_results`, `auth`, `core`) may be linked from the store
+sidebar, and every model the platform site registers for those apps must be
+linked from the control plane.
+
 ## Site dropdown tools
 
 `UNFOLD["SITE_DROPDOWN"]` (`settings.py`) always lists Rosetta
@@ -215,11 +293,25 @@ shortcut:
 
 | Link | Env var |
 |---|---|
-| Documentation | `ADMIN_DOCS_URL` (expanded by `_ADMIN_DOCS_LINKS`) |
+| Help & Guides | `ADMIN_DOCS_URL` |
 | Flower (Celery) | `ADMIN_FLOWER_URL` |
 | Mailpit | `ADMIN_MAILPIT_URL` |
 | Meilisearch | `ADMIN_MEILISEARCH_URL` |
 | RabbitMQ | `ADMIN_RABBITMQ_URL` |
+
+**Help & Guides** is the odd one out: it is the only dropdown entry both
+consoles carry. It is expanded once into `_ADMIN_DOCS_LINKS`, spliced into
+`UNFOLD["SITE_DROPDOWN"]` ahead of the ops links, and is the *entire*
+`UNFOLD_PLATFORM["SITE_DROPDOWN"]` — which did not exist before. It points at
+the tenant-admin guide on the documentation site (production sets the Greek
+index of `docs.grooveshop.space`; staging its own twin), and it is env-gated
+for a different reason from the ops links: a local checkout should render no
+link at all rather than one to a site that may not carry this build's pages.
+
+These five are absolute URLs to other hosts, which is why
+`tests/unit/core/test_unfold_links_resolve.py` accepts a `link` starting with
+`https://` or `http://` as well as `/`. Everything else in either block must
+still be a `reverse_lazy` pinned with `urlconf=`.
 
 The Cache tool renders `core/templates/admin/clear_cache.html`, counts keys
 per surface with `CacheService.count()`, purges through
@@ -270,6 +362,11 @@ per surface with `CacheService.count()`, purges through
   and retries; caught by the AST test.
 - **Tenant-only model opened on the platform host**: 403 by design
   (`_withheld_on_public`), not a missing-column 500.
+- **Platform-only model opened on a store host**: 403 by design
+  (`WithheldOnTenantHostModelAdmin`), except `tenant`, which is the
+  merchant's own settings screen. A page that renders instead means the
+  admin class does not carry the mixin — add it and let the registry-walking
+  test confirm it.
 - **Dashboard shows stale numbers**: the cached zones did not invalidate;
   check the model is connected in `admin/signals.py`.
 
@@ -279,11 +376,17 @@ per surface with `CacheService.count()`, purges through
 |---|---|
 | `grooveshop-django-api/admin/admin.py` | `MyAdminSite`, cache purge views |
 | `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite`, `register_platform_models` |
-| `grooveshop-django-api/admin/base.py` | `BaseModelAdmin`, `BaseTranslatableAdmin`, action permission stamping |
+| `grooveshop-django-api/admin/base.py` | `BaseModelAdmin`, `BaseTranslatableAdmin`, action permission stamping, `_withheld_on_public` |
+| `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `IsSuperuserOnlyModelAdmin`, `AdminSiteLoginNextMixin` |
+| `grooveshop-django-api/tenant/app_labels.py` | `tenant_only_app_labels`, `shared_only_app_labels` — both withhold sets |
+| `grooveshop-django-api/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS`, `TENANT_SELF_EDITABLE_FIELDS` — role scope, not the withhold set |
+| `grooveshop-django-api/core/admin.py` | The celery-beat admins, `CachePurgeLogAdmin`, `override_third_party_admins()` — three of the four mixin application points |
 | `grooveshop-django-api/admin/permissions.py` | Sidebar permission callables |
 | `grooveshop-django-api/admin/dashboard.py`, `admin/platform_dashboard.py`, `admin/signals.py` | Dashboards and invalidation |
 | `grooveshop-django-api/admin/apps.py` | `MyAdminConfig.ready()` |
 | `grooveshop-django-api/settings.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `SITE_DROPDOWN` |
 | `grooveshop-django-api/core/templates/unfold/`, `core/templates/admin/` | Template overrides |
-| `grooveshop-django-api/tests/unit/core/test_unfold_links_resolve.py` | Guards urlconf pinning |
+| `grooveshop-django-api/tests/unit/core/test_unfold_links_resolve.py` | Guards urlconf pinning; accepts absolute URLs for the env-gated dropdown entries |
 | `grooveshop-django-api/tests/unit/shipping_acs/test_admin_action_responses.py` | Guards action return values |
+| `grooveshop-django-api/tests/integration/admin/test_tenant_host_model_visibility.py` | Walks the registry: every shared-only model is refused on a tenant host |
+| `grooveshop-django-api/tests/integration/admin/test_platform_console.py` | Pins the store/control-plane sidebar split |
