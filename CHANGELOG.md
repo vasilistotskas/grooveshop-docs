@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.1.0...v1.2.0) (2026-09-13)
+
+
+### Features
+
+* **docs:** document the platform operator's console ([2966f63](https://github.com/vasilistotskas/grooveshop-docs/commit/2966f63aff387b45eac8af8270c1a7b835415a78))
+
 # [1.1.0](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.0.3...v1.1.0) (2026-09-12)
 
 
