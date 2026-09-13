@@ -1,3 +1,11 @@
+## [1.2.2](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.1...v1.2.2) (2026-09-13)
+
+
+### Bug Fixes
+
+* **ci:** the citation gate must not judge repositories it cannot see ([536cfa3](https://github.com/vasilistotskas/grooveshop-docs/commit/536cfa3e513dfdcffce39134194bdac4792ca840))
+* **docs:** validate every page against the code, and gate citations in CI ([2f8c529](https://github.com/vasilistotskas/grooveshop-docs/commit/2f8c529f86a69fba0dc410ed34296f9fd6558a8b))
+
 ## [1.2.1](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.0...v1.2.1) (2026-09-13)
 
 
