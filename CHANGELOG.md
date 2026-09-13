@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.0...v1.2.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* **docs:** the Celery time limits and result policy were documented backwards ([8307e73](https://github.com/vasilistotskas/grooveshop-docs/commit/8307e736f90fd6c840bb8a84e22187286034321b))
+
 # [1.2.0](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.1.0...v1.2.0) (2026-09-13)
 
 
