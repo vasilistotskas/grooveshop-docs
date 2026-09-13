@@ -57,6 +57,12 @@ jobs:
           repository: vasilistotskas/grooveshop-media-stream
           path: grooveshop-media-stream
 
+      - name: Checkout grooveshop-agent-gateway (citations)
+        uses: actions/checkout@v6
+        with:
+          repository: vasilistotskas/grooveshop-agent-gateway
+          path: grooveshop-agent-gateway
+
       - name: Install pnpm
         uses: pnpm/action-setup@v5
         with:
