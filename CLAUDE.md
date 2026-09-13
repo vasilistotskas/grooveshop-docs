@@ -82,6 +82,15 @@ pull secret and the only authenticated pull in the cluster.
 
 ## Deployment
 
+**A `docs:` commit cuts a release here, unlike every other repository in the
+workspace.** The default rules give `docs:` no version at all, which in a
+documentation repo means the most natural commit type for the actual product
+change silently ships nothing: the commit lands on `main`, no release is cut,
+no image is built, and the site keeps serving the previous version. A
+`releaseRules` entry in `package.json` maps `docs` to a patch. `ci:` and
+`chore:` still cut nothing, which is correct — they do not change the site.
+
+
 CI (`.github/workflows/ci.yml`) builds on every push and cuts a semantic
 release on `main`; the published release triggers `docker.yml`, which pushes
 `gro0ve/grooveshop-docs:vX.Y.Z`. The image is pinned in
