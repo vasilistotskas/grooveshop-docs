@@ -27,6 +27,7 @@ pnpm build:full       # sync + build (what CI does)
 pnpm preview          # serve dist/
 pnpm check:admin      # fails if the admin guide names anything from the codebase
 pnpm check:claims     # fails if a page cites a file or admin screen that no longer exists
+                      # (needs the sibling repos; it reports what it could not check)
 pnpm typecheck        # vue-tsc over .vitepress/
 ```
 
