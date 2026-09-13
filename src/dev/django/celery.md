@@ -29,8 +29,16 @@ tasker.conf.update(
 )
 ```
 
-Note the time limits: `settings.py` says 1500/1800 seconds but
-`core/celery.py` wins with 300/600. Signal handlers in the same function
+Note the time limits, because the comment above that `conf.update()` claims
+the opposite of what happens. Django's settings win, so the effective limits
+are **1500/1800 seconds**, not the 300/600 passed here. `config_from_object`
+with `namespace="CELERY"` resolves the PREFIXED key from every configuration
+source before falling back to a bare lowercase one, so
+`CELERY_TASK_SOFT_TIME_LIMIT` and `CELERY_TASK_TIME_LIMIT` in `settings.py`
+outrank the values this call passes afterwards. Verified by resolving
+`app.conf` from the real application rather than by reading the call order.
+The same precedence makes `task_ignore_result=False` here inert — see the
+result backend below. Signal handlers in the same function
 are connected with `weak=False`, because closures defined inside a function
 are otherwise garbage-collected before they ever fire. They: close stale DB
 connections at worker start, apply the DB-backed translation overlay so
@@ -95,10 +103,14 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   PreSync `backend-prepare` Job, which sets `CELERY_RESULT_BACKEND` to
   Redis DB 1 for its own short life. `settings.py` then narrows what gets
   written: `CELERY_TASK_IGNORE_RESULT` with
-  `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` is meant to keep failures and
-  drop successes. Read that intent against `core/celery.py`, which passes
-  `task_ignore_result=False` in the same `conf.update()` that wins the
-  time limits above.
+  `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` keeps failures and drops
+  successes, and that intent is what actually takes effect.
+  `core/celery.py` passes `task_ignore_result=False`, which looks like it
+  reverses the decision and does not: the namespaced Django setting outranks
+  it, so `app.conf.task_ignore_result` resolves to `True`. Its comment
+  ("Don't store task results in database") also describes the opposite of
+  what the value it sets would mean. Treat the line as dead, not as the
+  effective policy, and check `app.conf` before believing either.
 - Scheduler: `django_celery_beat.schedulers:DatabaseScheduler`. The
   `CELERY_BEAT_SCHEDULE` dict is seeded into `PeriodicTask` rows, visible
   in the platform admin under Background Jobs.
