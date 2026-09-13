@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.2...v1.2.3) (2026-09-13)
+
+
+### Bug Fixes
+
+* **release:** a docs: commit must cut a release in a docs repo ([70927da](https://github.com/vasilistotskas/grooveshop-docs/commit/70927dabf4c3cf03d5a577c2a106e4e2e40aba72))
+
 ## [1.2.2](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.1...v1.2.2) (2026-09-13)
 
 

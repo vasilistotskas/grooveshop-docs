@@ -1,6 +1,6 @@
 {
   "name": "grooveshop-docs",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "private": true,
   "description": "GrooveShop platform documentation: tenant-admin guide (el/en) and developer reference",
   "type": "module",
@@ -44,7 +44,10 @@
         "@semantic-release/commit-analyzer",
         {
           "releaseRules": [
-            { "type": "docs", "release": "patch" }
+            {
+              "type": "docs",
+              "release": "patch"
+            }
           ]
         }
       ],
