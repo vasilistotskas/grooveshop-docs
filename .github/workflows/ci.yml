@@ -42,6 +42,21 @@ jobs:
           repository: vasilistotskas/grooveshop-django-api
           path: grooveshop-django-api
 
+      # The citation gate can only judge citations into repositories it can
+      # see, so check out the public ones too. It reports what it skipped;
+      # grooveshop-infrastructure is private and stays unchecked in CI.
+      - name: Checkout grooveshop-storefront-ui-node-nuxt (citations)
+        uses: actions/checkout@v6
+        with:
+          repository: vasilistotskas/grooveshop-storefront-ui-node-nuxt
+          path: grooveshop-storefront-ui-node-nuxt
+
+      - name: Checkout grooveshop-media-stream (citations)
+        uses: actions/checkout@v6
+        with:
+          repository: vasilistotskas/grooveshop-media-stream
+          path: grooveshop-media-stream
+
       - name: Install pnpm
         uses: pnpm/action-setup@v5
         with:

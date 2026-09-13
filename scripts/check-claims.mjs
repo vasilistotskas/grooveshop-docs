@@ -91,7 +91,9 @@ for (const repoName of [...present, null]) {
   for (const file of walk(root, CODE_EXT)) {
     const rel = relative(root, file).replace(/\\/g, '/')
     filesByPath.add(rel)
-    if (repoName) filesByPath.add(`${repoName}/${rel}`)
+    // Addressable by repository name too: pages cite this repo's own files
+    // (`grooveshop-docs/.github/workflows/docker.yml`) as readily as a sibling's.
+    filesByPath.add(`${repoName ?? 'grooveshop-docs'}/${rel}`)
     const base = rel.split('/').pop()
     if (!filesByName.has(base)) filesByName.set(base, [])
     filesByName.get(base).push(rel)
@@ -140,17 +142,31 @@ const PATH_RE = /`([A-Za-z0-9_.\-/]+\.(?:py|ts|mts|cts|vue|js|mjs|cjs|go|yaml|ym
 const IDENT_RE = /`([A-Za-z_$][\w$]*(?:\(\))?)`/g
 const SPAN_RE = /<span class="sidebar-path">([^<]+)<\/span>/g
 
+const absent = REPOS.filter(r => !present.includes(r))
+let skipped = 0
+
+/**
+ * `true` resolved, `false` broken, `null` not checkable in this checkout.
+ *
+ * A tree holding only some repositories can only judge citations into the ones
+ * it has. CI checks out a subset, and calling every citation into an absent
+ * repository broken would fail the build on prose that is correct — the same
+ * half-applied-rule trap the admin-prose gate hit on a sparse checkout.
+ */
 function pathResolves(cite) {
-  const c = cite.replace(/\\/g, '/')
+  // A citation may be written relative to a repository root ("./openapi/…").
+  const c = cite.replace(/\\/g, '/').replace(/^\.\//, '')
   if (c.includes('...')) return true // deliberately elided
   if (/^(?:django_celery_beat|celery|django|allauth|rest_framework|knox|parler)\//.test(c)) return true // library
   if (filesByPath.has(c)) return true
   for (const r of REPOS) if (filesByPath.has(c.replace(`${r}/`, ''))) return true
+  // Explicitly addressed to a repository that is not checked out here.
+  if (absent.some(r => c.startsWith(`${r}/`))) return null
   const tail = c.split('/').pop()
   const hits = filesByName.get(tail)
-  if (!hits) return false
-  if (!c.includes('/')) return true // bare filename that exists somewhere
-  return hits.some(h => h.endsWith(`/${c}`) || h === c || `${c}`.endsWith(h))
+  if (hits && (!c.includes('/') || hits.some(h => h.endsWith(`/${c}`) || h === c))) return true
+  // Unprefixed and unfound: only a complete checkout can call this broken.
+  return absent.length ? null : false
 }
 
 for (const file of walk(SRC, /\.md$/)) {
@@ -169,8 +185,13 @@ for (const file of walk(SRC, /\.md$/)) {
       // is a URL (`/dev/llms.txt`), and a bare filename may be an external
       // artefact (`acp.json`, `fbevents.js`) with no file in these repos.
       if (cite.startsWith('/') || !cite.includes('/')) continue
+      const verdict = pathResolves(cite)
+      if (verdict === null) {
+        skipped++
+        continue
+      }
       stats.paths++
-      if (!pathResolves(cite)) problems.push(`${where}  path does not exist: ${cite}`)
+      if (!verdict) problems.push(`${where}  path does not exist: ${cite}`)
     }
 
     if (SCREENS) {
@@ -195,6 +216,9 @@ for (const file of walk(SRC, /\.md$/)) {
 }
 
 console.log(`check-claims: ${stats.paths} path(s) and ${stats.screens} sidebar path(s) checked`)
+if (absent.length) {
+  console.log(`check-claims: ${skipped} citation(s) skipped — these repositories are not checked out here: ${absent.join(', ')}`)
+}
 if (problems.length) {
   for (const p of problems) console.error(p)
   console.error(`\ncheck-claims: ${problems.length} unresolved citation(s).`)
