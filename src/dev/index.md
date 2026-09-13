@@ -22,6 +22,7 @@ Pages are of three kinds:
 | Platform and flows | `/dev/platform/`, `/dev/flows/` | Cross-service narratives written for this site. Each ends with a **Source** table of file paths. |
 | Service guides | `/dev/django/`, `/dev/operations/` | How one service is built and operated, distilled from that repository's `CLAUDE.md` and code. |
 | Reference | `/dev/<service>/reference/` | Copied verbatim at build time from the owning repository's `docs/` folder. Read-only here. |
+| Operator runbooks | `/dev/operator/` | Running the platform itself rather than building on it: onboarding a store, the tenant record, domains and certificates, billing and dunning, suspension and destruction, platform staff, and the control plane's scheduled work. |
 
 ## Repositories
 
@@ -46,7 +47,8 @@ tree sits behind basic auth at the ingress.
 2. [Architecture](/dev/platform/architecture) — how the services connect.
 3. [Multi-tenancy](/dev/platform/multi-tenancy) — the constraint that shapes every change.
 4. The flow you are about to touch, under **Flows**.
-5. The owning service's guide and reference.
+5. If you are running the platform rather than changing it, start at [The control plane](/dev/operator/) instead.
+6. The owning service's guide and reference.
 
 ## For AI agents
 

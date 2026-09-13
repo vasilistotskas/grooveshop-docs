@@ -102,6 +102,7 @@ const SECTION_TITLES = {
   'dev/platform': 'Platform',
   'dev/flows': 'End-to-end flows',
   'dev/django': 'Django API',
+  'dev/operator': 'Platform operator',
   'dev/operations': 'Operations',
   'dev/api': 'API reference',
   'dev/nuxt': 'Other services',
@@ -125,7 +126,7 @@ const SECTION_ORDER = [
   'Start here', 'Getting started', 'Catalog', 'Storefront', 'Blog', 'Sales',
   'B2B (wholesale)', 'Shipping', 'Customers', 'Loyalty', 'Localization',
   'Settings', 'System', 'Help',
-  'Platform', 'End-to-end flows', 'Django API',
+  'Platform', 'Platform operator', 'End-to-end flows', 'Django API',
   'Per-service reference (synced from the owning repository)',
   'Operations', 'API reference', 'Other services', 'Other',
 ]

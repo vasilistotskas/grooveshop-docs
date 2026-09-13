@@ -73,6 +73,19 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
   },
   ...referenceGroups(),
   {
+    text: 'Platform operator',
+    items: [
+      { text: 'The control plane', link: '/dev/operator/' },
+      { text: 'Onboarding a store', link: '/dev/operator/onboarding' },
+      { text: 'The tenant record', link: '/dev/operator/tenants' },
+      { text: 'Domains & certificates', link: '/dev/operator/domains' },
+      { text: 'Plans, billing & dunning', link: '/dev/operator/billing' },
+      { text: 'Suspend, export & destroy', link: '/dev/operator/lifecycle' },
+      { text: 'Platform staff & access', link: '/dev/operator/team' },
+      { text: 'Scheduled work & platform data', link: '/dev/operator/background-jobs' },
+    ],
+  },
+  {
     text: 'Operations',
     items: [
       { text: 'Deploying', link: '/dev/operations/deploying' },
