@@ -41,7 +41,7 @@ The page lists **surfaces**, grouped as catalog, commerce, config and content. E
 | **Site settings** | any Extra Setting, and the seller identity shown in the footer. | Payment methods, Shipping options and Loyalty. |
 | **Translations (parler)** | marked **Heavy**. Forces every translated row to be re-read from the database. Use only when told to. | |
 
-Below the cards: the twenty most recent purges (who, when, which surfaces, how many entries).
+Below the cards: your store's twenty most recent purges (who, when, which surfaces, how many entries). Only your own appear here — another store's purges are never shown, and yours are never shown to them.
 
 If the storefront purge is not configured for the environment, the page says so and only the data half is purged.
 
@@ -70,7 +70,7 @@ Tick the surfaces and click **Dry run**. The message shows how many entries **wo
 - Purging does not affect the customer's browser cache or a CDN in front of the site; a customer may still need to reload.
 - Search results come from the search engine's index, not from this cache; a product that does not appear in search is re-indexed on save and by a nightly job.
 - Product feeds for Meta, TikTok and AI agents are refreshed by purging Products or Categories.
-- Every purge, dry runs included, is recorded. The last twenty appear on this page, and the complete record lives on the platform console rather than in your admin.
+- Every purge, dry runs included, is recorded against the store that made it. Your last twenty appear on this page; the complete record across every store lives on the platform console rather than in your admin. The list only counts purges made since it became per-store, so it may be empty at first.
 - A full cache reset also runs automatically on the first of every month at 04:00.
 
 ## Related
