@@ -159,21 +159,111 @@ as a `NearMissEntry` with the exact remaining amount, which powers the
 storefront's "add X more to unlock" teaser. Codes never produce near misses —
 they produce a rejection — and an empty cart never produces one.
 
-### The offers page
+### Discovery: three surfaces, one rule
 
-`GET /api/v1/promotion` (`promotion/views.py: PublicPromotionListView`) lists
-what a shopper can act on: every live automatic promotion, plus code
-promotions that have at least one **publicly advertisable** code. Personal
-coupons, single-use codes and promotions that have hit `usage_limit_total`
-are excluded, so the page never advertises an offer the cart would then
-refuse. Results are ordered `priority, id` — the same order the engine
-applies them in, so the page reads top to bottom the way a cart accumulates.
+"May a shopper be told about this promotion?" has exactly one answer, in
+`PromotionQuerySet.publicly_listable` (`promotion/managers/promotion.py`):
+every live automatic promotion, plus code promotions with at least one
+**publicly advertisable** code (`publishable_code_q` — not personal, not a
+single-use bulk code), minus anything that has hit `usage_limit_total`. All
+three discovery surfaces below compose it, so none can advertise an offer
+the cart would then refuse.
 
-The storefront page is `app/pages/offers/index.vue`, gated by
+They also share one payload shape — `PublicPromotionSerializer` — which is
+what lets the storefront render the same card everywhere from a single
+`app/composables/usePromotionOffer.ts` (headline, conditions, expiry, icon,
+colour, and the translated ACP rejection vocabulary).
+
+#### The offers page
+
+`GET /api/v1/promotion` (`promotion/views.py: PublicPromotionListView`).
+Results are ordered `priority, id` — the same order the engine applies them
+in, so the page reads top to bottom the way a cart accumulates.
+
+The storefront page is `app/pages/offers/index.vue` (cards in
+`app/components/Offers/Card.vue`), gated by
 `app/middleware/promotions-enabled.ts`, and its proxy
 `server/api/promotions/index.get.ts` uses `useBackendFetch` (a raw `$fetch`
 carries no `X-Forwarded-Host` and would resolve the public schema, giving
 every tenant an empty list).
+
+#### The product page panel
+
+`GET /api/v1/promotion/product/{productId}`
+(`promotion/views.py: ProductPromotionListView` →
+`promotion/services.py: ProductPromotionService`) answers the narrower
+question a shopper actually has: what is running **for this item**. Each row
+carries a `relation` (`promotion/enum.py: ProductPromotionRelation`) saying
+why it is relevant, because `target_scope` alone cannot express it:
+
+| `relation` | Meaning |
+|---|---|
+| `PRODUCT` | The promotion names this product |
+| `REWARD` | The shopper **receives** it — the FREE_GIFT gift, or a BXGY reward-pool item |
+| `CATEGORY` | Its category is targeted (MPTT descendants included) |
+| `ORDER` | Store-wide; true of every product |
+
+Scope and exclusions are resolved with the same rules
+`PromotionEngine._matching_items` uses at cart time — excluded products,
+excluded categories (descendants included) and `exclude_discounted_products`
+all suppress the buy-side claim — so an excluded product never advertises
+the offer that skips it. The exclusions constrain what must be **bought**,
+so they do not suppress a `REWARD` claim. `FREE_GIFT` mirrors
+`_gift_entitlement` exactly (lowest-pk **active** gift product), so a
+mis-configured promotion with two gifts never promises the one nobody would
+receive.
+
+Rows sort most-specific-first (`PRODUCT`, `REWARD`, `CATEGORY`, `ORDER`) and
+are capped at `MAX_PRODUCT_OFFERS`. The panel is
+`app/components/Product/Offers.vue`; it renders the specific relations open
+and collapses the `ORDER` ones, because a store-wide offer is true of every
+product and would otherwise bury the one line about the item in front of the
+shopper.
+
+#### The checkout coupon picker
+
+`GET /api/v1/cart/coupons` (`cart/views/cart.py: list_coupons` →
+`promotion/services.py: CouponPickerService`) lists the advertisable codes
+**plus the personal coupons assigned to a signed-in customer** — the one
+code a shopper is most likely to be holding is the one `/offers`
+deliberately never shows them. Guests get only the public set: a guest cart
+carries no verified identity to match against.
+
+Every row carries the verdict `CouponService.apply` would give for the cart
+as it stands:
+
+| Field | Meaning |
+|---|---|
+| `eligible` | `apply` would accept the code |
+| `reason` | ACP vocabulary when it would not; `null` otherwise |
+| `discountAmount` | What applying it RIGHT NOW would take off |
+| `freeShipping` | It would newly waive shipping |
+| `applied` | It is the code already on the cart |
+
+Two subtleties, both load-bearing:
+
+- **`apply` raises on `COMBINATION_DISALLOWED` too.** A non-stackable coupon
+  that loses the stacking comparison to the automatic offers is rejected by
+  `_resolve_stacking`, and `CouponService.apply` raises on *any* rejection —
+  so such a row must be `eligible: false`, not an enabled button that
+  answers 400. (`blocking_rejections` excludes the same reason, but that is
+  about aborting order creation, not about accepting a code.)
+- **`discountAmount` is measured against the automatic offers alone**, not
+  the cart's current total, because applying a coupon *replaces* the
+  attached one (one coupon per cart in v1).
+
+Cost: ONE `_collect_candidates` pass, then the pure stacking/clamp maths
+re-run per candidate — not an `evaluate()` per code, which would have made
+the checkout page pay ~15 queries for every code the store publishes.
+`tests/unit/promotion/test_coupon_picker.py` pins both the apply-parity
+contract and the query budget.
+
+The storefront trigger and modal are
+`app/components/Checkout/CouponPicker.vue`, mounted inside
+`app/components/Checkout/CouponInput.vue` so the cart and checkout pages
+both get it. The proxy `server/api/cart/coupons.get.ts` is deliberately
+**uncached** and never SSR-rendered: every field except the offer copy
+depends on the cart and the signed-in shopper.
 
 `/offers` is indexable, so it also has an entry in
 `server/plugins/sitemap-tenant-gate.ts: GATED_ROUTES` — plan flag
@@ -309,10 +399,14 @@ whose plan enables it, and Django still gates the data.
   defines no `ready()`, and nothing under `promotion/` calls
   `CacheService.purge`.
   Its `django_patterns` is
-  also empty, because `PublicPromotionListView` is a plain `APIView` with no
+  also empty, because both promotion views are plain `APIView`s with no
   response cache; the entries that exist are the Nuxt `PublicPromotionList`
-  handler and the rendered `/offers` route. **Purging is a manual operator
-  action** after any promotion, code or schedule edit. Contrast the
+  and `ProductPromotionList` handlers and the rendered `/offers` **and
+  `/products`** routes. `/products` is in the `promotions` surface, not only
+  in `products`, because the product page now renders the offers that apply
+  to it — a scope edit otherwise leaves every product page advertising the
+  old one for the whole SWR window. **Purging is a manual operator action**
+  after any promotion, code, scope or schedule edit. Contrast the
   `recommendations` surface, which lists four models in `invalidated_by`.
 - **An admin-issued gift card is never emailed.** `giftcard/admin.py:
   save_model` routes a new card through `GiftCardService.issue`, which mints
@@ -355,9 +449,10 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/promotion/models/cart_code.py` | `CartPromotionCode`, one-per-cart in v1 |
 | `grooveshop-django-api/promotion/models/redemption.py` | `PromotionRedemption`, the usage ledger |
 | `grooveshop-django-api/promotion/enum.py` | Trigger, benefit, scope, rejection vocabulary |
-| `grooveshop-django-api/promotion/services.py` | `PromotionEngine`, `CouponService`, stacking, recording |
-| `grooveshop-django-api/promotion/views.py` | `PublicPromotionListView` and its two gates |
-| `grooveshop-django-api/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, payment-intent evaluation |
+| `grooveshop-django-api/promotion/managers/promotion.py` | `publicly_listable`, `publishable_code_q` — the ONE advertisability rule |
+| `grooveshop-django-api/promotion/services.py` | `PromotionEngine`, `CouponService`, `ProductPromotionService`, `CouponPickerService` |
+| `grooveshop-django-api/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
+| `grooveshop-django-api/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
 | `grooveshop-django-api/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
 | `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` |
 | `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, refund credit, expiry |
@@ -368,8 +463,14 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/core/cache/surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
 | `grooveshop-django-api/tenant/permissions.py` | The plan and runtime permission classes |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/offers/index.vue` | The offers page |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Offers/Card.vue` | One offer card |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/usePromotionOffer.ts` | Headline, conditions, expiry, rejection copy — shared by all three surfaces |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Product/Offers.vue` | The product page's offer panel |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/CouponPicker.vue` | The checkout coupon picker |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/promotions-enabled.ts` | Two-tier route gate |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/gift-cards-enabled.ts` | Two-tier route gate |
 | `grooveshop-storefront-ui-node-nuxt/server/api/promotions/index.get.ts` | Cached offers proxy |
+| `grooveshop-storefront-ui-node-nuxt/server/api/promotions/product/[productId].get.ts` | Cached per-product offers proxy |
+| `grooveshop-storefront-ui-node-nuxt/server/api/cart/coupons.get.ts` | Coupon picker proxy — deliberately uncached |
 | `grooveshop-storefront-ui-node-nuxt/server/api/giftcard/` | Check, purchase, status, mine |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-tenant-gate.ts` | `/offers` sitemap gating |
