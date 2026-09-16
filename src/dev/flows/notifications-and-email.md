@@ -161,10 +161,19 @@ logo **only** for the platform tenant, and an empty string otherwise — the
 base template then renders the store name as a text wordmark, so an
 unbranded tenant's mail never wears another store's brand.
 
-Envelope addressing comes from `tenant/credentials.py`: `tenant_from_email`
-keeps the platform sender in `From` with the store name as display name,
-because only the platform domain is SPF/DKIM-authorised on the relay, and
-puts the merchant's address in `Reply-To` via `tenant_reply_to`.
+Envelope addressing comes from `tenant/credentials.py: tenant_from_email`,
+and the sending domain decides it, not the merchant's preference. A tenant
+whose own domain is verified on the relay — `Tenant.from_email` set **and**
+`Tenant.from_email_verified` ticked — sends as `"{store name}" <from_email>`.
+Every other tenant sends as `"{store name}" <DEFAULT_FROM_EMAIL>`: the
+platform envelope the relay can sign, with the merchant's brand in the
+sender line and their own address in `Reply-To` via `tenant_reply_to`.
+
+`from_email_verified` **is** the safety property, which is why it is
+platform-only and absent from `TENANT_SELF_EDITABLE_FIELDS` — a store
+operator can propose a `from_email`, but only the platform can certify
+that the relay holds a DKIM key for that domain. Putting an unsignable
+address in `From` fails DMARC alignment and lands the mail in spam.
 
 Transactional mail carries `List-ID` and a `mailto:` `List-Unsubscribe`
 from `user/utils/subscription.py: build_transactional_list_headers`.
@@ -300,6 +309,52 @@ a second `Notification` row because the helper is not idempotent.
 `dispatch_on_commit` is the standard enqueue — it defers to
 `transaction.on_commit` so a worker never sees a row the creating
 transaction has not committed.
+
+### The production relay
+
+Transactional mail goes through **Resend**, configured entirely as
+explicit `env` entries on all four Django containers (backend,
+celery-worker, celery-beat, flower) in
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`.
+`env` beats every `envFrom`, so the relay configuration cannot be shadowed
+by a key that drifts back into `backend-secrets`.
+
+Three details are counter-intuitive enough to be worth stating, each of
+which cost a production incident:
+
+- **The port is 2465, not 465.** Hetzner blocks outbound 25 and 465 from
+  both cluster nodes — a connect attempt times out at 12s, while 587, 2465
+  and 2587 answer in 0.11s. 2465 is Resend's documented implicit-TLS
+  alternate, so the TLS posture is unchanged: encrypted from the first
+  byte, with none of the plaintext-EHLO or STARTTLS-stripping surface that
+  moving to 587 would have introduced. `EMAIL_USE_SSL=True` and
+  `EMAIL_USE_TLS=False` are both set explicitly, because Django treats
+  them as mutually exclusive and `settings.py` refuses to boot if both are
+  on.
+- **`EMAIL_TIMEOUT` must be set.** Django's default is `None`, meaning no
+  socket timeout at all: a relay that accepts the connection and then goes
+  quiet blocks the Celery worker that ran the send, forever, with nothing
+  in the logs and no failed task result. `settings.py` defaults it to 20s
+  so no deployment can inherit the `None`.
+- **The relay credential is a boot dependency of every management
+  command.** `settings.py` raises `ImproperlyConfigured` when
+  `EMAIL_HOST_PASSWORD` is still `changeme` under
+  `SYSTEM_ENV=production`, so the Argo PreSync hook — which sends no mail —
+  names the `resend-smtp` Secret explicitly. It used to receive the
+  password implicitly through `backend-secrets`, and removing the dead
+  Gmail keys from that Secret broke every deploy until the dependency was
+  made visible.
+
+**Per-tenant sending domains.** `webside.gr` is verified on Resend with
+DKIM selector `resend`; the Return-Path rides `rsend.webside.gr` in
+eu-west-1 (`send.webside.gr` is published too), which is a subdomain of
+the From domain, so SPF aligns under DMARC's relaxed default while DKIM
+signs `d=webside.gr` directly. Onboarding another tenant's domain is the
+same three steps every time: add the domain in Resend, publish the DKIM
+TXT and the two CNAMEs it returns, then tick `from_email_verified` on the
+tenant row. **Leave the apex MX and apex SPF alone** — inbound mail for
+addresses like `info@` and `orders@` is Cloudflare Email Routing and has
+nothing to do with sending; adding Resend's MX would break it.
 
 ### Mailpit on staging
 
