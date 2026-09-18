@@ -36,7 +36,7 @@ The form has four fields:
 
 The last row is deliberate: the **System** section is for platform operators. See [Welcome](/admin/) for the full picture, and [Security & access](/admin/settings/security-and-access) for one caveat about the identity lists.
 
-Where the store profile lives: search "Tenant" in the command palette or open `/admin/tenant/tenant/`. Admin and Owner see their own store row only, and can edit only part of it. Editable: store name and description, contact email, default language, branding and colours, social links, analytics pixels, your Viva Wallet, Stripe, ACS and BoxNow credentials, and the authenticator-app issuer name. Read-only, because the platform sets them: your plan and billing dates, every plan feature switch, the store's short name, and the currency.
+Where the store profile lives: search "Tenant" in the command palette or open `/admin/tenant/tenant/`. Admin and Owner see their own store row only, and can edit only part of it. Editable: store name and description, contact email, default language, branding and colours, social links, analytics pixels (Google Analytics, Meta, TikTok), Google Ads conversion tracking (the `AW-` conversion ID plus one label per action — purchase, add to cart, begin checkout, page view; a label without the ID is refused, and every event is sent with the real order or cart value rather than a placeholder), your Viva Wallet, Stripe, ACS and BoxNow credentials, and the authenticator-app issuer name. Read-only, because the platform sets them: your plan and billing dates, every plan feature switch, the store's short name, and the currency.
 
 ## Tasks
 
