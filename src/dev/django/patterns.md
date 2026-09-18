@@ -225,7 +225,16 @@ no filters: it rewrites incoming query keys to snake_case and republishes
 `CamelCasePublishableTimeStampFilterSet` are for. Both now inherit the
 timestamp filters from `TimeStampFilterMixin` instead of restating them.
 `CamelCaseOrderingFilter` (`core/filters/camel_case_ordering.py`) does the
-same rewrite for `?ordering=`.
+same rewrite for `?ordering=`, and decides per action which keys it
+honours (`ordering_for`): a standard action uses the viewset's
+`ordering_fields` / `ordering`; an extra `@action` sorts nothing unless the
+viewset declares its contract in `action_ordering`, because such an action
+usually paginates another model (an author's posts, a user's favourites)
+and the parent's columns would be wrong there. The OpenAPI extension reads
+the same contract, so the storefront's generated query schema forwards
+exactly the keys the action accepts — until 2026-09-18 every such action
+blanked its fields instead and the storefront's sort controls on author,
+category and account pages changed nothing.
 
 ## Pagination envelope (`core/pagination/`)
 
