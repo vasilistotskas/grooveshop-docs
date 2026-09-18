@@ -113,9 +113,31 @@ manage.py clear_cache --prefixes <raw prefix>    # raw Redis prefixes
 `shared/constants/prerender.ts`, all with
 `cache: { varies: ['host', 'x-device-class'] }`: the brand pages at
 `swr: 3600`, the homepage at 300 seconds, and the blog and catalogue
-families at 600 and 300. Server handlers use `defineCachedEventHandler`. Both store in the `cache:` mount in shared
-Redis: page renders under `nitro:routes:` (with the host escaped into the
-key, and `/` stored as `index`) and handlers under `nitro:handlers:<name>`.
+families at 600 and 300. Server handlers use `defineCachedEventHandler`,
+the sitemap and RSS feeds `defineCachedFunction`. All of it lives in the
+`cache:` mount in shared Redis, namespaced by build as
+`cache:<buildId>:nitro:...` (`server/plugins/storage.ts`). A deploy
+therefore starts from an empty cache — there is no post-deploy purge
+step — and the previous build's namespace is unlinked a minute after
+the new pods start.
+
+The tenant host sits in a different place in each key family, and the
+purge endpoint's host scoping (`server/utils/cacheKey.ts:
+cacheKeyBelongsToHost`) has to recognise all three:
+
+| Family | Key shape | Where the host is |
+|---|---|---|
+| `nitro:handlers:<name>:<entry>` | `tenantCacheKey` after Nitro's `escapeKey` (word characters only) | the entry starts with the host stripped of punctuation, then `__` |
+| `nitro:routes:_:<path>.<hash>:host.<hash>:xdeviceclass.<hash>` | route-rule cache; `/` is stored as `index` | `host.<hash>` — Nitro's vary-header hash of the host, never the host text |
+| `nitro:functions:<name>:…:<host>:…` | cached functions keyed on the raw host | a whole `:`-delimited segment |
+
+Until 2026-09-18 only the first shape was recognised: a tenant purge of
+`page_config` cleared the handler JSON and left every rendered page, and
+a `sitemap_seo` purge matched nothing — each reporting success. The
+endpoint also marked a key as handled before its regex ran, so of the
+five `_nuxt_routes()` patterns in `page_config` only the first ever
+matched. Both are pinned by `test/unit/server/api/admin/cache/purge.spec.ts`
+against keys copied from the production keyspace.
 
 The purge endpoint is `POST /api/admin/cache/purge`
 (`server/api/admin/cache/purge.post.ts`), authenticated by the
@@ -209,9 +231,10 @@ purged from its dashboard, not from anything in these repositories.
 | Admin edit not visible in an API response (`/api/v1/...`) | Django `CustomCache` | Admin Cache tool for the surface, or `manage.py clear_cache <surface>` |
 | Seeded promotions or bulk-updated rows not visible | Django, signals bypassed | `CacheService.purge(["promotions"])` or `clear_cache promotions` |
 | Whole storefront 404 "Store not found" after a Django deploy that touched `TenantConfigSerializer` | Django `global:tenant_resolve` | fixed by shape keying; if still on an older tag, `clear_cache --prefixes global:tenant_resolve` |
-| Old HTML on a marketing route after a green storefront deploy | Nitro `nitro:routes:` | purge endpoint with `*routes*` |
+| Old HTML on a marketing route right after a green storefront deploy | not Nitro — each build has its own namespace | confirm the pods run the new image; check Cloudflare |
+| Content edit not visible on a rendered page within a build | Nitro `nitro:routes:` | the surface's Cache tool purge from the tenant admin (`page_config` covers `/`, `/about`, `/contact`, …), or the purge endpoint with `*routes*` |
 | Navigation menu edit not showing | Nitro handler `pageConfigNavigation` | `clear_cache page_config` (purges `*pageConfig*`) |
-| One API route returns pre-deploy data | Nitro `nitro:handlers:<name>` | purge endpoint with `*<handlerName>*` |
+| One API route returns pre-edit data | Nitro `nitro:handlers:<name>` | purge endpoint with `*<handlerName>*` |
 | Replaced product image still served | media-stream `image:{schema}` | `flush-tenant` with the internal secret |
 | Google/Meta/TikTok feed stale | gateway feeds | `clear_cache products` (calls `invalidate_feeds`) |
 | Product missing or stale in search | Meilisearch | `meilisearch_sync_index` for the model |
@@ -225,7 +248,11 @@ purged from its dashboard, not from anything in these repositories.
 - Protected fragments are filtered after SCAN, never before
   (`core/cache/service.py`, `core/cache/protected.py`).
 - A tenant-host purge passes its primary domain as `host`; only the
-  platform host purges globally (`core/cache/nuxt.py`).
+  platform host purges globally (`core/cache/nuxt.py`). On the Nuxt side
+  the host is matched per key family, never as a substring
+  (`server/utils/cacheKey.ts: cacheKeyBelongsToHost`).
+- The Nitro cache is namespaced by build id (`server/plugins/storage.ts`);
+  a purge is merchant-time invalidation, never a deploy step.
 - The Nitro navigation handler is `pageConfigNavigation`
   (`core/cache/surfaces.py`).
 - Purge tokens and internal secrets never leave the cluster; run purges

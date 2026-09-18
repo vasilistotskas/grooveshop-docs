@@ -1,6 +1,6 @@
 ---
 title: Deploying
-description: "How a release becomes a running pod: semantic-release and image publish per repository, the image pins Argo CD reads, why a green Argo status can lie, how to verify a rollout, and the storefront cache purge that follows every frontend deploy."
+description: "How a release becomes a running pod: semantic-release and image publish per repository, the image pins Argo CD reads, why a green Argo status can lie, how to verify a rollout, and why no cache purge follows a frontend deploy."
 ---
 
 # Deploying
@@ -21,7 +21,7 @@ flowchart LR
   P -->|app-root syncs child spec| A[app-grooveshop Application]
   A -->|PreSync Job| H[migrate_schemas, collectstatic, meili settings, slot backfill]
   H --> D[Deployments roll]
-  D -->|purge| C[Nitro SWR cache in Redis]
+  D -->|new build id| C[fresh Nitro cache namespace in Redis]
 ```
 
 ## Release flow per repository
@@ -179,40 +179,30 @@ the production pods the moment it merges, on whatever image production is
 pinned to. Keep `base/` changes out of a staging-pin PR; put them in the
 production-pin PR or their own.
 
-## Storefront deploys serve stale HTML until you purge
+## Storefront deploys start from an empty page cache
 
-A storefront bump does not refresh the SSR-cached routes in
-`shared/constants/prerender.ts`. `nuxt.config.ts` builds three sets of
-route rules from that file, all sharing
-`cache: { varies: ['host', 'x-device-class'] }`: the brand pages in
-`PRERENDERED_ROUTES` at `swr: 3600`, the homepage in `SWR_ROUTE_RULES` at
-300 seconds, and the blog and catalogue families in
-`SWR_ROUTE_PATTERN_RULES` at 600 and 300. The rendered HTML lives in
-shared Redis, so it survives the pod roll: new pods, new image, old page,
-for as long as the route's own TTL, while Argo reads Healthy. After any
-storefront deploy purge from inside a frontend pod (the token never leaves
-it):
+The SSR renders of the routes in `shared/constants/prerender.ts` live in
+shared Redis for up to an hour (`nuxt.config.ts` gives them
+`cache: { varies: ['host', 'x-device-class'] }` with `swr: 3600` for the
+brand pages, 300 seconds for the homepage, 600 and 300 for the blog and
+catalogue families). Until 2026-09-07 a deploy inherited the previous
+build's entries — old text, and asset URLs the new image no longer served
+— for as long as each entry lived, while Argo read Healthy (2026-08-27:
+prod served the old jurisdiction clause on `/terms-of-use` after a fully
+green v3.160.3 rollout). `server/plugins/storage.ts` now mounts the cache
+under `cache:<buildId>:`, a uuid Nuxt mints per build, so new pods read and
+write a namespace nothing has written to yet, and the superseded build's
+keys are unlinked a minute after start-up (`sweepSupersededBuildCaches`).
+There is no purge step after a storefront deploy. A purge probe run right
+after one reports low counts because the cache is cold, not because a
+pattern is wrong.
 
-```bash
-kubectl exec -i -n grooveshop deploy/frontend-nuxt -- node <<'JS'
-const token = process.env.NUXT_CACHE_PURGE_TOKEN
-fetch('http://127.0.0.1:3000/api/admin/cache/purge', {
-  method: 'POST',
-  headers: { 'X-Cache-Purge-Token': token, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ patterns: ['*routes*', '*pageConfig*'], dryRun: false }),
-}).then(r => r.text()).then(console.log)
-JS
-```
-
-Page renders live under `nitro:routes:`, every `defineCachedEventHandler`
-under `nitro:handlers:<name>`; `*routes*` clears only the first. A deploy
-that changes what an API route returns needs `*<handlerName>*` as well.
-Probe with `dryRun: true` first: the wrong prefix reports `deleted: 0` and
-exits green. Diagnose without purging by appending `?cb=<timestamp>`: a
-fresh cache key renders fresh, so old text on the bare URL and new text
-with `?cb=` is this cache, not a failed deploy. Staging cannot catch this
-class of bug because its Redis is separate from production's. The full
-list of layers is in [Caches & purging](/dev/operations/caches).
+The purge endpoint is for merchant-time invalidation — a Django edit that
+must show before a route's TTL — and every layer and command is in
+[Caches & purging](/dev/operations/caches). Diagnose a suspected stale
+page without purging by appending `?cb=<timestamp>`: a fresh cache key
+renders fresh, so old text on the bare URL and new text with `?cb=` is an
+entry inside the current build's TTL, not a failed deploy.
 
 ## Traefik-facing pods need `preStop`
 
@@ -243,9 +233,12 @@ Deployment.
 - **PreSync Job gone, sync loops**: the hook failed and
   `HookFailed` deleted it; re-run with matching Django tags and watch the
   log live.
-- **Green rollout, old page**: the Nitro SWR cache; purge `*routes*`.
-- **Green rollout, one API route stale**: a `defineCachedEventHandler`;
-  purge `*<handlerName>*`.
+- **Green rollout, old page**: not the Nitro cache — each build has its
+  own namespace. Confirm the pods run the new image, then Cloudflare. A
+  page that differs with `?cb=` is a within-build TTL entry; purge its
+  surface from the tenant's Cache tool.
+- **Green rollout, one API response stale**: Django's own `CustomCache`,
+  which is not per build; `clear_cache <surface>`.
 
 ## Source
 
