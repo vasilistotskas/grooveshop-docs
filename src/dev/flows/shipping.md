@@ -279,10 +279,29 @@ read, API call and persist so a slow response cannot lose
 
 `order_status_for_shipment_state` is the pure mapping from carrier state
 to order status, shared by the live poll and the reconcile command so
-they cannot drift. `_apply_order_status_transition` then performs it,
-bridging through SHIPPED when the carrier jumped straight to DELIVERED or
-RETURNED, and for DELIVERED it calls `maybe_advance_to_completed` so an
-already-paid order lands on COMPLETED in the same pass.
+they cannot drift. `in_transit`, `at_destination`, `out_for_delivery` and
+`attempted` all mean SHIPPED — a failed attempt is proof the parcel left
+(prod order 267 sat at PROCESSING for the ten days ACS held it at the
+branch before that state joined the set). `_apply_order_status_transition`
+then performs it, bridging through SHIPPED when the carrier jumped
+straight to DELIVERED or RETURNED, and for DELIVERED it calls
+`maybe_advance_to_completed` so an already-paid order lands on COMPLETED
+in the same pass. A `canceled` shipment state — produced only by the
+admin retire action or a voucher cancel, never by tracking — routes the
+order through `OrderService.cancel_order` instead
+(`_cancel_order_for_dead_shipment`), so stock is restored and the payment
+settled exactly as a staff cancel would; a bare status write stranded prod
+order 248 with its unit still counted as sold.
+
+The summary alone is not enough to know the parcel has left. ACS reports
+`shipment_status=5`, `delivery_flag=0` and no non-delivery reason for a
+parcel waiting at a Smartpoint or in the branch's hands, and the mapping
+keeps the current state for that triplet — which is still `new` when the
+pickup happened between two polls. `poll_shipment_tracking` therefore
+lifts a `new` shipment to `in_transit` when `ACS_TrackingDetails` holds
+any checkpoint that is not a print (`_has_left_sender`,
+`_PRE_DISPATCH_CHECKPOINT_PREFIXES`); a voucher that was printed and
+never handed over carries only print checkpoints and stays `new`.
 
 `acs_send_arrival_notification` emails and notifies the shopper when the
 parcel goes out for delivery.

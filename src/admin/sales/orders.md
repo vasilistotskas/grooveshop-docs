@@ -77,7 +77,7 @@ stateDiagram-v2
 | **Delivered** | The carrier reports delivery. | Automatic from the carrier; or the bulk action. |
 | **Completed** | Delivered and paid. Final. | Automatic once a delivered order is paid (for cash on delivery, when the courier's payout is reconciled); or the bulk action. |
 | **Canceled** | Closed before shipping. Stock was restored. Final. | The customer from their account, the cancel bulk action, or the automatic clean-up of unpaid orders. |
-| **Returned** | The carrier brought the parcel back, or the customer returned it. | Automatic from the carrier; otherwise you, by editing **Status** on the order page (there is no bulk action for it). |
+| **Returned** | The carrier brought the parcel back, or the customer returned it. For a cash-on-delivery order nothing was collected, so the payment status becomes **Canceled** at the same time and the order is closed; a paid order keeps its payment until you refund it. Stock is not restored on its own: put the goods back once you have the parcel in hand. | Automatic from the carrier; otherwise you, by editing **Status** on the order page (there is no bulk action for it). |
 | **Refunded** | A returned order whose money went back. Final. | You, by editing **Status** on a Returned order. |
 
 Only **Pending** and **Processing** orders can be canceled. **Completed**, **Canceled** and **Refunded** have no exit.
@@ -92,7 +92,7 @@ Only **Pending** and **Processing** orders can be canceled. **Completed**, **Can
 | **Failed** | The online charge was declined. The order stays Pending and is auto-canceled after the grace period. | The provider, when it reports the decline. |
 | **Refunded** | Fully refunded. | Cancelling a paid order, or a full refund made in the Stripe dashboard. |
 | **Partially Refunded** | Part of the money went back. | A partial refund made in the Stripe dashboard. |
-| **Canceled** | The provider reversed a payment that never completed. | Viva Wallet. |
+| **Canceled** | Nothing was collected and nothing is owed. Set when an unpaid order is canceled or comes back **Returned** (cash on delivery the customer refused or never collected, or an online payment that never completed), or when Viva Wallet reverses a payment that never completed. | The cancellation or the return itself, or Viva Wallet. |
 
 Once a payment is Completed, Refunded, Partially Refunded or Canceled, a late or duplicated provider message can never move it back to Pending or Failed.
 

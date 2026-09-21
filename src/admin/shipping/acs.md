@@ -58,7 +58,7 @@ Shipment states:
 | In transit | ACS has loaded the parcel. | Shipped |
 | At destination station | Parcel reached the delivery branch. | Shipped |
 | Out for delivery | On the courier's vehicle. The customer is emailed once. | Shipped |
-| Delivery attempted | ACS recorded a failed attempt with a reason. | none |
+| Delivery attempted | ACS could not deliver and recorded why: the customer was absent, the address was wrong, or the parcel is waiting at the branch or a Smartpoint for the customer to collect. ACS texts the customer and holds the parcel for about ten days, then returns it to you. Call the customer while it is held. | Shipped |
 | Delivered | Signed for. | Delivered, then Completed if the order is paid |
 | Returned | Returned to sender. | Returned |
 | Canceled | Voucher cancelled at ACS or retired locally. | Canceled |

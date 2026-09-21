@@ -75,7 +75,14 @@ webhook, which flips PENDING to PROCESSING inline because it already
 holds the row lock and knows the prior state.
 
 Terminal states are COMPLETED, CANCELED and REFUNDED; they have no exit.
-RETURNED reaches REFUNDED and nothing else.
+RETURNED reaches REFUNDED and nothing else — and only when money moved.
+CANCELED and RETURNED are the two statuses after which nothing will ever
+be collected (`PAYMENT_CLOSING_STATUSES`, `order/enum/status.py`), so
+`Order.save()` settles a still-unpaid `payment_status` to CANCELED on
+either transition (`Order.settle_unpaid_payment`) and the order is closed
+for good; a paid return keeps COMPLETED until the refund. Before this
+rule reached RETURNED, 34 refused cash-on-delivery parcels on tenant #1
+read payment "Pending" forever (`0058_settle_returned_unpaid_orders`).
 
 ### Who moves each transition
 
@@ -83,12 +90,12 @@ RETURNED reaches REFUNDED and nothing else.
 |---|---|---|
 | PENDING → PROCESSING | Online payment webhook | `OrderService.handle_payment_succeeded`, `viva_webhook._handle_payment_created`, `handle_stripe_checkout_completed` |
 | PENDING → PROCESSING | Carrier voucher mint (collected-on-delivery) | `AcsService._advance_pending_order_to_processing`, `BoxNowService._advance_pending_order_to_processing` |
-| PENDING/PROCESSING → SHIPPED | Carrier event | `AcsService._apply_order_status_transition`, `BoxNowService._apply_order_status_transition` |
+| PENDING/PROCESSING → SHIPPED | Carrier event (`in_transit`, `at_destination`, `out_for_delivery`, `attempted`; or a `new` shipment whose tracking history holds a non-print checkpoint) | `AcsService._apply_order_status_transition`, `AcsService._has_left_sender`, `BoxNowService._apply_order_status_transition` |
 | PENDING/PROCESSING → SHIPPED | Admin attaching tracking | `OrderService.add_tracking_info`, `POST /api/v1/order/{id}/add_tracking` |
 | SHIPPED → DELIVERED | Carrier event | Both carriers' `_apply_order_status_transition` |
-| DELIVERED → COMPLETED | Automatic, when paid | `OrderService.maybe_advance_to_completed` |
+| DELIVERED → COMPLETED | Automatic, when paid: inline on the carrier DELIVERED and the COD reconcile, and hourly for anything paid outside those two moments | `OrderService.maybe_advance_to_completed`, `order.tasks.complete_paid_delivered_orders` |
 | SHIPPED/DELIVERED → RETURNED | Carrier event (`returned`, `lost`) | `AcsService.order_status_for_shipment_state` |
-| → CANCELED | Customer, staff, or the cleanup task | `OrderService.cancel_order` |
+| → CANCELED | Customer, staff, the cleanup task, or the ACS replay for a voucher retired before dispatch | `OrderService.cancel_order`, `AcsService._cancel_order_for_dead_shipment` |
 | RETURNED → REFUNDED | Staff, manually | `POST /api/v1/order/{id}/update_status` |
 | Any | Staff, manually | `OrderViewSet.update_status`, admin bulk actions in `order/admin.py` |
 
@@ -288,7 +295,14 @@ online payment. Nothing happens at the moment the payment fails.
 - **Order stuck at PROCESSING with a voucher.** The carrier reported a
   state the table rejected. Both carriers log the rejected pair at
   WARNING with the order id; `manage.py reconcile_acs_order_status`
-  reports ACS drift and repairs it only when passed `--apply`.
+  reports ACS drift and repairs it only when passed `--apply`. For a
+  retired voucher that replay runs the real cancel, stock included.
+- **Order stuck at DELIVERED although paid.** The inline auto-advance
+  runs at two moments only; `complete_paid_delivered_orders` sweeps the
+  rest every hour, silently for the customer.
+- **Returned cash-on-delivery order reads payment "Pending".** Only
+  possible for rows older than `0058_settle_returned_unpaid_orders`; the
+  RETURNED transition now settles the payment itself.
 - **Order stuck at PENDING with no voucher.** The carrier permanently
   rejected the shipment. The shipment row sits at `pending_creation` and
   `shipping/alerts.py: alert_admins_shipment_creation_failed` emails the
