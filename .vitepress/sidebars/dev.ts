@@ -93,6 +93,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Caches & purging', link: '/dev/operations/caches' },
       { text: 'Secrets', link: '/dev/operations/secrets' },
       { text: 'Backups', link: '/dev/operations/backups' },
+      { text: 'Monitoring & alerting', link: '/dev/operations/monitoring' },
     ],
   },
   {

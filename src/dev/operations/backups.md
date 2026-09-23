@@ -153,8 +153,10 @@ What exists:
 
 What does not exist, and is the open item alongside the off-cluster copy:
 
-- **No metrics or alerting stack.** No Prometheus, no Alertmanager, no
-  dashboards. The Redis outage was found by 503s, not by an alert.
+- **No backup-specific alert.** Metrics, dashboards and alerting exist
+  (see [Monitoring and alerting](/dev/operations/monitoring)), and the
+  PVC-fill and volume-health rules would have caught the Redis outage, but
+  nothing alerts on a nightly dump that did not happen.
 - **No error tracker.** Sentry is not wired into any service; errors are
   log lines in VictoriaLogs and, for Celery, `MonitoredTask.on_failure`.
 - **No backup verification.** Nothing restores a dump automatically to

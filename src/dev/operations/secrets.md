@@ -62,6 +62,7 @@ under `overlays/staging/` with its own values.
 | `frontend-secrets` | `NUXT_SESSION_PASSWORD`, `NUXT_SECRET_KEY`, `NUXT_CACHE_PURGE_TOKEN`, `NUXT_OAUTH_GOOGLE_*`, `NUXT_OAUTH_FACEBOOK_*`, `NUXT_OAUTH_DISCORD_*`, `NODE_AUTH_TOKEN` | frontend-nuxt |
 | `media-stream-secrets` | `INTERNAL_DOMAINS_SECRET`, `NODE_AUTH_TOKEN` | media-stream |
 | `media-stream-internal-secret` | `secret` (the `INTERNAL_ADMIN_SECRET` that guards `flush-tenant`) | media-stream, and the backend as `MEDIA_STREAM_INTERNAL_SECRET` |
+| `media-stream-metrics-token` | `token` (read-only bearer for `/metrics`; sealed straight from a generated value, no plaintext copy — the rotation command is in the file) | media-stream as `METRICS_BEARER_TOKEN`, and the `media-stream` VMPodScrape |
 | `agent-gateway-secrets` | `INTERNAL_EVENTS_SECRET` (same value as the backend's `AGENT_GATEWAY_INTERNAL_SECRET`) | agent-gateway |
 | `redis-auth` | `password` | Redis CR, backend, workers, frontend, gateway |
 | `app-grooveshop-meilisearch-master-key` | `MEILI_MASTER_KEY` | Meilisearch chart, PreSync job |
