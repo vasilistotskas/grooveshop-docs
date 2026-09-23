@@ -38,7 +38,7 @@ flowchart TD
   Platform["UCP / ACP platform"] --> Profile["/.well-known/ucp"]
   Platform --> ACP["/acp/checkout_sessions"]
   DJ["Django order task"] --> Int["POST /internal/events/order-status"]
-  Int --> Queue["ag:events:orders"]
+  Int --> Queue["ag:webhooks:orders"]
   Queue --> Hook["signed webhook to platform"]
 ```
 
@@ -140,9 +140,10 @@ methods belong to capabilities the profile does not advertise, so a
 negotiating platform never calls them.
 
 `get_order` sources the required `checkout_id` from the gateway's own order
-index (`ag:{schema}:order:{uuid}`, retained a year, because the link must
-outlive the session itself — `internal/checkout/store.go` holds an active
-session for 30 minutes and a terminal one for 24 hours). An order placed on the web has no checkout to
+link (`ag:{schema}:orderlink:{uuid}` — checkout id, storefront domain and
+webhook target — retained a year, because the link must outlive the session
+itself: `internal/checkout/store.go` holds an active session for 30 minutes
+and a terminal one for 24 hours). An order placed on the web has no checkout to
 name and is refused with that explanation, never a fabricated id.
 `order.fulfillment` stays `{}`: an expectation needs a destination the order
 detail deliberately does not decode, and an event needs a shipment timestamp
@@ -300,17 +301,29 @@ A 5xx from the gateway is raised so Celery retries; a 4xx is logged.
 
 `internal/server/internalapi.go` checks the token with a constant-time compare
 **before reading the body**, so an unauthenticated caller cannot distinguish a
-malformed body from a valid one. It applies the event to any matching checkout
-session and queues a platform webhook.
+malformed body from a valid one. It routes the event through the **order
+link**, not the checkout session — the session is gone within a day, while
+shipment and delivery events arrive for weeks — applies it to the session if
+one still exists, and, when the checkout registered a webhook target, fetches
+the order and queues the full UCP order entity for delivery.
 
-The webhook queue is deliberately **not** per schema: one work queue
-(`ag:events:orders`) for the whole pod pool, with each event carrying its own
-schema, from which the signing key and target URL are resolved. Delivery runs
-in a bounded worker pool because inline delivery let one undeliverable
-endpoint stall every tenant's webhooks. Semantics are at-least-once: an event
-moves to a processing list before delivery and is removed only on a terminal
-outcome, and a shutdown mid-delivery leaves it for `reclaim()` on the next
-boot.
+Deliveries follow the UCP order-event rules: the body is the order entity,
+headers follow Standard Webhooks (`Webhook-Id`, `Webhook-Timestamp`) with
+`UCP-Agent` naming the tenant's profile, and the request is signed per RFC
+9421 (`Content-Digest`, `Signature-Input`, `Signature`) with the tenant's
+ES256 key — the one algorithm every UCP verifier must support
+(`internal/httpsig`). The client dials only public addresses and never
+follows a redirect, so a registered URL cannot be turned toward the cluster.
+
+The webhook queue is deliberately **not** per schema: one Redis stream
+(`ag:webhooks:orders`) and consumer group for the whole pod pool, one consumer
+per pod name, each delivery carrying its own schema for the signing key.
+Delivery runs in a bounded worker pool because inline delivery let one
+undeliverable endpoint stall every tenant's webhooks. Semantics are
+at-least-once: an entry is acknowledged only on a terminal outcome; a
+restarted pod replays its own pending entries at once, and a vanished pod's
+are claimed by another after the visibility timeout — never while the pod
+that holds them is still delivering.
 
 Django can also drop a tenant's cached feeds through
 `POST /internal/feeds/invalidate` (`core/cache/gateway.py`), which requires
@@ -398,8 +411,9 @@ yourself, then bumping the pin in the infrastructure repo.
   one-year retention. It is a refusal, not a bug.
 - **Order webhooks stop for one tenant.** The delivery pool bounds the damage
   to one worker per stuck endpoint, so the symptom is usually that tenant's
-  platform endpoint blackholing. Events stay on the processing list and
-  `reclaim()` rescues them on the next boot.
+  platform endpoint blackholing. Undelivered entries stay pending in the
+  `dispatch` group (`XPENDING ag:webhooks:orders dispatch`) until a terminal
+  outcome.
 - **Deploy changed nothing.** The gateway image is not released by pushing to
   `main`. Tag `vX.Y.Z`, then update the pin in the infrastructure repo.
 
@@ -428,6 +442,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/ucp/profile.go` | Business profile document |
 | `grooveshop-agent-gateway/internal/ucp/handler.go` | Payment handler, instruments, hosted selection |
 | `grooveshop-agent-gateway/internal/ucp/webhook.go` | Order-event queue and signed delivery |
+| `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
 | `grooveshop-agent-gateway/internal/acp/handler.go` | ACP routes and bearer auth |
 | `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, VAT-inclusive prices, skip rules |
 | `grooveshop-agent-gateway/internal/feeds/acp.go` | ACP feed shape |
