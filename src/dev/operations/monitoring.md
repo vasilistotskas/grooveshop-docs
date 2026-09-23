@@ -44,6 +44,8 @@ flowchart LR
 | Media stream | same file | Sharp pipelines, cache layers, admission control. Requires a bearer token, see below |
 | RabbitMQ | same file | Node metrics from `/metrics`, per-queue depth and consumers from `/metrics/detailed` |
 | Patroni | same file | Primary role, PostgreSQL running, timeline, WAL position |
+| PostgreSQL | same file, from `grooveshop/base/postgres-exporter.yaml` | Connections by state against `max_connections`, transactions, locks, long and idle-in-transaction transactions, deadlocks, database and WAL size, checkpointer, the top 100 statements (normalised text) |
+| Redis | same file, from the `redisExporter` sidecar in `grooveshop/base/redis.yaml` | Memory against `maxmemory`, evictions, hit ratio, clients, AOF size, and whether the last AOF rewrite, AOF write and RDB save succeeded |
 | cert-manager, Argo CD controller, Longhorn, VictoriaLogs | `victoria-metrics/scrapes/vmservicescrape-*.yaml` | Certificate Ready and renewal, Application health and sync, volume robustness, log ingestion |
 | Kubernetes | the chart | Nodes, kubelet and cAdvisor, kube-state-metrics, the API server |
 
@@ -61,7 +63,7 @@ selector:
 |---|---|
 | HTTP Traffic & Latency | Requests, 5xx, 4xx and latency by Service and by store host; load shedding; certificates; media stream; agent gateway |
 | Background Work | Celery outcomes and failing tasks, queue depth and consumers, worker CPU and memory, ERROR log lines |
-| Platform Health | Volumes (kubelet and Longhorn), PostgreSQL, container resources and restarts, Argo CD applications, the monitoring pipeline itself |
+| Platform Health | Volumes (kubelet and Longhorn), PostgreSQL (role and statistics, top statements), Redis (persistence, AOF size against its volume, memory, evictions), container resources and restarts, Argo CD applications, the monitoring pipeline itself |
 
 The chart's own dashboards go to the **Cluster** folder. Dashboards for
 hardware and topologies this cluster does not have (Windows, AIX, macOS,
@@ -77,7 +79,7 @@ wraps each file into the ConfigMap the Grafana sidecar loads.
 
 | Rule file | Covers |
 |---|---|
-| `victoria-metrics/rules/vmrule-grooveshop.yaml` | 5xx on the storefront and API, load shedding, certificates (cert-manager not Ready, served certificate near expiry), Celery task failures, no Celery workers, a queue with work and no consumer, no PostgreSQL primary, an unhealthy Longhorn volume, Argo CD applications unhealthy or auto-synced and stuck OutOfSync, log ingestion stopped |
+| `victoria-metrics/rules/vmrule-grooveshop.yaml` | 5xx on the storefront and API, load shedding, certificates (cert-manager not Ready, served certificate near expiry), Celery task failures, no Celery workers, a queue with work and no consumer, no PostgreSQL primary, PostgreSQL unreachable, connection saturation, a transaction idle for over 5 minutes, deadlocks, Redis down or failing to persist, an unhealthy Longhorn volume, Argo CD applications unhealthy or auto-synced and stuck OutOfSync, log ingestion stopped |
 | `victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | Any ERROR, CRITICAL or FATAL log line in production, by container |
 | chart (`vmks-rule-*`) | Kubernetes itself, including `TargetDown` for any scrape that fails |
 
@@ -129,7 +131,17 @@ by a namespace regex.
   `logLevelRules`, so log panels show levels instead of `UNK`.
 - The VictoriaMetrics datasources declare the real 30-second scrape
   interval, so `$__rate_interval` never produces an empty rate window.
-- vmalert-vmks loads 42 groups and 259 rules. A different count after a
+- postgres-exporter is a Deployment, not a Spilo sidecar: a sidecar would
+  restart the single-member database and receive the superuser's
+  credentials. It logs in as `postgres_exporter`, a member of `pg_monitor`
+  only, which the operator creates on every cluster as an infrastructure
+  role (`postgres-op/v2.0.2/configmap.yaml`). One password is sealed three
+  times: for the operator and for each app namespace.
+- The storefront's evlog events have no message key. VictoriaLogs'
+  `VL-Msg-Field` list (`victoria-logs/values.yaml`) falls back to their
+  error text, request path or tag, so their lines are readable. Media
+  stream logs JSON in production (`src/main.ts` in its repository).
+- vmalert-vmks loads 42 groups and 264 rules. A different count after a
   change means a selector or a rule file broke.
 
 ## Failure modes
@@ -143,6 +155,13 @@ by a namespace regex.
 - **media-stream target returns 401.** The pod and the VMPodScrape
   disagree on the token, or the Secret was rotated without the pods
   restarting. `TargetDown` fires.
+- **postgres-exporter reports `pg_up 0` after a rotation.** The operator
+  and the exporter hold different copies of the password; re-seal all
+  three files from one value. A bare secret name in
+  `infrastructure_roles_secrets` resolves to `default/` and the role is
+  silently never created, so the name must stay namespaced.
+- **Changing the Redis exporter restarts Redis.** It is a container in
+  the Redis pod, so any change to its image or resources rolls the pod.
 - **Log alerts silent during an incident.** Check ingestion first
   (`GrooveShopLogIngestionStopped`, "Logs ingested / s"): with no rows
   arriving, every log rule sees zero errors.
@@ -162,6 +181,10 @@ by a namespace regex.
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/` | The log vmalert and its rule |
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/scrapes/` | Traefik and cluster-component scrapes |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/metrics-scrapes.yaml` | Scrapes for the app's own components |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/postgres-exporter.yaml` | The PostgreSQL exporter and its collectors |
+| `grooveshop-infrastructure/manifests/app-constructs/postgres-op/v2.0.2/configmap.yaml` | `infrastructure_roles_secrets`: the exporter's role |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis.yaml` | The Redis exporter sidecar |
+| `grooveshop-infrastructure/manifests/app-constructs/victoria-logs/values.yaml` | `VL-Msg-Field`: which field becomes a log line's message |
 | `grooveshop-infrastructure/manifests/app-constructs/traefik/helmchartconfig.yaml` | Router metrics |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |
