@@ -63,7 +63,7 @@ Bulk actions: **Resend confirmation** and **Deactivate selected subscriptions**.
 
 ### Put a newsletter form on the storefront
 
-1. Create a **Newsletter** topic with **Active**, **Default Subscription** and **Requires Confirmation** on. Only one Newsletter topic can be the default; saving a second one is refused.
+1. A new store already has one: a **Newsletter** topic with **Active**, **Default Subscription** and **Requires Confirmation** on. Rename it if you like. To use a topic of your own instead, turn **Default Subscription** off on that one first: only one Newsletter topic can be the default, and saving a second one is refused.
 2. Add a **Newsletter Signup** section to a page layout, see [Page layouts](/admin/storefront/page-layouts).
 3. Keep the `NEWSLETTER_ENABLED` setting on. With it off, or with no default Newsletter topic, the section shows nothing.
 

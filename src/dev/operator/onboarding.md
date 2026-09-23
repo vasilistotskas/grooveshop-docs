@@ -170,15 +170,24 @@ into operator messages (`tenant/provisioning.py`):
 | `ensure_api_domain` | Creates the `api.<primary>` `TenantDomain` row | Returns `None` with no primary domain. **Not optional**: the resolver derives `apiDomain` as `api.<primary>` and the storefront dials it, but request routing matches domain rows exactly — a derived host with no row is one Django refuses to serve. The storefront looks healthy while WebSocket notifications close 4004 and every social login 404s at the form POST |
 | `ensure_site` | Creates the public-schema `django.contrib.sites` Site for the primary domain | Per-tenant `SocialApp` credentials are keyed on that Site; without it the adapter's lookup always misses and allauth silently falls back to the platform's OAuth app |
 | `provision_owner_membership` | Grants OWNER `UserTenantMembership`, looked up in the **public** schema | Returns `None` if the owner has no `UserAccount` yet — the caller warns; grant the membership from the admin once they register |
-| `seed_tenant_defaults` | Inside the tenant's schema: extra settings, page layouts, content pages, recommendation slots, Meilisearch indexes | Each step is independently best-effort and **returns the names that failed** |
+| `seed_tenant_defaults` | Inside the tenant's schema: extra settings, page layouts, content pages, the flat-rate carrier, the default newsletter topic, recommendation slots, Meilisearch indexes | Each step is independently best-effort and **returns the names that failed** |
 
 Seeding detail worth knowing:
 
 - **Page layouts** seed **published** (`page_config/defaults.py:
-  seed_page_layouts`); **content pages** seed **unpublished**
-  (`seed_content_pages`). A new store therefore has a composed homepage
-  and a set of legal/marketing pages that nobody can see until the
-  merchant publishes them.
+  seed_page_layouts`). Of the **content pages** (`seed_content_pages`),
+  the three legal documents seed published with the platform's text,
+  and the rest unpublished with a prompt. A new store therefore has a
+  composed homepage, its terms, privacy and cookie policies, and a set
+  of marketing pages that nobody can see until the merchant writes and
+  publishes them.
+- **The flat-rate carrier** is switched on (`_activate_default_carrier`)
+  so checkout has a delivery option before any courier contract.
+- **The default newsletter topic** (`user/services/subscription.py:
+  ensure_default_newsletter_topic`) is what the default layout's
+  newsletter band subscribes to; without it the band renders nothing.
+  It is double opt-in, written in `el` and `en`, and never replaces a
+  topic the merchant made.
 - **Meilisearch indexes** are created through `update_meili_settings`,
   not a bare `create_index`, because an index with Meilisearch's default
   empty `filterableAttributes` rejects every storefront query — HTTP 400
