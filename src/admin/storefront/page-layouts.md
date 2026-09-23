@@ -55,7 +55,7 @@ Below the form, the **Page Sections** table lists the sections in render order w
 | Recently Viewed Rail | none; also needs the **RECENTLY_VIEWED_ENABLED** setting on |
 | Rich Text Block | content (HTML, up to 20000 characters) |
 | Call to Action Banner | heading, description, button_text, button_link, background_color, surface |
-| Newsletter Signup | heading, description, placeholder |
+| Newsletter Signup | heading, description, placeholder, button_text, surface; an email form with a consent box, shown only when a default Newsletter topic exists (see [Subscriptions](/admin/customers/subscriptions)) |
 | Testimonials | items (name, text, avatar) |
 | Spacer (height), Divider (variant) | layout helpers |
 | Loyalty Program Hero, Search Bar, Business Hours | none; Business Hours reads its opening times from the **BUSINESS_HOURS** setting |

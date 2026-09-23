@@ -57,7 +57,7 @@ Defaults are what a fresh store starts with. Money is in euro.
 | `PRODUCT_REVIEWS_ENABLED` | Review list and write-review flow on product pages. | on | yes |
 | `BLOG_COMMENTS_ENABLED` | Comments and likes under blog posts. | on | yes |
 | `FAVOURITES_ENABLED` | Wishlist hearts, favourites page, price-drop and back-in-stock emails driven by favourites. | on | yes |
-| `NEWSLETTER_ENABLED` | Topic subscriptions in the account and the subscription endpoints. Existing unsubscribe links keep working. | on | yes |
+| `NEWSLETTER_ENABLED` | Topic subscriptions in the account, the storefront's newsletter form and the subscription endpoints. Existing unsubscribe links keep working. | on | yes |
 | `FEEDBACK_ENABLED` | The feedback page and its submission endpoint. | on | yes |
 | `PRODUCT_ALERTS_ENABLED` | Explicit back-in-stock and price-drop alerts and their emails. | on | yes |
 
@@ -150,8 +150,6 @@ Fill the seller identity **before the first invoice**: the values are printed on
 | `REENGAGEMENT_EMAIL_MAX_COUNT`, `REENGAGEMENT_EMAIL_COOLDOWN_DAYS` | Limits of the "we miss you" emails. | 3, 90 | no |
 | `INACTIVE_USER_THRESHOLD_DAYS` | Days without activity before a customer counts as inactive. | 60 | no |
 | `NOTIFICATION_EXPIRATION_DAYS` | Days after which in-app notifications are deleted. | 180 | no |
-| `SUBSCRIPTION_CONFIRMATION_URL` | Path template of the newsletter confirmation link. Leave as is. | set | no |
-
 ### Store presence
 
 | Setting | Meaning | Default | Public |

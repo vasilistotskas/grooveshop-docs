@@ -42,7 +42,7 @@ The form (name and description are translatable and have language tabs):
 |---|---|
 | **Name**, **Slug**, **Description**, **Category** | What the customer sees on the account's subscriptions page. |
 | **Is active** | Inactive topics disappear from the customer's list and from every subscription endpoint; existing subscriptions are kept. |
-| **Is default** | Every new account is subscribed automatically at sign-up. |
+| **Is default** | On a Newsletter topic, the one the storefront's newsletter form subscribes to. On an Account Updates or System Notifications topic, every new account is subscribed at sign-up. See [Subscriptions](/admin/customers/subscriptions). |
 | **Requires confirmation** | The subscription starts as pending and the customer gets an email with a confirmation link; it becomes active only when they click it. |
 
 ### Tasks
@@ -61,7 +61,7 @@ Untick **Is active** rather than deleting, so the subscriber history stays. Indi
 
 - The **Subscribers** column is counted fresh every time you load the list. It reads "active/total", and the total counts every subscription row on the topic, including the pending ones that were never confirmed and the ones that unsubscribed.
 - The whole newsletter feature can be switched off with the `NEWSLETTER_ENABLED` setting; unsubscribe links in already-sent emails keep working regardless. See [Store settings](/admin/settings/store-settings).
-- The confirmation link is built from the `SUBSCRIPTION_CONFIRMATION_URL` setting, which points at your own store's address. Leave it as it is.
+- The confirmation link points at your storefront's own address; there is nothing to configure.
 
 ## Related
 

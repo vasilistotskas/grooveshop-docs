@@ -55,7 +55,7 @@ description: Σύνθεση της αρχικής σελίδας και των �
 | Recently Viewed Rail | κανένα· χρειάζεται και τη ρύθμιση **RECENTLY_VIEWED_ENABLED** ενεργή |
 | Rich Text Block | content (HTML, έως 20000 χαρακτήρες) |
 | Call to Action Banner | heading, description, button_text, button_link, background_color, surface |
-| Newsletter Signup | heading, description, placeholder |
+| Newsletter Signup | heading, description, placeholder, button_text, surface· φόρμα email με κουτί συγκατάθεσης, που εμφανίζεται μόνο όταν υπάρχει προεπιλεγμένο θέμα Newsletter (δείτε [Συνδρομές](/el/admin/customers/subscriptions)) |
 | Testimonials | items (name, text, avatar) |
 | Spacer (height), Divider (variant) | βοηθητικά διάταξης |
 | Loyalty Program Hero, Search Bar, Business Hours | κανένα· το Business Hours διαβάζει το ωράριο από τη ρύθμιση **BUSINESS_HOURS** |
