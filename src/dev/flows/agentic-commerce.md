@@ -133,6 +133,23 @@ The canonical tools take the wire shapes from the OpenRPC document: `meta`
 snake_case members. Extensions compose **flat** onto `checkout`, never nested
 under capability names.
 
+Every canonical tool **negotiates** before it acts
+(`internal/ucp/negotiate.go`, `internal/ucp/profiles.go`). The platform
+profile named in `meta.ucp-agent.profile` is fetched under the spec's fetch
+rules (https only, no redirects, public addresses only, bounded size, cached for
+at least 60 seconds, failures backed off, one global rate budget), validated
+against the spec's own `platform_schema` (the vendored schemas are embedded in
+the binary under `internal/ucp/spec/`), version-checked, and intersected with
+the business's capabilities — the same registry `/.well-known/ucp` publishes.
+A profile that cannot be fetched, parsed or version-matched is the spec's
+JSON-RPC `-32001` error with a `continue_url`; a valid profile that shares no
+version of the operation's capability gets the `error_response` branch
+(`capabilities_incompatible`). Responses declare the negotiated capabilities
+in `ucp.capabilities`. The order webhook endpoint is taken **only** from the
+negotiated order capability's `config.webhook_url` — never from a request
+member — and a `pay_way_id` is honoured only when the hosted-selection
+extension is negotiated.
+
 The service `schema` URL may appear **only** while every method it defines for
 an advertised capability exists — the five checkout tools plus `get_order`.
 Declaring it asserts a machine-checkable contract. Its cart and catalog
@@ -442,6 +459,8 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/ucp/profile.go` | Business profile document |
 | `grooveshop-agent-gateway/internal/ucp/handler.go` | Payment handler, instruments, hosted selection |
 | `grooveshop-agent-gateway/internal/ucp/webhook.go` | Order-event queue and signed delivery |
+| `grooveshop-agent-gateway/internal/ucp/negotiate.go` | Capability intersection and authority binding |
+| `grooveshop-agent-gateway/internal/ucp/profiles.go` | Platform profile fetch, validation and cache |
 | `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
 | `grooveshop-agent-gateway/internal/acp/handler.go` | ACP routes and bearer auth |
 | `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, VAT-inclusive prices, skip rules |
