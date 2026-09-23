@@ -291,7 +291,13 @@ returns the RFC 9728 document naming the tenant's **own API origin**
 (`TenantConfig.apiDomain`) as the authorization server, with
 `scopes_supported` of `openid`, `profile`, `email`, `orders:read`,
 `loyalty:read` and `favourites:read`.
-`server/routes/.well-known/mcp/server-card.json.get.ts` points at `/mcp`.
+Discovery follows SEP-2127: the storefront's
+`server/routes/.well-known/ai-catalog.json.get.ts` lists one
+`application/mcp-server-card+json` entry, and the gateway serves the card at
+the reserved `<streamable-http-url>/server-card` (`/mcp/server-card`,
+`internal/mcpsrv/servercard.go`) — identity and remotes only, no tools, which
+clients read from `tools/list`. The card's name, title and version are the
+ones `initialize` reports (`mcpsrv.IdentityFor`).
 
 `internal/identity` is **optional** auth on `/mcp`: anonymous shopping stays
 open, a present bearer is verified against Django's `/agent/me`, and an
