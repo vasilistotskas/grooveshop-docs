@@ -172,11 +172,68 @@ Rules the code encodes:
 single-language on `default_locale`, and `Tenant.clean()` refuses a list
 that omits the default. The storefront builds routes for every locale in
 `i18n/locales.ts: SUPPORTED_LOCALES` for every tenant at build time, so
-reachability is decided at runtime: `server/middleware/1.locale.ts` clamps
-locale detection to the tenant's set and
+reachability is decided at runtime by one rule,
+`shared/i18n/tenantLocales.ts: servedLocale`: a locale the tenant serves
+renders as itself, anything else renders as the unprefixed default.
 `app/middleware/locale-available.global.ts` answers 404 for a prefix the
 tenant does not list. The sitemap, hreflang set and language switcher read
 the same list.
+
+The default locale is the BUILD-time `i18n.defaultLocale` (`el`) that
+`prefix_except_default` gives the unprefixed routes, so `/` renders in it
+on every tenant — including one whose `default_locale` is `en`. The
+server follows what renders, not the tenant setting; per-store default
+routing is out of scope.
+
+#### Request language
+
+Every response is answered in the language of the page the visitor is
+on, end to end:
+
+1. `server/middleware/1.locale.ts` sets `event.context.locale`: the path
+   prefix of a page request (`shared/i18n/localeFromPath.ts`), or the
+   `X-Language` header of an `/api` request, clamped by `servedLocale`.
+   Cookies, `Accept-Language` and `?locale=` are not sources: with
+   `detectBrowserLanguage: false` the URL is the truth.
+2. The app states the page locale on every same-origin `/api` call
+   through one hook, `app/utils/api.ts: pageLocaleHeader`, which the only
+   fetchers the app may use all carry: `$api` (`app/plugins/api.ts`),
+   `useApi` / `useLazyApi` / `useRequestApi`
+   (`app/composables/useApi.ts`). `$fetch` is intentionally not globally
+   configurable in Nuxt, so the hook cannot sit under the call sites; an
+   ESLint `no-restricted-syntax` rule in `eslint.config.mjs` keeps raw
+   `$fetch` / `useFetch` / `useLazyFetch` / `useRequestFetch` out of
+   `app/**`.
+3. Nitro forwards `event.context.locale` to Django as `X-Language`
+   (`createHeaders`, `useBackendFetch`, `server/plugins/forwarded-proto.ts`;
+   cached functions pass it explicitly).
+4. Django activates it for unprefixed `/api/` and `/_allauth/` requests:
+   `core/middleware/locale.py: RequestLanguageMiddleware`, a
+   `LocaleMiddleware` subclass, calls
+   `core/utils/i18n.py: resolve_request_language` (`X-Language`, then
+   `X-Locale`, then `Accept-Language`, clamped to the served languages)
+   in `process_view` — after URL resolution, because
+   `LocalePrefixPattern` resolves the unprefixed routes only under the
+   default language — sets `request.LANGUAGE_CODE`, adds
+   `Vary: X-Language, X-Locale`, and deactivates after the response. The
+   admin, `/accounts/`, `/i18n/` and explicitly prefixed paths keep
+   Django's own rule. An explicit `?languageCode=` still selects the
+   content it names.
+
+What changes with the language: validation and `detail` messages,
+allauth errors, choice labels (`statusDisplay`), and parler fields read
+in the active language (product attribute names and values, variant
+axes, cart promotion names). Everything returned as a `translations`
+dict is language-independent. `Order.language_code` is seeded from it,
+so an order's emails and invoice come in the language the customer
+shopped in. Clients branch on stable codes, never on message text — the
+order-create 400 carries `error.type` (`order/enum/create_error.py:
+OrderCreateErrorType`).
+
+Caches key on it in one place per layer: Django's `cache_page` suffixes
+its key with `request.LANGUAGE_CODE` (`django/utils/cache.py`), and every
+Nitro handler key goes through `tenantCacheKey`, which carries
+`host__locale__key`.
 
 ### Asset origins
 
@@ -279,6 +336,11 @@ are the bugs it exists to catch.
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | Per-tenant locale gate |
+| `grooveshop-storefront-ui-node-nuxt/shared/i18n/tenantLocales.ts` | `tenantAllowedLocales`, `servedLocale` |
+| `grooveshop-storefront-ui-node-nuxt/server/middleware/1.locale.ts` | `event.context.locale` |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/api.ts`, `app/plugins/api.ts`, `app/composables/useApi.ts` | The page-locale fetchers |
+| `grooveshop-django-api/core/middleware/locale.py` | `RequestLanguageMiddleware` |
+| `grooveshop-django-api/core/utils/i18n.py` | `resolve_request_language` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useSettingFlag.ts` | Runtime flag reader |
 | `grooveshop-storefront-ui-node-nuxt/.claude/rules/multi-tenant.md` | The `event.context.tenant` contract |
 | `grooveshop-agent-gateway/internal/tenant/` | Resolver and middleware |

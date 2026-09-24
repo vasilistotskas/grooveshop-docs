@@ -127,9 +127,15 @@ cacheKeyBelongsToHost`) has to recognise all three:
 
 | Family | Key shape | Where the host is |
 |---|---|---|
-| `nitro:handlers:<name>:<entry>` | `tenantCacheKey` after Nitro's `escapeKey` (word characters only) | the entry starts with the host stripped of punctuation, then `__` |
+| `nitro:handlers:<name>:<entry>` | `tenantCacheKey` (`host__locale__key`) after Nitro's `escapeKey` (word characters only) | the entry starts with the host stripped of punctuation, then `__` |
 | `nitro:routes:_:<path>.<hash>:host.<hash>:xdeviceclass.<hash>` | route-rule cache; `/` is stored as `index` | `host.<hash>` — Nitro's vary-header hash of the host, never the host text |
-| `nitro:functions:<name>:…:<host>:…` | cached functions keyed on the raw host | a whole `:`-delimited segment |
+| `nitro:functions:<name>:…:<host>:<locale>:…` | cached functions keyed on the raw host, then the locale | a whole `:`-delimited segment |
+
+The locale follows the host in both keyed families because Django
+answers in the `X-Language` it is sent: without it, an entry filled by
+an English page would be served to a Greek one. It sits AFTER the host
+so store-scoped purges still match every language. Route-rule pages are
+keyed by path, which already carries the locale prefix.
 
 Until 2026-09-18 only the first shape was recognised: a tenant purge of
 `page_config` cleared the handler JSON and left every rendered page, and

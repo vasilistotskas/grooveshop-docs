@@ -69,7 +69,7 @@ as if the browser had called it directly:
 | `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `settings.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
 | `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`settings.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
 | `X-Real-IP` | The real client IP, preferring Cloudflare's `CF-Connecting-IP`; Django's allauth adapter and rate limiter read it |
-| `X-Language` | The request locale, so emails and responses render in the right language |
+| `X-Language` | The page's locale (`event.context.locale`); Django answers in it on `/api/` and `/_allauth/` (`core/middleware/locale.py`) — see Multi-tenancy → Request language |
 | `Authorization: Bearer <knox token>` | The customer's API token from the Nuxt session |
 
 `useBackendFetch()` (`server/utils/backendFetch.ts`) is the named `$fetch`
@@ -160,7 +160,7 @@ admission control and per-resource deduplication.
 | Django cache | Redis via `core/caches.py: CustomCache` | `{schema}:{prefix}:{version}:{key}` from `tenant/cache.py: make_tenant_key` (registered as `KEY_FUNCTION`) | A `global:` key prefix opts out of schema scoping for families like `tenant_resolve`, whose invalidation always fires from the public schema |
 | Tenant resolve | Django cache, 1 hour | `global:tenant_resolve:{shape}:{domain}` | The shape fingerprint of `TenantConfigSerializer` is part of the key, so adding a field never serves a stale shape |
 | Nuxt tenant config | Process memory, 5 minutes | host | `server/utils/tenant.ts`; negative results are never cached |
-| Nuxt route cache | Nitro cache in Redis | `tenantCacheKey(event, ...)` from `server/utils/cacheKey.ts` | Every tenant-specific `defineCachedEventHandler` must use it; the key carries a hash because Nitro strips punctuation |
+| Nuxt route cache | Nitro cache in Redis | `tenantCacheKey(event, ...)` from `server/utils/cacheKey.ts`: `host__locale__key` | Every tenant-specific `defineCachedEventHandler` must use it; the locale keeps an English entry from being served to a Greek page, and the key carries a hash because Nitro strips punctuation |
 | Nuxt SWR pages | Nitro cache | `varies: ['host', 'x-device-class']` | Homepage, brand pages, blog and catalogue families (`nuxt.config.ts: routeRules`, `shared/constants/prerender.ts`); cached HTML is rendered anonymously by contract |
 | Gateway tenant config | Process memory 5 min, then Redis `ag:tenant:{host}`, then Django | host | Singleflight, negative cache, stale-if-error (`internal/tenant`) |
 | Gateway feeds and sessions | Redis | `ag:{schema}:...` | Feeds have fresh and stale TTLs; checkout sessions expire after a day |
