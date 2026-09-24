@@ -197,6 +197,64 @@ because it is addressed to the store operator, not to the customer who
 placed the order. The same holds for the operational alerts in
 `shipping/alerts.py`, which render at call time.
 
+### Link language
+
+A storefront link opens the storefront in the language the email is
+written in. The storefront runs @nuxtjs/i18n `prefix_except_default`, so
+the one rule lives in `core/utils/tenant_urls.py:
+storefront_locale_prefix`: a link gets a `/<code>` prefix only when the
+tenant serves that language and it is not the unprefixed locale;
+otherwise it has no prefix.
+
+- **Served locales** — `tenant_storefront_locales` mirrors the
+  storefront's `shared/i18n/tenantLocales.ts: tenantAllowedLocales`:
+  `Tenant.available_locales` filtered to `STOREFRONT_LOCALES`, or
+  `[default_locale]` when the list is empty. `STOREFRONT_LOCALES`
+  mirrors the storefront's `SUPPORTED_LOCALES` (`el`, `en`), which is
+  narrower than `settings.LANGUAGES`: `de` has content but no storefront
+  routes.
+- **Unprefixed locale** — `STOREFRONT_DEFAULT_LOCALE` (`el`), which
+  mirrors the storefront's build-time `DEFAULT_LOCALE`. It is a constant
+  rather than `settings.LANGUAGE_CODE`, because env can override that
+  setting without a storefront rebuild. The coupling is written down once,
+  beside `STOREFRONT_LOCALES`. Change both repos in the same release.
+
+`get_tenant_frontend_url(path, *, language)` requires the language. Every
+caller passes the value it hands `translation.override`, so the link and
+the copy cannot disagree. `build_email_context(*, language, ...)` makes
+`SITE_URL` the localized home page, and the templates that append
+`/account/orders/...` to it inherit the prefix. A merchant-facing email
+renders under no override, so it passes `translation.get_language()`.
+`get_tenant_base_url` is still the bare origin, for callers that need a
+host rather than a page (`List-ID`, Meta's base check).
+
+allauth builds its email links (`activate_url`, `password_reset_url`,
+`signup_url`) from `HEADLESS_FRONTEND_URLS` before it knows who the
+recipient is. `UserAccountAdapter.send_mail` decides the email's
+language, so it localizes those three keys there with
+`localize_storefront_url`. The language is the user's (`get_user_language`)
+when allauth's context names one. Otherwise it is the visitor's
+(`resolve_request_language(self.request)`), as for the unknown-account and
+account-already-exists emails. allauth's `BaseAdapter` reads
+`self.request` from `allauth.core.context.request`, which
+`AccountMiddleware` sets.
+
+In-app notifications are the exception: a notification is read in
+whatever language its viewer is browsing, so `Notification.link` stores a
+**locale-neutral path**. It has no host and no locale prefix, for example
+`/account/orders/42`, and may carry a query and a fragment. Tasks build it
+with `core/utils/tenant_urls.py: storefront_path`. The field is a
+`CharField` with `validate_storefront_path`, and
+`notification/services.py: create_user_notification` runs that validator
+too, because `objects.create` skips field validators. The storefront opens
+the path under the viewer's current locale with `useLocalePath()`
+(`app/components/User/NotificationsBell.vue`,
+`app/pages/account/notifications/index.vue`). The frozen webside bell
+navigates the path as-is, which is correct because webside serves `el`
+only. Migration `notification.0017_notification_link_storefront_path`
+rewrote the absolute links stored before this change to neutral paths.
+It cleared links that pointed at a host outside the tenant's domains.
+
 ### Escaping admin-authored HTML
 
 `PayWay.instructions` is authored in the admin WYSIWYG editor, so it is
@@ -441,6 +499,10 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/core/email/config.py` | Per-template metadata for the admin preview |
 | `grooveshop-django-api/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
 | `grooveshop-django-api/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
+| `grooveshop-django-api/core/utils/tenant_urls.py` | `STOREFRONT_LOCALES`, `STOREFRONT_DEFAULT_LOCALE`, `storefront_locale_prefix`, `get_tenant_frontend_url`, `localize_storefront_url`, `storefront_path` |
+| `grooveshop-django-api/user/adapter.py` | `UserAccountAdapter.send_mail` (allauth link localization) |
+| `grooveshop-django-api/notification/migrations/0017_notification_link_storefront_path.py` | Link field change and the rewrite of existing links |
+| `grooveshop-storefront-ui-node-nuxt/app/components/User/NotificationsBell.vue` | Opens a notification path under the viewer's locale |
 | `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_admin_recipients` |
 | `grooveshop-django-api/user/utils/subscription.py` | `build_transactional_list_headers` |
 | `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers |
