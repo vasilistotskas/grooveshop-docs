@@ -53,6 +53,21 @@ is never served against a Zod schema that requires the new field. Every
 reader and every invalidator in `tenant/signals.py` goes through that
 helper.
 
+The ViewSet response cache (`cache_methods` in `core/utils/views.py`,
+Django's `cache_page`) is scoped to the running release.
+`response_cache_key_prefix()` leads every key prefix with
+`settings.RELEASE_VERSION`, which `settings.py` reads from the
+`pyproject.toml` the image ships (semantic-release bumps it in the release
+commit). A deploy therefore never serves a body an earlier release cached;
+the old entries are never read again and expire on the timeout each
+`cache_methods` decorator was given. Before this, a release that changed an endpoint's
+shape kept serving the old cached body until it expired: on 2026-09-24 a
+blog list cached before the SEO move still lacked its SEO fields. Only the
+response cache is scoped this way. Sessions, throttle counters and locks
+share `CACHES["default"]` and must survive a deploy, so the backend's own
+`KEY_PREFIX`/`VERSION` stay fixed. The `*<Class>ViewSet_*` purge patterns
+match inside the key and reach every release's entries.
+
 ## Layer 2: cache surfaces and `CacheService`
 
 `core/cache/registry.py` holds `CacheSurface` objects, each with a `code`,
