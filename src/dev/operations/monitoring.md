@@ -8,14 +8,17 @@ description: What is scraped, where the dashboards and alert rules live, how Tra
 Metrics, alerts and dashboards run in the `app-victoria-metrics`
 Application (namespace `monitoring`): VictoriaMetrics stores the series,
 vmalert evaluates the rules, Alertmanager routes them to Discord, and
-Grafana shows them at `grafana.grooveshop.space` (behind Cloudflare
-Access, see `docs/operator-dashboards.md` in the infrastructure repo).
-Logs live in VictoriaLogs (`app-victoria-logs`); a second vmalert turns
-log lines into alerts.
+Grafana shows them at `grafana.grooveshop.space`, behind its own
+Cloudflare Access application. Grafana signs you in from the Access token
+itself (`auth.jwt` in `victoria-metrics/values.yaml`), so the Access
+one-time code is the only login; see `docs/operator-dashboards.md` in the
+infrastructure repository. Logs live in VictoriaLogs
+(`app-victoria-logs`); a second vmalert turns log lines into alerts.
 
 Everything is declared in git. Grafana's storage is an emptyDir, so a
 dashboard, folder or datasource that is not in the repository does not
-survive a pod restart, and neither do UI logins.
+survive a pod restart. Sign-ins do: JWT auth checks the Access token on
+every request and keeps no session.
 
 ## Diagram
 
