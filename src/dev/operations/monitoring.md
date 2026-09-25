@@ -144,6 +144,18 @@ by a namespace regex.
   `VL-Msg-Field` list (`victoria-logs/values.yaml`) falls back to their
   error text, request path or tag, so their lines are readable. Media
   stream logs JSON in production (`src/main.ts` in its repository).
+  Because of that fallback a storefront request's path is its `_msg`,
+  not a `log.path` field: filter with `_msg:"/products"*`.
+- The storefront logs every request, page renders and `_payload.json`
+  included, except the assets a page view pulls (`evlog.exclude` in its
+  `nuxt.config.ts`). 10% of successful requests are kept, and every
+  request of 1 s or more and every 4xx/5xx. Each line carries
+  `log.tenantSchema` and `log.tenantName`, set on the request logger by
+  `server/middleware/0.tenant.ts`; evlog's enricher hooks run after the
+  line is printed and reach no log.
+- Traefik's request-duration histograms use 11 buckets from 25 ms to
+  10 s (`traefik/helmchartconfig.yaml`), so a storefront p95 moves when a
+  render gets faster. No query pins an `le` value.
 - vmalert-vmks loads 42 groups and 264 rules. A different count after a
   change means a selector or a rule file broke.
 
@@ -188,6 +200,8 @@ by a namespace regex.
 | `grooveshop-infrastructure/manifests/app-constructs/postgres-op/v2.0.2/configmap.yaml` | `infrastructure_roles_secrets`: the exporter's role |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis.yaml` | The Redis exporter sidecar |
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-logs/values.yaml` | `VL-Msg-Field`: which field becomes a log line's message |
-| `grooveshop-infrastructure/manifests/app-constructs/traefik/helmchartconfig.yaml` | Router metrics |
+| `grooveshop-infrastructure/manifests/app-constructs/traefik/helmchartconfig.yaml` | Router metrics and latency buckets |
+| `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | `evlog.exclude` and the production sampling and keep rules |
+| `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | Puts the tenant on the request's log line |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |
