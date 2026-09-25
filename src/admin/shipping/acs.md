@@ -86,7 +86,7 @@ Buttons on this page:
 Nothing to do in the normal case: the voucher is minted automatically. If an order shows **Pending creation** for more than a minute:
 
 1. Open the order in <span class="sidebar-path">Sales → Orders</span> and check the email you received about the failed voucher, or the **Metadata** section of the shipment, where the last ACS error and the request that failed are stored.
-2. Fix the cause on the order. The postcode is not usually the problem: the platform strips spaces and anything that is not a digit before sending, and keeps the first five digits. What ACS does reject is a phone number that is not a plain 10-digit Greek number, an address it cannot place, and a Smartpoint it does not recognise.
+2. Fix the cause on the order. Checkout now requires a postcode in the country's format, a street that contains a letter, and a street number that is not a postcode, so a mistyped address rarely reaches ACS; the platform strips the space in a postcode such as "703 00" before sending. Orders placed before that check can still carry a bad address: correct it in the order's **Shipping Address** section, where the same check applies. ACS also rejects a phone number that is not a plain 10-digit Greek number, an address it cannot place, and a Smartpoint it does not recognise.
 3. Back on <span class="sidebar-path">Shipping → ACS Shipments</span>, click **Issue ACS voucher now** on the row.
 
 A missing ACS credential is a different failure. Nothing is retried, because credentials do not appear on their own; the store's admins are emailed at once and the order waits. Tell the platform team.

@@ -44,7 +44,7 @@ The page is split into tabs:
 - **Order Information**: UUID, the editable **Status**, created, updated and status-updated timestamps.
 - **Billing / Invoice**: **Document type** (Receipt or Invoice), and for invoice orders the buyer's company name, VAT ID (ΑΦΜ), tax office (ΔΟΥ), business activity and registered billing address. **Wholesale pricing** shows which B2B group priced the order, or "Retail (no group pricing)".
 - **Customer Information**: linked account (empty for guests), name, email, phone.
-- **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty.
+- **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty. Saving a change to the country, street, number or postcode checks the address the way checkout does: the postcode must match the country's format, the street must contain a letter, and the number must not be a postcode. An old order with an address that fails is not blocked from other edits; the check runs only when you change the address.
 - **Payment Information**: **Pay way** (what the customer chose), the editable **Payment status**, **Payment Method** (the gateway that took the charge), **Payment ID**, **Paid Amount**, and the read-only **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** stamped at checkout.
 - **Shipping & Tracking**: shipping provider, shipping kind, shipping price, tracking number, carrier name.
 - **Additional Information**: the customer's notes from checkout.

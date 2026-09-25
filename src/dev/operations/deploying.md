@@ -19,7 +19,7 @@ flowchart LR
   R -->|docker.yml| I[gro0ve/* + ghcr.io image]
   I -.->|human bumps pin| P[app-grooveshop.yaml]
   P -->|app-root syncs child spec| A[app-grooveshop Application]
-  A -->|PreSync Job| H[migrate_schemas, collectstatic, meili settings, slot backfill]
+  A -->|PreSync Job| H[migration_preflight, migrate_schemas, collectstatic, meili settings, slot backfill]
   H --> D[Deployments roll]
   D -->|new build id| C[fresh Nitro cache namespace in Redis]
 ```
@@ -103,20 +103,46 @@ kubectl -n grooveshop rollout status deploy/backend --timeout=600s
 
 ## The PreSync job
 
-`prepare-helm/templates/job.yaml` runs one four-step shell script per
-deploy, before any pod rolls. Steps 1 and 2, `migrate_schemas` and
-`collectstatic`, run under `set -e` and abort the sync on failure. Steps 3
+`prepare-helm/templates/job.yaml` runs one shell script per deploy, before
+any pod rolls. Step 0, `migration_preflight`, and steps 1 and 2,
+`migrate_schemas` and `collectstatic`, run under `set -e` and abort the
+sync on failure. Steps 3
 and 4 are convergence, not gates, and the script continues past either:
 `meilisearch_apply_settings --all-tenants` (exit 3 means no active tenants
 yet, which is normal on a fresh bring-up; any other non-zero exit is
 logged as real index drift) and `backfill_recommendation_slots`, which
 seeds the recommendation slot rows for tenants that predate the engine.
 It needs the Redis and RabbitMQ secrets to start Django, has
-`activeDeadlineSeconds: 1800` and `backoffLimit: 2`. Because the schema lands before the new code, every
-migration must be backwards-compatible with the previous release; see the
-synced [Migration Safety Rules](/dev/django/reference/migrations). Do not
-create a tenant while a sync is in flight: the tenant-creation migrate
-races the hook.
+`activeDeadlineSeconds: 1800` and `backoffLimit: 2`. Do not create a
+tenant while a sync is in flight: the tenant-creation migrate races the
+hook.
+
+### Step 0: the migration preflight
+
+The schema lands before the new code, and the previous release keeps
+querying it until its last pod exits. `manage.py migration_preflight`
+(`grooveshop-django-api/core/db/migration_safety.py`) checks `public` and
+every tenant schema. For each one it compares the pending migrations with
+the migrations already applied there, which are the serving release's
+models. It blocks any pending operation whose database effect removes,
+renames or tightens a table or column those models still use:
+
+- a dropped or renamed column or table;
+- a NOT NULL column added without `db_default`;
+- a column made NOT NULL without `db_default`;
+- a `RunSQL` drop that does not declare `contract_of`, or whose expand
+  migration is pending in the same deploy.
+
+It writes nothing. A failure stops the sync before any DDL runs, and the
+old pods keep serving. The same command runs in the Django CI `Migration
+Check` job after migrating a database at the base commit.
+
+Because it reads the database, not the git history, it also catches a pin
+that skips a Django release. The expand migration and its contract then
+arrive together, and the fix is to pin the intermediate release first. The
+rule and the two-release recipe are the synced
+[Migration Safety Rules](/dev/django/reference/migrations). The runbook
+for a failed preflight is in `grooveshop-infrastructure/docs/deploying.md`.
 
 Read the hook's log while it is alive:
 
@@ -233,6 +259,11 @@ Deployment.
 - **PreSync Job gone, sync loops**: the hook failed and
   `HookFailed` deleted it; re-run with matching Django tags and watch the
   log live.
+- **PreSync fails at step 0 with `BLOCK ...` lines**: the preflight
+  refused a migration that would break the serving release. Nothing was
+  migrated. `contract_of ... is pending in this same deploy` means the
+  pin skips a release, so pin the intermediate one first. Anything else
+  needs a Django fix: revert the pin and split the change.
 - **Green rollout, old page**: not the Nitro cache — each build has its
   own namespace. Confirm the pods run the new image, then Cloudflare. A
   page that differs with `?cb=` is a within-build TTL entry; purge its
@@ -253,7 +284,8 @@ Deployment.
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-docs.yaml`, `overlays/staging/ingress-docs.yaml` | Documentation hosts and the `/dev` basic-auth split |
 | `grooveshop-infrastructure/docs/deploying.md` | The runbook this page distils |
 | `grooveshop-infrastructure/.claude/skills/update-deploy-version/SKILL.md` | Pin-bump skill |
-| `grooveshop-django-api/.github/workflows/ci.yml`, `docker.yml` | Release and image publish |
+| `grooveshop-django-api/.github/workflows/ci.yml`, `docker.yml` | Release and image publish; the `Migration Check` deploy replay |
+| `grooveshop-django-api/core/management/commands/migration_preflight.py`, `core/db/migration_safety.py` | PreSync step 0 and its classifier |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml`, `grooveshop-media-stream/.github/workflows/docker.yml`, `grooveshop-docs/.github/workflows/docker.yml` | Image publish on release |
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release and image |
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts`, `shared/constants/prerender.ts` | SWR route rules |
