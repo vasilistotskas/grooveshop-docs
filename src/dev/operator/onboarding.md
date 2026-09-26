@@ -181,6 +181,18 @@ Seeding detail worth knowing:
   composed homepage, its terms, privacy and cookie policies, and a set
   of marketing pages that nobody can see until the merchant writes and
   publishes them.
+- **Legal text is versioned.** The seeded legal pages are stamped
+  `ContentPage.legal_text_revision = LEGAL_TEXT_REVISION`
+  (`page_config/legal_documents.py`). A later change to the platform
+  text is a new `LEGAL_TEXT_UPDATES` entry plus a data migration that
+  rewrites only pages still byte-identical to the previous platform
+  text (`page_config/migrations/0032_privacy_server_logs_section.py`
+  is the first). Any other page keeps its text, stays below the
+  revision, and is flagged to the merchant (dashboard banner, content
+  page list and form, `pending_legal_reviews` in
+  `page_config/defaults.py`) until they run the admin action that marks
+  it reviewed. `manage.py legal_text_status` lists, per tenant, the
+  pages still behind.
 - **The flat-rate carrier** is switched on (`_activate_default_carrier`)
   so checkout has a delivery option before any courier contract.
 - **The default newsletter topic** (`user/services/subscription.py:
@@ -485,7 +497,9 @@ Applications.
 | `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, why `default_currency` is platform-only |
 | `grooveshop-django-api/tenant/views.py` | `tenant_resolve` payload and the internal-token variant |
 | `grooveshop-django-api/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app`, `pre_login` |
-| `grooveshop-django-api/page_config/defaults.py` | `seed_page_layouts` (published), `seed_content_pages` (unpublished) |
+| `grooveshop-django-api/page_config/defaults.py` | `seed_page_layouts` (published), `seed_content_pages` (legal documents published, the rest unpublished), `pending_legal_reviews` |
+| `grooveshop-django-api/page_config/legal_documents.py` | The seeded legal text, `LEGAL_TEXT_UPDATES`, `LEGAL_TEXT_REVISION` |
+| `grooveshop-django-api/page_config/management/commands/legal_text_status.py` | Which tenants have legal pages behind the platform text |
 | `grooveshop-django-api/recommendation/presets.py` | `seed_recommendation_slots`, `reset_slot_to_preset` |
 | `grooveshop-django-api/core/utils/tenant_urls.py` | `resolve_tenant_api_domain`, tenant-scoped link building |
 | `grooveshop-django-api/core/urls.py` | allauth mounted at `accounts/` |

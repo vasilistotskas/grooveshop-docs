@@ -344,11 +344,13 @@ consequences:
   still completes through the proxy. Match the proxy mode of the host you
   are copying rather than assuming either way, and if you proxy a host,
   confirm the certificate actually issues.
-- **Client IP.** The `X-Forwarded-For` chain arriving at Traefik is
-  `<real client>, <Cloudflare edge>`, so every rate-limit middleware sets
-  `ipStrategy.depth: 2` (`base/middleware-ratelimit.yaml`). At depth 1 the
-  limiter metered the Cloudflare edge IP and every visitor behind the same
-  point of presence shared one bucket.
+- **Client IP.** Traefik keeps `X-Forwarded-For` only from Cloudflare's
+  address ranges, and a middleware sees it before Traefik appends its own
+  hop, so every rate-limit middleware sets `ipStrategy.depth: 1`
+  (`base/middleware-ratelimit.yaml`): the visitor Cloudflare appended. A
+  DNS-only host's visitors arrive from non-Cloudflare peers, whose header
+  Traefik deletes, so they share one bucket per router. The full model is
+  `docs/edge-trust-boundary.md` in the infrastructure repository.
 
 ### Unmapped hosts
 
@@ -448,7 +450,7 @@ brand domain, or the white-label asset hosts):
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/` | The tenant overlay: `ingress.yaml`, `kustomization.yaml`, `README.md` |
 | `grooveshop-infrastructure/manifests/app-directory/appset-grooveshop-tenants.yaml` | The directory generator |
 | `grooveshop-infrastructure/manifests/app-constructs/cert-manager/setup/issuers/letsencrypt-http01.cluster-issuer.yaml` | The HTTP-01 ClusterIssuer |
-| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/middleware-ratelimit.yaml` | `ipStrategy.depth: 2` behind Cloudflare |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/middleware-ratelimit.yaml` | `ipStrategy.depth: 1` behind Cloudflare |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-tenant-catchall.yaml` | The unmapped-host router |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-platform.yaml`, `ingress-platform-assets.yaml` | Platform hosts and the shared asset origins |
 | `grooveshop-infrastructure/docs/tenant-onboarding.md` | The full runbook, DNS step and certificate hazards |

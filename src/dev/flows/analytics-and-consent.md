@@ -199,7 +199,10 @@ explicitly **does not trust the client** for `client_ip_address` or
 cookies the browser pixel manages and are forwarded from the cookie header.
 The real client IP comes from `CF-Connecting-IP`, falling back to
 `True-Client-IP` and then to `X-Forwarded-For`; h3's default would otherwise
-surface the K3s load-balancer SNAT address.
+surface the socket address, which is the Traefik pod. The value only feeds
+Meta's event matching, so a caller who forges it spoils the attribution of
+their own events and nothing else — it is never used for a security
+decision (that is `core/client_ip.py` in Django).
 
 `order/services.py: _sanitise_meta_context` filters the incoming dict to a
 closed key set — `fbp`, `fbc`, `client_user_agent`, `client_ip_address`,

@@ -176,8 +176,10 @@ returns that — the stored key is a cache, not a requirement. A POST
 resolves candidate tenants by order code, then **verifies against Viva's
 Retrieve Transaction API inside each candidate's context**; only the
 tenant whose credentials can retrieve the transaction processes it. The
-IP allowlist is informational because the ingress SNATs the source
-address. Idempotency is a database row, not metadata:
+IP allowlist is informational, a log line: refusing on Viva's hardcoded
+ranges would fail closed the day they change. It reads the one address a
+caller cannot write (`core/client_ip.py: client_ip_or_peer`), never a
+bare `X-Forwarded-For` entry. Idempotency is a database row, not metadata:
 `order/models/viva_webhook_event.py: VivaWebhookEvent` is unique on
 `(transaction_id, event_type_id)`.
 

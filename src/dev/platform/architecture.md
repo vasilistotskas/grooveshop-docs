@@ -68,7 +68,7 @@ as if the browser had called it directly:
 |---|---|
 | `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `settings.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
 | `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`settings.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
-| `X-Real-IP` | The real client IP, preferring Cloudflare's `CF-Connecting-IP`; Django's allauth adapter and rate limiter read it |
+| `X-Real-IP` | The visitor's IP, from Cloudflare's `CF-Connecting-IP`. Django believes it only together with a correct `X-Origin-Verify`, which is relayed alongside (`core/client_ip.py`: `trusted_client_ip`); without it, limits key on the peer Traefik saw (`client_ip_or_peer`) |
 | `X-Language` | The page's locale (`event.context.locale`); Django answers in it on `/api/` and `/_allauth/` (`core/middleware/locale.py`) — see Multi-tenancy → Request language |
 | `Authorization: Bearer <knox token>` | The customer's API token from the Nuxt session |
 
