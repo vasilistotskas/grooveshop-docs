@@ -105,9 +105,17 @@ can never wipe security state, and writes a `CachePurgeLog` row
 (`core/cache/models.py`) with actor, surfaces, counts and detail.
 
 `core/cache/invalidation.py` connects `post_save` / `post_delete` for every
-model named in a surface's `invalidated_by`, marks the surface stale and
-flushes once per transaction. This is how a PayWay edit reaches the
-checkout on the next request. The `pageConfigNavigation` Nitro handler
+model named in a surface's `invalidated_by`: the merchant-edited models of
+products, categories, blog, page layouts and content pages, navigation,
+promotions, tags, pay-ways and recommendations. User-generated rows
+(reviews, comments, favourites, stock alerts) are left out. A commit only
+adds its stale surfaces to a per-schema Redis set and queues one
+`invalidate_cache_surfaces_task` 10 seconds later, which every commit in
+that window rides, so a catalogue import costs one purge and an edit shows
+within about ten seconds (plus the edge purge that follows it). A save
+whose `update_fields` fall inside the surface's `ignored_update_fields` is
+skipped: every order's `save(update_fields=["stock", "updated_at"])` would
+otherwise empty the store's product cache on each sale. The `pageConfigNavigation` Nitro handler
 name is what the `page_config` surface must match; a shorter pattern
 purged zero keys and reported success, which is why the surface file
 carries the exact name.
@@ -132,8 +140,8 @@ manage.py clear_cache --prefixes <raw prefix>    # raw Redis prefixes
 
   Run it with no arguments to list the surfaces.
 - **Code**: `CacheService.purge(["promotions"])` after a write that bypasses
-  signals (bulk operations, seed scripts); purging promotions after a
-  seed is manual.
+  signals (`QuerySet.update()`, `bulk_create`, seed scripts); purging
+  promotions after a seed is manual.
 - **Scheduled**: `core.tasks.clear_all_cache_task` on the first of the
   month.
 
@@ -294,7 +302,7 @@ PageSpeed runs while Traefik's counters never moved.
 | Whole storefront 404 "Store not found" after a Django deploy that touched `TenantConfigSerializer` | Django `global:tenant_resolve` | fixed by shape keying; if still on an older tag, `clear_cache --prefixes global:tenant_resolve` |
 | Old HTML right after a green storefront deploy | Cloudflare, if the `backend-edge-purge` hook failed (Nitro has a namespace per build) | the hook's log; rerun `manage.py purge_edge_cache` from a backend pod |
 | Edit visible with `?cb=1` but not on the plain URL for over a minute | Cloudflare, the store's tag purge failed | Celery log for `purge_edge_cache_task`; the store's Cloudflare credentials |
-| Content edit not visible on a rendered page within a build | Nitro `nitro:routes:` | the surface's Cache tool purge from the tenant admin (`page_config` covers `/`, `/about`, `/contact`, …), or the purge endpoint with `*routes*` |
+| Content edit not visible on a rendered page after ~40 s | Nitro `nitro:routes:` (the edit bypassed signals, or its model is not in the surface's `invalidated_by`) | the surface's Cache tool purge from the tenant admin (`page_config` covers `/`, `/about`, `/contact`, …), or the purge endpoint with `*routes*` |
 | Navigation menu edit not showing | Nitro handler `pageConfigNavigation` | `clear_cache page_config` (purges `*pageConfig*`) |
 | One API route returns pre-edit data | Nitro `nitro:handlers:<name>` | purge endpoint with `*<handlerName>*` |
 | Replaced product image still served | media-stream `image:{schema}` | `flush-tenant` with the internal secret |
