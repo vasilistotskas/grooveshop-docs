@@ -151,8 +151,13 @@ by a namespace regex.
   `nuxt.config.ts`). 10% of successful requests are kept, and every
   request of 1 s or more and every 4xx/5xx. Each line carries
   `log.tenantSchema` and `log.tenantName`, set on the request logger by
-  `server/middleware/0.tenant.ts`; evlog's enricher hooks run after the
-  line is printed and reach no log.
+  `server/middleware/0.tenant.ts`. Page and other browser-facing events
+  also carry `log.client` (`server/middleware/2.evlog-client.ts`): browser
+  and major version, OS name, the device class the page was rendered for,
+  `bot` and the Cloudflare country — never the raw User-Agent. A render's
+  internal `/api` events have no User-Agent and no `client`. evlog's
+  `evlog:enrich` hooks run after the line is printed and reach no log, so
+  every field is set on the request logger before it emits.
 - Traefik's request-duration histograms use 11 buckets from 25 ms to
   10 s (`traefik/helmchartconfig.yaml`), so a storefront p95 moves when a
   render gets faster. No query pins an `le` value.
@@ -203,5 +208,6 @@ by a namespace regex.
 | `grooveshop-infrastructure/manifests/app-constructs/traefik/helmchartconfig.yaml` | Router metrics and latency buckets |
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | `evlog.exclude` and the production sampling and keep rules |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | Puts the tenant on the request's log line |
+| `grooveshop-storefront-ui-node-nuxt/server/middleware/2.evlog-client.ts` | Puts the client (browser, OS, device class, bot, country) on the request's log line |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |
