@@ -87,7 +87,7 @@ Nothing to do in the normal case: the voucher is minted automatically. If an ord
 
 1. Open the order in <span class="sidebar-path">Sales → Orders</span> and check the email you received about the failed voucher, or the **Metadata** section of the shipment, where the last ACS error and the request that failed are stored.
 2. Fix the cause on the order. Checkout now requires a postcode in the country's format, a street that contains a letter, and a street number that is not a postcode, so a mistyped address rarely reaches ACS; the platform strips the space in a postcode such as "703 00" before sending. Orders placed before that check can still carry a bad address: correct it in the order's **Shipping Address** section, where the same check applies. ACS also rejects a phone number that is not a plain 10-digit Greek number, an address it cannot place, and a Smartpoint it does not recognise.
-3. Back on <span class="sidebar-path">Shipping → ACS Shipments</span>, click **Issue ACS voucher now** on the row.
+3. Back on <span class="sidebar-path">Shipping → ACS Shipments</span>, click **Issue ACS voucher now** on the row. It is refused for an order whose online payment is still pending, so an unpaid order never gets a voucher; that voucher is issued automatically once the payment is confirmed. The failure is also written as a note in the order's history.
 
 A missing ACS credential is a different failure. Nothing is retried, because credentials do not appear on their own; the store's admins are emailed at once and the order waits. Tell the platform team.
 

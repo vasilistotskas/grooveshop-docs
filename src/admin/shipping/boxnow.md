@@ -69,6 +69,7 @@ Buttons:
 | Bulk action | **Download voucher PDFs (zip)** | One zip named `boxnow-vouchers.zip` with one PDF per selected parcel, named by parcel ID. Rows without a parcel ID are skipped. |
 | Shipment page | **Download BoxNow voucher (PDF)** | The single label. |
 | Shipment page | **Cancel parcel via BoxNow API** | Cancels this parcel if it is New. |
+| Shipment page | **Create BoxNow parcel now** | Sends the delivery request again for a shipment that has no parcel yet, after its data was fixed. Refused while an online payment is still pending: the parcel is then created automatically once the payment is confirmed. |
 
 The label is also one click away in <span class="sidebar-path">Sales → Orders</span> with **Download shipping voucher (PDF)** on the row or the order page.
 
@@ -87,7 +88,7 @@ The row stays in **Pending creation** and the store's admins receive an email na
 
 - **P402 invalid locker**: the locker is unknown to the store's BoxNow account. Run **Sync lockers from BoxNow API** and check the locker is active; a catalogue synced under different credentials produces this for every order.
 - **Missing credentials**: the platform team must add the store's BoxNow client ID, secret and partner ID; nothing retries until then.
-- There is no "issue voucher" or retry button anywhere on the BoxNow screens, unlike ACS. Once the data is fixed, only the platform team can send the delivery request again.
+- Once the data is fixed, open the shipment and press **Create BoxNow parcel now**. The failure is also written as a note in the order's history, with the same instruction.
 
 ### Cancel a parcel
 

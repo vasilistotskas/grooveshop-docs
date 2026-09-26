@@ -35,13 +35,13 @@ The search box matches order ID, UUID, customer email, first and last name, phon
 
 ### Bulk actions
 
-Select rows and pick one of **Mark selected orders as processing / shipped / delivered / completed** or **Cancel selected orders and restore stock**. Every order is checked against the allowed transitions individually. Rows that cannot move are skipped with a warning naming the order and the reason; the others go through.
+Select rows and pick one of **Mark selected orders as processing / shipped / delivered / completed / returned / refunded** or **Cancel selected orders and restore stock**. Every order is checked against the allowed transitions individually. Rows that cannot move are skipped with a warning naming the order and the reason; the others go through. These actions are the only way to change an order's status: they are what restores stock on a cancellation and refuses a transition that is not allowed.
 
 ### The order page
 
 The page is split into tabs:
 
-- **Order Information**: UUID, the editable **Status**, created, updated and status-updated timestamps.
+- **Order Information**: UUID, the **Status** (read-only here; change it with the actions above), created, updated and status-updated timestamps.
 - **Billing / Invoice**: **Document type** (Receipt or Invoice), and for invoice orders the buyer's company name, VAT ID (ΑΦΜ), tax office (ΔΟΥ), business activity and registered billing address. **Wholesale pricing** shows which B2B group priced the order, or "Retail (no group pricing)".
 - **Customer Information**: linked account (empty for guests), name, email, phone.
 - **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty. Saving a change to the country, street, number or postcode checks the address the way checkout does: the postcode must match the country's format, the street must contain a letter, and the number must not be a postcode. An old order with an address that fails is not blocked from other edits; the check runs only when you change the address.
