@@ -33,8 +33,7 @@ with `KEY_FUNCTION = tenant.cache.make_tenant_key`. Every key is prefixed
 with the active schema, `{schema}:{prefix}:{version}:{key}`, so one store's
 cache is never visible to another. Keys that start with `global:` swap the
 schema for the literal `global`, which is how `tenant_resolve` and
-`tenant_domains` entries can be written from any schema and invalidated
-from the public one.
+`tenant_domains` entries are shared by every schema that reads them.
 
 `CustomCache.__init__` injects redis-py resilience options (retry,
 health-check interval, keepalive) that redis-py ships off and Django never
@@ -49,9 +48,24 @@ health monitor can see a full volume that a `set`/`get` round-trip cannot.
 The `tenant_resolve` entry is keyed by the shape of
 `TenantConfigSerializer` (`tenant/cache.py: tenant_resolve_key()`): a
 release that adds a field reads a new key, so a cached pre-release payload
-is never served against a Zod schema that requires the new field. Every
-reader and every invalidator in `tenant/signals.py` goes through that
-helper.
+is never served against a Zod schema that requires the new field.
+
+Both tenant families are invalidated by **generation, never by delete**.
+`Tenant.cache_generation` is part of their keys (`tenant_resolve_key`,
+`tenant_domains_key`), and every write that changes what they hold bumps it
+in the database inside the write's own transaction: `Tenant.save` in the
+same UPDATE, `TenantDomain` saves and deletes and the folded pay-way and
+agent-setting writes through `bump_cache_generation` (`tenant/signals.py`).
+After the commit every reader builds a new key; the old entry is never read
+again and ages out on its TTL. The reason is the fail-open backend: during
+a Redis outage a `delete` is a logged no-op, so a purge-by-delete left the
+pre-write payload in Redis for up to an hour. Strict keys would have made
+the reads raise instead, and resolve is on every storefront request. The
+counter is only ever written as `F() + 1`, so a stale in-memory copy cannot
+move it back. Resolve therefore reads the domain's tenant row on every call
+(one indexed query) and caches only the serializer output. Downstream
+copies still expire on their own: Nuxt's five-minute tenant config and the
+gateway's tenant cache.
 
 The ViewSet response cache (`cache_methods` in `core/utils/views.py`,
 Django's `cache_page`) is scoped to the running release.
@@ -284,7 +298,7 @@ purged from its dashboard, not from anything in these repositories.
 | File | Role |
 |---|---|
 | `grooveshop-django-api/core/caches.py` | `CustomCache`, resilience options, SCAN helpers |
-| `grooveshop-django-api/tenant/cache.py`, `tenant/signals.py` | `make_tenant_key`, `tenant_resolve_key`, invalidators |
+| `grooveshop-django-api/tenant/cache.py`, `tenant/signals.py`, `tenant/models.py` | `make_tenant_key`, `tenant_resolve_key`, `tenant_domains_key`, `bump_cache_generation`, `Tenant.cache_generation` |
 | `grooveshop-django-api/core/cache/registry.py`, `surfaces.py`, `service.py`, `invalidation.py`, `protected.py`, `nuxt.py`, `gateway.py`, `models.py` | Surface registry, purge service, signal wiring, Nuxt and gateway clients, `CachePurgeLog` |
 | `grooveshop-django-api/admin/admin.py`, `core/admin.py` | Cache tool and purge log admin |
 | `grooveshop-django-api/core/management/commands/clear_cache.py` | Command |

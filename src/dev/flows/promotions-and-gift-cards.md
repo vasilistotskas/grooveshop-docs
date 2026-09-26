@@ -417,6 +417,13 @@ whose plan enables it, and Django still gates the data.
   clears `delivered_at` and dispatches `deliver_gift_card_email`) and setting
   a `deliver_at` so the sweep finds it. Purchased cards are unaffected —
   `complete_purchase` dispatches delivery itself.
+- **The demo store's published gift card refills every night.** Visitors
+  may spend `DEMO-GIFT-25` (`devtools/demo_account.py: GIFT_CARD_CODE`), and
+  the nightly `reset_demo_account` returns it to its issued value with one
+  `ADJUST` row for the difference from the raw ledger sum, then sets it
+  active with a fresh validity window (`_restore_gift_card`). The spends stay
+  on its history, their guest orders `SET_NULL`. Demo tenants only, and no
+  other card is touched.
 - **A coupon silently does nothing.** Check `is_active` on both the code and
   the promotion, `is_live` (the schedule window), the assignment fields for a
   personal coupon, and then stacking — a code that lost to a better automatic

@@ -416,9 +416,11 @@ a common bug:
 - **A protected tenant cannot be suspended, reactivated or destroyed** by
   any path — action, API or automation.
 - **Every credential field is excluded from the audit history.**
-- **Every `Tenant` save purges the resolve cache** for all of that tenant's
-  domains (`tenant/signals.py`), which is why the console never needs a
-  manual purge for a branding change.
+- **Every `Tenant` save moves the resolve cache on** for all of that
+  tenant's domains: `Tenant.save` bumps `cache_generation`, which is part of
+  every resolve and domain-set key (`tenant/models.py`, `tenant/cache.py`).
+  That is why the console never needs a manual purge for a branding change,
+  even across a Redis outage.
 - **A new public extra-setting must be added to `PUBLIC_SETTING_KEYS`** or
   the storefront cannot read it.
 

@@ -111,11 +111,12 @@ host other than the caller's own. It queries
 returns `TenantConfigSerializer`, or `404 Store not found`.
 
 The payload is cached for an hour under `tenant/cache.py:
-tenant_resolve_key(domain)` — a `global:` key that is schema-independent
-(the endpoint is called through one tenant's domain to resolve another's,
-while invalidation always fires from the public schema) and that
-fingerprints the serializer's field names, so a release that adds a field
-never serves the old shape.
+tenant_resolve_key(domain, tenant)` — a `global:` key that is
+schema-independent (the endpoint is called through one tenant's domain to
+resolve another's), that fingerprints the serializer's field names, so a
+release that adds a field never serves the old shape, and that carries the
+tenant's `cache_generation`. The domain lookup runs on every call, cache
+hit or not, because the generation comes from that row.
 
 When the caller proves it is the gateway with `X-Internal-Token`, the
 response also carries `chat_api_key` and `acp_bearer_token`; that variant
@@ -144,13 +145,16 @@ internal token.
 
 ### Cache invalidation
 
-`tenant/signals.py: invalidate_domain_caches` fires on every
-`TenantDomain` save **and** delete. It purges the changed row's resolve
-key, **every sibling domain's key**, and `global:tenant_domains:<schema>`.
-The sibling purge is load-bearing: the payload embeds cross-row
-derivations, so adding an `assets*` row changes what should be served under
-the *primary* domain's key. Nuxt's five-minute copy still has to expire on
-its own.
+`tenant/signals.py: bump_generation_on_domain_change` fires on every
+`TenantDomain` save **and** delete and bumps the owning tenant's
+`cache_generation`, in the same transaction. Every key of that tenant —
+each sibling domain's resolve payload and the domain set behind CORS and
+CSRF — moves to the new generation at once. Covering the siblings is
+load-bearing: the payload embeds cross-row derivations, so adding an
+`assets*` row changes what the *primary* domain resolves to. No Redis
+delete is involved, so a Redis outage during the change cannot leave the
+old payload served ([Caches & purging](/dev/operations/caches)). Nuxt's
+five-minute copy still has to expire on its own.
 
 ## The host families a store needs
 
