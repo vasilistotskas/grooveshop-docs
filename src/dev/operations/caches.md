@@ -22,6 +22,7 @@ flowchart LR
   S -->|nuxt_patterns + host| N[/Nuxt /api/admin/cache/purge/]
   N --> R2[(Redis: Nitro cache:*)]
   S -->|feeds| G[/gateway /internal/feeds/invalidate/]
+  S -->|page surfaces, ~30 s later| T[/Cloudflare purge by Cache-Tag/]
   A -->|IndexMixin signals| M[(Meilisearch)]
   R2 --> CF[Cloudflare edge] --> B[Browser]
 ```
@@ -251,13 +252,38 @@ Command reference:
 
 ## Cloudflare
 
-The first tenant's storefront is proxied by Cloudflare; the platform hosts
-are not. Two things to know: hashed `/_nuxt` assets should be edge-cached
-by a Cache Rule, and **Speed Brain must stay off** for that zone. Speed
-Brain answers `Sec-Purpose: prefetch` requests for non-cacheable content
-with an edge-generated 503, which showed up as dozens of `/_nuxt` 503s in
-PageSpeed runs while Traefik's counters never moved. Cloudflare's cache is
-purged from its dashboard, not from anything in these repositories.
+Cloudflare caches the storefront's pages as well as its hashed `/_nuxt`
+assets, but only the pages Nitro served from its own page cache: the
+storefront adds `Cloudflare-CDN-Cache-Control: max-age=60,
+stale-while-revalidate=86400` and `Cache-Tag: storefront-html,
+storefront-html-<schema>` to those (`server/plugins/edge-cache.ts`), and a
+`storefront pages` Cache Rule per zone makes them eligible and follows the
+header. A response without it — account, cart, checkout, an uncached
+locale — is never stored. Browsers get `Cache-Control: no-cache` and
+revalidate against the edge.
+
+Two purges keep the edge honest (`core/cache/edge.py`):
+
+- **After an edit.** When `CacheService` purges a surface with page
+  renders, it queues one purge of the store's tag, about 30 seconds later,
+  so a burst of saves costs one request — Cloudflare's Free plan allows
+  five a minute per account. On the public schema it purges every store.
+- **After a deploy.** The `backend-edge-purge` PostSync hook runs
+  `manage.py purge_edge_cache`, which purges the `storefront-html` tag from
+  every zone before the warm-up: an edge copy from the previous build
+  points at `/_nuxt` chunks the new pods no longer serve.
+
+The platform zone (`*.grooveshop.space`) is purged with the platform's
+token (`CLOUDFLARE_PLATFORM_*` settings); a store on its own domain in its
+own Cloudflare account carries its zone ID and a Cache-Purge-only token on
+its Tenant row. The rule's definition, and why it lists paths instead of
+excluding them, are in the infrastructure repo's
+`docs/cloudflare-zone-settings.md`.
+
+**Speed Brain must stay off** on every zone. It answers
+`Sec-Purpose: prefetch` requests for non-cacheable content with an
+edge-generated 503, which showed up as dozens of `/_nuxt` 503s in
+PageSpeed runs while Traefik's counters never moved.
 
 ## Symptom to layer to command
 
@@ -266,7 +292,8 @@ purged from its dashboard, not from anything in these repositories.
 | Admin edit not visible in an API response (`/api/v1/...`) | Django `CustomCache` | Admin Cache tool for the surface, or `manage.py clear_cache <surface>` |
 | Seeded promotions or bulk-updated rows not visible | Django, signals bypassed | `CacheService.purge(["promotions"])` or `clear_cache promotions` |
 | Whole storefront 404 "Store not found" after a Django deploy that touched `TenantConfigSerializer` | Django `global:tenant_resolve` | fixed by shape keying; if still on an older tag, `clear_cache --prefixes global:tenant_resolve` |
-| Old HTML on a marketing route right after a green storefront deploy | not Nitro — each build has its own namespace | confirm the pods run the new image; check Cloudflare |
+| Old HTML right after a green storefront deploy | Cloudflare, if the `backend-edge-purge` hook failed (Nitro has a namespace per build) | the hook's log; rerun `manage.py purge_edge_cache` from a backend pod |
+| Edit visible with `?cb=1` but not on the plain URL for over a minute | Cloudflare, the store's tag purge failed | Celery log for `purge_edge_cache_task`; the store's Cloudflare credentials |
 | Content edit not visible on a rendered page within a build | Nitro `nitro:routes:` | the surface's Cache tool purge from the tenant admin (`page_config` covers `/`, `/about`, `/contact`, …), or the purge endpoint with `*routes*` |
 | Navigation menu edit not showing | Nitro handler `pageConfigNavigation` | `clear_cache page_config` (purges `*pageConfig*`) |
 | One API route returns pre-edit data | Nitro `nitro:handlers:<name>` | purge endpoint with `*<handlerName>*` |
@@ -287,7 +314,12 @@ purged from its dashboard, not from anything in these repositories.
   the host is matched per key family, never as a substring
   (`server/utils/cacheKey.ts: cacheKeyBelongsToHost`).
 - The Nitro cache is namespaced by build id (`server/plugins/storage.ts`);
-  a purge is merchant-time invalidation, never a deploy step.
+  a Nitro purge is merchant-time invalidation, never a deploy step. The
+  Cloudflare edge is the opposite: a deploy purges it.
+- Only a response carrying `Cloudflare-CDN-Cache-Control` is stored at the
+  edge, and only a Nitro page-cache response carries it
+  (`server/utils/edgeCache.ts`). Never `s-maxage` there: it disables the
+  edge's stale-while-revalidate.
 - The Nitro navigation handler is `pageConfigNavigation`
   (`core/cache/surfaces.py`).
 - Purge tokens and internal secrets never leave the cluster; run purges
@@ -302,8 +334,11 @@ purged from its dashboard, not from anything in these repositories.
 | `grooveshop-django-api/core/cache/registry.py`, `surfaces.py`, `service.py`, `invalidation.py`, `protected.py`, `nuxt.py`, `gateway.py`, `models.py` | Surface registry, purge service, signal wiring, Nuxt and gateway clients, `CachePurgeLog` |
 | `grooveshop-django-api/admin/admin.py`, `core/admin.py` | Cache tool and purge log admin |
 | `grooveshop-django-api/core/management/commands/clear_cache.py` | Command |
+| `grooveshop-django-api/core/cache/edge.py`, `core/tasks.py` (`purge_edge_cache_task`), `core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy |
+| `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook |
 | `grooveshop-django-api/tenant/media_flush.py`, `tenant/tasks.py` | Media flush |
-| `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN` |
+| `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `CLOUDFLARE_PLATFORM_*` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/admin/cache/purge.post.ts` | Nitro purge endpoint |
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts`, `shared/constants/prerender.ts` | SWR route rules |
 | `grooveshop-media-stream/src/MediaStream/Cache/controllers/admin-cache.controller.ts` | `flush-tenant` |
