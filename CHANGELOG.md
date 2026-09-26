@@ -1,3 +1,10 @@
+## [1.2.23](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.22...v1.2.23) (2026-09-26)
+
+
+### Bug Fixes
+
+* **nginx:** drop the docs server's duplicate access log ([1f27ad3](https://github.com/vasilistotskas/grooveshop-docs/commit/1f27ad34036232babde0ea497371f25ecd9917bf))
+
 ## [1.2.22](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.21...v1.2.22) (2026-09-26)
 
 ## [1.2.21](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.20...v1.2.21) (2026-09-26)
