@@ -51,7 +51,8 @@ jobs:
           repository: vasilistotskas/grooveshop-storefront-ui-node-nuxt
           path: grooveshop-storefront-ui-node-nuxt
 
-      - name: Checkout grooveshop-media-stream (citations)
+      # Also a reference-docs source: sync:sources copies its docs/.
+      - name: Checkout grooveshop-media-stream (reference docs, citations)
         uses: actions/checkout@v6
         with:
           repository: vasilistotskas/grooveshop-media-stream

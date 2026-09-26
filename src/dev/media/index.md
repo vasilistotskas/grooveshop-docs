@@ -53,9 +53,12 @@ pnpm run test:e2e
 pnpm run cache:clear    # Redis + file system cache
 ```
 
-## Status of this section
+## Reference
 
-The media stream section of these docs is not written yet. The
-repository's `CLAUDE.md` is the guide until then; the URL contract with
-the storefront is described under
+The repository's own `docs/` folder is copied in at build time under
+[Media stream reference](/dev/media/reference/): the per-request log line,
+the metrics and the LogsQL / PromQL queries that use them
+(`docs/observability.md` in `grooveshop-media-stream`). The repository's
+`CLAUDE.md` covers the rest until more of it is written; the URL contract
+with the storefront is described under
 [Architecture](/dev/platform/architecture).

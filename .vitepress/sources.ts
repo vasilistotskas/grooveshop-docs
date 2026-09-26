@@ -6,8 +6,10 @@
  * every GrooveShop repository is checked out as a sibling); `to` is
  * relative to `src/`. The copied tree is gitignored.
  *
- * Adding a service later (Nuxt, agent gateway, media stream, infra) is one
- * more entry here plus a checkout step in .github/workflows/ci.yml.
+ * Adding a service later (Nuxt, agent gateway, infra) is one more entry
+ * here plus a checkout of its repository in BOTH .github/workflows/ci.yml
+ * and .github/workflows/docker.yml: the image build syncs the sources too,
+ * and a missing source fails it.
  */
 export interface DocSource {
   /** Stable id, also the sidebar group key. */
@@ -24,5 +26,11 @@ export const DOC_SOURCES: DocSource[] = [
     title: 'Django API reference',
     from: 'grooveshop-django-api/docs',
     to: 'dev/django/reference',
+  },
+  {
+    id: 'media',
+    title: 'Media stream reference',
+    from: 'grooveshop-media-stream/docs',
+    to: 'dev/media/reference',
   },
 ]

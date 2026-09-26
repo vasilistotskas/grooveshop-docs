@@ -36,6 +36,14 @@ jobs:
           sparse-checkout: docs
           sparse-checkout-cone-mode: true
 
+      - name: Checkout grooveshop-media-stream (reference docs)
+        uses: actions/checkout@v6
+        with:
+          repository: vasilistotskas/grooveshop-media-stream
+          path: grooveshop-media-stream
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: true
+
       - name: Install pnpm
         uses: pnpm/action-setup@v5
         with:
