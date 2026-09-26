@@ -45,7 +45,7 @@ changed afterwards without recreating the store.
 |---|---|---|
 | Slug | URL-safe, unique (`Tenant.slug`) | Yes |
 | Schema name | PostgreSQL identifier, at most 63 chars; rejected if reserved or `pg_`-prefixed (`tenant/validators.py: validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES`). Convention: the slug with dashes as underscores | **No** — it names the Postgres schema and every media path |
-| Primary domain | The storefront host. `api.<domain>` is derived from it | **No, in practice** — it anchors the API host, the Site row and every issued certificate |
+| Primary domain | The storefront host. The API host is derived from it: `api.<domain>`, or `api-<label>.grooveshop.space` for a store on a platform subdomain (`core/utils/tenant_urls.py: derive_api_domain`) | **No, in practice** — it anchors the API host, the Site row and every issued certificate |
 | Owner email | Receives the OWNER membership (`tenant/provisioning.py: provision_owner_membership`) | Yes |
 | Plan | One of `TenantPlan` — `trial`, `basic`, `pro`, `enterprise` | Yes |
 | Trial length | `--trial-days` (default 30) sets `paid_until` so dunning covers the trial from day one; `0` means never expires. It applies **only** when `--plan trial` — a paid plan is created with no term, and staff record `paid_until` when the first payment lands | Yes |
@@ -84,8 +84,9 @@ it later means the slot admin's **Reset to preset**
 Point three A records at the cluster's ingress IP — the apex, `www.` and
 `api.`. The value is the master node's public address, recorded in
 `grooveshop-infrastructure/CLAUDE.md` and repeated in the tenant template
-README; Traefik runs as a DaemonSet so either node answers, but pinning to
-the master avoids surprises when a node drains.
+README; Traefik runs one pod per node (a 2-replica Deployment spread across
+both), so either node answers, but pinning to the master avoids surprises
+when a node drains.
 
 ```
 example.com              A  <cluster ingress IP>
@@ -93,9 +94,17 @@ www.example.com          A  <cluster ingress IP>
 api.example.com          A  <cluster ingress IP>
 ```
 
-Behind Cloudflare, these records must be **DNS-only** (grey cloud) — a
-proxied record answers the HTTP-01 challenge from Cloudflare's edge, not
-from Traefik.
+A store on a platform subdomain has no `www` host, and its API host is
+**first-level**: `shop.grooveshop.space` and `api-shop.grooveshop.space`,
+never `api.shop.grooveshop.space`. The zone's free Universal SSL
+certificate covers `*.grooveshop.space` one label deep, so a second-level
+name cannot be proxied and would bypass Cloudflare for good
+(grooveshop-infrastructure `docs/edge-trust-boundary.md`).
+
+Create the records **DNS-only** (grey cloud), let cert-manager issue the
+certificates, then switch them to **proxied**. Issuing first keeps the
+HTTP-01 challenge off Cloudflare's HTTPS redirect and avoids a 526 from a
+proxied host whose certificate does not exist yet.
 
 Verify before going further:
 
@@ -167,7 +176,7 @@ into operator messages (`tenant/provisioning.py`):
 
 | Step | What it does | If it cannot |
 |---|---|---|
-| `ensure_api_domain` | Creates the `api.<primary>` `TenantDomain` row | Returns `None` with no primary domain. **Not optional**: the resolver derives `apiDomain` as `api.<primary>` and the storefront dials it, but request routing matches domain rows exactly — a derived host with no row is one Django refuses to serve. The storefront looks healthy while WebSocket notifications close 4004 and every social login 404s at the form POST |
+| `ensure_api_domain` | Creates the API `TenantDomain` row (`derive_api_domain`: `api.<primary>`, or `api-<label>.<zone>` on a platform subdomain) | Returns `None` with no primary domain. **Not optional**: the resolver derives `apiDomain` the same way and the storefront dials it, but request routing matches domain rows exactly — a derived host with no row is one Django refuses to serve. The storefront looks healthy while WebSocket notifications close 4004 and every social login 404s at the form POST |
 | `ensure_site` | Creates the public-schema `django.contrib.sites` Site for the primary domain | Per-tenant `SocialApp` credentials are keyed on that Site; without it the adapter's lookup always misses and allauth silently falls back to the platform's OAuth app |
 | `provision_owner_membership` | Grants OWNER `UserTenantMembership`, looked up in the **public** schema | Returns `None` if the owner has no `UserAccount` yet — the caller warns; grant the membership from the admin once they register |
 | `seed_tenant_defaults` | Inside the tenant's schema: extra settings, page layouts, content pages, the flat-rate carrier, the default newsletter topic, recommendation slots, Meilisearch indexes | Each step is independently best-effort and **returns the names that failed** |

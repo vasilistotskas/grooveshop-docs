@@ -167,8 +167,10 @@ five-minute copy still has to expire on its own.
 
 ### Why the `api.` row is mandatory
 
-`core/utils/tenant_urls.py: resolve_tenant_api_domain` **derives**
-`api.<primary>` when no explicit `api*` row exists, and the storefront
+`core/utils/tenant_urls.py: resolve_tenant_api_domain` **derives** the
+API host when no explicit `api*` row exists (`derive_api_domain`:
+`api.<primary>`, or `api-<label>.grooveshop.space` for a store on a platform
+subdomain, so Cloudflare's Universal SSL covers it), and the storefront
 dials that derived value. But routing matches rows exactly. A derived host
 with no row is a host Django refuses to serve, and the failure is
 deceptive: the storefront looks perfectly healthy while real-time
@@ -176,7 +178,7 @@ notifications close 4004 on every attempt and every social login 404s at
 the form POST.
 
 `tenant/provisioning.py: ensure_api_domain` is what stops that happening.
-It finds the primary domain, derives `api.<primary>`, and `get_or_create`s
+It finds the primary domain, derives the API host the same way, and `get_or_create`s
 the row with `is_primary=False`. It runs from both entry points — the
 `tenant_create` management command and `TenantAdmin.save_related` on the
 admin's New Store flow — so the two can never drift. It returns `None`
