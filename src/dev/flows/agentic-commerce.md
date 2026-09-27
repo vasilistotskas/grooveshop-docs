@@ -170,8 +170,11 @@ Completing a checkout, UCP or ACP, places the order through
 `internal/checkout/flow.go: Flow.Complete`, which sets
 `attribution.agentProtocol` on the `POST /order` body
 (`internal/django/client_checkout.go: OrderAttribution`) to the owning
-session's protocol, `ucp` or `acp`. Django books such an order with source
-type `agent` ahead of every other signal, so it reads as "AI agent (UCP)" or
+session's protocol, `ucp` or `acp`. Django believes it only alongside the
+gateway's shared secret, which the same call already carries as
+`X-Internal-Gateway` (`cartHeaders`, `internal/django/client_cart.go`;
+checked by `order/views/order.py: _attribution_input`). With it, Django books
+the order with source type `agent` ahead of every other signal, so it reads as "AI agent (UCP)" or
 "AI agent (ACP)" in the admin; see
 [Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).
 
