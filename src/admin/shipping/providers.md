@@ -113,10 +113,11 @@ Deleting a key is safe: every key has a built-in default.
 
 ### Offer a new country
 
-1. Check that the country is in the **Country** list of a rate line. If it is not, the platform has not added it yet: ask the platform team (see [Countries & regions](/admin/localization/countries-and-regions)).
-2. Open the row of each courier that should deliver there and add a rate line: the country, the kind, the price, the free-shipping threshold if there is one, and a max weight if the courier limits it for that destination.
-3. Tick **Is Active** and save.
-4. Open the storefront checkout with a test cart. The country now appears in the country list, and only the couriers you added rates for are offered.
+Every country is already in the **Country** list; you do not need the platform team for this.
+
+1. Open the row of each courier that should deliver there and add a rate line: the country, the kind, the price, the free-shipping threshold if there is one, and a max weight if the courier limits it for that destination.
+2. Tick **Is Active** and save.
+3. Open the storefront checkout with a test cart. The country now appears in the country list, and only the couriers you added rates for are offered. Customers pick a region only when the country has regions in the list; otherwise the field stays empty.
 
 To stop delivering to a country, untick **Is Active** on its rate lines. Once no active line is left, the country disappears from checkout.
 

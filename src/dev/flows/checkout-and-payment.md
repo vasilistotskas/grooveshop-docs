@@ -133,10 +133,17 @@ country**, and then whatever the chosen carrier adds through
 `ShippingService.validate_order_payload`. Carrier rules live in the
 adapter, not here — see [Shipping](/dev/flows/shipping).
 
-**The region must belong to the country.** `core/validators/address.py:
-address_errors` checks it, and `region` is part of `ADDRESS_FIELDS`, so
-`Order.clean`, `UserAddress.clean` and the serializers all inherit the
-check. `order/serializers/order.py` returns field-scoped 400s for a
+**Region is required only where the country has regions, and must belong
+to it.** `core/validators/address.py: address_errors` owns both rules,
+and `region` is part of `ADDRESS_FIELDS`, so `Order.clean`,
+`UserAddress.clean` and the serializers all inherit them;
+`UserAddressWriteSerializer.region` is optional at the field level for
+that reason. The Country API exposes a read-only `has_regions`, and the
+storefront's region field (`required`, disabled state and Zod rule)
+follows `selectedCountry.hasRegions` in checkout and the address forms.
+The country list itself is the full ISO 3166-1 set, seeded by
+`country/migrations/0012_seed_iso_countries.py`; only a rate makes a
+country shippable. `order/serializers/order.py` returns field-scoped 400s for a
 region in another country, a carrier with no active rate and a cart over
 the rate's weight cap.
 
@@ -471,7 +478,8 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
 | `grooveshop-django-api/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
 | `grooveshop-django-api/shipping/services.py` | `quote`, `assert_available`, `available_options` |
-| `grooveshop-django-api/country/serializers.py` | `phone_metadata` field |
+| `grooveshop-django-api/country/serializers.py` | `phone_metadata` and `has_regions` fields |
+| `grooveshop-django-api/country/migrations/0012_seed_iso_countries.py` | The full ISO 3166-1 country seed |
 | `grooveshop-django-api/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id` |

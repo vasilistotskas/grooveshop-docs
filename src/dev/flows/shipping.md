@@ -124,9 +124,17 @@ admin edits rates through an Unfold `ShippingRateInline` on
 `ShippingProviderAdmin` with a plain country select: an autocomplete
 would 403, because the country admin is platform-only.
 
-Countries and regions stay global reference data (`SHARED_APPS`);
-seeding a country makes it *selectable*, and only a rate makes it
-*shippable* for one store. `shipping/migrations/0011_convert_legacy_pricing_to_rates.py`
+Countries and regions stay global reference data (`SHARED_APPS`). Every
+ISO 3166-1 country is seeded (`country/migrations/0012_seed_iso_countries.py`),
+so every country is *selectable* in the rate inline, and only a rate
+makes it *shippable* for one store.
+
+**Destination VAT and customs are not handled.** VAT is one rate per
+product with no country dimension (`vat/`), so a rate to another EU
+country charges the product's own rate, not the destination's (no OSS),
+and a non-EU destination gets no customs data on the voucher. Opening
+such a country is a compliance decision that this code does not make
+for the merchant. `shipping/migrations/0011_convert_legacy_pricing_to_rates.py`
 converted each tenant's old setting values into rates for the countries
 in its old `supported_countries` (else GR), so no store started offering
 a new country by accident; a new tenant runs the same migration and gets
@@ -240,7 +248,9 @@ applied before `live_quote` is ever called.
 
 The station sync in `shipping_acs/tasks.py` covers the countries that
 have an active ACS rate; `AcsService.sync_stations(country=...)` takes
-the country as a required argument. The shipment uses `order.country_id`.
+the country as a required argument. The voucher uses `order.country_id`
+and `live_quote` receives the real destination country and region, so
+no ACS path assumes Greece: which countries ACS serves is rate data.
 The `ACS_SUPPORTED_COUNTRIES` setting and `shipping_acs/config.py:
 default_country` are gone.
 

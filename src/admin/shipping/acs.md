@@ -169,7 +169,7 @@ See [Reconciliation](/admin/system/reconciliation) for the finance view.
 
 ### Smartpoint stations
 
-<span class="sidebar-path">Shipping → ACS Stations</span> is a local copy of ACS shops and Smartpoint lockers, refreshed daily at 03:00. Columns: **External ID** (the area station code), **Name**, **Shop kind**, **City**, **Postal code**, **Country code**, **Is active**. Filters: **Shop kind**, **Country code**, **Is active**. Search matches ID, name, city and postcode. **Last synced at** is read-only. There is no sync button on this screen; the nightly refresh is the only way the list changes. It covers the countries that have an active ACS rate on the ACS provider row.
+<span class="sidebar-path">Shipping → ACS Stations</span> is a local copy of ACS shops and Smartpoint lockers, refreshed daily at 03:00. Columns: **External ID** (the area station code), **Name**, **Shop kind**, **City**, **Postal code**, **Country code**, **Is active**. Filters: **Shop kind**, **Country code**, **Is active**. Search matches ID, name, city and postcode. **Last synced at** is read-only. There is no sync button on this screen; the nightly refresh is the only way the list changes. It covers exactly the countries that have an active rate on the ACS provider row: which countries ACS serves for your store is decided by those rates, not by a separate setting.
 
 Notes:
 
