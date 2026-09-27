@@ -1,6 +1,6 @@
 ---
 title: BoxNow
-description: BoxNow locker deliveries, the synced locker list, parcel states and events, label printing, cancellation and what the customer receives.
+description: BoxNow locker deliveries in Greece and Cyprus, the synced locker list, parcel states and events, label printing, cancellation and what the customer receives.
 ---
 
 # BoxNow
@@ -11,7 +11,7 @@ BoxNow delivers to automated lockers. A customer picks a locker on the checkout 
 
 ## Lockers
 
-The locker list is a local copy of BoxNow's destination catalogue.
+The locker list is a local copy of BoxNow's destination catalogue. It holds the Greek and the Cypriot lockers together; the country code on each locker says which is which.
 
 | Column | Meaning |
 |---|---|
@@ -73,6 +73,34 @@ Buttons:
 
 The label is also one click away in <span class="sidebar-path">Sales → Orders</span> with **Download shipping voucher (PDF)** on the row or the order page.
 
+## Delivering to Cyprus
+
+BoxNow also delivers from Greek shops to its locker network in Cyprus. It uses the same BoxNow account and the same credentials, so there is nothing for the platform team to change.
+
+### Set it up
+
+1. Open <span class="sidebar-path">Shipping → Shipping Providers</span>, then the BoxNow row, and scroll to **Rates**.
+2. Add a line: **Country** Cyprus, **Shipping kind** pickup point, your **Price**, a **Free shipping threshold** if you want one, and **Max weight (grams)** `4000`. BoxNow accepts at most 4 kg per parcel to Cyprus.
+3. Tick **Is Active** and save. Cyprus now appears in the checkout country list, and BoxNow is offered for it. Couriers without a Cyprus rate are not.
+4. Check that the Cypriot lockers are in <span class="sidebar-path">Shipping → BoxNow Lockers</span>: search for a Cypriot postcode, such as `1010` in Nicosia. They arrive with the nightly sync; if none are there yet, run **Sync lockers from BoxNow API**.
+5. Place a test order to a Cypriot locker, print its voucher and send it to BoxNow so they can confirm the setup. BoxNow asks for this before you start shipping to Cyprus.
+
+For the general steps of adding a country, see [Shipping providers](/admin/shipping/providers).
+
+### What the customer sees
+
+- **Cyprus in the country list**, with its districts as regions. The district must belong to the chosen country: a Greek prefecture with Cyprus is refused.
+- **The Cyprus locker map.** When Cyprus is the delivery country, the map switches to BoxNow's Cyprus map on its own. Changing the country clears a locker that was already picked.
+- **The phone number in international format.** When Cyprus is the delivery country, `+357` is shown in front of the phone field and a Cypriot number of eight digits is accepted. A Greek mobile works too, typed with `+30` in front: someone in Greece can send a parcel to a locker in Cyprus.
+- **Carts over 4 kg** see BoxNow greyed out with the reason, instead of an empty delivery step.
+- **Delivery time**: about three working days from the moment you hand the parcel to BoxNow.
+
+### Things to know about Cyprus
+
+- **A Greek locker cannot be used for a Cypriot address, or the other way round.** The order is refused and the customer is asked to pick a locker in the delivery country.
+- **A brand-new locker may be missing for up to a day.** The locker list syncs once a night, so BoxNow may show a locker on the map before it reaches your list. An order to such a locker is still accepted.
+- Labels, cancellations, parcel states and PAY ON THE GO work exactly as for Greece.
+
 ## Tasks
 
 ### Ship a locker order
@@ -120,6 +148,7 @@ Open the shipment and read the events tab, or go to <span class="sidebar-path">S
 ## Related
 
 - [Shipping providers](/admin/shipping/providers)
+- [Countries & regions](/admin/localization/countries-and-regions)
 - [ACS Courier](/admin/shipping/acs)
 - [Orders](/admin/sales/orders)
 - [Audit & logs](/admin/system/audit-and-logs)

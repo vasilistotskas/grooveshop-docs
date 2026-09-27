@@ -29,7 +29,7 @@ The page lists **surfaces**, grouped as catalog, commerce, config and content. E
 | **Products** | a product, its images, attributes, price or stock; also the search endpoint. | Categories, Tags, and the product feeds for Meta, TikTok and AI agents. |
 | **Categories** | a category, its image, the tree, or the category map behind the navbar. | the same product feeds. |
 | **Payment methods** | a payment method's availability, cost, description or instructions. | Shipping options, which embed the eligible methods. |
-| **Shipping options** | a shipping provider, a shipping price, or a station or locker sync. | |
+| **Shipping options** | a shipping provider, a shipping rate, or a station or locker sync. Saving a provider or a rate purges it, and the country list, on its own. | |
 | **Regions & Countries** | rarely needed; the address pickers at checkout. | |
 | **Loyalty** | tiers or loyalty settings shown on the storefront. Only the storefront half is cached, so this is a light purge. | |
 | **Promotions** | a promotion, its codes or its schedule. The public offers page is covered. | |

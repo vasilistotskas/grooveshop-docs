@@ -13,12 +13,12 @@ Subscription topics, in contrast, are yours: they sit under <span class="sidebar
 
 | Data | What it holds | What it controls |
 |---|---|---|
-| **Countries** | Two- and three-letter codes, the numeric code, the telephone dialling code, a flag image, and the country name in Greek, English and German. | The country picker on the checkout and account address forms; the country recorded on every order and user address. |
-| **Regions** | A code and the country it belongs to, with names in the same three languages. | The region picker that appears once a country is chosen. Greek prefectures and German states are seeded. |
+| **Countries** | Two- and three-letter codes, the numeric code, the telephone dialling code, a flag image, and the country name in Greek, English and German. | The country picker on the checkout and account address forms; the country recorded on every order and user address; the phone format checked for that country. |
+| **Regions** | A code and the country it belongs to, with names in the same three languages. | The region picker that appears once a country is chosen. Greek prefectures, Cypriot districts and German states are seeded. The region must belong to the chosen country, at checkout and when staff edit an address. |
 
 Effects on your store:
 
-- A customer can only ship to a country that exists in the list. Your shipping providers then decide whether they serve it.
+- A customer can only ship to a country that exists in the list **and** that one of your shipping providers has an active rate for. Checkout lists only those countries; the account profile still offers the whole list. See [Shipping providers](/admin/shipping/providers#rates).
 - VAT rates are attached to products, not to countries; see [VAT rates](/admin/sales/vat-rates).
 - The pickers are cached under the **Regions & Countries** surface; a change made by the platform may need a purge, see [Cache](/admin/system/cache).
 

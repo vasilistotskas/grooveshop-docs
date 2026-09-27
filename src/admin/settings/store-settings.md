@@ -65,8 +65,6 @@ Defaults are what a fresh store starts with. Money is in euro.
 
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
-| `CHECKOUT_SHIPPING_PRICE` | Flat home-delivery shipping cost. | 3.00 | yes |
-| `FREE_SHIPPING_THRESHOLD` | Cart subtotal above which home delivery is free. | 50.00 | yes |
 | `STOCK_RESERVATION_TTL_MINUTES` | How long stock stays reserved for a checkout in progress. | 30 | no |
 | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` | Minutes after a failed online payment before the order is cancelled and its stock released. | 30 | no |
 | `ORDER_AUTO_CANCEL_PENDING_HOURS` | Hours an unpaid online order may stay pending before it is cancelled. | 24 | no |
@@ -80,14 +78,12 @@ Defaults are what a fresh store starts with. Money is in euro.
 
 ### Shipping
 
+Shipping prices, free-shipping thresholds and the countries you deliver to are not settings: they are the **Rates** on each courier's row, see [Shipping providers](/admin/shipping/providers#rates). What remains here are the courier switches.
+
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
-| `ACS_SHIPPING_PRICE` | Flat ACS home-delivery and Smartpoint cost. | 3.50 | yes |
-| `ACS_FREE_SHIPPING_THRESHOLD` | Subtotal above which ACS shipping is free. | 40.00 | yes |
 | `ACS_SMARTPOINT_ENABLED` | Offer ACS Smartpoint locker pickup at checkout. Turn on only after the stations have synced. | off | yes |
-| `ACS_DYNAMIC_PRICING_ENABLED` | Ask ACS for a live quote at checkout; falls back to the flat price on any error. | off | no |
-| `BOXNOW_SHIPPING_PRICE` | Flat cost for delivery to a BoxNow locker. | 2.50 | yes |
-| `BOXNOW_FREE_SHIPPING_THRESHOLD` | Subtotal above which BoxNow delivery is free. | 30.00 | yes |
+| `ACS_DYNAMIC_PRICING_ENABLED` | Ask ACS for a live quote at checkout; falls back to the rate's price on any error. | off | no |
 | `DEFAULT_WEIGHT_UNIT` | Unit for product weights. | kg | no |
 
 ### Invoicing & myDATA
