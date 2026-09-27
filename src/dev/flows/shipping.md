@@ -1,6 +1,6 @@
 ---
 title: Shipping
-description: "The carrier abstraction, provider rows and the factory trap, dispatch on commit, and the full ACS and BoxNow flows including COD reconciliation."
+description: "The carrier abstraction, provider rows and the factory trap, per-tenant ShippingRate pricing and availability, dispatch on commit, and the full ACS and BoxNow flows including Cyprus lockers and COD reconciliation."
 ---
 
 # Shipping
@@ -12,10 +12,15 @@ is the runtime switch and capability declaration. Nothing above the
 shipping layer imports a provider app — the order flow, the serializers,
 the pay-way filter and the pricing calculator all go through
 `shipping/services.py: ShippingService`, which resolves the row and then
-the adapter. Adding a courier is one app plus one row.
+the adapter. Price, availability and weight cap live in a third piece,
+the per-tenant `shipping/models/rate.py: ShippingRate` table, one row per
+(provider, country, kind). Adding a courier is one app plus one provider
+row plus its rates.
 
-Two carriers exist today: ACS Courier (`shipping_acs/`, REST, polled) and
-BoxNow (`shipping_boxnow/`, REST plus webhook).
+Three adapters exist today: ACS Courier (`shipping_acs/`, REST, polled),
+BoxNow (`shipping_boxnow/`, REST plus webhook) and the merchant-fulfilled
+`flat_rate` (`shipping/carriers/flat_rate.py`, lifecycle only: no API,
+no label, no tracking).
 
 ## Diagram
 
@@ -54,8 +59,7 @@ The optional hooks are where a carrier states what it is:
 | Hook | Purpose |
 |---|---|
 | `payload_keys` | Which non-`Order` keys the carrier reads out of the create-order body (`boxnow_locker_id`, `acs_station_external_id`, …) |
-| `calculate_shipping_cost` | The carrier prices its own kinds; returning `None` falls back to the platform flat rate |
-| `free_shipping_threshold` | The marketing promise, read by `GET /api/v1/shipping/free-shipping-info` |
+| `live_quote` | Optional live price for a rate (`rate`, `country_code`, `region_id`, `weight_grams`, `currency`). The default returns `None`, meaning "charge the rate's `price`". Only ACS overrides it |
 | `is_kind_enabled` | Per-kind gate a carrier controls itself, e.g. ACS Smartpoint |
 | `create_shipment_row` | Persist the child row synchronously during checkout |
 | `dispatch_create_shipment_task` | Enqueue the Celery task that talks to the carrier API |
@@ -92,24 +96,82 @@ the test or fixture silently runs against the wrong configuration. If you
 need a provider in a specific state, assert or set the flags explicitly
 after the factory call.
 
+### Rates: `ShippingRate`
+
+`ShippingRate` is tenant-scoped and is the **only** source of shipping
+price, availability and weight cap. There is no settings fallback: the
+six legacy `EXTRA_SETTINGS` keys (`CHECKOUT_SHIPPING_PRICE`,
+`FREE_SHIPPING_THRESHOLD`, `BOXNOW_SHIPPING_PRICE`,
+`BOXNOW_FREE_SHIPPING_THRESHOLD`, `ACS_SHIPPING_PRICE`,
+`ACS_FREE_SHIPPING_THRESHOLD`) and `metadata["supported_countries"]` are
+no longer read by anything.
+
+| Field | Meaning |
+|---|---|
+| `provider` | FK to `ShippingProvider`, `related_name="rates"` |
+| `country` | FK to the shared `country.Country` (`PROTECT`, `related_name="+"`), the same cross-schema shape as `Order.country` |
+| `kind` | `ShippingKind` |
+| `price` | `MoneyField` |
+| `free_shipping_threshold` | `MoneyField`, nullable: `NULL` means never free |
+| `max_weight_grams` | Nullable: `NULL` means no cap |
+| `is_active` | Pauses the rate without losing the price |
+
+It is unique on `(provider, country, kind)` and indexed on
+`(country, is_active)`. `clean()` rejects a kind the provider does not
+support, a currency other than the tenant's `default_currency`, and a
+negative price. `HistoricalRecords` keeps the price audit trail. The
+admin edits rates through an Unfold `ShippingRateInline` on
+`ShippingProviderAdmin` with a plain country select: an autocomplete
+would 403, because the country admin is platform-only.
+
+Countries and regions stay global reference data (`SHARED_APPS`);
+seeding a country makes it *selectable*, and only a rate makes it
+*shippable* for one store. `shipping/migrations/0011_convert_legacy_pricing_to_rates.py`
+converted each tenant's old setting values into rates for the countries
+in its old `supported_countries` (else GR), so no store started offering
+a new country by accident; a new tenant runs the same migration and gets
+a GR `flat_rate` home-delivery rate.
+
+### The single gate: `active_rate`
+
+Every availability decision goes through
+`ShippingService.active_rate(provider_code, kind, country_code)`: an
+active rate, on an active provider, with a registered adapter, for a kind
+the provider supports and the adapter's `is_kind_enabled` allows. The
+rest is built on it:
+
+| Method | Role |
+|---|---|
+| `quote(...) -> Money` | Price, evaluated in a fixed order: availability (`ShippingUnavailableError`), weight cap (`ShippingWeightExceededError`), free-shipping threshold, then the adapter's `live_quote` or the rate's `price` |
+| `assert_available(...)` | Availability and cap without a price; used when a free-shipping promotion zeroes the cost, so a promo can never ship to a country the store does not serve |
+| `shippable_country_codes()` | Countries with at least one active rate, ordered by `Country.sort_order`; backs `GET /api/v1/country?shippable=true` (`country/filters.py`), which returns nothing on the platform host |
+| `resolve_home_delivery_provider(country_code)` | The active home-delivery carrier with the lowest `priority` for that country |
+| `available_options(country_code)` | Checkout options; the country is required (400 without it) |
+| `free_shipping_info(country_code)` | The "free shipping from X" promise; defaults to the first shippable country and echoes the `country_code` it used |
+
+The exceptions live in `shipping/exceptions.py`.
+
 ### Method offering at checkout
 
-`ShippingService.available_options` filters to active providers that have
-a registered adapter, optionally by `metadata["supported_countries"]`,
-then emits one row per supported kind that passes `is_kind_enabled`. Each
-row carries the price the adapter quotes, the kind-aware logo URL, and
-the pay-ways that combination can settle — resolved by calling the same
-`PayWayService.filter_by_carrier` the checkout calls, so the delivery
-step can never advertise a method the payment step would refuse. Rows
+`ShippingService.available_options` iterates the active rates for the
+requested country and emits one row per rate that passes
+`active_rate`. Each row carries the quoted price, `country_code`,
+`max_weight_grams` and `exceeds_max_weight`, the kind-aware logo URL,
+and the pay-ways that combination can settle — resolved by calling the
+same `PayWayService.filter_by_carrier` the checkout calls, so the
+delivery step can never advertise a method the payment step would
+refuse. An over-cap option is **listed and flagged, not dropped**, so a
+heavy cart to a capped destination (BoxNow Cyprus, 4000 g) gets a
+disabled option with a reason instead of a silently empty step. Rows
 sort by `(priority, provider_code)`.
 
-Pricing goes through the same registry.
-`OrderService.calculate_shipping_cost` auto-resolves a bare
-`home_delivery` request to the active home-delivery carrier with the
-lowest `priority` (`_resolve_active_home_delivery_code`), and
-`_resolve_shipping_provider` uses the **same helper** to set the order's
-FK — otherwise the order would be priced against one carrier's threshold
-and served by another.
+Order pricing goes through the same service. `OrderService.shipping_cost`
+is the single entry point for every caller (order creation, the
+payment-intent computation in `cart/views/cart.py`) and calls
+`ShippingService.quote`. A bare `home_delivery` request resolves through
+`resolve_home_delivery_provider`, and `_resolve_shipping_provider` uses
+the **same helper** to set the order's FK — otherwise the order would be
+priced against one carrier's rate and served by another.
 
 ### Dispatch on transaction commit
 
@@ -167,6 +229,20 @@ Two encodings on the wire are easy to get wrong:
 `shipping/services.py: sanitize_delivery_notes`, which collapses
 whitespace runs and caps at 500 characters — an embedded carriage return
 can be read as a record separator by ACS.
+
+### Pricing and station countries
+
+ACS is the only adapter with a `live_quote`: it returns
+`_fetch_live_quote` only when `ACS_DYNAMIC_PRICING_ENABLED` is on, and
+`None` when the setting is off or the live call fails, in which case
+`quote` charges the rate's `price`. The free-shipping threshold is
+applied before `live_quote` is ever called.
+
+The station sync in `shipping_acs/tasks.py` covers the countries that
+have an active ACS rate; `AcsService.sync_stations(country=...)` takes
+the country as a required argument. The shipment uses `order.country_id`.
+The `ACS_SUPPORTED_COUNTRIES` setting and `shipping_acs/config.py:
+default_country` are gone.
 
 ### Labels and the pickup list
 
@@ -350,6 +426,41 @@ design. Lockers are synced nightly into `BoxNowLocker` by
 and served to the picker through `GET /api/v1/shipping/boxnow/lockers`
 and `.../nearest`.
 
+### Countries: Greece and Cyprus
+
+One BoxNow partner account serves both networks; the Cyprus lockers come
+from the same `/destinations` catalogue, each row carrying its
+`country`. The sync stores it on `BoxNowLocker.country_code`, which has
+no default: a destination without a country is skipped and counted as
+`skipped_no_country` instead of being filed as Greek. The shipment
+payload is unchanged, because `locationId` alone identifies the locker.
+
+`BoxNowCarrier.validate_order_payload` looks the chosen
+`boxnow_locker_id` up by `external_id`. A locker whose country differs
+from the order's country is a field error on `boxnow_locker_id`. A locker
+that is not in the table yet is **accepted** with a WARNING log, because
+the nightly sync lags BoxNow's own map by up to a day.
+
+Cyprus availability and its 4 kg cap are data, not code: a BoxNow
+pickup-point rate for CY with `max_weight_grams=4000`.
+
+On the storefront, `shared/utils/boxnow-widget.ts` (import-free) is the
+single source for the widget per country: `BOXNOW_WIDGET_COUNTRIES` maps
+GR to `https://widget-v5.boxnow.gr` and CY to `https://widget-v5.boxnow.cy`,
+each with its `countryCode` query value and the lowercase country name
+the widget posts back as `boxnowCountry`. `BOXNOW_FRAME_ORIGINS` and
+`boxNowWidgetCountry(alpha2)` derive from it, and so do the CSP
+`frame-src` and `BOXNOW_ALLOWED_ORIGINS` in `shared/utils/csp.ts`,
+including the redirect origins the iframe hops through. Adding a country
+is one verified line there plus a rate.
+`app/composables/useBoxNowWidget.ts: buildBoxNowIframeUrl` builds the
+host and `countryCode` for the delivery country and the page locale, and
+throws for a country with no mapping, so checkout disables BoxNow rather
+than loading the wrong map. `parseBoxNowSelectedLocker` compares
+`boxnowCountry` case-insensitively and returns
+`boxnowLockerCountryCode`. Changing the delivery country clears the
+chosen locker.
+
 The webhook is `POST /boxnow/webhook/`, registered at the URL root rather
 than under `api/v1/` so BoxNow reaches it without a language prefix or
 auth headers (`core/urls.py`). Its only gate is HMAC-SHA256:
@@ -396,9 +507,17 @@ move `Order.status`, which the carrier events drive separately.
   transaction across the carrier API call.
 - **A carrier declares settlements, never preferences.** Preferences are
   `PayWayShippingExclusion` rows.
-- **`calculate_shipping_cost` and `_resolve_shipping_provider` resolve
-  `home_delivery` through the same helper**, so the price charged and the
-  carrier assigned always agree.
+- **`ShippingRate` is the only source of shipping price, availability and
+  weight cap.** No settings fallback, no carrier-side pricing; a carrier
+  may only refine a rate through `live_quote`.
+- **Every availability check goes through `ShippingService.active_rate`**:
+  options, quotes, promo free shipping, the shippable-country filter and
+  order validation cannot disagree about what a store ships.
+- **`OrderService.shipping_cost` and `_resolve_shipping_provider` resolve
+  `home_delivery` through `resolve_home_delivery_provider`**, so the price
+  charged and the carrier assigned always agree.
+- **A BoxNow locker must be in the order's country**; an unsynced locker is
+  accepted, a mismatched one is not.
 - **Operational alerts go to `tenant_admin_recipients()`**, not to
   `settings.ADMINS`. `shipping/alerts.py: send_ops_alert` falls back to
   the platform list only on the public schema or when the tenant carries
@@ -459,6 +578,13 @@ move `Order.status`, which the carrier events drive separately.
 - **Verified BoxNow webhook that cannot be applied.** The endpoint has
   already answered 200, so BoxNow will not retry and the transition is
   lost. `alert_admins_webhook_processing_failed` makes the drop loud.
+- **Order refused with "no active rate".** The country, kind or carrier
+  has no active `ShippingRate`, or the provider or kind is switched off.
+  The serializer answers a field-scoped 400; the fix is a rate row, not
+  code.
+- **Heavy cart to a capped destination.** `quote` raises
+  `ShippingWeightExceededError`; checkout already showed the option as
+  disabled through `exceeds_max_weight`.
 - **Cancel cascade refused.** ACS will not delete a voucher already on a
   pickup list; BoxNow will not cancel a parcel already accepted at a
   locker. The rejection is swallowed and recorded on
@@ -470,8 +596,15 @@ move `Order.status`, which the carrier events drive separately.
 | File | Role |
 |---|---|
 | `grooveshop-django-api/shipping/interfaces.py` | `ShippingCarrierInterface`, `_REGISTRY`, `register_provider`, `all_payload_keys` |
-| `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `available_options`, `free_shipping_info`, `sanitize_delivery_notes` |
+| `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `sanitize_delivery_notes` |
+| `grooveshop-django-api/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError` |
 | `grooveshop-django-api/shipping/models/provider.py` | `ShippingProvider` fields and kind-aware logo resolution |
+| `grooveshop-django-api/shipping/models/rate.py` | `ShippingRate`: fields, constraints, `clean()` |
+| `grooveshop-django-api/shipping/migrations/0011_convert_legacy_pricing_to_rates.py` | Settings-to-rates conversion per tenant |
+| `grooveshop-django-api/shipping/admin.py` | `ShippingRateInline` on `ShippingProviderAdmin` |
+| `grooveshop-django-api/shipping/carriers/flat_rate.py` | Merchant-fulfilled, lifecycle-only adapter |
+| `grooveshop-django-api/country/filters.py` | `?shippable=true` |
+| `grooveshop-django-api/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider` |
 | `grooveshop-django-api/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
 | `grooveshop-django-api/shipping/alerts.py` | `send_ops_alert` and the two operational alerts |
 | `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
@@ -480,12 +613,17 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments` and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |
 | `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
-| `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `supported_settlements`, `is_kind_enabled` |
+| `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
 | `grooveshop-django-api/shipping_boxnow/webhook.py` | Raw-bytes `data` extraction and HMAC verification |
 | `grooveshop-django-api/shipping_boxnow/views/webhook.py` | Tenant resolution and the response contract |
-| `grooveshop-django-api/shipping_boxnow/services.py` | Shipment creation, `apply_webhook_event`, locker sync, COD on delivery |
-| `grooveshop-django-api/shipping_boxnow/carrier.py` | BoxNow adapter and `supported_settlements` |
+| `grooveshop-django-api/shipping_boxnow/services.py` | Shipment creation, `apply_webhook_event`, locker sync (`skipped_no_country`), COD on delivery |
+| `grooveshop-django-api/shipping_boxnow/carrier.py` | BoxNow adapter, `supported_settlements`, the locker-country check in `validate_order_payload` |
+| `grooveshop-django-api/shipping_boxnow/models/locker.py` | `BoxNowLocker.country_code`, no default |
 | `grooveshop-django-api/pay_way/services.py` | `filter_by_carrier`, `filter_by_shipping_kind` |
 | `grooveshop-django-api/settings.py` | Beat cadences for every carrier task |
 | `grooveshop-storefront-ui-node-nuxt/shared/shipping/index.ts` | Checkout method to carrier mapping |
-| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step and locker pickers |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step, over-cap and error states, locker pickers |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/boxnow-widget.ts` | `BOXNOW_WIDGET_COUNTRIES`, `BOXNOW_FRAME_ORIGINS`, `boxNowWidgetCountry` |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | `frame-src` and `BOXNOW_ALLOWED_ORIGINS`, derived from the above |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useBoxNowWidget.ts` | `buildBoxNowIframeUrl`, `parseBoxNowSelectedLocker` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/BoxNowLockerPicker.vue` | The widget iframe, per delivery country and locale |

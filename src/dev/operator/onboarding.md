@@ -203,7 +203,11 @@ Seeding detail worth knowing:
   it reviewed. `manage.py legal_text_status` lists, per tenant, the
   pages still behind.
 - **The flat-rate carrier** is switched on (`_activate_default_carrier`)
-  so checkout has a delivery option before any courier contract.
+  so checkout has a delivery option before any courier contract. Its
+  price is the GR home-delivery `ShippingRate` that
+  `shipping/migrations/0011_convert_legacy_pricing_to_rates.py` creates
+  when the new schema migrates; without an active rate the carrier
+  would offer nothing.
 - **The default newsletter topic** (`user/services/subscription.py:
   ensure_default_newsletter_topic`) is what the default layout's
   newsletter band subscribes to; without it the band renders nothing.

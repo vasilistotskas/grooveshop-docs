@@ -158,7 +158,9 @@ controls both earning and redeeming. Flow page: [Loyalty](/dev/flows/loyalty).
 ### `shipping/`, `shipping_acs/`, `shipping_boxnow/`
 
 `shipping/` holds the carrier abstraction (`shipping/interfaces.py`), the
-`ShippingProvider` row and the shipping-options endpoint. `shipping_acs/`
+`ShippingProvider` row, the per-tenant `ShippingRate` table
+(`shipping/models/rate.py`, the only source of shipping price,
+availability and weight cap) and the shipping-options endpoint. `shipping_acs/`
 (`AcsShipment`, `AcsPickupList`, `AcsCodPayout`, `AcsStation`,
 `AcsTrackingEvent`) and `shipping_boxnow/` (`BoxNowShipment`,
 `BoxNowLocker`, `BoxNowParcelEvent`) each carry a `services.py` client and
