@@ -356,12 +356,15 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   fulfilled.** Both Stripe entry points stamp
   `metadata["payment_after_cancel"]`, log at ERROR and refuse to mint a
   shipment.
-- **Attribution is analytics, never authorisation.** Every input is
-  shopper-controlled; nothing reads `OrderAttribution` to price, gate
+- **Attribution is analytics, never authorisation.** Every input but the
+  agent protocol is shopper-controlled (that one needs the gateway's
+  `X-Internal-Gateway` secret); nothing reads `OrderAttribution` to price, gate
   or route an order, and a malformed `attribution` never fails a
   checkout (only its shape is validated).
-- **Every new order has exactly one attribution row.** No signal is a
-  `direct` row; a missing row means the order predates attribution.
+- **Every order placed through checkout has exactly one attribution
+  row.** No signal is a `direct` row, so for a checkout order a missing
+  row means it predates attribution. Demo-seeded and test-factory orders
+  have none either.
 - **A Viva order code is merchant-editable metadata, so it is not proof
   of ownership.** Tenant selection is decided by which tenant's
   credentials can retrieve the transaction.
