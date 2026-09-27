@@ -14,6 +14,11 @@ whose stored consent snapshot does not say `ads`.
 Every tracker id is **per tenant** with no platform or environment fallback —
 a shared id would mix ad accounts and analytics properties across merchants.
 
+Order acquisition source is deliberately **not** behind the banner: it is
+first-party, per-tab `sessionStorage`, keeps no click-id values, and leaves the
+browser only inside the shopper's own order. See
+[Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).
+
 ## Diagram
 
 ```mermaid
@@ -409,6 +414,7 @@ The script refuses to run unless the tenant's primary domain carries the
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useGA4.ts` | GA4 recommended events |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOpenAIPixel.ts` | ChatGPT Ads conversion pixel |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | `buildMetaPayload` and its consent short-circuit |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Order acquisition capture, outside the consent gate |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Server-side enrichment of the meta context |
 | `grooveshop-storefront-ui-node-nuxt/server/api/analytics/cookie-consent.post.ts` | Banner telemetry endpoint |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | Per-tenant tracker origins |

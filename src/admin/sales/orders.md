@@ -18,7 +18,9 @@ Every purchase, whether it came from the storefront, a guest checkout or an AI a
 | **Status** | The fulfilment state (see the table below). |
 | **Customer** | Name on the order and the email it was placed with. Guest orders show the same, just without a linked account. |
 | **Order** | Line count, total quantity and the amount the customer actually owes after discounts, loyalty points and gift cards. |
+| **Order source** | Where the customer came from before placing the order, as a coloured badge: the channel's name (Instagram, Google, a referring website, "AI agent (UCP)") coloured by its kind (see [Order source](#order-source) below). Empty for orders placed before the store started recording it. |
 | **Payment** | The financial state, independent of the fulfilment state. |
+| **Payment Method** | How the order is paid: the payment provider's name (Viva Wallet, Stripe) for an online payment, otherwise the method the customer picked, such as cash on delivery or bank transfer. |
 | **Shipment** | The courier's own state for the parcel (ACS or BoxNow), blank when no carrier is attached yet. |
 | **Shipping** | Tracking number, carrier and city, or "No tracking" and the city. |
 | **Created** | Date and time, with a relative age. |
@@ -27,7 +29,7 @@ Each row has two quick actions: **Download shipping voucher (PDF)** and **Custom
 
 ### Filters
 
-The right-hand panel offers, top to bottom: **Status Group** (Active, In Fulfillment, Completed, Problematic), **Payment Status** (each state plus "Needs Attention", which is Failed or Pending), **Document Type** (Receipt or Invoice and the label kinds), **Wholesale** (orders priced with a B2B customer group or retail), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), then the raw status and payment status, created and status-updated date ranges, country, region, payment method, the gateway that processed the charge, shipping provider, shipping kind and, for BoxNow orders, the parcel state. A date drill-down by creation date sits above the table.
+The right-hand panel offers, top to bottom: **Status Group** (Active, In Fulfillment, Completed, Problematic), **Payment Status** (each state plus "Needs Attention", which is Failed or Pending), **Document Type** (Receipt or Invoice and the label kinds), **Wholesale** (orders priced with a B2B customer group or retail), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), **Source type** and **Order source** (see [Order source](#order-source)), then the raw status and payment status, created and status-updated date ranges, country, region, payment method, the gateway that processed the charge, shipping provider, shipping kind and, for BoxNow orders, the parcel state. A date drill-down by creation date sits above the table.
 
 ### Search
 
@@ -47,7 +49,7 @@ The page is split into tabs:
 - **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty. Saving a change to the country, street, number or postcode checks the address the way checkout does: the postcode must match the country's format, the street must contain a letter, and the number must not be a postcode. An old order with an address that fails is not blocked from other edits; the check runs only when you change the address.
 - **Payment Information**: **Pay way** (what the customer chose), the editable **Payment status**, **Payment Method** (the gateway that took the charge), **Payment ID**, **Paid Amount**, and the read-only **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** stamped at checkout.
 - **Shipping & Tracking**: shipping provider, shipping kind, shipping price, tracking number, carrier name.
-- **Additional Information**: the customer's notes from checkout.
+- **Additional Information**: the customer's notes from checkout, then the read-only order source fields: **Source type**, **Order source**, **Traffic medium**, **Campaign name**, **Referrer host** and **Landing page**. All show "-" on an order placed before the store started recording them.
 
 Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
 
@@ -95,6 +97,34 @@ Only **Pending** and **Processing** orders can be canceled. **Completed**, **Can
 | **Canceled** | Nothing was collected and nothing is owed. Set when an unpaid order is canceled or comes back **Returned** (cash on delivery the customer refused or never collected, or an online payment that never completed), or when Viva Wallet reverses a payment that never completed. | The cancellation or the return itself, or Viva Wallet. |
 
 Once a payment is Completed, Refunded, Partially Refunded or Canceled, a late or duplicated provider message can never move it back to Pending or Failed.
+
+## Order source
+
+Every new order records where the customer came from: the ad, post, search result or website that brought them to the store in the browser tab they ordered from. It is worked out once, when the order is placed, and never changes afterwards.
+
+| Source type | Meaning |
+|---|---|
+| **Direct** | No trace of where the visit came from: a typed address, a bookmark, or an app that hides the link it opened. |
+| **Campaign** | A link you tagged with `utm_source` (a newsletter, an influencer's link, a QR code), not marked as paid. |
+| **Paid** | A paid ad click: the ad network's own click marker was on the link (Google Ads, Microsoft Ads, TikTok, X, LinkedIn, Pinterest ads), or a tagged link whose `utm_medium` says it was paid (`cpc`, `ppc`, `paid_social` and the like). Facebook and Instagram mark ordinary shared links the same way as their ads, so a Meta ad reads as **Paid** only when its link is tagged so. |
+| **Social** | Instagram, Facebook, TikTok, Pinterest, YouTube, X, LinkedIn or Reddit, whether from a link on the site or from the app's own built-in browser. |
+| **Search** | Google, Bing, DuckDuckGo or Yahoo search results. |
+| **Referral** | Any other website that linked to the store, shown by its address, and AI assistants such as ChatGPT and Perplexity. |
+| **AI agent** | The order was placed by an AI agent through the store's agent checkout (UCP or ACP), not by a person in the storefront. |
+
+**Order source** is the channel's name (Instagram, Google, the referring website) and is what the list column shows. **Traffic medium** and **Campaign name** are the `utm_medium` and `utm_campaign` of a tagged link. **Referrer host** is the website the customer arrived from, without the page, and **Landing page** is the first page they saw, without its parameters.
+
+The dashboard's **Orders by source** chart counts the last 30 days of orders by the same source. See [Dashboard](/admin/getting-started/dashboard).
+
+### Tag a link so its orders are recognised
+1. Add `utm_source`, `utm_medium` and `utm_campaign` to the link you share, e.g. `?utm_source=newsletter&utm_medium=email&utm_campaign=autumn-sale`.
+2. Orders placed from that visit show the source `newsletter` with type **Campaign**, and the campaign name on the order page.
+3. For an ad, set `utm_medium` to `cpc` or `paid_social` so the orders read as **Paid**. Google and Microsoft ads that add their own click marker are recognised as paid without it.
+
+### See the orders from one channel
+1. Open **Sales → Orders**.
+2. Pick the channel in **Order source**, or a whole kind in **Source type** (for example every **Social** order).
+3. Direct orders have no source name, so reach them through **Source type → Direct**.
 
 ## Tasks
 
@@ -165,6 +195,7 @@ A guest order has no account in **Customer Information**. Everything else works 
 - **Two fields look like the payment method.** **Pay way** is the dropdown, and it holds what the customer chose at checkout. **Payment Method** next to it is written by the platform and records which gateway took the money (`stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`); it is used to match incoming provider messages, so leave it alone.
 - **Wholesale orders** keep the group name and discount percent they were priced with; changing the customer's group later does not touch old orders. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
 - **A Shipment column without a value** means no voucher has been asked for yet, or the order is older than the current carrier setup. The voucher button will say so.
+- **The order source is a guide, not proof.** Anyone can type the tags into a link, and some apps hide where a visit came from, so a real Instagram visit can show as **Direct**. It is counted for the browser tab the customer ordered in: the first page they opened in that tab sets it, and only a later tagged or ad link replaces it. Returning from the card payment page never changes it.
 - Superusers also see the raw **Order History** and **Stock Logs** under [Audit & logs](/admin/system/audit-and-logs).
 
 ## Related
