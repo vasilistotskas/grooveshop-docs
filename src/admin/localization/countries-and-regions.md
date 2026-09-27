@@ -14,7 +14,7 @@ Subscription topics, in contrast, are yours: they sit under <span class="sidebar
 | Data | What it holds | What it controls |
 |---|---|---|
 | **Countries** | Every country in the world, each with its two- and three-letter codes, the numeric code, the telephone dialling code, a flag image, and the country name in Greek, English and German. | The country picker on the checkout and account address forms; the country recorded on every order and user address; the phone format checked for that country. |
-| **Regions** | A code and the country it belongs to, with names in the same three languages. | The region picker that appears once a country is chosen. Greek prefectures, Cypriot districts and German states are seeded. For a country that has regions, a region is required and must belong to that country, at checkout and when staff edit an address. A country without regions is checked out without one. |
+| **Regions** | A code and the country it belongs to, with names in the same three languages. | The region picker that appears once a country is chosen. The Greek regions and the Cypriot districts are seeded. For a country that has regions, a region is required and must belong to that country, at checkout and when staff edit an address. A country without regions is checked out without one. |
 
 Effects on your store:
 
