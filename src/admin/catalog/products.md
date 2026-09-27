@@ -52,7 +52,7 @@ The form is split into tabs. Above the tabs, language tabs switch between **Gree
 | **Brand** | Autocomplete. Brand names are not translated. |
 | **Active** | Off keeps the product out of the storefront and the search index. |
 | **Name** | Per language. The slug is pre-filled from the name on a new product. |
-| **Description** | Per language, rich text editor. HTML is sanitised on save. |
+| **Description** | Per language, rich text editor; what it accepts is described under [Blog posts](/admin/blog/posts). |
 
 ### Pricing & Inventory
 

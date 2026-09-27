@@ -41,7 +41,7 @@ Language tabs (Greek default, English, German) apply to **Title**, **Subtitle** 
 
 | Section | Fields |
 |---|---|
-| **Content** | **Title**, **Subtitle**, **Body** (rich text, sanitised on save). |
+| **Content** | **Title**, **Subtitle**, **Body** (rich text; see **Rich text and video** below). |
 | **Media** | **Image**: the cover image; usual formats plus SVG. |
 | **Organization** | **Slug** (pre-filled from the title), **Category**, **Tags** (blog tags, multi-select). |
 | **Publishing** | **Author**, **Featured**, **Is Published**, **Published At**. |
@@ -74,6 +74,7 @@ Untick **Is Published**. Visitors get a 404 at `/blog/post/<id>/<slug>` and so d
 
 ## Things to know
 
+- **Rich text and video.** The body keeps what the editor produces: formatting, links, images and tables. To embed a video, paste a YouTube or Vimeo link into **Insert → Media**; video files and other hosts are refused. Anything the storefront cannot show, including markup pasted through **Source code**, stops the save with a message naming it instead of being removed silently. The same rule applies to every rich-text field: product and category descriptions, content pages and payment instructions.
 - **Storefront visibility** needs Is Published on and Published At not in the future. A draft is invisible to everyone, you included: signing in to the admin does not let you preview one on the storefront, so the only way to see a post as a reader is to publish it.
 - **Search index**: only posts with Is Published on are indexed, and the index ignores the date. A scheduled post can therefore turn up in search results before its publication time, even though the blog pages still hide it. Keep long-lead posts as drafts until close to the date.
 - **Comments cannot be switched off for one post.** There is no per-post setting; the store-wide **BLOG_COMMENTS_ENABLED** under <span class="sidebar-path">Settings → Extra Settings</span> is all or nothing. To close one conversation, unapprove its comments; see [Comments](/admin/blog/comments).

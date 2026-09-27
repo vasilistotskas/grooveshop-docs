@@ -20,7 +20,7 @@ A content page is a slug plus a rich-text body per language. It is meant for the
 
 **Search** matches title and slug. **Filter**: Is Published.
 
-The form has **Content** (**Title** and **Body** per language through the Greek / English / German tabs; the body is a rich-text editor and HTML is sanitised on save), **Organization** (**Slug**, **Is Published**), collapsed **SEO** (**Seo Title**, **Seo Description**, **Seo Keywords**) and collapsed **System**. A **Translations** tab lists the languages that already have a title.
+The form has **Content** (**Title** and **Body** per language through the Greek / English / German tabs; the body is a rich-text editor; what it accepts is described under [Blog posts](/admin/blog/posts)), **Organization** (**Slug**, **Is Published**), collapsed **SEO** (**Seo Title**, **Seo Description**, **Seo Keywords**) and collapsed **System**. A **Translations** tab lists the languages that already have a title.
 
 ## Where a page shows on the storefront
 
