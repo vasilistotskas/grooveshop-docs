@@ -283,6 +283,53 @@ arrived through a real checkout — see
   confirmation email additionally holds a short Redis execution lock so
   an OOM-killed worker cannot permanently block a resend.
 
+### 9. Acquisition source
+
+Every order records where the shopper came from, as one
+`OrderAttribution` row written in the creation transaction by
+`OrderAttributionService.record` (`order/services.py`), on both paths.
+
+**Capture, in the browser.** `app/plugins/attribution.client.ts` runs
+once per page load, synchronously, and reads `window.location` and
+`document.referrer`: the URL the browser landed on, before any client
+navigation. `app/composables/useOrderAttribution.ts: capture` keeps
+three UTM values (trimmed, length-capped), the **names** of the
+click-id parameters present (the `ClickIdsEnum` list; values identify a
+click to an ad network and are never kept), the referrer's origin when
+it is external, and the landing path, in per-tab `sessionStorage`. The
+tab's first page load always writes it, even a direct one; afterwards
+only a visit carrying a UTM or a click id replaces it. A later plain
+referral is never a new landing: it is a Viva or 3-D Secure return,
+which must not relabel the tab as a referral from the PSP. There is no
+consent gate, because nothing persistent is stored and it is sent only
+with the shopper's own order.
+
+**Transport.** `useCheckoutSubmit.ts` adds the stored value as
+`attribution` to the `POST /order` body when there is one.
+`server/api/orders/index.post.ts` forwards `clientIdentityHeaders(event)`
+so Django sees the shopper's `User-Agent`, not the pod's: an in-app
+browser that strips `Referer` still names itself there. The agent
+gateway sends only `attribution.agentProtocol`; see
+[Agentic commerce](/dev/flows/agentic-commerce).
+
+**Classification, in Django.** `order/attribution.py: classify` is pure
+and first-match-wins: agent protocol, then `utm_source` (`paid` when the
+medium matches GA4's paid rule or a paid click id is present, else
+`campaign`), then click id, known referrer host, in-app browser
+`User-Agent`, any other external referrer, and finally `direct`. The
+tenant's own domains (`tenant/middleware.py: tenant_domain_set`) never
+count as a referrer. Only the referrer's host and the landing path (no
+query) are stored. The result is an `OrderSourceType`
+(`order/enum/attribution.py`) plus `source`, `medium`, `campaign`,
+`referrer_host` and `landing_path`.
+
+**Read side.** `OrderSerializer.attribution` on order list and detail
+(null for an order older than the table), the `source` / `sourceType`
+filters (`order/filters.py`), and in the admin a source badge column,
+two filters, read-only fields on the order's Additional Information tab
+and an "Orders by source" dashboard doughnut. The per-field reference
+is section 3.4 of [Order system](/dev/django/reference/order-system).
+
 ## Invariants
 
 - **Routing is on settlement and capability, never on a provider
@@ -309,6 +356,12 @@ arrived through a real checkout — see
   fulfilled.** Both Stripe entry points stamp
   `metadata["payment_after_cancel"]`, log at ERROR and refuse to mint a
   shipment.
+- **Attribution is analytics, never authorisation.** Every input is
+  shopper-controlled; nothing reads `OrderAttribution` to price, gate
+  or route an order, and a malformed `attribution` never fails a
+  checkout (only its shape is validated).
+- **Every new order has exactly one attribution row.** No signal is a
+  `direct` row; a missing row means the order predates attribution.
 - **A Viva order code is merchant-editable metadata, so it is not proof
   of ownership.** Tenant selection is decided by which tenant's
   credentials can retrieve the transaction.
@@ -351,17 +404,27 @@ arrived through a real checkout — see
   fail an otherwise fulfillable checkout — unless another session
   actually took the stock, in which case the whole creation rolls back
   with `InsufficientStockError`.
+- **Order attributed as `direct` although the shopper came from an
+  ad.** `sessionStorage` was blocked (private mode, quota), the order
+  was placed in a different tab from the one the shopper landed in, or
+  an in-app browser stripped both `Referer` and its UA marker. Checkout
+  is unaffected; the capture swallows storage errors.
 
 ## Source
 
 | File | Role |
 |---|---|
 | `grooveshop-django-api/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `create_order_from_cart_offline`, `_consume_stock_for_order`, amount verification, `validate_shipping_address` |
+| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `create_order_from_cart_offline`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `OrderAttributionService` |
 | `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry |
 | `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 |
 | `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
+| `grooveshop-django-api/order/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |
+| `grooveshop-django-api/order/models/attribution.py` | `OrderAttribution` |
+| `grooveshop-django-api/order/enum/attribution.py` | `OrderSourceType` |
+| `grooveshop-django-api/order/serializers/order.py` | `OrderAttributionInputSerializer` (write), `OrderAttributionSerializer` (read) |
+| `grooveshop-django-api/order/filters.py` | `source` and `sourceType` order filters |
 | `grooveshop-django-api/order/stock.py` | `StockManager` reserve, convert, decrement, increment, cleanup |
 | `grooveshop-django-api/pay_way/services.py` | `is_provider_configured`, `filter_by_carrier`, `filter_by_shipping_kind`, `process_payment` |
 | `grooveshop-django-api/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
@@ -369,7 +432,9 @@ arrived through a real checkout — see
 | `grooveshop-django-api/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `create_payment_intent` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, pay-way and settings loading |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | Submit orchestration, idempotency key, the three payment flows |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Per-tab landing capture and the override rule |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/attribution.client.ts` | Runs the capture once per page load |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckout.ts` | Reserve / release / create-intent calls |
-| `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Order proxy, Meta context injection, upstream error forwarding |
+| `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Order proxy, Meta context injection, shopper identity headers, upstream error forwarding |
 | `grooveshop-storefront-ui-node-nuxt/server/routes/checkout/viva-return.get.ts` | Viva redirect translation |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/checkout/success/[uuid].vue` | Success page, payment-status polling, purchase pixels |

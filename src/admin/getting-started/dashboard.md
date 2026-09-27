@@ -28,6 +28,7 @@ Three buttons at the top: **New Product**, **Pending Orders** (the orders list f
 
 - **Orders and revenue, last 14 days.** Bars are orders per day, the line is paid revenue per day in euro.
 - **Order status distribution.** A doughnut with the count of orders per status (Pending, Processing, Shipped, Delivered, Completed, Canceled, Returned, Refunded).
+- **Orders by source, last 30 days.** A doughnut with the orders placed in the last 30 days per [order source](/admin/sales/orders#order-source): the six biggest sources by name, the rest together as **Other**. Orders placed before the store started recording the source are left out.
 
 ### Queues
 

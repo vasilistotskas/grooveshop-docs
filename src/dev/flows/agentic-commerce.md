@@ -166,6 +166,15 @@ name and is refused with that explanation, never a fabricated id.
 detail deliberately does not decode, and an event needs a shipment timestamp
 upstream does not expose.
 
+Completing a checkout, UCP or ACP, places the order through
+`internal/checkout/flow.go: Flow.Complete`, which sets
+`attribution.agentProtocol` on the `POST /order` body
+(`internal/django/client_checkout.go: OrderAttribution`) to the owning
+session's protocol, `ucp` or `acp`. Django books such an order with source
+type `agent` ahead of every other signal, so it reads as "AI agent (UCP)" or
+"AI agent (ACP)" in the admin; see
+[Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).
+
 ### An ONLINE payment method is not an instrument
 
 This is the sharpest rule in the gateway, and it fails closed.
@@ -474,6 +483,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/media/url.go` | Asset origin fallback |
 | `grooveshop-agent-gateway/internal/chat/handler.go`, `bridge.go` | Chatbot and withheld tools |
 | `grooveshop-agent-gateway/internal/checkout/store.go` | Redis keys and TTLs |
+| `grooveshop-agent-gateway/internal/checkout/flow.go`, `internal/django/client_checkout.go` | Order placement and its `agentProtocol` attribution |
 | `grooveshop-agent-gateway/internal/obs/health.go` | `/healthz`, `/readyz` |
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
 | `grooveshop-django-api/tenant/views.py`, `tenant/serializers.py` | `tenant_resolve` and the folded gates |
