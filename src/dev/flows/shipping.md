@@ -458,18 +458,19 @@ On the storefront, `shared/utils/boxnow-widget.ts` (import-free) is the
 single source for the widget per country: `BOXNOW_WIDGET_COUNTRIES` maps
 GR to `https://widget-v5.boxnow.gr` and CY to `https://widget-v5.boxnow.cy`,
 each with its `countryCode` query value and the lowercase country name
-the widget posts back as `boxnowCountry`. `BOXNOW_FRAME_ORIGINS` and
-`boxNowWidgetCountry(alpha2)` derive from it, and so do the CSP
-`frame-src` and `BOXNOW_ALLOWED_ORIGINS` in `shared/utils/csp.ts`,
-including the redirect origins the iframe hops through. Adding a country
-is one verified line there plus a rate.
-`app/composables/useBoxNowWidget.ts: buildBoxNowIframeUrl` builds the
-host and `countryCode` for the delivery country and the page locale, and
-throws for a country with no mapping, so checkout disables BoxNow rather
-than loading the wrong map. `parseBoxNowSelectedLocker` compares
-`boxnowCountry` case-insensitively and returns
-`boxnowLockerCountryCode`. Changing the delivery country clears the
-chosen locker.
+the widget posts back as `boxnowCountry`. `BOXNOW_FRAME_ORIGINS` (every
+country host plus the redirect origins the iframe hops through),
+`BOXNOW_ALLOWED_ORIGINS` (the postMessage allowlist) and
+`boxNowWidgetCountry(alpha2)` derive from it, and `shared/utils/csp.ts`
+builds `frame-src` from `BOXNOW_FRAME_ORIGINS`. Adding a country is one
+verified line there plus a rate. In the same file,
+`buildBoxNowIframeUrl` builds the host and `countryCode` for the
+delivery country and the page locale, and throws for a country with no
+mapping, so checkout disables BoxNow rather than loading the wrong map.
+`parseBoxNowSelectedLocker` maps `boxnowCountry` case-insensitively to
+`boxnowLockerCountryCode`, and `BoxNowLockerPicker.vue` ignores a locker
+whose map is missing or belongs to another country. Changing the
+delivery country clears the chosen locker.
 
 The webhook is `POST /boxnow/webhook/`, registered at the URL root rather
 than under `api/v1/` so BoxNow reaches it without a language prefix or
@@ -633,7 +634,6 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/settings.py` | Beat cadences for every carrier task |
 | `grooveshop-storefront-ui-node-nuxt/shared/shipping/index.ts` | Checkout method to carrier mapping |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step, over-cap and error states, locker pickers |
-| `grooveshop-storefront-ui-node-nuxt/shared/utils/boxnow-widget.ts` | `BOXNOW_WIDGET_COUNTRIES`, `BOXNOW_FRAME_ORIGINS`, `boxNowWidgetCountry` |
-| `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | `frame-src` and `BOXNOW_ALLOWED_ORIGINS`, derived from the above |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useBoxNowWidget.ts` | `buildBoxNowIframeUrl`, `parseBoxNowSelectedLocker` |
-| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/BoxNowLockerPicker.vue` | The widget iframe, per delivery country and locale |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/boxnow-widget.ts` | `BOXNOW_WIDGET_COUNTRIES`, `BOXNOW_FRAME_ORIGINS`, `BOXNOW_ALLOWED_ORIGINS`, `boxNowWidgetCountry`, `buildBoxNowIframeUrl`, `parseBoxNowSelectedLocker` |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | `frame-src`, built from `BOXNOW_FRAME_ORIGINS` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/BoxNowLockerPicker.vue` | The widget iframe per delivery country and locale; ignores a locker from another country's map |

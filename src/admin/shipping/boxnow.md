@@ -80,9 +80,9 @@ BoxNow also delivers from Greek shops to its locker network in Cyprus. It uses t
 ### Set it up
 
 1. Open <span class="sidebar-path">Shipping → Shipping Providers</span>, then the BoxNow row, and scroll to **Rates**.
-2. Add a line: **Country** Cyprus, **Shipping kind** pickup point, your **Price**, a **Free shipping threshold** if you want one, and **Max weight (grams)** `4000`. BoxNow accepts at most 4 kg per parcel to Cyprus.
+2. Add a line: **Country** Cyprus, **Shipping Kind** pickup point, your **Price**, a **Free Shipping Threshold** if you want one, and **Max Weight (grams)** `4000`. BoxNow accepts at most 4 kg per parcel to Cyprus.
 3. Tick **Is Active** and save. Cyprus now appears in the checkout country list, and BoxNow is offered for it. Couriers without a Cyprus rate are not.
-4. Check that the Cypriot lockers are in <span class="sidebar-path">Shipping → BoxNow Lockers</span>: search for a Cypriot postcode, such as `1010` in Nicosia. They arrive with the nightly sync; if none are there yet, run **Sync lockers from BoxNow API**.
+4. Check that the Cypriot lockers are in <span class="sidebar-path">Shipping → BoxNow Lockers</span>: filter **Country Code** by `CY`. They arrive with the nightly sync; if none are there yet, run **Sync lockers from BoxNow API**.
 5. Place a test order to a Cypriot locker, print its voucher and send it to BoxNow so they can confirm the setup. BoxNow asks for this before you start shipping to Cyprus.
 
 For the general steps of adding a country, see [Shipping providers](/admin/shipping/providers).

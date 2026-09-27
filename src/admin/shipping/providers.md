@@ -46,7 +46,7 @@ The storefront asks the platform for one option per active provider and supporte
 3. The row has an active rate for the customer's delivery country and that kind.
 4. The courier's own check for that kind passes. ACS Smartpoint pickup additionally needs the **ACS_SMARTPOINT_ENABLED** setting. Both couriers refuse every kind when the store has no credentials for them.
 
-An option whose rate has a **Max weight (grams)** below the weight of the cart is still listed, but greyed out with the reason, so the customer sees why it cannot be chosen rather than an empty step. Options are sorted by **Priority**, then code. Each card also carries the payment methods that this courier and kind can settle, worked out from what the courier can physically collect and from the exclusion rows above:
+An option whose rate has a **Max Weight (grams)** below the weight of the cart is still listed, but greyed out with the reason, so the customer sees why it cannot be chosen rather than an empty step. Options are sorted by **Priority**, then code. Each card also carries the payment methods that this courier and kind can settle, worked out from what the courier can physically collect and from the exclusion rows above:
 
 | Courier and kind | Payment settlements offered |
 |---|---|
@@ -62,10 +62,10 @@ Prices are set per country on the provider row itself, in the **Rates** table of
 | Field | Meaning |
 |---|---|
 | **Country** | The delivery country. |
-| **Shipping kind** | Home delivery or pickup point. The row must support that kind, otherwise the line cannot be saved. |
+| **Shipping Kind** | Home delivery or pickup point. The row must support that kind, otherwise the line cannot be saved. |
 | **Price** | What the customer pays for shipping, in the store's currency. |
-| **Free shipping threshold** | Cart subtotal from which this option ships free. Leave it empty if it is never free. |
-| **Max weight (grams)** | The heaviest cart this option accepts. Leave it empty for no limit. |
+| **Free Shipping Threshold** | Cart subtotal from which this option ships free. Leave it empty if it is never free. |
+| **Max Weight (grams)** | The heaviest cart this option accepts. Leave it empty for no limit. |
 | **Is Active** | Untick to stop offering the option without losing its price. |
 
 What follows from it:
@@ -108,7 +108,7 @@ Deleting a key is safe: every key has a built-in default.
 ### Change a shipping price
 
 1. Open the provider row and scroll to **Rates**.
-2. On the line for that country and kind, edit **Price**, **Free shipping threshold** or **Max weight (grams)**.
+2. On the line for that country and kind, edit **Price**, **Free Shipping Threshold** or **Max Weight (grams)**.
 3. Save. Checkout and the "free shipping from" banner use the new values straight away.
 
 ### Offer a new country
