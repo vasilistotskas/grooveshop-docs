@@ -45,7 +45,7 @@ Header actions: **Generate codes** (see Coupon codes) and **Duplicate**, which c
 |---|---|
 | **Percentage off** | A percent off the eligible lines. |
 | **Fixed amount off** | An amount off, spread across the eligible lines. |
-| **Free shipping** | Removes the shipping cost. Always combines with other promotions; **Stackable** is ignored. |
+| **Free shipping** | Removes the shipping cost. Always combines with other promotions; **Stackable** is ignored. It never opens a destination: the delivery country still needs an active shipping rate. |
 | **Buy X get Y discounted** | For every X eligible units, Y units from the reward pool get the given percent off. |
 | **Free gift item** | Adds the gift product to the order at no charge when the conditions hold. |
 

@@ -13,16 +13,16 @@ Subscription topics, in contrast, are yours: they sit under <span class="sidebar
 
 | Data | What it holds | What it controls |
 |---|---|---|
-| **Countries** | Two- and three-letter codes, the numeric code, the telephone dialling code, a flag image, and the country name in Greek, English and German. | The country picker on the checkout and account address forms; the country recorded on every order and user address. |
-| **Regions** | A code and the country it belongs to, with names in the same three languages. | The region picker that appears once a country is chosen. Greek prefectures and German states are seeded. |
+| **Countries** | Every country in the world, each with its two- and three-letter codes, the numeric code, the telephone dialling code, a flag image, and the country name in Greek, English and German. | The country picker on the checkout and account address forms; the country recorded on every order and user address; the phone format checked for that country. |
+| **Regions** | A code and the country it belongs to, with names in the same three languages. | The region picker that appears once a country is chosen. The Greek regions and the Cypriot districts are seeded. For a country that has regions, a region is required and must belong to that country, at checkout and when staff edit an address. A country without regions is checked out without one. |
 
 Effects on your store:
 
-- A customer can only ship to a country that exists in the list. Your shipping providers then decide whether they serve it.
+- A customer can only ship to a country that one of your shipping providers has an active rate for. Every country is already in the list, so offering a new one is up to you: add a rate, see [Shipping providers](/admin/shipping/providers#offer-a-new-country). Checkout lists only those countries; the account profile still offers the whole list.
 - VAT rates are attached to products, not to countries; see [VAT rates](/admin/sales/vat-rates).
 - The pickers are cached under the **Regions & Countries** surface; a change made by the platform may need a purge, see [Cache](/admin/system/cache).
 
-To add a country or fix a region name, ask the platform.
+To fix a country or region name, or to add regions for a country, ask the platform.
 
 ## Store domain records (platform)
 

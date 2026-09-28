@@ -1,6 +1,6 @@
 ---
 title: Checkout & payment
-description: "Cart to paid order: stock reservation, address and pay-way validation, the two order-creation paths, and every payment provider's flow with its webhook."
+description: "Cart to paid order: stock reservation, country-aware address and phone validation, shipping-rate enforcement, pay-way validation, the two order-creation paths, and every payment provider's flow with its webhook."
 ---
 
 # Checkout & payment
@@ -104,11 +104,48 @@ method plus the locker or station id the method requires) and
 value that will actually be submitted, so the error appears on the step
 that owns the field instead of as a late 400.
 
+**Phones follow the country, not a hardcoded `+30`.** The country API
+exposes a read-only, derived `phone_metadata` on every country
+(`country/serializers.py`, built by `country/phone.py` from
+`phonenumbers.PhoneMetadata.metadata_for_region` and cached; never
+stored): `national_number_pattern`, `possible_lengths`,
+`national_prefix_for_parsing` and `example_mobile`. `app/utils/phone.ts`
+uses it and no phone library of its own:
+
+- `normalizePhone(raw, country)` passes a leading `+` through, turns
+  `00` into `+`, strips the national prefix and prepends the dial code,
+  guarding against a number typed with its dial code already in it.
+- `isPlausiblePhone(raw, country)` checks the national pattern and
+  lengths; any other `+` number gets a plain E.164 check, so a Greek
+  mobile can ship to a Cypriot locker.
+- `stripDialCodeForDisplay` and `dialCodeLabel` drive the dial-code
+  badge, which follows the delivery country in checkout, the form's
+  country in the address book and the profile country in account
+  settings. The validation message quotes the country's `example_mobile`.
+
+The storefront always submits E.164; `PHONENUMBER_DEFAULT_REGION` on the
+Django side only matters for input that is not.
+
 Django re-validates in `OrderService.validate_shipping_address`: the nine
 required fields, an email format check, a phone length band, a country
-check, and then whatever the chosen carrier adds through
+check, **an active shipping rate for the chosen carrier, kind and
+country**, and then whatever the chosen carrier adds through
 `ShippingService.validate_order_payload`. Carrier rules live in the
 adapter, not here — see [Shipping](/dev/flows/shipping).
+
+**Region is required only where the country has regions, and must belong
+to it.** `core/validators/address.py: address_errors` owns both rules,
+and `region` is part of `ADDRESS_FIELDS`, so `Order.clean`,
+`UserAddress.clean` and the serializers all inherit them;
+`UserAddressWriteSerializer.region` is optional at the field level for
+that reason. The Country API exposes a read-only `has_regions`, and the
+storefront's region field (`required`, disabled state and Zod rule)
+follows `selectedCountry.hasRegions` in checkout and the address forms.
+The country list itself is the full ISO 3166-1 set, seeded by
+`country/migrations/0012_seed_iso_countries.py`; only a rate makes a
+country shippable. `order/serializers/order.py` returns field-scoped 400s for a
+region in another country, a carrier with no active rate and a cart over
+the rate's weight cap.
 
 Two deliberate asymmetries: the storefront requires a street number that
 Django allows blank (the courier voucher needs one), and the Greek VAT
@@ -118,9 +155,13 @@ buyer never gets a late rejection.
 ### 4. Shipping method decides which pay-ways exist
 
 `GET /api/v1/shipping/options` (`shipping/services.py:
-ShippingService.available_options`) returns the
-(provider, kind) matrix for active providers that have a registered
-adapter, and each row carries the pay-ways that combination can settle.
+ShippingService.available_options`) requires the delivery country and
+returns one row per active `ShippingRate` for it, and each row carries
+the pay-ways that combination can settle, plus `max_weight_grams` and
+`exceeds_max_weight`. The checkout's country list comes from
+`GET /api/v1/country?shippable=true`, so the shopper can only pick a
+country the store has a rate for; a saved address elsewhere switches the
+form to a new address.
 `GET /api/v1/pay_way` applies the same rules through
 `pay_way/filters.py`, which routes to `PayWayService.filter_by_carrier`
 when a provider code is present and to `filter_by_shipping_kind` when it
@@ -131,6 +172,17 @@ Order creation re-applies both layers in
 `order/views/order.py: OrderViewSet._validate_pay_way_for_order`, plus a
 credentials gate (`PayWayService.is_provider_configured`). A stale client
 cannot place an order with a method checkout would never have offered.
+
+**Shipping is priced from the rate, never from a setting.** Every
+caller — both order-creation paths and `cart/create-payment-intent` —
+goes through `OrderService.shipping_cost`, which calls
+`ShippingService.quote`. A free-shipping promotion zeroes the price but
+still calls `ShippingService.assert_available`, so it cannot ship to a
+country the store does not serve. The storefront reads no shipping
+setting either: `shippingPrice` is the live option price or `null`
+(shown as "—"), and a failed options fetch is an error state with a
+retry that blocks the step, not a fallback number.
+`cart/serializers/cart.py` requires `country_id` for the same reason.
 
 ### 5. Order creation: two paths, one endpoint
 
@@ -341,6 +393,10 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   and refused at checkout-session creation
   (`PayWayService.is_provider_configured`). See
   [Multi-tenancy](/dev/platform/multi-tenancy).
+- **Shipping never falls back to settings.** No active `ShippingRate`
+  means no option, no quote and a 400 at order creation, on both sides
+  (`shipping/services.py`, `order/services.py`,
+  `app/composables/useCheckoutForm.ts`).
 - **The charged amount is always `Order.calculate_order_total_amount()`.**
   Every charge site, every verification and every webhook amount guard
   reads it; `total_price` is the undiscounted figure and charging it is
@@ -418,7 +474,15 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | File | Role |
 |---|---|
 | `grooveshop-django-api/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `create_order_from_cart_offline`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `OrderAttributionService` |
+| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `create_order_from_cart_offline`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `OrderAttributionService` |
+| `grooveshop-django-api/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
+| `grooveshop-django-api/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
+| `grooveshop-django-api/shipping/services.py` | `quote`, `assert_available`, `available_options` |
+| `grooveshop-django-api/country/serializers.py` | `phone_metadata` and `has_regions` fields |
+| `grooveshop-django-api/country/migrations/0012_seed_iso_countries.py` | The full ISO 3166-1 country seed |
+| `grooveshop-django-api/country/phone.py` | Phone metadata from `phonenumbers` |
+| `grooveshop-django-api/country/filters.py` | `?shippable=true` |
+| `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id` |
 | `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry |
 | `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 |
 | `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
@@ -433,7 +497,8 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
 | `grooveshop-django-api/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
 | `grooveshop-django-api/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `create_payment_intent` |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, pay-way and settings loading |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, shippable countries, shipping options and their error state, pay-way loading |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/phone.ts` | `normalizePhone`, `isPlausiblePhone`, `stripDialCodeForDisplay`, `dialCodeLabel` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | Submit orchestration, idempotency key, the three payment flows |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Per-tab landing capture and the override rule |
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/attribution.client.ts` | Runs the capture once per page load |
