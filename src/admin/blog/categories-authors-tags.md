@@ -50,14 +50,14 @@ An author is a profile attached to exactly one user account. A post's **Author**
 | Column | Meaning |
 |---|---|
 | **User** | Full name (or username) and email. |
-| **Bio** | First 50 characters of the biography. |
+| **Bio** | The biography's first 50 characters, as plain text. |
 | **Posts** | Number of posts. |
 | **Total likes received** | Likes across the author's published posts. |
 | **Website** | Link, if set. |
 
 **Search** matches the user's email, username, first and last name, and the bio. No filters.
 
-The form: **Basic Information** (**User**, **Website**), **Biography** (**Bio** per language), collapsed **Statistics**.
+The form: **Basic Information** (**User**, **Website**), **Biography** (**Bio** per language), collapsed **Statistics**. **Bio** uses the same rich-text editor as a post body: paragraphs, bold, links and lists show on the author page as written (see [Posts](/admin/blog/posts#things-to-know)).
 
 ### Tasks
 
