@@ -1,6 +1,6 @@
 {
   "name": "grooveshop-docs",
-  "version": "1.2.30",
+  "version": "1.2.31",
   "private": true,
   "description": "GrooveShop platform documentation: tenant-admin guide (el/en) and developer reference",
   "type": "module",
