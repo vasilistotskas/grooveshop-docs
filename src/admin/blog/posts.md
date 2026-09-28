@@ -67,7 +67,7 @@ Tabs under the form: **Translations** (one row per language with title and subti
 3. Do not run **Publish selected posts** on it: the action overwrites **Published At** with now and publishes immediately.
 
 ### Add questions and answers (FAQ)
-1. In the **Body**, put the cursor where the questions go and choose **Insert → Accordion** (or the accordion button on the toolbar). The editor's own labels for it are in English.
+1. In the **Body**, put the cursor where the questions go and choose **Insert → Accordion** (or the accordion button on the toolbar). With the admin in Greek it reads **Εισαγωγή → Ερώτηση & απάντηση**.
 2. Replace the placeholder title with the question and the text under it with the answer. The answer can hold any formatting, links or lists.
 3. Insert one item per question; items placed one after another show as one list.
 
