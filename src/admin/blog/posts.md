@@ -66,6 +66,13 @@ Tabs under the form: **Translations** (one row per language with title and subti
 2. The list shows **Scheduled**. The storefront shows the post from that moment on, with no further action.
 3. Do not run **Publish selected posts** on it: the action overwrites **Published At** with now and publishes immediately.
 
+### Add questions and answers (FAQ)
+1. In the **Body**, put the cursor where the questions go and choose **Insert → Accordion** (or the accordion button on the toolbar). The editor's own labels for it are in English.
+2. Replace the placeholder title with the question and the text under it with the answer. The answer can hold any formatting, links or lists.
+3. Insert one item per question; items placed one after another show as one list.
+
+On the storefront each question is a bar in the store's accent colour, like the mobile footer's sections, and the answer opens when the reader taps it. Every item is saved closed, whatever state it had in the editor, and the reader opens the one they want.
+
 ### Feature a post
 Tick **Featured** in the list or on the form. Featured posts are exposed to the storefront for the featured rails and listings that use the flag.
 
