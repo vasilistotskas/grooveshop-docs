@@ -93,7 +93,6 @@ Every price change is kept in the rate's history, so you can see who changed wha
 | `min_weight_kg`, `max_weight_kg` | ACS | Bounds applied to the parcel weight sent to ACS. |
 | `nearest_limit` | ACS | Maximum number of stations returned by the "nearest lockers" search. |
 | `default_voucher_language` | ACS | Language printed on the voucher. Greek unless you change it. |
-| `default_map_center`, `default_map_zoom`, `tile_provider` | ACS | How the map looks in the Smartpoint picker. |
 
 Deleting a key is safe: every key has a built-in default.
 
