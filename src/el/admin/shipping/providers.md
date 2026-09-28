@@ -93,7 +93,6 @@ description: Οι εγγραφές των courier που ενεργοποιού�
 | `min_weight_kg`, `max_weight_kg` | ACS | Όρια που εφαρμόζονται στο βάρος δέματος που στέλνεται στην ACS. |
 | `nearest_limit` | ACS | Μέγιστος αριθμός καταστημάτων που επιστρέφει η αναζήτηση «πλησιέστερα lockers». |
 | `default_voucher_language` | ACS | Γλώσσα που τυπώνεται στο voucher. Ελληνικά, αν δεν την αλλάξετε. |
-| `default_map_center`, `default_map_zoom`, `tile_provider` | ACS | Εμφάνιση του χάρτη στον επιλογέα Smartpoint. |
 
 Η διαγραφή ενός κλειδιού είναι ασφαλής: κάθε κλειδί έχει ενσωματωμένη προεπιλογή.
 
