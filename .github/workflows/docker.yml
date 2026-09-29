@@ -24,12 +24,12 @@ jobs:
       # into the build context before the image is built, because the
       # sibling repositories are not reachable from inside `docker build`.
       - name: Check out the repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: grooveshop-docs
 
       - name: Checkout grooveshop-django-api (reference docs)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: vasilistotskas/grooveshop-django-api
           path: grooveshop-django-api
@@ -37,7 +37,7 @@ jobs:
           sparse-checkout-cone-mode: true
 
       - name: Checkout grooveshop-media-stream (reference docs)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: vasilistotskas/grooveshop-media-stream
           path: grooveshop-media-stream
@@ -45,13 +45,13 @@ jobs:
           sparse-checkout-cone-mode: true
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
         with:
           package_json_file: grooveshop-docs/package.json
           run_install: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24.19.0
 
