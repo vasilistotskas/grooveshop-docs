@@ -59,7 +59,7 @@ under `overlays/staging/` with its own values.
 | Secret | Keys | Consumed by |
 |---|---|---|
 | `backend-secrets` | `SECRET_KEY`, `AGENT_GATEWAY_INTERNAL_SECRET`, `NUXT_CACHE_PURGE_TOKEN`, `MEILI_SEARCH_KEY`, `FLOWER_BASIC_AUTH`, `DEEPL_AUTH_KEY`, `EMAIL_*` (backend, host, port, TLS, user, password, default from), `SOCIALACCOUNT_GOOGLE_*`, `SOCIALACCOUNT_FACEBOOK_*`, `SOCIALACCOUNT_DISCORD_*` | backend, celery-worker, celery-beat, flower, PreSync job |
-| `frontend-secrets` | `NUXT_SESSION_PASSWORD`, `NUXT_SECRET_KEY`, `NUXT_CACHE_PURGE_TOKEN`, `NUXT_OAUTH_GOOGLE_*`, `NUXT_OAUTH_FACEBOOK_*`, `NUXT_OAUTH_DISCORD_*`, `NODE_AUTH_TOKEN` | frontend-nuxt |
+| `frontend-secrets` | `NUXT_SESSION_PASSWORD`, `NUXT_CACHE_PURGE_TOKEN`, `NUXT_OAUTH_GOOGLE_*`, `NUXT_OAUTH_FACEBOOK_*`, `NUXT_OAUTH_DISCORD_*`, `NODE_AUTH_TOKEN` | frontend-nuxt |
 | `media-stream-secrets` | `INTERNAL_DOMAINS_SECRET`, `NODE_AUTH_TOKEN` | media-stream |
 | `media-stream-internal-secret` | `secret` (the `INTERNAL_ADMIN_SECRET` that guards `flush-tenant`) | media-stream, and the backend as `MEDIA_STREAM_INTERNAL_SECRET` |
 | `media-stream-metrics-token` | `token` (read-only bearer for `/metrics`; sealed straight from a generated value, no plaintext copy — the rotation command is in the file) | media-stream as `METRICS_BEARER_TOKEN`, and the `media-stream` VMPodScrape |
