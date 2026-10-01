@@ -260,13 +260,16 @@ is out of scope for the admin). Three catalogues meet on one page:
   `manage.py makemessages_unfold -l el`. Unfold ships no translations
   and leaves them to each project; the command walks the installed
   package, leaves out what Django's own Greek catalogues already
-  translate, and is rerun after every Unfold upgrade.
+  translate, and is rerun after every Unfold upgrade, with gettext 0.23
+  or later: older xgettext skips calls inside f-strings (Unfold's
+  `f"{_('Welcome')} {username}"`) and would drop them.
 - **Django's and the other packages'**, which win wherever they
   translate a string.
 
 Guards: `tests/unit/test_locale_catalogue.py` fails on an untranslated
 or fuzzy Greek entry in either catalogue, and when the installed Unfold
-has strings its catalogue lacks; `tests/unit/test_model_field_labels.py`
+has strings its catalogue lacks (one way only, since what xgettext finds
+depends on its version); `tests/unit/test_model_field_labels.py`
 fails on a model field whose label Django derived from its name. Text
 built for display goes through gettext (`ngettext` for counts), never an
 f-string; `admin/displays.py: relative_time` passes its own translated
