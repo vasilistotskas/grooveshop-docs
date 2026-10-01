@@ -7,21 +7,21 @@ description: Preview every transactional email the store sends, in each language
 
 <span class="sidebar-path">Not in the sidebar. Click the store name at the top of the sidebar and pick **Email Templates**, or go to `/admin/email-templates/management/`.</span>
 
-The Email Template Management page lets staff see exactly what a customer receives. It is a **preview tool and nothing else**: the templates belong to the platform, and there is no way to edit one, reset one, or send a test from this page. The page exists on the store admin only, and it shows real orders of this store, so treat what you see on it as customer data.
+The Email Template Management page lets staff see exactly what a customer receives. It is a **preview tool and nothing else**: the templates belong to the platform, and there is no way to edit one, reset one, or send a test from this page. The page exists on the store admin only, and it shows real orders of this store, so it is open only to roles that may view orders; treat what you see on it as customer data.
 
 ## What you see
 
-**Left panel: Available Templates.** A search box (**Ctrl+K** / **⌘K** focuses it) filters by name and description, and the list is grouped by category with collapsible headings that open automatically when a search matches inside them. Each template shows a badge, an **HTML** and a **TXT** marker, and a short description. Every template today carries the **Active** badge and has both an HTML and a plain-text version, so neither marker distinguishes anything in practice.
+**Left: Templates.** A search box filters the list by name and description as you type. The list is grouped by category; each template shows its name, an **Active** label and a short description. Click a template to preview it.
 
-**Right panel: Template Preview.**
+**Right: Preview.** The preview renders as soon as you pick a template, and again whenever you change one of its controls:
 
 | Control | Options |
 |---|---|
 | **Language** | Greek, English, German. |
-| **Data Source** | **Sample Data** (made up on the spot, never saved) or **Real Order**. The **Real Order** choice is only offered on templates whose name begins `order_`, which leaves out several genuine order emails: the new-order notice to you, payment failed, invoice issued, dispute notification, and the two courier ones. Preview those with sample data. |
-| **Select Order** | Appears with Real Order: the 10 most recent orders of the store, and only those ten. |
-| **Generate Preview** | Renders the template. |
-| **HTML** / **Text** tabs | Switch between the rich and the plain-text version. |
+| **Data** | **Sample data** (made up on the spot, never saved) or one of the store's 10 most recent orders. A real order fills in the order, cart, courier and gift-card emails; the other templates always use sample data. |
+| **Format** | **HTML** (the email as the customer sees it) or **Text** (the plain-text version). |
+
+The subject line is shown above the preview.
 
 ## Which templates exist
 
@@ -47,11 +47,11 @@ Ten templates carry a written description and a real subject pattern such as `Yo
 1. Open the page from the site dropdown.
 2. Click the template, for example **order_shipped**.
 3. Pick the **Language** the customer uses.
-4. Choose **Real Order**, pick the order in **Select Order**, click **Generate Preview**.
-5. Compare the **HTML** and **Text** tabs.
+4. Pick the order under **Data**.
+5. Switch **Format** between **HTML** and **Text** to compare the two versions.
 
 ### Review translations
-Generate the same template three times, once per language, and read each. Missing or English-only strings in a Greek preview are something to report to the platform team, not something you can fix here.
+Preview the same template in each language in turn and read each. Missing or English-only strings in a Greek preview are something to report to the platform team, not something you can fix here.
 
 ### Find the template for an order status
 Order templates carry the statuses they are sent for. Use the search box with the status name (shipped, delivered, canceled) or open the template and read its description.
@@ -64,7 +64,6 @@ Order templates carry the statuses they are sent for. Use the search box with th
 ## Things to know
 
 - **No editing, no reset to default, no test send.** Changing what an email says is a request to the platform team, not something this page can do.
-- **A bad order id gives you a misleading preview.** Pick an order that has since been deleted, or paste an id belonging to another store, and the preview does not say so. It quietly renders sample data while still labelling itself a real-order preview. If a preview shows names and products you do not recognise, the order id did not resolve.
 - Only the ten most recent orders are offered, so you cannot preview an older one here.
 - The template list is read once when the store's servers start. A template added by a platform release shows up after the next restart, not immediately.
 

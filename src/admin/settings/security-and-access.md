@@ -73,7 +73,6 @@ Safe actions:
 - Nothing here touches the platform staff who sign in to the admin. A staff password reset or session revocation is done on the platform console.
 - Permission groups are a platform tool and play no part in store roles. The group screen is not listed anywhere in a store's admin any more, and a store role cannot open it whatever address is typed; it is managed on the platform console. See [Roles & team](/admin/getting-started/roles-and-team).
 - The other platform-owned lists a store's admin used to show — store addresses, the record of cache purges, the schedule of recurring work, countries and regions — now refuse to open on a store's address too. They are listed under [Welcome](/admin/).
-- <span class="sidebar-path">System → Configuration</span> holds exactly one entry, **Shipping Providers**, and it is the same list as <span class="sidebar-path">Shipping → Shipping Providers</span>, which every admin user can already open.
 
 ## Related
 

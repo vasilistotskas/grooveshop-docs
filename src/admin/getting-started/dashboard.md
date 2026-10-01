@@ -1,38 +1,50 @@
 ---
 title: Dashboard
-description: What every card, chart and queue on the admin landing page shows, which periods they cover, and how often they refresh.
+description: What every card, chart, list and warning on the admin landing page shows, which period each covers, and how quickly it follows your edits.
 ---
 
 # Dashboard
 
 <span class="sidebar-path">Navigation → Dashboard</span>
 
-The dashboard is the landing page after login. Everyone with access to the admin sees it.
+The dashboard is the landing page after login. Everyone with access to the admin sees it; a few blocks are shown to platform operators only, as noted below.
 
 ## What you see
 
-### Quick actions
+### Shortcuts
 
-Three buttons at the top: **New Product**, **Pending Orders** (the orders list filtered to status Pending) and **Customers**.
+Three buttons at the top: **New product**, **Orders** and **Customers**.
+
+### Warnings
+
+Messages that need someone's attention appear above the figures, and only when there is something to do:
+
+- **Your legal pages need an update**: the platform added text to its legal documents, and these pages were not changed for you because their text is yours. Each page is listed with a link; open it to see the text to add. Shown to anyone who may edit content pages.
+- **Invoice seller details are incomplete** (platform operators): the **Company name**, **VAT ID (ΑΦΜ)** or **Tax office (ΔΟΥ)** missing, with a **Fix in settings** link. Invoices issued meanwhile carry no legal identity.
+- **myDATA** (platform operators): credentials missing while myDATA is on, invoices rejected in the last 7 days, or a reminder that submissions still go to the AADE sandbox.
+
+These are checked on every page load, so fixing a setting clears its warning at once.
 
 ### Key figures
 
 | Card | Meaning |
 |---|---|
-| **Revenue** | Sum of paid amounts of orders with payment status Completed. A switch offers **7d**, **1m**, **3m** and **1y**. Each period shows a trend badge against the immediately preceding period of the same length; no badge means there was nothing to compare against. |
-| **Pending orders** | Orders currently in status Pending. |
+| **Revenue** | Sum of paid orders (payment status Completed). A switch offers **7d**, **1m**, **3m** and **1y**, and the browser remembers your choice. A trend badge compares each period with the one before it of the same length; no badge means there was nothing to compare against. |
+| **Pending orders** | Orders currently in status Pending. The card opens the order list filtered to them. |
 | **New customers** | Accounts created in the last 30 days, with today's count alongside. |
-| **Average order value** | Average paid amount over all orders of the last 30 days. |
+| **Average order value** | Average over the paid orders of the last 30 days. |
 
 ### Charts
 
-- **Orders and revenue, last 14 days.** Bars are orders per day, the line is paid revenue per day in euro.
-- **Order status distribution.** A doughnut with the count of orders per status (Pending, Processing, Shipped, Delivered, Completed, Canceled, Returned, Refunded).
-- **Orders by source, last 30 days.** A doughnut with the orders placed in the last 30 days per [order source](/admin/sales/orders#order-source): the six biggest sources by name, the rest together as **Other**. Orders placed before the store started recording the source are left out.
+- **Revenue and orders, last 14 days.** Bars are orders per day, the line is paid revenue per day.
+- **Order status.** Every order by its current status.
+- **Orders by source, last 30 days.** The orders of the last 30 days per [order source](/admin/sales/orders#order-source): the six biggest sources by name, the rest together as **Other**. Orders placed before the store recorded a source are left out.
 
-### Queues
+A chart with no data says so in words instead of drawing an empty frame.
 
-Three lists for triage, each with a **View all** link:
+### Lists
+
+Each with a link to the full list:
 
 - **Recent orders**: the six newest orders with status and amount.
 - **Reviews awaiting approval**: up to five product reviews in status New.
@@ -40,33 +52,32 @@ Three lists for triage, each with a **View all** link:
 
 ### Growth
 
-- **Conversion funnel** over the last 30 days: carts created, orders placed, orders paid, and the three percentages between them.
-- **Repeat customers**: paying customers with two or more paid orders in the last 30 days, as a share of all paying customers in that window. Guest orders are excluded.
-- **Top products**: the five most-viewed active products, by all-time view count, with current stock.
+- **Conversion** over the last 30 days: **Carts started**, **Orders placed** and **Paid**. A cart turns into its order when the order is placed, so carts started means the orders placed plus the carts that still hold items; a visitor who added nothing does not count.
+- **Repeat customers**: paying customers with two or more paid orders in the last 30 days, as a share of all paying customers in that window. Guest orders are left out.
+- **Most viewed products**: the five active products with the most views of all time.
 
-### Search insights
+### Running low (platform operators)
 
-Built from the storefront search log over the last 30 days:
+Up to ten active products with fewer than ten items left in stock (and at least one). The number beside **Catalog → Products** in the sidebar counts the same band.
 
-- total searches; the share of them that never returned a result; clicks and click-through rate, shown as a dash until click tracking has recorded anything;
-- the ten most frequent queries and the ten most frequent zero-result queries;
-- a 14-day search volume chart.
+### Search
 
-Fragments shorter than three characters are ignored in the two tables and in the zero-result share, because search-as-you-type records one row per keystroke. A query counts as zero-result only if it never returned anything, not merely when one of its lanes came back empty.
+From the storefront's search log, last 30 days:
 
-Use the zero-result table to spot products people look for under a name you do not use.
+- **Searches**, **Found nothing** (the share of searches that returned nothing) and **Result clicks** (shown as a dash until click tracking has recorded anything);
+- **Search volume** per day over the last 14 days;
+- **Top searches** and **Searches that found nothing**, ten each.
 
-### Warnings (platform operators only)
+Fragments shorter than three characters are ignored, because search-as-you-type records a row per keystroke. A search counts as "found nothing" only if it never returned a result.
 
-Platform superusers additionally see: missing seller identity fields (**Company name**, **VAT ID (ΑΦΜ)**, **Tax office (ΔΟΥ)**) with a **Fix in Settings** link, myDATA credential and rejected-invoice warnings, and up to ten active products with stock between 1 and 9. If you are an Owner and want the seller identity checked, open [Store settings](/admin/settings/store-settings) and search `INVOICE_SELLER_`.
+Use **Searches that found nothing** to spot products people look for under a name you do not use.
 
 ## Things to know
 
-- Everything except the warnings block is cached for five minutes. It is also refreshed the moment an order, invoice, product, review, customer account or contact message is saved or deleted, so a figure rarely lags a manual edit by more than a few minutes. The warnings block is recomputed on every page load, so fixing a missing setting shows immediately.
-- Revenue counts **paid** orders only. Cash-on-delivery orders join the revenue figure when the courier's payout is reconciled, which is days after delivery. See [Reconciliation](/admin/system/reconciliation).
-- The **Average order value** is over all orders of the period, paid or not.
-- The low-stock badge on **Catalog → Products** in the sidebar uses the same "stock between 1 and 9" band as the warning list.
-- There is no failed-job counter here. The count of failed background jobs lives on the platform console's own dashboard, because one list covers every store. See [Background jobs](/admin/system/background-jobs).
+- Each figure is kept for a few minutes (the conversion, repeat-customer, product and search blocks for fifteen), and a figure is refreshed as soon as a record it counts is saved or deleted — an order, a review, a contact message. An edit therefore shows on the next load; only counts that nothing invalidates, such as new customers or open carts, can lag by a few minutes.
+- Revenue counts **paid** orders only. Cash-on-delivery orders join it when the courier's payout is reconciled, days after delivery. See [Reconciliation](/admin/system/reconciliation).
+- The numbers beside sidebar entries (pending orders, reviews to approve, new messages and similar) refresh at least every minute.
+- There is no failed-job counter here. Failed background jobs are listed on the platform console, because one list covers every store. See [Background jobs](/admin/system/background-jobs).
 
 ## Related
 

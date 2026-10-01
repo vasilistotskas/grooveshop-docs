@@ -30,44 +30,43 @@ The layout form:
 | **Metadata** (collapsed) | Free JSON, not used by the storefront. |
 | **System** (collapsed) | ids and timestamps. |
 
-Below the form, the **Page Sections** table lists the sections in render order with:
+The **Page Sections** tab lists the sections in render order, each in its own collapsible panel with:
 
 | Field | Meaning |
 |---|---|
 | **Component Type** | Which block to render (list below). |
 | **Title** | Optional heading, shown by blocks that have one. |
 | **Is Visible** | Untick to hide a section without deleting it. |
-| **Props** | Block-specific settings as JSON. |
-| **Locale Overrides** | Per-language copy: `{"en": {"title": "...", "props": {...}}}`. Only the keys that differ; the default language is the fields themselves. |
+| **Props** | The block's settings. On a saved section this is a form listing exactly the settings that block accepts, with their limits; on a new one it is plain JSON until you save it with its type. |
+| **Locale Overrides** | Per-language copy: for another language, a title and any of the block's settings, filled only where that language differs; the default language is the fields themselves. A form too, once the section is saved. |
 | **Sort Order** | Read-only here; new sections go to the end. |
 
 ### Section types
 
-| Type | Props it accepts |
+The **Props** form of a saved section lists every setting its type accepts, so this table only says what the form cannot.
+
+| Type | Good to know |
 |---|---|
-| Hero Banner | heading, subheading, eyebrow, image_url, cta_text, cta_link, secondary_cta_text, secondary_cta_link, stats, overlay_opacity, decor |
-| Hero Carousel | images, mobile_images, link |
-| Products Slider | page_size (1-24) |
-| Products Grid | page_size (1-48) |
-| Featured Products | page_size (1-24), columns (1-6) |
-| Product Categories | none |
-| Blog Categories Rail, Blog Posts Carousel (count 1-12), Blog Posts Grid (count 1-24), Blog Posts List (page_size 1-24) | as listed |
-| Recently Viewed Rail | none; also needs the **RECENTLY_VIEWED_ENABLED** setting on |
-| Rich Text Block | content (HTML, up to 20000 characters) |
-| Call to Action Banner | heading, description, button_text, button_link, background_color, surface |
-| Newsletter Signup | heading, description, placeholder, button_text, surface; an email form with a consent box, shown only when a default Newsletter topic exists (see [Subscriptions](/admin/customers/subscriptions)) |
-| Testimonials | items (name, text, avatar) |
-| Spacer (height), Divider (variant) | layout helpers |
-| Loyalty Program Hero, Search Bar, Business Hours | none; Business Hours reads its opening times from the **BUSINESS_HOURS** setting |
-| Location Map | embed_url, lat, lng, address |
-| Features Grid, Media + Text, Image Gallery, Story Timeline, FAQ Accordion | generic marketing blocks; each accepts its own set of text, item and link props |
-| Partner Strip, Pull Quote, Reference Cards, Page Hero, Feature Lists, Option Selector, Comparison Table, Flow Steps, Project Register, Vendor Cards, Contact Panel, About Content, Vision Content, What Is Microlearning, Why Microlearning | **built for specific storefront designs only** — see the warning below |
+| Hero Banner, Hero Carousel | The carousel takes slides, or a list of images with an optional list for phones. |
+| Products Slider, Products Grid, Featured Products, Product Categories | Product rails pick by ordering and an optional category. |
+| Blog Categories Rail, Blog Posts Carousel, Blog Posts Grid, Blog Posts List | |
+| Recently Viewed Rail | Also needs the **RECENTLY_VIEWED_ENABLED** setting on. |
+| Rich Text Block | HTML, up to 20000 characters. |
+| Call to Action Banner | |
+| Newsletter Signup | An email form with a consent box, shown only when a default Newsletter topic exists (see [Subscriptions](/admin/customers/subscriptions)). |
+| Testimonials, Trust Badges, Stats Strip | Trust Badges is a row of reassurance badges (how you pay, who delivers); Stats Strip is a band of key figures. |
+| Offers Preview | The running promotions, on a page other than the offers page. Renders nothing when promotions are off or none is running. |
+| Spacer, Divider | Layout helpers. |
+| Loyalty Program Hero, Search Bar, Business Hours | Business Hours reads its opening times from the **BUSINESS_HOURS** setting. |
+| Location Map | |
+| Features Grid, Media + Text, Image Gallery, Story Timeline, FAQ Accordion | Generic marketing blocks. |
+| Partner Strip, Pull Quote, Reference Cards, Page Hero, Feature Lists, Option Selector, Comparison Table, Flow Steps, Project Register, Vendor Cards, Contact Panel, About Content, Vision Content, What Is Microlearning, Why Microlearning | **Built for specific storefront designs only** — see the warning below. |
 
 ### Two warnings about this list
 
 **Fifteen of these blocks render nothing on an ordinary store.** The eleven from **Partner Strip** to **Contact Panel**, plus the four content blocks from **About Content** to **Why Microlearning**, were written for particular storefront designs. Pick one on a store that does not use that design and the section saves, shows as visible, and then simply does not appear on the page: no error, no gap, no warning. Before you build a page around one, add it to a test layout, publish, purge the cache and check it actually shows. The blocks in every other row of the table work on every store.
 
-**Props are not checked when you save them here.** Type a key that does not exist, a number where text belongs or an oversized string, and the section is stored exactly as typed. You find out by loading the page. Links in props (`cta_link`, `button_link`, `link`) must be internal paths starting with `/` or `https://` addresses, and page counts must stay inside the ranges above, but nothing on this screen will stop you breaking either rule. Change one section at a time and check the result.
+**A section that saves can still look wrong.** Saving checks every setting against its type: an unknown setting, a number where text belongs, an oversized text, a count outside its range or a link that is neither an internal path starting with `/` nor an `https://` address is refused with the setting named. What it cannot check is how the block looks with your content, so change one section at a time and check the result.
 
 ## Seeded layouts
 
@@ -81,11 +80,11 @@ Every store starts with a published `home` layout of four sections: Blog Categor
 3. Save, then purge **Pages & navigation** in the [Cache](/admin/system/cache) tool.
 
 ### Add a section
-1. In **Page Sections** click add, pick the **Component Type**, fill **Title** and **Props**.
-2. Save. The section is appended last. Sort order is not editable in this table; to reorder, delete and re-add sections in the order you want.
+1. In **Page Sections** click add, pick the **Component Type** and fill **Title**.
+2. Save. The section is appended last, and its **Props** now open as a form for its type: fill them and save again. Sort order is not editable in this table; to reorder, delete and re-add sections in the order you want.
 
 ### Translate a section
-Put the other language's copy under **Locale Overrides**: `{"en": {"title": "Our story", "props": {"heading": "..."}}}`. Structural props (counts, columns, links) stay in **Props** so they cannot drift between languages.
+Open the section's **Locale Overrides**, add the other language and fill its title and texts. Leave structural settings (counts, columns, links) empty there, so they stay in **Props** and cannot drift between languages.
 
 ### Build an About page
 1. Click **Add**, set **Page Type** to `about`, a **Title**, and tick **Is Published**.

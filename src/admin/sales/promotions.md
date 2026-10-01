@@ -24,7 +24,7 @@ Promotions ship dark. They work only when both switches are on: the platform has
 | **Starts At** / **Ends At** | The schedule window, either side optional. |
 | **Redemptions** | How many orders used it. |
 
-Filters: trigger, benefit type, target scope, active, stackable, start and end date ranges. Search by name or by any of its coupon codes. A **Latest redemptions** panel under the list shows the most recent orders that used a promotion.
+Filters: trigger, benefit type, target scope, active, stackable, start and end date ranges. Search by name or by any of its coupon codes. Each row expands to a **Redemptions** table: the orders that used that promotion, with the customer and the discount.
 
 Bulk actions: **Activate selected promotions**, **Deactivate selected promotions**.
 
