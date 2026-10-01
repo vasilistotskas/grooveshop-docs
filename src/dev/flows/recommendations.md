@@ -187,10 +187,13 @@ by where the shopper is: `pdp`, `cart`, `out_of_stock`, `empty_cart`,
 `RecommendationSlot` is one row per surface per tenant: `strategy_chain`
 (ordered list of codes), `weights` (code to weight in 0..1, missing defaults
 to 1.0), `limit`, `min_fill`, `price_band_ratio`, `enabled`. The JSON fields
-are validated in `recommendation/schemas.py` and enforced in the model's
-`clean()`, so a bad chain is a field error in the admin rather than a 500 —
-and a shell or a preset seeding a bad row is caught the same way.
-`min_fill` may not exceed `limit`.
+carry a JSON Schema validator (`recommendation/json_schemas.py`: known
+strategy codes, no duplicates, weights in 0..1), and the model's `clean()`
+adds the checks that span fields: every weighted code is in the chain, and
+`min_fill` may not exceed `limit`. A bad chain is a field error in the
+admin, which also edits both fields through the schema-driven editor,
+rather than a 500 — and a shell or a preset seeding a bad row is caught the
+same way.
 
 `recommendation/presets.py` keys a per-surface chain, weights and limits by
 `tenant.models.StoreVertical`. Chain order is priority, not tier — a preset

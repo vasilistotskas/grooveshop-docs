@@ -31,8 +31,8 @@ flowchart TD
   RUC --> SSITE["admin.site (MyAdminSite)"]
   PSITE --> UP["UNFOLD_PLATFORM config"]
   SSITE --> UF["UNFOLD config"]
-  PSITE --> PDASH["platform_dashboard.py"]
-  SSITE --> SDASH["dashboard.py"]
+  PSITE --> PDASH["admin/dashboard/platform.py"]
+  SSITE --> SDASH["admin/dashboard/store/"]
 ```
 
 ## How it works
@@ -59,8 +59,8 @@ A tenant host never loads that module at all.
 stock install: the `Control plane` subheader, the `hub` symbol,
 `ENVIRONMENT` pointing at `admin/permissions.py: platform_environment`
 (which renders a permanent amber **Control plane** badge, because the two
-consoles look alike enough to edit the wrong one), the
-`DASHBOARD_CALLBACK`, a `COMMAND` block so the ⌘K palette searches records
+consoles look alike enough to edit the wrong one), a `COMMAND` block so
+the ⌘K palette searches records
 rather than only sidebar titles, and the sidebar below. `SITE_DROPDOWN`
 carries a single **Help & Guides** link, and only when `ADMIN_DOCS_URL` is
 set, so a local checkout renders no link at all.
@@ -97,20 +97,26 @@ public-schema rows.
 
 ### What each console withholds from the other
 
-Two mirror-image guards, both derived from `tenant/app_labels.py` rather
-than enumerated, so a new app is covered without editing a list.
+A store's own models never appear on the control plane because they are
+never registered on it, and the store site is not mounted on the platform
+host (`tests/unit/tenant/test_platform_host_serves_only_the_platform_admin.py`).
 
-| Guard | Fires when | Withholds | Effect |
-|---|---|---|---|
-| `admin/base.py: BaseModelAdmin._withheld_on_public` | `request.tenant` is positively the public schema | models whose app is in `tenant_only_app_labels()` (in `TENANT_APPS`, not in `SHARED_APPS`) | The store's own models never appear on the control plane. Without it Django queried the pre-multi-tenant legacy tables still sitting in `public` and raised a column-does-not-exist 500; a 403 is the honest answer |
-| `admin/mixins.py: WithheldOnTenantHostModelAdmin` | `request.tenant` is positively a real store | models whose app is in `shared_only_app_labels()` (in `SHARED_APPS`, not in `TENANT_APPS`) | Platform models never appear on a store's admin. `django_site` lists every store's domain; `core_cachepurgelog` records every purge across the estate, actor column included |
+The other direction needs a guard, because a store host does serve the
+store site, where platform models are registered too.
+`admin/mixins.py: WithheldOnTenantHostModelAdmin` fires when
+`request.tenant` is positively a real store and withholds every model whose
+app is in `tenant/app_labels.py: shared_only_app_labels()` (in
+`SHARED_APPS`, not in `TENANT_APPS`): `django_site` lists every store's
+domain, and `core_cachepurgelog` records every purge across the estate,
+actor column included. It gates `has_module_permission` (removing the
+model from the app list) **and** the four object permissions (turning a
+typed URL into a 403). It only withholds when it *positively* knows it is
+on a store: keying on `connection.schema_name` instead would fire during
+tests, management commands and Celery work, where no tenant is bound.
 
-Both gate `has_module_permission` (which removes the model from the app
-list, closing the navigation) **and** the four object permissions (which
-turn a typed URL into a clean 403 rather than a page of someone else's
-data). Both only withhold when they *positively* know which side they are
-on: keying on `connection.schema_name` instead would fire during tests,
-management commands and Celery work, where no tenant is bound.
+`country` and `region` are reference data a store's forms pick from, so
+they stay viewable (not editable) on a store host
+(`tenant/role_scopes.py: REFERENCE_DATA_APP_LABELS`).
 
 One exemption, `admin/mixins.py: STORE_SELF_SERVICE_APP_LABELS`: the
 `tenant` app is **not** withheld from a store's admin, because
@@ -227,46 +233,47 @@ failure log for the whole estate, not a task history. See
 
 ## The dashboard
 
-`admin/platform_dashboard.py: dashboard_callback` fills
-`core/templates/admin/platform_index.html`. Five counter cards, then the
-estate table:
+`core/templates/admin/platform_index.html` lays out two Unfold component
+widgets from `admin/dashboard/platform.py`. The page reads the public
+schema only.
+
+`PlatformEstateCards`, four cards:
 
 | Card | Source | Notes |
 |---|---|---|
-| **Stores** | `Tenant.objects.exclude(schema_name=public).count()` | Links to the Tenants changelist |
-| **Live** | `is_active=True, suspended_at__isnull=True` | |
-| **Suspended** | `suspended_at__isnull=False` | |
-| **Scheduled tasks** | enabled `PeriodicTask` rows | A stalled beat stops every store's carrier polling at once, which is why it belongs here and not on a merchant's dashboard |
-| **Failed tasks (24h)** | `TaskResult` with `status="FAILURE"` and `date_done` within 24 hours | Links straight to the failure-filtered changelist. It used to sit on the store dashboard, where it silently attributed every store's failures to whichever merchant was open |
+| **Stores** | every `Tenant` but the public row | Links to the Tenants changelist |
+| **Live** | `is_active=True`, `suspended_at` empty | |
+| **Suspended** | `suspended_at` set | Links to the suspended stores when there are any |
+| **Failed background tasks (24h)** | `TaskResult` with `status="FAILURE"` and `date_done` within 24 hours; the footer counts enabled `PeriodicTask` rows | Links to the failure-filtered changelist. One public-schema table covers every store, which is why this lives here and not on a merchant's dashboard |
 
-The table (`_tenants_table`) has one row per store: **Store, Domain,
-Schema, Plan, Status, Orders, Revenue**. Orders and revenue are read
-*inside* each tenant's schema via `tenant_context`; revenue is
-`Sum(paid_amount)` over `payment_status=COMPLETED`, the same shape the
-merchant dashboard uses, so only money that landed counts.
+`PlatformStoresTable`, one row per store: **Store** (links to the tenant),
+**Domain**, **Plan**, **Status** (the badges from
+`tenant/admin_labels.py`, shared with the Tenants list and the Plan &
+Billing page), **Orders**, **Revenue** and **Last order**.
 
-Two honesty rules are load-bearing:
+Orders, revenue and last order come from `tenant.TenantStatsSnapshot`, not
+from the stores' schemas. `tenant/tasks.py: fanout_refresh_stats_snapshots`
+runs every 30 minutes (beat entry `refresh-tenant-stats`) and dispatches
+`refresh_stats_snapshot` into each store's schema, which writes the store's
+order count, paid revenue (`payment_status=COMPLETED`, the store
+dashboard's definition) and latest order time onto its public-schema
+snapshot row. The page used to switch into every store's schema twice per
+view. A store without a snapshot yet shows `—`: not read is not no sales.
 
-- `_schema_exists()` checks `information_schema.schemata` **before**
-  counting. `SET search_path` to a missing schema does not error, it
-  silently falls through and the count comes back `0`, which would report a
-  half-provisioned store as a real store with no sales. Blank (`—`) is the
-  answer for "cannot tell", and the same applies to the
-  **Failed tasks** card, which shows `—` rather than claiming a clean 24
-  hours it did not check.
-- Cells are plain strings or `{"content", "class"}` dicts, because Unfold's
-  table component escapes `content` — a tenant-supplied store name can never
-  inject markup into the control plane.
+Cells are plain strings, `{"content", "class"}` dicts or rendered Unfold
+components (`admin/displays.py: link_cell`), because the table component
+escapes `content` — a tenant-supplied store name can never inject markup.
 
-The header carries two buttons, **New Store** (the `Tenant` add form, which
-provisions through `tenant/provisioning.py` — see
-[Onboarding a store](/dev/operator/onboarding)) and **Domains**.
+The header carries **New store** (the `Tenant` add form, which provisions
+through `tenant/provisioning.py` — see
+[Onboarding a store](/dev/operator/onboarding)), **Plan & Billing** and
+**Domains**.
 
 ## Invariants
 
 - **Per-store models are structurally absent here, not merely forbidden.**
-  They are never registered on this site; `_withheld_on_public` is defence
-  in depth for the shared site, not the mechanism.
+  They are never registered on this site, and the store site is not
+  mounted on this host at all.
 - **Only superusers reach this console**, and a merchant `is_staff` flag is
   not a superuser flag.
 - **Every `UNFOLD_PLATFORM` link is pinned with `urlconf=`.**
@@ -277,18 +284,18 @@ provisions through `tenant/provisioning.py` — see
   `PLATFORM_APP_LABELS`, not in a second `@admin.register(..., site=...)`
   declaration.
 - **The console reads the estate; it does not enter a store to work in it.**
-  Where it must read tenant data (orders, revenue, last activity) it goes
-  through `tenant_context` behind the schema-existence guard.
+  Per-store figures come from `TenantStatsSnapshot`, which a task writes
+  from inside each store.
 
 ## Failure modes
 
-- **A tenant-only model page opened on this host**: 403 by design
-  (`_withheld_on_public`). If it 500s with a missing column instead, the
-  guard did not fire — check that `request.tenant` is set.
+- **A tenant-only model page opened on this host**: 404, because the model
+  is not registered on this site.
 - **A platform model page opened on a store host**: 403 by design
-  (`WithheldOnTenantHostModelAdmin`). Two exceptions: `tenant`, which is the
-  merchant's own settings screen, and `auth`, which is dual-listed and so
-  never reaches the guard at all.
+  (`WithheldOnTenantHostModelAdmin`). Exceptions: `tenant`, which is the
+  merchant's own settings screen; `country` and `region`, reference data a
+  store may view (its forms pick from them) but not edit; and `auth`, which
+  is dual-listed and so never reaches the guard at all.
 - **A merchant reports seeing another store's rows on a screen that is not a
   changelist.** The guard is a `ModelAdmin` permission hook, so it covers
   changelists and detail pages and nothing else. A custom admin view that
@@ -296,9 +303,9 @@ provisions through `tenant/provisioning.py` — see
   search path into `public` and must scope itself.
 - **A sidebar entry 404s**: the model is not registered on this site.
   Check `PLATFORM_APP_LABELS` and `PLATFORM_EXCLUDED_MODELS`.
-- **The dashboard shows `—` in Orders or Revenue**: that store's schema
-  does not exist or could not be read. Half-provisioned, mid-destroy, or a
-  migration that never reached it — not a store with no sales.
+- **The dashboard shows `—` in Orders or Revenue**: that store has no
+  snapshot yet — new since the last refresh, or its refresh task failed
+  (see Task Results). Not a store with no sales.
 - **Login lands on the storefront account page**: `AdminSiteLoginNextMixin`
   adds the `next` parameter because Unfold's login template never emits one;
   both sites carry the mixin.
@@ -310,10 +317,11 @@ provisions through `tenant/provisioning.py` — see
 | File | Role |
 |---|---|
 | `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite`, `PLATFORM_APP_LABELS`, `PLATFORM_EXCLUDED_MODELS`, `register_platform_models` |
-| `grooveshop-django-api/admin/platform_dashboard.py` | Estate counters, per-store rows, `_schema_exists`, failed-task count |
-| `grooveshop-django-api/core/templates/admin/platform_index.html` | The dashboard cards and estate table |
+| `grooveshop-django-api/admin/dashboard/platform.py` | Estate cards and the store table |
+| `grooveshop-django-api/core/templates/admin/platform_index.html` | The dashboard layout |
+| `grooveshop-django-api/tenant/models.py`, `tenant/tasks.py` | `TenantStatsSnapshot`, `refresh_stats_snapshot`, `fanout_refresh_stats_snapshots` |
+| `grooveshop-django-api/tenant/admin_labels.py` | Plan, status and billing badges |
 | `grooveshop-django-api/admin/platform_billing.py` | The Plan & Billing page mounted by `get_urls` |
-| `grooveshop-django-api/admin/base.py` | `BaseModelAdmin._withheld_on_public` |
 | `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `AdminSiteLoginNextMixin` |
 | `grooveshop-django-api/admin/permissions.py` | `platform_environment` badge |
 | `grooveshop-django-api/admin/apps.py` | Calls `register_platform_models()` after autodiscovery |
