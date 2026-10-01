@@ -97,8 +97,8 @@ Filters: **Transaction Type**, **User**, **Created at** range. Search matches th
 
 ### Add or remove points for a customer
 
-1. Open the customer in <span class="sidebar-path">Customers → Users</span> and click **Adjust loyalty points for this user**. The button is visible to anyone who can edit the account, but only a superuser's click does anything.
-2. The default is 100 points; the range is minus to plus ten thousand. The change appears at once as an **Adjust** row with your account as creator and cannot be undone except by a further adjustment.
+1. Open the customer in <span class="sidebar-path">Customers → Users</span> and click **Adjust loyalty points**. Only platform operators see the button.
+2. Enter the **Points** (positive adds, negative removes; between minus and plus ten thousand) and a **Reason**, then submit. The change appears at once as an **Adjust** row with your account as creator and the reason as its description, and cannot be undone except by a further adjustment.
 
 Adjustments change the balance only, never XP, level or tier.
 

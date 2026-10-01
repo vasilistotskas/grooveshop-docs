@@ -29,7 +29,7 @@ Each row has two quick actions: **Download shipping voucher (PDF)** and **Custom
 
 ### Filters
 
-The right-hand panel offers, top to bottom: **Status Group** (Active, In Fulfillment, Completed, Problematic), **Payment Status** (each state plus "Needs Attention", which is Failed or Pending), **Document Type** (Receipt or Invoice and the label kinds), **Wholesale** (orders priced with a B2B customer group or retail), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), **Source type** and **Order source** (see [Order source](#order-source)), then the raw status and payment status, created and status-updated date ranges, country, region, payment method, the gateway that processed the charge, shipping provider, shipping kind and, for BoxNow orders, the parcel state. A date drill-down by creation date sits above the table.
+The **Filters** panel offers, top to bottom: **Status** and **Payment Status**, where you may pick several at once (Pending and Processing together are the orders still to handle; Failed and Pending together are the payments needing attention), **Document Type**, **Wholesale** (orders priced with a B2B customer group, or retail), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), **Source type** and **Order source** (see [Order source](#order-source)), created and status-updated date ranges, **Country** and **Region** (type to search), the pay way, the gateway that processed the charge, shipping provider, **Shipping Kind** and, for BoxNow orders, the parcel state. Choose any number of them and press **Apply Filters** once. A date drill-down by creation date sits above the table.
 
 ### Search
 
@@ -41,13 +41,15 @@ Select rows and pick one of **Mark selected orders as processing / shipped / del
 
 ### The order page
 
-The page is split into tabs:
+A row of cards at the top gives the order at a glance: **Status** (and how long ago it last changed), **Payment** (and the method), **Total** (and the number of items), **Customer** (linking to the account), **Shipment** (and the tracking number) and **Invoice** (its number and myDATA state).
+
+Below them the page is split into tabs:
 
 - **Order Information**: UUID, the **Status** (read-only here; change it with the actions above), created, updated and status-updated timestamps.
 - **Billing / Invoice**: **Document type** (Receipt or Invoice), and for invoice orders the buyer's company name, VAT ID (ΑΦΜ), tax office (ΔΟΥ), business activity and registered billing address. **Wholesale pricing** shows which B2B group priced the order, or "Retail (no group pricing)".
 - **Customer Information**: linked account (empty for guests), name, email, phone.
 - **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty. Saving a change to the country, region, street, number or postcode checks the address the way checkout does: the postcode must match the country's format, a region is required for a country that has regions and must belong to it, the street must contain a letter, and the number must not be a postcode. An old order with an address that fails is not blocked from other edits; the check runs only when you change the address.
-- **Payment Information**: **Pay way** (what the customer chose), the editable **Payment status**, **Payment Method** (the gateway that took the charge), **Payment ID**, **Paid Amount**, and the read-only **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** stamped at checkout.
+- **Payment Information**: **Payment Method** (what the customer chose), the editable **Payment status**, **Payment Gateway** (the gateway that took the charge), **Payment ID**, **Paid Amount**, and the read-only **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** stamped at checkout.
 - **Shipping & Tracking**: shipping provider, shipping kind, shipping price, tracking number, carrier name.
 - **Additional Information**: the customer's notes from checkout, then the read-only order source fields: **Source type**, **Order source**, **Traffic medium**, **Campaign name**, **Referrer host** and **Landing page**. All show "-" on an order placed before the store started recording them.
 
@@ -130,7 +132,7 @@ The dashboard's **Orders by source** chart counts the last 30 days of orders by 
 
 ### Find an order
 1. Type the order number, the customer's email or phone, or a tracking or voucher number in the search box.
-2. Narrow with **Status Group** or **Recent Orders** if the customer has many orders.
+2. Narrow with **Status** or **Recent Orders** if the customer has many orders.
 3. Open the row. From there **Customer's orders** shows everything else the same person bought.
 
 ### Move an order forward by hand
@@ -192,7 +194,7 @@ A guest order has no account in **Customer Information**. Everything else works 
 - **Editing Status on the order page skips the safety checks.** It still emails the customer, logs history and, for Canceled, asks the courier to cancel, but it does not restore stock, it does not refund anything, and it lets you jump to any state. Use the bulk actions.
 - **Editing money fields does not move money.** Changing the paid amount only changes what the screen shows; nothing is charged or refunded. **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** are read-only for that reason: they are stamped at checkout and the matching coupon, points and gift-card records already exist.
 - **Payment status Completed by hand** is right for bank transfers and cash collected in person. Do not use it for card payments still awaited from a provider.
-- **Two fields look like the payment method.** **Pay way** is the dropdown, and it holds what the customer chose at checkout. **Payment Method** next to it is written by the platform and records which gateway took the money (`stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`); it is used to match incoming provider messages, so leave it alone.
+- **Payment Method and Payment Gateway are different fields.** **Payment Method** is the dropdown, and it holds what the customer chose at checkout. **Payment Gateway** next to it is written by the platform and records which gateway took the money (`stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`); it is used to match incoming provider messages, so leave it alone.
 - **Wholesale orders** keep the group name and discount percent they were priced with; changing the customer's group later does not touch old orders. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
 - **A Shipment column without a value** means no voucher has been asked for yet, or the order is older than the current carrier setup. The voucher button will say so.
 - **The order source is a guide, not proof.** Anyone can type the tags into a link, and some apps hide where a visit came from, so a real Instagram visit can show as **Direct**. It is counted for the browser tab the customer ordered in: the first page they opened in that tab sets it, and only a later tagged or ad link replaces it. Returning from the card payment page never changes it.

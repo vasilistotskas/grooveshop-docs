@@ -34,6 +34,16 @@ flowchart LR
    `@extend_schema_view(**create_schema_view_config(...))` decorator (see
    [API conventions](/dev/django/api-conventions)). The committed
    `schema.yml` at the Django root is validated by the Code Quality CI job.
+
+   Schemas that describe JSON *inside* a field are published too. Every
+   page-section type's props contract (`page_config/section_schemas.py`,
+   the one Django validates writes against) becomes a component named
+   `PageSection<Type>Props`, e.g. `PageSectionHeroBannerProps`, through
+   the `page_config.openapi.publish_section_schemas` hook. The camelize
+   hook only walks spectacular's own registry, so these are camelized by
+   `core/json_schema.py: wire_schema`, at every depth. The document is
+   OpenAPI 3.0.3, so the section schemas avoid 3.1-only keywords
+   (`enum: [0]`, never `const`).
 2. **The storefront fetches it.** `pnpm generate:schema` runs
    `scripts/fetch-schema.mjs`, which reads `NUXT_DJANGO_URL` (default
    `http://localhost:8000`), sends `DJANGO_API_TOKEN` as a `Bearer` header
@@ -116,6 +126,10 @@ started at the workspace root; subproject sessions do not see the root
 - Enum component names are fixed in `SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`
   so a collision cannot rename a generated type.
 - Regeneration reads `NUXT_DJANGO_URL` (`scripts/fetch-schema.mjs`).
+- A page section's props contract is defined once, in Django
+  (`page_config/section_schemas.py`); the published
+  `PageSection<Type>Props` components are generated from it
+  (`tests/unit/page_config/test_openapi_sections.py`).
 
 ## Failure modes
 
@@ -136,6 +150,8 @@ started at the workspace root; subproject sessions do not see the root
 | `grooveshop-django-api/settings.py` | `SPECTACULAR_SETTINGS` (camelize hook, enum overrides) |
 | `grooveshop-django-api/schema.yml` | Committed Django schema |
 | `grooveshop-django-api/core/utils/serializers.py` | `create_schema_view_config` |
+| `grooveshop-django-api/page_config/section_schemas.py`, `page_config/openapi.py` | Section props contracts and their publication |
+| `grooveshop-django-api/core/json_schema.py` | `wire_schema` (camelizing published JSON Schemas) |
 | `grooveshop-storefront-ui-node-nuxt/scripts/fetch-schema.mjs` | `pnpm generate:schema` |
 | `grooveshop-storefront-ui-node-nuxt/scripts/sync-schema-yml.mjs` | `pnpm sync:schema` |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | `pnpm openapi-ts` |

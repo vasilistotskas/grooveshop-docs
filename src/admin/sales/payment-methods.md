@@ -15,26 +15,24 @@ A payment method is one option the shopper sees at checkout: Viva Wallet, Stripe
 
 | Column | Meaning |
 |---|---|
-| **Name** | The customer-facing label, resolved from a fixed list of keys (Credit Card, Pay On Delivery, BOX NOW PAY ON THE GO!, Pay On Store, PayPal, Stripe, Bank Transfer, Apple Pay, Google Pay, Viva Wallet). |
+| **Name** | The method's logo and its customer-facing label, resolved from a fixed list of keys (Credit Card, Pay On Delivery, BOX NOW PAY ON THE GO!, Pay On Store, PayPal, Stripe, Bank Transfer, Apple Pay, Google Pay, Viva Wallet). |
 | **Provider** | The provider code the platform uses to route the charge, e.g. `stripe`, `viva_wallet`, or "No provider". |
 | **Type** | The settlement type (table below). |
 | **Cost** | The fee added to the order, or **Free**. |
 | **Free Threshold** | "Free above X" when the fee is waived over an order amount, or **No threshold**. |
-| **Icon** | The logo shown at checkout. |
 | **Order** | Position in the checkout list. Rows can be dragged to reorder. |
 
-Filters: **Active**, **Payment Type** (settlement), **Configuration Status** (Configured, Not Configured, No Configuration Needed), **Cost Range**, **Free Threshold Range**, created and updated dates. Search by the name key (for example `PAY_ON_DELIVERY`, not the Greek label), provider code, description and instructions.
+Filters: **Active**, **Payment Type** (settlement), **Cost** and **Free Threshold** (from–to ranges), created and updated dates. Search by the name key (for example `PAY_ON_DELIVERY`, not the Greek label), provider code, description and instructions.
 
-Bulk actions: **Activate selected payment methods**, **Deactivate selected payment methods**, **Move selected items up in sort order**, **Move selected items down in sort order**, **Reset sort order to default**.
+Bulk actions: **Activate selected payment methods** and **Deactivate selected payment methods**. To change the order at checkout, drag the rows.
 
 ### The payment method page
 
-- **Basic Information**: **Active**, sort order.
-- **Display & Branding**: **Name** (one of the keys above, translated per language) and **Icon**.
-- **Content**: **Description** and **Payment Instructions**, a rich-text field. The instructions are rendered in the order-received email, which is where bank-transfer details or "have the exact amount ready for the courier" belong.
-- **Payment Configuration**: **Provider Code** and **Settlement**.
-- **Pricing**: **Cost**, **Free Threshold**, and the computed effective cost.
-- **Advanced Configuration**: the provider's non-secret configuration (read-only for staff, editable by superusers), a preview of its keys and the **Ready Status** (Ready to use / Requires setup). Anything whose name reads like a secret (api key, secret, password, token, private key, client secret, webhook secret) is refused on save and named in the error, because this box is not encrypted.
+The page has tabs:
+
+- **General**: **Active**, sort order, **Name** (one of the keys above, translated per language), **Icon**, **Description** and **Payment Instructions**, a rich-text field. The instructions are rendered in the order-received email, which is where bank-transfer details or "have the exact amount ready for the courier" belong.
+- **Payment**: **Provider Code**, **Settlement**, **Cost**, **Free Threshold** and the computed effective cost.
+- **System**: id and timestamps.
 - **Payment-method exclusions**: rows that block this method for a given shipping provider and shipping kind, with a private note. An empty table means the method is offered with every carrier that supports its settlement.
 
 ## Settlement types
@@ -46,7 +44,7 @@ Bulk actions: **Activate selected payment methods**, **Deactivate selected payme
 | **Paid to the carrier before pickup** | BoxNow collects payment online after dispatch: it sends a payment link when it picks the parcel up, and the locker PIN activates once the shopper pays. | Voucher is created immediately with the amount. Payment status stays Pending until BoxNow reports the parcel delivered, which it can only be after payment; it then flips to Completed. |
 | **Settled off-platform (e.g. bank transfer)** | The shopper pays outside the platform. | Order and voucher are created immediately; nothing marks it paid. You confirm the payment on the order page. |
 
-Only the online settlement needs provider configuration; the other three collect money without the platform calling anyone.
+Only the online settlement needs the payment provider's credentials, which belong to the store's own settings (see [Store settings](/admin/settings/store-settings)); the other three collect money without the platform calling anyone.
 
 ## Tasks
 
@@ -60,7 +58,7 @@ Only the online settlement needs provider configuration; the other three collect
 3. The fee is copied onto each order as its payment-method fee and included in the courier's collection amount.
 
 ### Write the bank-transfer instructions
-1. Open **Bank Transfer**, tab **Content**.
+1. Open **Bank Transfer**, tab **General**.
 2. Put the IBAN, beneficiary and the reference the customer should use in **Payment Instructions**, per language.
 3. When a transfer arrives, open the order and set **Payment status** to **Completed**. See [Orders](/admin/sales/orders).
 

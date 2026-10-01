@@ -96,9 +96,9 @@ Read-only id, uuid, timestamps and **Changed by**, the admin user who last saved
 | Tab | What it holds |
 |---|---|
 | **Product Attributes** | One row per attribute value, chosen through autocomplete. See [Attributes & values](/admin/catalog/attributes-and-values). |
-| **Product Images** | Thumbnail, image file and **Is Main**. Marking one image as main clears the flag on the others, so a product always has at most one. Accepted files are the usual image formats plus SVG, up to 2.5 MB each. Images keep the order in which they were added, and that order cannot be changed from this tab. To reorder them, open the separate **Product Images** list at `/admin/product/productimage/`, filter it to the product and drag the rows. |
+| **Product Images** | Image file (with a preview of the current one) and **Is Main**. Marking one image as main clears the flag on the others, so a product always has at most one. Accepted files are the usual image formats plus SVG, up to 2.5 MB each. Images keep the order in which they were added, and that order cannot be changed from this tab. To reorder them, open the separate **Product Images** list at `/admin/product/productimage/`, filter it to the product and drag the rows. |
 | **Active Stock Reservations** | Read-only rows: reservation id, quantity, who holds it (customer email or guest session), minutes until it expires, and whether it is pending checkout or already tied to an order. |
-| **Stock Activity Logs (Recent 20)** | Read-only history of stock operations with before/after levels and the related order. |
+| **Stock activity** | Every stock operation of the product, newest first and 20 per page, with the change, the before/after levels, the related order and who made it. |
 | **Tags** | Generic tags attached to this product. See [Tags](/admin/catalog/tags). |
 | **Related products** | Merchant-curated links to other products with a **Relation type** (Similar product, Goes well with, Accessory for, Replacement for, Bundle with). Rows are drag-ordered per product. Relations are one-directional: to show A on B and B on A, create both rows. A product cannot relate to itself. |
 
@@ -123,7 +123,7 @@ Customers who set a price-drop alert on the product receive their email when the
 
 ### Adjust stock by hand
 1. Change **Stock** on the product and save.
-2. The change is recorded in **Stock Activity Logs** as **Manual stock adjustment via admin panel**, attributed to you, so the history explains every movement. Sales and reservations are logged separately with their order, and never as a manual adjustment.
+2. The change is recorded in **Stock activity** as **Manual stock adjustment via admin panel**, attributed to you, so the history explains every movement. Sales and reservations are logged separately with their order, and never as a manual adjustment.
 3. A brand-new product is the one exception: the very first save has nothing to compare against, so its opening stock is not logged. Later edits are.
 
 ### Duplicate a product

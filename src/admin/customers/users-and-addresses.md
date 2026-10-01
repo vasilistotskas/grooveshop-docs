@@ -39,9 +39,9 @@ The account page has these sections:
 - **Loyalty & Rewards**: **Points Balance**, **Total XP**, **Level**, **Tier**, all read-only. See [Tiers & points](/admin/loyalty/tiers-and-points).
 - **System Information** (collapsed): ID and timestamps.
 
-Two tabs on the same page list the customer's saved addresses (Title, First Name, Last Name, City, Country, Is Main, Phone) and newsletter subscriptions (Topic, Status, Subscribed At, Unsubscribed At), each with a link to the full record.
+Tabs on the same page list the customer's saved addresses (Title, First Name, Last Name, City, Country, Is Main, Phone), newsletter subscriptions (Topic, Status, Subscribed At, Unsubscribed At) and **Orders**: every order of the customer, newest first and 20 per page, with its status, payment and paid amount, each linking to the order.
 
-Buttons: the account page has **Adjust loyalty points for this user**. It is shown to anyone who can edit the account, but only a superuser's click does anything; for everyone else it answers that only superusers may adjust points. The list has bulk actions to export the selected rows as CSV or XML. Select more than ten thousand rows and the export is refused rather than truncated, so narrow the filter first. The password is never written into an export file.
+Buttons: platform operators see **Adjust loyalty points** on the account page. The list has bulk actions to export the selected rows as CSV or XML. Select more than ten thousand rows and the export is refused rather than truncated, so narrow the filter first. The password is never written into an export file.
 
 ## Addresses
 
@@ -83,8 +83,10 @@ Use this for abuse or on the customer's request. It is not the deletion route: c
 
 ### Add points to a customer's balance
 
-1. Open the account and click **Adjust loyalty points for this user**.
-2. The default is 100 points; the allowed range is minus to plus ten thousand. Every adjustment is written to the points ledger with your name and cannot be undone except by another adjustment. See [Tiers & points](/admin/loyalty/tiers-and-points).
+This is a platform operator's task; the button is not shown to store roles.
+
+1. Open the account and click **Adjust loyalty points**.
+2. Enter the **Points** (positive adds, negative removes; between minus and plus ten thousand) and a **Reason**, then submit. The adjustment is written to the points ledger with your name and the reason, and cannot be undone except by another adjustment. See [Tiers & points](/admin/loyalty/tiers-and-points).
 
 ## Things to know
 

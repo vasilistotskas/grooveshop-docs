@@ -281,11 +281,10 @@ public-schema-only models from a store host — but `tenant` is listed in
 admin reach their own row and their own team without also exposing
 `django_site` or the cache purge log.
 
-Which sidebar *groups* render at all is decided a layer up, by the
-callbacks in `admin/permissions.py`: `is_store_section` hides the 30
-per-store links on the control plane (without it they all led to a 403),
-`is_platform_section` does the inverse, and `platform_environment` paints
-the **Control plane** badge in the header — "the two look alike enough
+The two consoles have separate sidebars (`UNFOLD` and `UNFOLD_PLATFORM`
+in `settings.py`), so neither needs to hide the other's links;
+`admin/permissions.py: platform_environment` paints the **Control plane**
+badge in the header — "the two look alike enough
 that an operator could otherwise edit the wrong thing". See
 [The control plane](/dev/operator/).
 
@@ -347,6 +346,6 @@ that an operator could otherwise edit the wrong thing". See
 | `grooveshop-django-api/admin/admin.py` | `MyAdminSite.has_permission` |
 | `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite.has_permission` (superuser-only) |
 | `grooveshop-django-api/admin/forms.py` | `PlatformAdminAuthenticationForm` |
-| `grooveshop-django-api/admin/permissions.py` | `is_store_section`, `is_platform_section`, `platform_environment` — the sidebar-group callbacks |
+| `grooveshop-django-api/admin/permissions.py` | `platform_environment` — the Control plane badge; `is_superuser` for superuser-only sidebar groups |
 | `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `IsSuperuserOnlyModelAdmin` |
 | `grooveshop-django-api/settings.py` | `AUTHENTICATION_BACKENDS`, `SHARED_APPS` / `TENANT_APPS`, `UNFOLD_PLATFORM["SIDEBAR"]` |

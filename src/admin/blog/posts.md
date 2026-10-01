@@ -32,7 +32,7 @@ The sidebar entry carries a yellow badge with the number of unpublished posts. T
 | **Mark selected posts as featured** / **Remove featured mark from selected posts** | Toggle the Featured flag. |
 | **Publish selected posts** | Sets Is Published on **and overwrites Published At with the current time**, on every post selected, including ones already published. It will re-date your archive; use the form instead unless you mean that. |
 | **Unpublish selected posts** | Sets Is Published off. |
-| **Increment view count by 100** / **Reset view count to zero** | Adjust the counter. |
+| **Reset view count to zero** | Clears the counter. |
 | **Export csv** / **Export xml** | Download the selection (up to 10,000 rows). |
 
 ## The post form

@@ -29,8 +29,6 @@ Tags are short translatable labels that can be attached to products from the pro
 |---|---|
 | **Activate selected tags** | Sets Active on. |
 | **Deactivate selected tags** | Sets Active off. |
-| **Update sort order** | Renumbers the selected tags by usage, most used first, then by label. |
-| **Analyze tag usage** | Shows a message with total, active and in-use counts for the selection. |
 
 The tag form has **Tag Information** (**Label** per language, **Active**), **Organization** (**Sort Order**) and collapsed **System Information**.
 
