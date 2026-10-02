@@ -47,19 +47,19 @@ The **Props** form of a saved section lists every setting its type accepts, so t
 
 | Type | Good to know |
 |---|---|
-| Hero Banner, Hero Carousel | The carousel takes slides, or a list of images with an optional list for phones. |
-| Products Slider, Products Grid, Featured Products, Product Categories | Product rails pick by ordering and an optional category. |
+| Hero Banner, Hero Carousel | The carousel takes slides, or a list of images with an optional list for phones. When the first slide has a heading, that heading is the page's main title. |
+| Products Slider, Products Grid, Featured Products, Product Categories | Product rails pick by ordering and an optional category. Products Grid and Featured Products both draw a grid of four across; Products Slider is the one that scrolls sideways. Product Categories draws square photo tiles, up to six in a row. |
 | Blog Categories Rail, Blog Posts Carousel, Blog Posts Grid, Blog Posts List | |
 | Recently Viewed Rail | Also needs the **RECENTLY_VIEWED_ENABLED** setting on. |
 | Rich Text Block | HTML, up to 20000 characters. |
 | Call to Action Banner | |
 | Newsletter Signup | An email form with a consent box, shown only when a default Newsletter topic exists (see [Subscriptions](/admin/customers/subscriptions)). |
 | Testimonials, Trust Badges, Stats Strip | Trust Badges is a row of reassurance badges (how you pay, who delivers); Stats Strip is a band of key figures. |
-| Offers Preview | The running promotions, on a page other than the offers page. Renders nothing when promotions are off or none is running. |
+| Offers Preview | The running promotions, on a page other than the offers page, always on a dark band whatever surface the section is set to. Its link counts the running offers unless you give it your own text. Renders nothing when promotions are off or none is running. |
 | Spacer, Divider | Layout helpers. |
-| Loyalty Program Hero, Search Bar, Business Hours | Business Hours reads its opening times from the **BUSINESS_HOURS** setting. |
+| Loyalty Program Hero, Search Bar, Business Hours | A visitor who is not signed in sees the programme: points per euro, what points are worth, the first-order bonus and the tiers, with a link to sign up. A signed-in member sees their own points and tier instead. Business Hours reads its opening times from the **BUSINESS_HOURS** setting. |
 | Location Map | |
-| Features Grid, Media + Text, Image Gallery, Story Timeline, FAQ Accordion | Generic marketing blocks. |
+| Features Grid, Media + Text, Image Gallery, Story Timeline, FAQ Accordion | Generic marketing blocks. The FAQ opens on its first answer, and the line under its heading points to your contact page unless you write your own. |
 | Partner Strip, Pull Quote, Reference Cards, Page Hero, Feature Lists, Option Selector, Comparison Table, Flow Steps, Project Register, Vendor Cards, Contact Panel, About Content, Vision Content, What Is Microlearning, Why Microlearning | **Built for specific storefront designs only** — see the warning below. |
 
 ### Two warnings about this list
