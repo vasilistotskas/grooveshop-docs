@@ -94,6 +94,7 @@ only by the lifecycle actions and the billing task. `is_active`, `plan` and
 |---|---|
 | `store_name` | `CharField(max_length=200)`, blank. The name customers see; falls back to `name` in the console's own displays |
 | `store_description` | `TextField`, blank |
+| `store_description_i18n` | `JSONField`, `{locale: text}` for the store's other storefront locales (`el`, `en`); never the tenant's `default_locale`, whose text is `store_description`. Served on the resolve payload as `storeDescriptionI18n`; the storefront prints `storeDescriptionI18n[locale]`, else `store_description` |
 | `logo_light_url`, `logo_dark_url`, `favicon_url` | `URLField`, blank |
 | `primary_color`, `neutral_color` | Tailwind colour **names** from `TailwindColor` (22 choices, Nuxt UI compatible), not hex |
 | `accent_hex`, `success_hex`, `warning_hex`, `error_hex`, `info_hex` | `CharField(max_length=7)` validated against `^#[0-9a-fA-F]{6}$` |
