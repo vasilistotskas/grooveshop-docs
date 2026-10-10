@@ -85,7 +85,7 @@ Numbers are taken from a per-year counter that only moves forward; a deleted inv
 
 ### ACS never collected today's parcels
 
-Vouchers are collected only when they are on a pickup list. The list is issued Mon–Fri at 16:30 and is rejected as a whole if any voucher on it is unprinted. Print the missing label and click **Issue ACS pickup list now** on ACS Shipments. See [ACS Courier](/admin/shipping/acs) and [Reconciliation](/admin/system/reconciliation).
+ACS collects a parcel once its label is printed, whether or not a pickup list was issued, so check the labels first: on ACS Shipments, filter by **Label printed at: empty**, select the rows and run **Print labels for selected shipments**. The 16:30 pickup list is only the day's manifest. ACS refuses it as a whole while any voucher is unprinted, which is normal and needs no action; after printing you can issue it with **Issue ACS pickup list now**. A printed parcel that still has not moved after three days is named in the 09:00 stale-shipments email. See [ACS Courier](/admin/shipping/acs) and [Reconciliation](/admin/system/reconciliation).
 
 ### ACS tracking looks out of date
 

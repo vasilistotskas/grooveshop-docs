@@ -265,17 +265,17 @@ four vouchers per A4. ACS accepts nothing else.
 the order API, the carrier adapter, both admin paths — goes through
 `AcsService.fetch_label_bytes`, which stamps `label_printed_at` on the
 cache-hit path as well as the miss, and is idempotent (first print
-wins). That is why "printed" means the same thing to the 15:45
-pre-flight and the 16:30 manifest whichever button the merchant used.
+wins). That is why "printed" means the same thing to the 16:30
+manifest whichever button the merchant used.
 
 **Bulk print is ours, not ACS's.** `ACS_Print_Voucher` takes a single
 `Voucher_No` and no alias in the manual prints more than one, so
 `AcsService.fetch_labels_pdf` makes N calls — each already cached for an
 hour by `fetch_label_bytes` — and concatenates the pages with `pypdf`
 into one document. One file is one job on the thermal roll, which is the
-point: the operation that unblocks a manifest is "print everything
-outstanding", and doing it one change page at a time is how the voucher
-that gets missed holds back every other parcel that day. WeasyPrint was
+point: printing is what lets ACS collect a parcel, the operation that
+unblocks a manifest is "print everything outstanding", and doing it one
+change page at a time is how a voucher gets missed. WeasyPrint was
 already a dependency but renders HTML to PDF and cannot concatenate
 existing documents, hence the new pin.
 
@@ -297,21 +297,27 @@ The action pairs with the existing `label_printed_at` /
 `EmptyFieldListFilter` on the changelist, which is how the merchant
 selects exactly the unprinted rows.
 
-**The pickup list is mandatory.** A voucher that is not on an issued
-pickup list is not presented to the courier for collection, so the parcel
-never moves. `AcsService.issue_daily_pickup_list` runs Mon–Fri at 16:30
+**The pickup list is a manifest, not a precondition.** ACS scans a parcel
+as collected on the day its label is printed, whether or not a pickup list
+was issued, Saturdays included, when no list runs at all. Measured on
+production from 2026-09-21 to 2026-10-10, 43 of 45 parcels were collected
+with no pickup list. The list is the day's record of what ACS accepted.
+`AcsService.issue_daily_pickup_list` runs Mon–Fri at 16:30
 Athens, guarded by a Redis `cache.add` mutex so the beat task and the
 admin "issue now" view cannot double-issue. It is the same three-phase
 shape as the voucher mint.
 
-Two ACS behaviours make this fragile, and both are handled:
+Two ACS behaviours shape it:
 
 - **ACS rejects the whole list if any voucher on it is unprinted**, and
-  offers no partial issue. `warn_unprinted_acs_vouchers` runs at 15:45,
-  45 minutes earlier, and emails the tenant's operators the exact orders
-  that still need a label. The remedy both that mail and the 16:30
-  failure mail point at is the bulk print action above — one filter, one
-  selection, one PDF.
+  offers no partial issue. The merchant prints labels the next morning,
+  so the 16:30 run is refused on most days. The service raises
+  `AcsUnprintedVouchersError`; `issue_daily_acs_pickup_list` catches it,
+  writes an `OrderHistory` note on each held-back order
+  (`_note_unprinted_on_orders`) and returns `{"status":
+  "blocked_unprinted", ...}`. No email and no failed task, because the
+  refusal is routine and needs no action. To issue a list anyway, the
+  bulk print action above, then the admin "issue now" button.
 - **ACS scopes a list to that day's pickup date.** On one production run
   the manifest covered 2 of 9 candidates. Vouchers minted on earlier days
   are simply not on it, and **they are not swept up by a later list** —
@@ -319,8 +325,7 @@ Two ACS behaviours make this fragile, and both are handled:
   reads back the manifest's actual membership
   (`ACS_Pickup_List_Display_Voucher`) and links only those, logging the
   ones left behind. Linking every candidate would file them under a
-  manifest the courier never received them on and hide them from the run
-  that could still get them collected.
+  manifest ACS never put them on.
 
 A response with no `PickupList_No` is not automatically a failure. Two
 exits are tried before the raise, in this order:
@@ -535,8 +540,11 @@ move `Order.status`, which the carrier events drive separately.
   no contact address, and returns `False` (logged) when there is no
   recipient at all. These are merchant-operations mails: "fix the address
   and re-dispatch".
-- **An ACS voucher that missed its pickup list stays uncollected** until
-  a list is issued for its own pickup date.
+- **Collection does not depend on the pickup list.** A voucher that
+  missed its own day's list is never added to a later one and is
+  collected all the same once printed. An unprinted-voucher refusal is a
+  `blocked_unprinted` status plus order notes, never an email or a
+  failed task.
 - **A pickup day with nothing live waiting is a `None`, not a raise**,
   and one live candidate is enough to make a refusal a failure again.
 - **Exactly one task owns a dead voucher: `check_stale_acs_shipments`.**
@@ -556,13 +564,13 @@ move `Order.status`, which the carrier events drive separately.
   `Reference_Key1=<order id>`; search the ACS dashboard for it and retire
   the duplicate.
 - **Pickup list not issued.** Three shapes. ACS rejected unprinted
-  vouchers: the 15:45 warning already named them and the 16:30 failure
-  mails them again with the ACS message, through
-  `_alert_unprinted_vouchers(blocked=True)`; the fix is the bulk print
-  action plus a manual re-issue. Or the response carried no
-  number, in which case the adopt path asks ACS what it actually holds.
-  Or ACS named nothing unprinted at all — then `_unprinted_rows` is
-  empty, `_alert_unprinted_vouchers` returns early and **no email goes
+  vouchers: routine, not a failure. The task returns `blocked_unprinted`
+  and notes each held-back order with the ACS message; nobody is
+  emailed, and the parcels are collected once printed. A list can still
+  be issued after the bulk print with a manual re-issue. Or the response
+  carried no number, in which case the adopt path asks ACS what it
+  actually holds. Or ACS named nothing unprinted at all — then the
+  service does not raise `AcsUnprintedVouchersError` and **no email goes
   out**: either the day was empty and the service already returned
   `None` (a `noop`, nobody to tell), or a live candidate was waiting and
   the ERROR log plus the failed task row are deliberately the whole

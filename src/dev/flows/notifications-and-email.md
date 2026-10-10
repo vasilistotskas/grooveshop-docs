@@ -142,7 +142,7 @@ shared layout and is excluded.
 | `product/` | `price_drop_alert`, `restock_alert`, `low_stock_alert` |
 | `b2b/` | `business_profile_approved`, `business_profile_rejected`, `admin_new_business_profile` |
 | `billing/` | `expiring`, `expired`, `suspended` |
-| `shipping_acs/` | `stale_shipments_alert`, `unprinted_vouchers_alert` |
+| `shipping_acs/` | `stale_shipments_alert` |
 | `user/` | `data_export_ready`, `inactive_user_email_template` |
 | `subscription/` | `confirmation` |
 
@@ -329,7 +329,6 @@ together.
 | Reservation expired without an order | `send_checkout_abandonment_emails` | — |
 | ACS parcel out for delivery | `acs_out_for_delivery` | `ACS_OUT_FOR_DELIVERY` |
 | BoxNow parcel at locker | `boxnow_parcel_at_locker` | `BOXNOW_PARCEL_AT_LOCKER` |
-| ACS voucher unprinted, 15:45 and on rejection | `unprinted_vouchers_alert` to operators | — |
 | ACS shipment stale | `stale_shipments_alert` to operators | — |
 | Carrier rejected a shipment, or a verified webhook failed to apply | `shipping/alerts.py` ops alert | — |
 

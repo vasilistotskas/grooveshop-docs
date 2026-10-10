@@ -13,16 +13,15 @@ Pickup lists and cash-on-delivery payouts are explained in depth, from the store
 
 ## ACS Pickup Lists
 
-A pickup list (manifest) is the daily document that tells ACS which vouchers to collect. **A voucher that is never on a pickup list is never collected.**
+A pickup list (manifest) is ACS's daily record of the vouchers it accepted for one pickup date. **It is not what gets a parcel collected:** ACS collects a parcel once its label is printed, whether or not a list was issued, and many collected vouchers never appear on one.
 
 Columns: **Pickup list no**, **Issued at**, **Voucher count**, **Issued by** (a person, or empty when the scheduled job did it). Search by number. Every field is read-only; the detail page also shows the billing code used and ACS's raw answer.
 
 ### The routine
 
 1. During the day, ACS vouchers are issued per shipment from [ACS Courier](/admin/shipping/acs) and printed.
-2. **Mon–Fri 15:45** a job emails the store if any voucher due today is still unprinted, because ACS rejects the whole list if one voucher on it is unprinted, and its interface cannot issue a partial list.
-3. **Mon–Fri 16:30** the job issues the list for every voucher awaiting collection and writes a row here.
-4. If the list must go out earlier, or after fixing an unprinted label, open <span class="sidebar-path">Shipping → ACS Shipments</span> and click **Issue ACS pickup list now**. That button is deliberately on the shipments screen, not on this one, so the person who prints the labels can reach it.
+2. **Mon–Fri 16:30** the job asks ACS to issue the list for every voucher still waiting for one, and writes a row here when ACS accepts. ACS refuses the whole list while any voucher on it is unprinted, and its interface cannot issue a partial list. That refusal is routine when labels are printed the morning after the order: it is written as a note on each order it held back, and nobody is emailed.
+3. If the list must go out earlier, or after printing the missing labels, open <span class="sidebar-path">Shipping → ACS Shipments</span> and click **Issue ACS pickup list now**. That button is deliberately on the shipments screen, not on this one, so the person who prints the labels can reach it.
 
 The messages it can return:
 
@@ -30,7 +29,7 @@ The messages it can return:
 |---|---|
 | "Pickup list … issued for … voucher(s)." | Done. A row appears here. |
 | "No vouchers are waiting for a pickup list." | Nothing to collect. No row is written. |
-| "ACS did not issue the pickup list: …" | ACS refused; its own wording follows, usually naming a voucher that has to be printed. |
+| "ACS did not issue the pickup list: …" | ACS refused; its own wording follows, usually naming a voucher still to be printed. Print it and click again to issue the list, or leave it: the parcels are collected once their labels are printed. |
 
 Issuing is single-flight: a lock is taken for five minutes, so if the scheduled run and a manual click overlap, the second one is skipped rather than double-issuing.
 
@@ -65,7 +64,7 @@ Unlike the two ledgers above, this row **is** editable, and only a platform oper
 ## Things to know
 
 - ACS is the cash-on-delivery carrier here; online payments settle through the payment provider, not through this ledger.
-- A pickup list row is written only when ACS accepted the list. No row for a working day means nothing was awaiting collection or the issue failed; the failure text is in the store's email and in the application log.
+- A pickup list row is written only when ACS accepted the list. No row for a working day means nothing was waiting for a list, ACS refused it over unprinted vouchers (noted on each order it held back), or the issue failed for another reason, whose text is in the application log.
 - Deleting an invoice does not give its number back. The counter only moves forward.
 
 ## Related

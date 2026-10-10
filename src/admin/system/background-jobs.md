@@ -30,8 +30,7 @@ Times are store local time (Athens). Each job runs once per store.
 | Job | When | What it does |
 |---|---|---|
 | Poll ACS tracking | every 15 minutes | Fetches checkpoints for every ACS voucher not yet delivered. ACS sends no notifications, so this is the only source. |
-| Warn about unprinted ACS vouchers | Mon–Fri 15:45 | Emails the store if a voucher on today's list has not been printed, because ACS rejects the whole pickup list otherwise. |
-| Issue ACS pickup list | Mon–Fri 16:30 | Presents the day's vouchers to ACS for collection. See [Reconciliation](/admin/system/reconciliation). |
+| Issue ACS pickup list | Mon–Fri 16:30 | Records the day's manifest with ACS. ACS collects printed parcels with or without it and refuses it while any voucher is unprinted; a refusal is noted on the orders it held back, not emailed. See [Reconciliation](/admin/system/reconciliation). |
 | Stale ACS shipments digest | daily 09:00 | Emails a list of vouchers with no movement for several days. |
 | Reconcile ACS COD payouts | daily 02:30 | Imports the previous day's cash-on-delivery payouts and marks the matching orders paid. |
 | Alert unremitted COD | daily 03:00 | Emails a list of delivered COD parcels ACS has not paid out yet. |
@@ -74,7 +73,7 @@ These run the job now instead of waiting, and all of them sit on screens a store
 
 | Screen | Button | What it does |
 |---|---|---|
-| ACS Shipments | **Issue ACS pickup list now** | Presents every waiting voucher to ACS without waiting for 16:30. |
+| ACS Shipments | **Issue ACS pickup list now** | Issues the day's manifest for every waiting voucher without waiting for 16:30. |
 | ACS Shipments | **Issue ACS voucher now** | Creates the voucher for one shipment. |
 | ACS Shipments | **Re-poll ACS tracking** | Re-fetches checkpoints for one shipment. |
 | ACS Shipments | **Re-poll tracking for selected shipments** | The same for several at once. |
@@ -86,7 +85,7 @@ These run the job now instead of waiting, and all of them sit on screens a store
 ## For platform operators
 
 - Do not disable or re-time the fan-out jobs; every store depends on them.
-- Do not change the ACS pickup-list time without agreeing it with the courier's collection window.
+- The ACS pickup-list time does not decide when parcels are collected: ACS collects printed parcels whether or not a list was issued, so moving it changes only when the day's manifest is recorded.
 - **Task Results lists failures, not runs.** Successful jobs deliberately write nothing, so an empty list means nothing failed, not that nothing ran. Failure rows are kept for thirty days. To answer "did the nightly job run at all?", read the last-run time on **Periodic Tasks** instead.
 
 ## Things to know
