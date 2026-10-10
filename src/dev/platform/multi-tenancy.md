@@ -205,8 +205,8 @@ on, end to end:
    `$fetch` / `useFetch` / `useLazyFetch` / `useRequestFetch` out of
    `app/**`.
 3. Nitro forwards `event.context.locale` to Django as `X-Language`
-   (`createHeaders`, `useBackendFetch`, `server/plugins/forwarded-proto.ts`;
-   cached functions pass it explicitly).
+   (`createHeaders`, `useBackendFetch`; cached functions pass it explicitly
+   to `backendFetchFor`, in `server/utils/backendFetch.ts`).
 4. Django activates it for unprefixed `/api/` and `/_allauth/` requests:
    `core/middleware/locale.py: RequestLanguageMiddleware`, a
    `LocaleMiddleware` subclass, calls

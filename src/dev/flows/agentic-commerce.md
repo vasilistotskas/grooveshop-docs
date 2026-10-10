@@ -295,6 +295,44 @@ groups are withheld, and a third is kept but marked:
 - Cart tools are kept but flagged, so a successful call tells the widget to
   refresh its cart store.
 
+#### SSE events
+
+The handler writes named events (`internal/chat/handler.go`). Each event is
+`event: <name>` plus one JSON `data:` line:
+
+| Event | Data | When |
+|---|---|---|
+| `delta` | `{text}` | A chunk of the assistant's reply. Also carries the localized fallback when a turn ends with no prose. |
+| `tool` | `{name, status}` | `running` before each tool call and `done` after it, so the widget can show progress instead of silence. |
+| `products` | `{tool, query?, total?, products: [{id}]}` | After the `done` of a catalog tool (`search_products`, `get_product`). |
+| `error` | `{message}` | The turn failed (for example, the provider rate-limited it). The message is localized. No `done` follows. |
+| `done` | `{conversationId, cartId?, cartMutated}` | The turn is saved. `cartMutated` tells the widget to refresh its cart. |
+
+The `products` event (`internal/chat/products.go`) carries **ids only**:
+- **Pricing.** The storefront loads each product with the shopper's own
+  session, so prices (B2B group pricing included) and stock are the shopper's
+  real ones. The gateway's catalog calls are anonymous and would show retail
+  figures.
+- **Dedup and cap.** `bridge.recordProducts` drops ids already sent this turn
+  and caps the list at `maxProductCards`.
+- **`get_product`** adds the product's variants.
+- **`search_products`** also sends `query` and the search's `total`. Its event
+  is sent even when no new ids are left, so the widget can still say what was
+  found, including "No products found".
+- **Not covered.** Cart and stock-alert tools reference products but emit
+  nothing: the widget already shows the cart, and an alert confirmation is not
+  a recommendation.
+
+In the storefront:
+- `app/utils/sse.ts` parses the stream and `app/composables/useShopChat.ts`
+  attaches each `products` event to its message.
+- `app/components/Chrome/AssistantProducts.vue` fetches the products in
+  parallel through `/api/products/{id}`, drops any that 404 or are inactive,
+  and renders `AssistantProductCard.vue` cards with Add to cart.
+- A search shows "Found N" and a **View all** link to `/search?query=…`.
+- The frozen webside chat panel (`app/components/Chat/Panel.vue`) ignores the
+  event.
+
 ### Identity linking
 
 Django is the OAuth 2.1 authorization server through `allauth.idp`, and the
@@ -484,7 +522,10 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, VAT-inclusive prices, skip rules |
 | `grooveshop-agent-gateway/internal/feeds/acp.go` | ACP feed shape |
 | `grooveshop-agent-gateway/internal/media/url.go` | Asset origin fallback |
-| `grooveshop-agent-gateway/internal/chat/handler.go`, `bridge.go` | Chatbot and withheld tools |
+| `grooveshop-agent-gateway/internal/chat/handler.go`, `bridge.go` | Chatbot, its SSE events, and withheld tools |
+| `grooveshop-agent-gateway/internal/chat/products.go` | The `products` event: extractors, dedup, card cap |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useShopChat.ts`, `app/utils/sse.ts` | Chat stream client |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Chrome/AssistantProducts.vue`, `AssistantProductCard.vue` | Chat product cards |
 | `grooveshop-agent-gateway/internal/checkout/store.go` | Redis keys and TTLs |
 | `grooveshop-agent-gateway/internal/checkout/flow.go`, `internal/django/client_checkout.go` | Order placement and its `agentProtocol` attribution |
 | `grooveshop-agent-gateway/internal/obs/health.go` | `/healthz`, `/readyz` |
