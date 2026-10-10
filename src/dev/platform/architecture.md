@@ -72,12 +72,13 @@ as if the browser had called it directly:
 | `X-Language` | The page's locale (`event.context.locale`); Django answers in it on `/api/` and `/_allauth/` (`core/middleware/locale.py`) — see Multi-tenancy → Request language |
 | `Authorization: Bearer <knox token>` | The customer's API token from the Nuxt session |
 
-`useBackendFetch()` (`server/utils/backendFetch.ts`) is the named `$fetch`
-instance that resolves these per request and is preferred for new routes;
-`server/plugins/forwarded-proto.ts` patches the global `$fetch` as a safety
-net for older cached routes. Cached fetchers must pass the tenant host
-explicitly (`server/utils/api.ts: createCachedFetcher`) because a cached
-function has no request context.
+Every Django call goes through `useBackendFetch(event)`
+(`server/utils/backendFetch.ts`), a `$fetch` instance that resolves these
+headers from the request. There is no global `$fetch` patch; it was removed so
+the server ports to Nuxt 5's Nitro v3, which has no global `$fetch`. A cached
+function has no request, so it uses
+`backendFetchFor({ tenantHost, locale })` with the store host and locale it is
+keyed by (`server/utils/api.ts: createCachedFetcher`).
 
 Inside the cluster the Nuxt pod dials `http://backend-service` (the
 Kubernetes Service), not the public API host (`frontend-config.yaml:
@@ -211,8 +212,7 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 | File | Role |
 |---|---|
 | `grooveshop-storefront-ui-node-nuxt/server/utils/auth.ts` | `createHeaders` |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/backendFetch.ts` | `useBackendFetch` |
-| `grooveshop-storefront-ui-node-nuxt/server/plugins/forwarded-proto.ts` | Global `$fetch` header patch |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/backendFetch.ts` | `useBackendFetch`, `backendFetchFor` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig`, in-memory tenant cache |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey`, `hashedCacheKey` |
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | `routeRules`, `runtimeConfig`, Nitro Redis storage |

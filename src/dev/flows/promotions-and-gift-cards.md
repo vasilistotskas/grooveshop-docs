@@ -1,6 +1,6 @@
 ---
 title: Promotions & gift cards
-description: "Coupon and automatic promotion rules, stacking, the gift-card ledger, refund-to-card, the two-tier gates, and the manual cache purge the offers page needs."
+description: "Coupon and automatic promotion rules, stacking, the on-offer badge and search filter, the gift-card ledger, refund-to-card, the two-tier gates, and the manual cache purge the offers page needs."
 ---
 
 # Promotions and gift cards
@@ -273,6 +273,112 @@ storefront routes (`/gift-cards`, `/gift-cards/success`, `/feedback`) carry
 `robots: false` and never reach a sitemap at all; removing that noindex from
 one of them means adding it to this table.
 
+### The on-offer flag: catalogue badge and search filter
+
+The three surfaces above describe promotions. The catalogue asks a different,
+per-product question: **is this product on offer right now?** One SQL
+expression answers it, `promotion/offers.py: offer_kind_expression`, and gives
+one of three values:
+
+| `offerKind` | When |
+|---|---|
+| `MARKDOWN` | The product carries a product-level discount (`discount_percent > 0`). This value wins over `PROMOTION`. |
+| `PROMOTION` | A live promotion covers the product (rules below), and promotions are enabled for the store. |
+| `null` | Neither applies. |
+
+The promotion branch is `covered_by_live_promotion`, built on
+`live_offer_promotions`. It is stricter than `publicly_listable`, which it
+builds on, because only some promotions put a price offer on a product:
+
+- **AUTOMATIC only.** A code promotion offers nothing until the shopper types
+  the code.
+- **`target_scope` PRODUCTS or CATEGORIES.** Category scope includes the MPTT
+  subtree, as in `PromotionEngine._matching_items`. ORDER scope is cart-level
+  and never marks a product.
+- **Every benefit type except FREE_SHIPPING.** Free shipping is a shipping
+  perk, not a price offer.
+- **Exclusions remove the product:** `excluded_products`, and
+  `excluded_categories` with their subtrees. `exclude_discounted_products`
+  needs no clause of its own, because a marked-down product is already
+  `MARKDOWN`.
+- **Only the products the shopper buys are marked.** The reward side of a
+  BXGY or FREE_GIFT promotion is not.
+- **Gated by `PromotionEngine.is_enabled()`** (plan flag and merchant
+  setting). With promotions off, the cart grants nothing, so nothing is
+  advertised.
+
+Every surface reads this one expression, so the filter a shopper clicks and the
+badge a card shows cannot disagree:
+
+- **Product list and detail.** `offerKind` comes from the
+  `ProductQuerySet.with_offer_kind()` annotation
+  (`product/managers/product.py`), which `product/views/product.py` applies.
+  `product/serializers/product.py` reads the annotation and nothing else.
+- **Search index.** `ProductTranslation` indexes a filterable `on_offer`
+  (`product/models/product.py`). The bulk queryset annotates it once per sync
+  (`get_meilisearch_queryset`, `indexed_offer_kind`), and
+  `search/views.py` filters on it when the request carries `onOffer=true`.
+- **Search result cards.** `search/serializers.py` resolves `offer_kind` from
+  the product.
+
+#### Storefront
+
+- **Filter.** The **On offer** filter
+  (`app/components/Products/Filters/Availability.vue`) reaches the search
+  endpoint through `app/components/Products/List.vue` →
+  `server/api/products/search.get.ts`. The mega-menu's **On offer** button
+  links to `/offers`, not to this filter.
+- **Badge.** `app/components/Product/Card.vue` shows "−N%" for `MARKDOWN` and
+  the translated "Offer" for `PROMOTION`. Sold out still takes precedence. A
+  promotion has no single percentage to name, so it shows a word.
+  `app/components/Search/Modal.vue` and `app/components/Product/Images.vue`
+  (the product page gallery) apply the same rule, so a product badged in a
+  listing is never bare on its own page.
+
+#### Keeping the index in step
+
+`on_offer` can go stale without any Product being saved: an admin edits a
+promotion, a window opens or closes, or a usage limit is reached. Three
+producers feed one coalescing queue in `promotion/offer_sync.py`.
+
+**Signals** (`promotion/signals.py`) fire on:
+- a promotion save or delete;
+- its four scope M2M sets;
+- a redemption that moves it across `usage_limit_total`.
+
+What each signal records:
+- A change that leaves the new scope readable records the **promotion id**,
+  and its products are resolved later.
+- A change that destroys the old scope (delete, `pre_remove`, `pre_clear`)
+  records the **product ids** at once, while those rows still exist.
+
+**The window sweep** is the beat entry `reindex-offer-window-changes`
+(`settings.py`, every 5 minutes). It runs
+`tenant.tasks.fanout_reindex_offer_window_changes` →
+`reindex_window_changes`:
+- It reindexes the products of every active promotion whose `starts_at` or
+  `ends_at` fell inside `(cursor, now]`.
+- The cursor (`promotion-offer:window-cursor`) moves only after dispatch.
+  A crash repeats the window instead of skipping it.
+- A missing cursor falls back to one day back. Reindexing is idempotent.
+
+**Coalescing:**
+- Marks are stored as per-schema cache sets, then committed.
+- One `reindex_offer_products_task` runs `REINDEX_DELAY_SECONDS` (15 s) after
+  the first mark and drains them all. An admin save that fires a dozen signals
+  reindexes once.
+
+Two changes are **not** covered:
+- the reverse side of the M2M (`product.promotions.add`);
+- the merchant's `PROMOTIONS_ENABLED` toggle.
+
+The nightly full sync (`sync-meilisearch-indexes` →
+`tenant.tasks.fanout_sync_meilisearch_indexes`) repairs both.
+
+A deploy that changes the indexed fields needs a one-time
+`meilisearch_sync_all_indexes --all-tenants --app product`, or `onOffer` filters
+on documents that lack the field.
+
 ### Gift cards: a ledger, not a balance column
 
 `giftcard/models.py` is explicit: balance is **always** derived by summing
@@ -378,6 +484,8 @@ whose plan enables it, and Django still gates the data.
 - **The gift-card ledger is append-only.** Never update or delete a
   transaction; write an `ADJUST`.
 - **One coupon per cart** in v1, enforced in `CouponService.apply`.
+- **The on-offer badge and the on-offer filter agree.** Both read
+  `offer_kind_expression`; never compute "on offer" anywhere else.
 - **Free shipping always combines**; `stackable` does not apply to it.
 - **Non-monetary applications still write redemption rows**, or their usage
   limits count nothing.
@@ -394,10 +502,10 @@ whose plan enables it, and Django still gates the data.
   cache surface in `core/cache/surfaces.py` declares **no `invalidated_by` at
   all**, so it takes the `CacheSurface` default of an empty tuple. Signal
   wiring in `core/cache/invalidation.py` only ever connects the models a
-  surface lists, so no signal, admin hook or save purges it — the
-  `promotion` app ships no signals module at all, `promotion/apps.py`
-  defines no `ready()`, and nothing under `promotion/` calls
-  `CacheService.purge`.
+  surface lists, so no signal, admin hook or save purges it. The signals in
+  `promotion/signals.py` only queue the search index's `on_offer` reindex
+  (see [Keeping the index in step](#keeping-the-index-in-step)), and nothing
+  under `promotion/` calls `CacheService.purge`.
   Its `django_patterns` is
   also empty, because both promotion views are plain `APIView`s with no
   response cache; the entries that exist are the Nuxt `PublicPromotionList`
@@ -458,6 +566,13 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/promotion/enum.py` | Trigger, benefit, scope, rejection vocabulary |
 | `grooveshop-django-api/promotion/managers/promotion.py` | `publicly_listable`, `publishable_code_q` — the ONE advertisability rule |
 | `grooveshop-django-api/promotion/services.py` | `PromotionEngine`, `CouponService`, `ProductPromotionService`, `CouponPickerService` |
+| `grooveshop-django-api/promotion/offers.py` | `offer_kind_expression`, `live_offer_promotions`, `scope_product_ids` — the ONE on-offer rule |
+| `grooveshop-django-api/promotion/offer_sync.py` | Coalesced `on_offer` reindex queue and the window sweep |
+| `grooveshop-django-api/promotion/signals.py` | Promotion, scope and usage-limit changes that queue the reindex |
+| `grooveshop-django-api/promotion/tasks.py` | `reindex_offer_products_task`, `reindex_offer_window_changes_task` |
+| `grooveshop-django-api/product/managers/product.py` | `ProductQuerySet.with_offer_kind()` |
+| `grooveshop-django-api/product/models/product.py` | `Product.offer_kind`, the indexed `on_offer` field, `get_meilisearch_queryset` |
+| `grooveshop-django-api/search/views.py` | The `onOffer` search filter |
 | `grooveshop-django-api/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
 | `grooveshop-django-api/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
 | `grooveshop-django-api/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
@@ -474,6 +589,8 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/usePromotionOffer.ts` | Headline, conditions, expiry, rejection copy — shared by all three surfaces |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Product/Offers.vue` | The product page's offer panel |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/CouponPicker.vue` | The checkout coupon picker |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Product/Card.vue` | The `offerKind` badge |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Products/Filters/Availability.vue` | The **On offer** filter |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/promotions-enabled.ts` | Two-tier route gate |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/gift-cards-enabled.ts` | Two-tier route gate |
 | `grooveshop-storefront-ui-node-nuxt/server/api/promotions/index.get.ts` | Cached offers proxy |
