@@ -35,11 +35,11 @@ The list is built from the templates the platform actually ships, so it always m
 | Giftcard | Gift card delivery, Gift card purchase receipt, Gift card expiry reminder |
 | B2B | Business profile approved, Business profile rejected, Admin new business profile |
 | Billing | Expiring, Expired, Suspended (platform billing notices) |
-| Shipping Acs | Stale shipments alert, Unprinted vouchers alert (to the store) |
+| Shipping Acs | Stale shipments alert (to the store) |
 | Subscription | Confirmation |
 | User Management | Data export ready, Inactive user re-engagement |
 
-Ten templates carry a written description and a real subject pattern such as `Your Order #<id> Has Shipped`. The other twenty-four show the placeholder description "Email template" and a generic subject in the preview. That says nothing about the email itself: those templates are sent just as often, and the real message carries a proper subject.
+Ten templates carry a written description and a real subject pattern such as `Your Order #<id> Has Shipped`. The other twenty-three show the placeholder description "Email template" and a generic subject in the preview. That says nothing about the email itself: those templates are sent just as often, and the real message carries a proper subject.
 
 ## Tasks
 

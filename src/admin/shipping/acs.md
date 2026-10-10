@@ -29,7 +29,7 @@ What the platform does automatically:
 1. **At checkout** the shipment row is created in state **Pending creation** with the delivery kind, the chosen Smartpoint (if any), the parcel weight from the cart, one parcel, and the charge type.
 2. **The voucher** is requested in the background: straight away for cash on delivery, bank transfer and orders paid entirely with a gift card, and only after the payment succeeds for card orders. On success the row gets its **Voucher number**, moves to **New**, the order's tracking number is set and the order moves from Pending to Processing.
 3. **Printing** the label records **Label printed at** on the row.
-4. **The pickup list** (manifest) is issued Monday to Friday at 16:30 Athens time, or on demand with the button on this page. ACS does not collect parcels that are not on a pickup list.
+4. **The pickup list** (manifest) is issued Monday to Friday at 16:30 Athens time, or on demand with the button on this page. It is the day's record of the vouchers ACS accepted, not a condition for collection: ACS collects a parcel once its label is printed, whether or not it is on a list.
 5. **Tracking** is polled every fifteen minutes for every non-final shipment. The shipment state follows ACS, and the order status follows the shipment state.
 6. **Cash on delivery** is settled days later: a nightly job pulls ACS's payout report and marks the matching orders paid.
 
@@ -43,8 +43,8 @@ Columns of the list:
 | **Order** | Link to the order. |
 | **State** | See the state table below. |
 | **Delivery kind** | Home delivery or Pickup point / locker. |
-| **Pickup list** | The manifest the voucher was issued on. Empty until the daily list runs. |
-| **Label printed at** | When the label was **first** downloaded through the platform. Later downloads do not change it. Empty means ACS will reject the pickup list. |
+| **Pickup list** | The manifest the voucher was issued on. Empty until a list ACS accepted includes it, and empty on many parcels ACS collected anyway: that is normal. |
+| **Label printed at** | When the label was **first** downloaded through the platform. Later downloads do not change it. Empty means the label has not been printed here yet, and while any voucher is unprinted ACS refuses the day's pickup list. |
 | **Last polled at** | When tracking was last refreshed. |
 
 Filters: **Shipment state**, **Delivery kind**, **Label printed at** (empty or not), **Created at** range. The search box matches the voucher number, the order number and the customer email.
@@ -97,11 +97,11 @@ One parcel at a time, the voucher is printed from the **order**:
 
 1. In <span class="sidebar-path">Sales → Orders</span>, click **Download shipping voucher (PDF)** on the order row or at the top of the order page.
 2. Print the PDF on the thermal roll printer. The layout is the thermal one (one voucher per page) unless the ACS provider's metadata sets `print_type` to `2` for laser, four per A4. See [Shipping providers](/admin/shipping/providers).
-3. **Label printed at** is now set. Print every voucher before 16:30; ACS refuses the whole day's pickup list if even one voucher on it is unprinted.
+3. **Label printed at** is now set. Printing the label is what lets ACS collect the parcel. ACS also refuses the whole day's pickup list while even one voucher on it is unprinted; that refusal needs no action (see "Issue the pickup list" below).
 
-**Printing everything outstanding at once.** On <span class="sidebar-path">Shipping → ACS Shipments</span>, filter by **Label printed at: empty**, tick the rows and choose the bulk action **Print labels for selected shipments**. ACS has no bulk print of its own, so the platform fetches each label and merges them into a single PDF ordered by order number: one file, one job on the thermal roll, instead of opening one order page per parcel. The single voucher you miss holds back every other parcel that day, so prefer this over working through them by hand.
+**Printing everything outstanding at once.** On <span class="sidebar-path">Shipping → ACS Shipments</span>, filter by **Label printed at: empty**, tick the rows and choose the bulk action **Print labels for selected shipments**. ACS has no bulk print of its own, so the platform fetches each label and merges them into a single PDF ordered by order number: one file, one job on the thermal roll, instead of opening one order page per parcel. A label you miss is a parcel ACS cannot collect, so prefer this over working through them by hand.
 
-Downloading the merged file sets **Label printed at** by exactly the same route as the per-order button, so the 15:45 warning and the 16:30 pickup list see the same truth either way.
+Downloading the merged file sets **Label printed at** by exactly the same route as the per-order button, so the 16:30 pickup list sees the same truth either way.
 
 If a voucher cannot be fetched — none has been minted yet, or ACS refuses that one — it is named on screen with its order number and **the others still print**. Only when every selected voucher fails is there no download at all: you get the error messages instead of an empty PDF, which would look like a successful print of nothing.
 
@@ -109,23 +109,25 @@ A label printed from ACS's own portal is not visible to the platform, so the col
 
 ### Issue the pickup list
 
-Automatic on working days at 16:30. You get a warning email at 15:45 listing vouchers that still have no printed label.
+Automatic Monday to Friday at 16:30. The pickup list is the day's manifest: the record of the vouchers ACS accepted for that date. It is not what gets a parcel collected. ACS scans a parcel as collected on the day its label is printed, with or without a list, and on Saturdays too, when no list runs at all.
 
-To issue earlier, or again after fixing a rejection:
+**A refused list is normal.** ACS refuses the whole list while any voucher on it is unprinted, and it cannot issue a partial one. If you print labels the morning after the order, the 16:30 run finds the newest orders still unprinted and is refused on most days. Nothing is lost: those parcels are collected once their labels are printed. You are not emailed about it; the refusal is written as a note in the history of each order it held back.
+
+To issue the list anyway, once the labels are printed:
 
 1. Filter the list by **Label printed at: empty**, select every row shown, run **Print labels for selected shipments** and print the PDF it downloads.
 2. Click **Issue ACS pickup list now**.
-3. Read the message. "Pickup list … issued for N voucher(s)" is success. "ACS did not issue the pickup list: …" quotes ACS's own reason, usually naming the unprinted vouchers. "No vouchers are waiting for a pickup list" means there was nothing for ACS to collect: either every voucher already belongs to a list, or the only ones left are vouchers ACS will never collect — see "An empty day is not a failure" below.
+3. Read the message. "Pickup list … issued for N voucher(s)" is success. "ACS did not issue the pickup list: …" quotes ACS's own reason, usually naming the unprinted vouchers. "No vouchers are waiting for a pickup list" means there was nothing to put on a list: either every voucher already belongs to a list, or the only ones left are vouchers ACS has never scanned — see "An empty day is not a failure" below.
 
-If the 16:30 run is rejected because a label is missing, the store's admins get a second email, **"ACS pickup list NOT issued — N voucher(s) need printing"**. It names the same vouchers and orders as the 15:45 warning and quotes ACS's reply. Either email has the same fix, and it takes a minute: on <span class="sidebar-path">Shipping → ACS Shipments</span> select the rows it names, run **Print labels for selected shipments**, print the one PDF that downloads, then click **Issue ACS pickup list now**. The day is not lost until the courier leaves. Those two are the only emails the pickup list ever sends you; anything else that goes wrong is recorded for the platform team, not mailed to you.
+The pickup list never emails you. Anything that goes wrong with it other than unprinted labels is recorded for the platform team.
 
 **An empty day is not a failure.** ACS builds each list for one pickup date and chooses the vouchers itself, so on a day with no new parcels it correctly answers that there is nothing eligible. When the only vouchers still waiting are ones ACS has never scanned — typically a parcel that was never actually handed over — the run ends quietly with no list and no email, and the button reports "No vouchers are waiting for a pickup list". Those rows are reported by the 09:00 stale-shipment email instead, and retiring them is what clears them.
 
-Why it matters:
+Worth knowing:
 
-- ACS collects only vouchers that are on an issued pickup list. Handing a parcel to the driver without one does not get it collected.
+- Printing the label is what lets ACS collect a parcel. A parcel on no pickup list is still collected, and tracking follows it like any other.
 - A voucher on a list can no longer be cancelled through the platform and can no longer be reprinted through ACS.
-- **A missed list is not caught up later.** ACS builds each list for one pickup date only. A voucher that missed the list for its own day stays unlisted: tomorrow's list covers tomorrow's vouchers, not yesterday's. The **Pickup list** column stays empty on those rows, which is how you find them. Ask ACS to collect them against their voucher numbers.
+- **A missed list is not caught up later, and that is fine.** ACS builds each list for one pickup date only, so a voucher that missed the list for its own day is never added to a later one and its **Pickup list** column stays empty. The parcel is collected all the same; nothing needs doing.
 
 Issued lists are visible to superusers at <span class="sidebar-path">System → Reconciliation → ACS Pickup Lists</span> with the **Pickup list number**, **Issued at**, **Voucher count** and **Issued by** (empty when the 16:30 run issued it). Search matches the pickup list number. The rows are read-only, and there is no button here to reprint the manifest as a PDF: print it from the ACS portal if the driver asks for it. See [Reconciliation](/admin/system/reconciliation).
 

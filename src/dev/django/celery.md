@@ -75,8 +75,10 @@ or `@shared_task(base=MonitoredTask, ...)`.
 (`CELERY_TASK_RETRY_BACKOFF = True`, max 600 seconds), jitter on, and
 `CELERY_TASK_MAX_RETRIES = 5`. Individual tasks tighten this where a retry
 would be wrong, for example `max_retries=3` on the system tasks in
-`core/tasks.py`, and some deliberately raise non-retryable errors (the ACS
-pickup list raises when a voucher is unprinted so an operator fixes it).
+`core/tasks.py`, and some narrow `autoretry_for` instead (the ACS pickup
+list retries only `AcsRetryableError`: an unprinted-voucher refusal
+returns `blocked_unprinted` and notes the orders, and any other ACS
+refusal fails the task without a retry; `shipping_acs/tasks.py`).
 `task_acks_late=True` plus `CELERY_TASK_REJECT_ON_WORKER_LOST = True` means
 a task killed mid-run is redelivered, so bodies must be idempotent.
 
@@ -173,8 +175,7 @@ Most entries fall back to hourly when `DEBUG` is on.
 | `sync-boxnow-lockers` | `tenant.tasks.fanout_sync_boxnow_lockers` | daily 02:00 | `expires: 300` |
 | `poll-boxnow-tracking` | `tenant.tasks.fanout_poll_boxnow_tracking_batch` | every 15 min | defence against a missed webhook |
 | `sync-acs-stations` | `tenant.tasks.fanout_sync_acs_stations` | daily 03:00 | |
-| `warn-unprinted-acs-vouchers` | `tenant.tasks.fanout_warn_unprinted_acs_vouchers` | Mon-Fri 15:45 | 45 min before the manifest |
-| `issue-acs-pickup-list` | `tenant.tasks.fanout_issue_daily_acs_pickup_list` | Mon-Fri 16:30 | raises if any voucher is unprinted |
+| `issue-acs-pickup-list` | `tenant.tasks.fanout_issue_daily_acs_pickup_list` | Mon-Fri 16:30 | an unprinted-voucher refusal returns `blocked_unprinted` and notes each held-back order, no email; only other refusals fail |
 | `poll-acs-tracking` | `tenant.tasks.fanout_poll_acs_tracking_batch` | every 15 min | staggered under the ACS rate cap |
 | `check-stale-acs-shipments` | `tenant.tasks.fanout_check_stale_acs_shipments` | daily 09:00 | `expires: 3600` |
 | `reconcile-acs-cod-payouts` | `tenant.tasks.fanout_reconcile_acs_cod_payouts` | daily 02:30 | idempotent on `(voucher_no, cod_payment_date)` |
@@ -189,7 +190,7 @@ Most entries fall back to hourly when `DEBUG` is on.
 | `tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
 | `order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each with a Redis reservation key so a duplicate signal cannot send twice), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, checkout abandonment, `push_order_event_to_gateway` |
 | `order/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
-| `shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list, unprinted warning, COD reconciliation and alerts, arrival notification |
+| `shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list (and the order notes for a refused one), COD reconciliation and alerts, arrival notification |
 | `shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, arrival notification |
 | `product/tasks.py` | back-in-stock, price-drop and low-stock alerts |
 | `giftcard/tasks.py` | delivery, receipts, expiry, reminders, refund-to-card |
