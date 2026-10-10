@@ -105,14 +105,26 @@ and — after attaching — re-evaluates; if the cart itself makes the code
 ineligible, it **detaches the code again** and raises with the exact reason
 rather than leaving a dead code on the cart.
 
-Rejection reasons are a closed vocabulary, `CouponRejectionReason`, whose
-values follow the ACP discount-extension error vocabulary verbatim so the
-agent gateway can pass them through unchanged.
+Rejection reasons are a closed vocabulary, `CouponRejectionReason`. All but
+two follow the ACP discount-extension error vocabulary verbatim:
+`discount_code_not_started` and `discount_code_not_applicable` have no ACP
+equivalent, and the agent gateway reports both as `discount_code_invalid`
+(`internal/checkout/discounts.go: mapDiscountReason`).
 
-`CartDiscountResult.blocking_rejections` filters one reason out:
-`combination_disallowed` is **not** blocking. A code that lost the stacking
-comparison to a better automatic promotion charges the shopper *less* than the
-code alone would have, and the cart preview already showed that outcome.
+`discount_code_not_applicable` is raised by `_check_eligibility` before any
+minimum when nothing in the cart is in the promotion's scope (after its
+exclusions): a code for chargers on a cart of cables. Before it existed such a
+code passed eligibility, computed to zero and was silently dropped, so the
+picker offered it and `apply` accepted it for nothing (demo store,
+2026-10-10). A buy-X-get-Y code short of its first full group is
+`discount_code_minimum_not_met`, for the same reason.
+
+`CartDiscountResult.blocking_rejections` filters two reasons out, because
+dropping the code changes nothing the cart preview showed:
+`combination_disallowed` (the code lost the stacking comparison to a better
+automatic promotion, so the shopper is charged *less* than the code alone
+would give) and `not_applicable` (the item it covered was removed after
+applying, so it discounted nothing).
 
 ### Stacking and priority
 
@@ -154,10 +166,23 @@ gift or the courier upcharges the voucher later.
 
 ### Near misses
 
-An **automatic** promotion blocked only by its minimum subtotal is reported
-as a `NearMissEntry` with the exact remaining amount, which powers the
-storefront's "add X more to unlock" teaser. Codes never produce near misses —
-they produce a rejection — and an empty cart never produces one.
+An **automatic** promotion short of exactly one minimum is reported as a
+`NearMissEntry`, which powers the storefront's "add X more to unlock" teaser
+(`app/components/Cart/Banners.vue`). Exactly one distance is set:
+
+- `remaining_amount`: only the minimum subtotal is missing
+  (`_minimum_near_miss`).
+- `remaining_quantity`: only units are missing. That is a `min_quantity`, or
+  the rest of a buy-X-get-Y group (`_bxgy_units_short`): "buy 2 get 1" with
+  two eligible units in the cart reports 1. A reward-pool offer counts its
+  buy side only.
+
+A promotion short of both minimums produces no teaser, since there is no
+single thing to add. Codes never produce near misses (they produce a
+rejection), and neither does a cart holding none of the promotion's units.
+The cart exposes the list as `promotionNearMiss` with `remainingAmount` and
+`remainingQuantity`; the frozen webside cart renders only the amount
+teasers.
 
 ### Discovery: three surfaces, one rule
 
