@@ -33,6 +33,24 @@ export default defineConfig({
     config(md) {
       md.use(mermaidPlugin)
     },
+    // Query languages Shiki has no grammar for. The fences keep their real
+    // name (media-stream's observability reference labels them), and render
+    // as plain text instead of logging a fallback warning on every build.
+    languageAlias: {
+      logsql: 'txt',
+      promql: 'txt',
+    },
+  },
+
+  vite: {
+    build: {
+      // Vite's chunk warning cannot tell a lazy chunk from one every page
+      // loads, and the big chunks here are all lazy: the local search index
+      // (fetched when search opens) and Mermaid's elk/cytoscape layouts
+      // (fetched by the diagrams that use them). scripts/check-initial-load.mjs
+      // enforces the budget that matters, on what a page loads up front.
+      chunkSizeWarningLimit: Number.POSITIVE_INFINITY,
+    },
   },
 
   /**
