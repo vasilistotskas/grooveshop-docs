@@ -219,6 +219,11 @@ engine decided for it — `amount`, `freeShipping`, `gift`, or the
 `rejection` reason — and exactly one of them holds, because a code that
 changes nothing is refused. `app/components/Checkout/CouponInput.vue` renders
 it, so a free-shipping code reads "free delivery" and an idle one says why.
+The agent gateway reads the same two fields
+(`internal/checkout/pricing.go: addDiscounts`): ACP `discounts.applied` lists
+one entry per offer with its own amount (automatic ones flagged), and a
+refused attached code goes under `discounts.rejected`, never `applied`
+(`internal/acp/render.go: renderDiscounts`).
 
 ### Discovery: three surfaces, one rule
 
