@@ -158,6 +158,27 @@ by a namespace regex.
   internal `/api` events have no User-Agent and no `client`. evlog's
   `evlog:enrich` hooks run after the line is printed and reach no log, so
   every field is set on the request logger before it emits.
+- One correlation id follows a request across services. Every storefront
+  call to Django sends `X-Correlation-ID`: the caller's own header, else
+  the request's evlog `requestId` (`server/utils/backendFetch.ts`). Django
+  binds it in `core/middleware/correlation_id.py` (minting a UUID when
+  none came), stamps it on every log record as `log.correlation_id` and
+  echoes it on the response. To follow a storefront request into Django,
+  take its `requestId` and filter Django on `log.correlation_id`.
+- Django logs one INFO access line per request it handles
+  (`core/middleware/access_log.py`): `log.method`, `log.route` (the URL
+  pattern, never the raw path or query string; `unmatched` for a path no
+  pattern matches), `log.status`, `log.duration_ms` and
+  `log.correlation_id`. Kubelet's probes are answered before it and are
+  not logged.
+- A failed Celery task logs one ERROR line from `MonitoredTask.on_failure`
+  with the traceback in `log.exception` and redacted arguments
+  (`core/tasks.py`); Celery's own `celery.app.trace` line also carries
+  one.
+- Browser errors (uncaught Vue, startup and window errors, unhandled
+  rejections) reach the logs as `log.source:client` with
+  `log.action:client:*`, each distinct error once per page load
+  (`app/plugins/error-reporting.client.ts`).
 - Traefik's request-duration histograms use 11 buckets from 25 ms to
   10 s (`traefik/helmchartconfig.yaml`), so a storefront p95 moves when a
   render gets faster. No query pins an `le` value.
@@ -209,5 +230,10 @@ by a namespace regex.
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | `evlog.exclude` and the production sampling and keep rules |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | Puts the tenant on the request's log line |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/2.evlog-client.ts` | Puts the client (browser, OS, device class, bot, country) on the request's log line |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/backendFetch.ts` | Sends the correlation id on every Django call |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/error-reporting.client.ts` | Reports browser errors through evlog's client transport |
+| `grooveshop-django-api/core/middleware/correlation_id.py` | Binds and echoes the correlation id |
+| `grooveshop-django-api/core/middleware/access_log.py` | Django's per-request access line |
+| `grooveshop-django-api/core/tasks.py` | `MonitoredTask`: the task failure line with its traceback |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |

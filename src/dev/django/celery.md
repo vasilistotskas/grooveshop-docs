@@ -53,7 +53,9 @@ stamps a `_schema_name` header from `connection.schema_name` unless the
 caller set one; `__call__()` wraps the body in that schema's context.
 
 `core/tasks.py: MonitoredTask(TenantTask)` adds `on_success` / `on_failure`
-logging with redacted arguments:
+logging with redacted arguments. A failure is logged once, at ERROR, with
+the traceback (`exc_info=exc`: Celery's `einfo.exception` is a wrapper
+with no traceback frames):
 
 ```python
 class MonitoredTask(TenantTask):
@@ -63,6 +65,7 @@ class MonitoredTask(TenantTask):
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         safe_args = [_safe_repr(a) for a in (args or [])]
         ...
+        logger.error("Task %s failed. ...", self.name, ..., exc_info=exc)
 ```
 
 Domain tasks are declared as `@celery_app.task(base=MonitoredTask, ...)`
