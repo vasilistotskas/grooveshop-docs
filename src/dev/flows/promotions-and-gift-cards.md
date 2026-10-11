@@ -106,25 +106,40 @@ ineligible, it **detaches the code again** and raises with the exact reason
 rather than leaving a dead code on the cart.
 
 Rejection reasons are a closed vocabulary, `CouponRejectionReason`. All but
-two follow the ACP discount-extension error vocabulary verbatim:
-`discount_code_not_started` and `discount_code_not_applicable` have no ACP
-equivalent, and the agent gateway reports both as `discount_code_invalid`
+three follow the ACP discount-extension error vocabulary verbatim:
+`discount_code_not_started`, `discount_code_not_applicable` and
+`discount_code_gift_unavailable` have no ACP equivalent, and the agent
+gateway reports them as `discount_code_invalid`
 (`internal/checkout/discounts.go: mapDiscountReason`).
 
-`discount_code_not_applicable` is raised by `_check_eligibility` before any
-minimum when nothing in the cart is in the promotion's scope (after its
-exclusions): a code for chargers on a cart of cables. Before it existed such a
-code passed eligibility, computed to zero and was silently dropped, so the
-picker offered it and `apply` accepted it for nothing (demo store,
-2026-10-10). A buy-X-get-Y code short of its first full group is
-`discount_code_minimum_not_met`, for the same reason.
+**A code is accepted only when it changes the outcome.** Every way a code
+could be attached for nothing is a refusal, decided once in
+`PromotionEngine._classify` (and the clamp step of `evaluate`) and mirrored
+by the picker:
 
-`CartDiscountResult.blocking_rejections` filters two reasons out, because
+| Situation | Reason |
+|---|---|
+| Nothing in the cart is in the code's scope (after exclusions), checked by `_check_eligibility` before any minimum | `not_applicable` |
+| A buy-X-get-Y short of its group, or a reward-pool offer whose reward is not in the cart (`_bxgy_shortfall`) | `minimum_not_met` |
+| Worth nothing for any other reason, e.g. a reward-pool offer whose rewards cannot be bought (`_worthless_code_reason`) | `not_applicable` |
+| A monetary code the clamp leaves with 0, because earlier promotions already took the items total | `combination_disallowed` |
+| A free-shipping code on a cart an automatic promotion already ships free | `combination_disallowed` |
+| A gift code whose gift is inactive or out of stock | `gift_unavailable` |
+
+Before this, a GaN-charger code on a cart of cables computed to zero, was
+silently dropped, and the picker offered it while `apply` accepted it for
+nothing (demo store, 2026-10-10); a redundant SHIPFREE "applied" the same
+way.
+
+`CartDiscountResult.blocking_rejections` filters three reasons out, because
 dropping the code changes nothing the cart preview showed:
-`combination_disallowed` (the code lost the stacking comparison to a better
-automatic promotion, so the shopper is charged *less* than the code alone
-would give) and `not_applicable` (the item it covered was removed after
-applying, so it discounted nothing).
+`combination_disallowed` (the code lost to a better automatic promotion, or
+the automatic ones already give what it would, so the shopper is charged no
+more than the code alone would give), `not_applicable` (the item it covered
+was removed after applying, so it discounted nothing) and
+`gift_unavailable` (the gift ran out after the code was applied — a freebie
+must not hold the paid goods hostage, the rule `_inject_promotion_gifts`
+follows too).
 
 ### Stacking and priority
 
@@ -139,11 +154,15 @@ applying, so it discounted nothing).
   `combination_disallowed`.
 
 Free shipping never takes part: it has no amount to conflict over, so
-`stackable` is ignored and it always combines. Free gifts are likewise
-non-monetary.
+`stackable` is ignored and it always combines (a free-shipping *code* is
+refused when an automatic promotion already waives shipping, see above).
+Free gifts are likewise non-monetary. A gift is an entitlement only while
+the lowest-pk active gift product has the stock to hand over
+(`_gift_entitlement`); a sold-out gift pauses the offer silently, and only
+"no active gift at all" is logged, as a misconfiguration.
 
 After stacking, the chosen entries are clamped so the running discount never
-exceeds the items total.
+exceeds the items total; a code the clamp leaves with 0 is refused.
 
 ### Recording
 
@@ -173,16 +192,33 @@ An **automatic** promotion short of exactly one minimum is reported as a
 - `remaining_amount`: only the minimum subtotal is missing
   (`_minimum_near_miss`).
 - `remaining_quantity`: only units are missing. That is a `min_quantity`, or
-  the rest of a buy-X-get-Y group (`_bxgy_units_short`): "buy 2 get 1" with
-  two eligible units in the cart reports 1. A reward-pool offer counts its
-  buy side only.
+  what a buy-X-get-Y still needs (`_bxgy_shortfall`): "buy 2 get 1" with two
+  eligible units in the cart reports 1; a reward-pool offer reports its
+  missing buy units, or — once the buy side is met — 1 with
+  `reward_products` set to the sellable reward products (one reward unit
+  already earns the offer).
+
+**A teaser is a promise, so the engine checks it.** `_teaser_holds` rebuilds
+the cart as it would be after following the teaser (`_items_after_teaser`:
+units onto the cheapest counted line, or one unit of the cheapest reward)
+and runs the full classification, stacking and clamp over it. Only a teaser
+whose promotion is then granted is shown. That removed "-5% from 3 items" on
+two cables, where the third cable unlocks a non-stackable "2+1" that wins
+(demo store, 2026-10-10), and it also hides a gift teaser while the gift is
+sold out and a reward-pool teaser that is short on both sides.
 
 A promotion short of both minimums produces no teaser, since there is no
 single thing to add. Codes never produce near misses (they produce a
 rejection), and neither does a cart holding none of the promotion's units.
-The cart exposes the list as `promotionNearMiss` with `remainingAmount` and
-`remainingQuantity`; the frozen webside cart renders only the amount
-teasers.
+The cart exposes the list as `promotionNearMiss` with `remainingAmount`,
+`remainingQuantity` and `rewardProducts` (rendered as linked product chips);
+the frozen webside cart renders only the amount teasers.
+
+The cart's `appliedCoupons` gives one entry per attached code with what the
+engine decided for it — `amount`, `freeShipping`, `gift`, or the
+`rejection` reason — and exactly one of them holds, because a code that
+changes nothing is refused. `app/components/Checkout/CouponInput.vue` renders
+it, so a free-shipping code reads "free delivery" and an idle one says why.
 
 ### Discovery: three surfaces, one rule
 
@@ -234,9 +270,9 @@ excluded categories (descendants included) and `exclude_discounted_products`
 all suppress the buy-side claim — so an excluded product never advertises
 the offer that skips it. The exclusions constrain what must be **bought**,
 so they do not suppress a `REWARD` claim. `FREE_GIFT` mirrors
-`_gift_entitlement` exactly (lowest-pk **active** gift product), so a
-mis-configured promotion with two gifts never promises the one nobody would
-receive.
+`_gift_entitlement` exactly (lowest-pk **active** gift product with the stock
+to hand over), so a promotion with two gifts never promises the one nobody
+would receive, and a sold-out gift is not advertised.
 
 Rows sort most-specific-first (`PRODUCT`, `REWARD`, `CATEGORY`, `ORDER`) and
 are capped at `MAX_PRODUCT_OFFERS`. The panel is
@@ -264,6 +300,11 @@ as it stands:
 | `discountAmount` | What applying it RIGHT NOW would take off |
 | `freeShipping` | It would newly waive shipping |
 | `applied` | It is the code already on the cart |
+
+The verdicts come from the same helpers `_classify` uses (`_bxgy_shortfall`,
+`_worthless_code_reason`, `_gift_entitlement`), and `_stacked_total` counts
+a code the clamp leaves with 0 as a loser, so every refusal in the table
+above reads the same here as at `apply`.
 
 Two subtleties, both load-bearing:
 
