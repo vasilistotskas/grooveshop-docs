@@ -93,7 +93,7 @@ A refund of a **gift card purchase** made in the Viva Wallet dashboard is added 
 - **Never edit the ledger.** Corrections are new **Adjust** rows; that is why the transactions screen is read-only.
 - **Storefront purchases** are limited to `GIFT_CARD_MIN_AMOUNT` to `GIFT_CARD_MAX_AMOUNT` (10 to 500 by default), paid through the store's online provider, and are not orders: no stock, no shipping, no invoice. The buyer gets a receipt email and the recipient gets the card, immediately or on the chosen date. The sale of a card is never submitted to myDATA; VAT is due when goods are bought with it.
 - **A card is not a coupon.** It has no conditions, targeting or stacking rules and can be combined with any promotion. See [Promotions](/admin/sales/promotions).
-- **VAT and invoices**: the invoice shows the full goods value and VAT; the gift-card amount appears as a payment. See [Invoices](/admin/sales/invoices).
+- **VAT and receipts**: the receipt shows the full goods value and VAT; the gift-card amount appears as a payment. See [Receipts and credit documents](/admin/sales/receipts).
 
 ## Related
 

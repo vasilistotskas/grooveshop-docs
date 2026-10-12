@@ -9,7 +9,7 @@ description: Business profiles for the wholesale program, the approval workflow,
 
 A business profile is a customer's company identity for the wholesale program: company name, VAT number (ΑΦΜ), tax office (ΔΟΥ), business activity and registered address. Customers apply from their account; you review, approve into a customer group, reject with a reason, or suspend. Approval is what switches that customer's cart to wholesale prices. The orange badge on the sidebar entry counts applications waiting for review.
 
-The wholesale program ships dark. It works only when the platform has enabled B2B for the store and `B2B_WHOLESALE_ENABLED` is on under [Store settings](/admin/settings/store-settings). Invoice-at-checkout is separate and available to every shopper; see [Invoices](/admin/sales/invoices).
+The wholesale program ships dark. It works only when the platform has enabled B2B for the store and `B2B_WHOLESALE_ENABLED` is on under [Store settings](/admin/settings/store-settings). Invoice-at-checkout is separate and available to every shopper; see [Receipts and credit documents](/admin/sales/receipts).
 
 ## What you see
 
@@ -99,7 +99,7 @@ flowchart LR
 ## Related
 
 - [Customer groups & price lists](/admin/b2b/groups-and-price-lists)
-- [Invoices](/admin/sales/invoices)
+- [Receipts and credit documents](/admin/sales/receipts)
 - [Orders](/admin/sales/orders)
 - [Users & addresses](/admin/customers/users-and-addresses)
 - [Store settings](/admin/settings/store-settings)

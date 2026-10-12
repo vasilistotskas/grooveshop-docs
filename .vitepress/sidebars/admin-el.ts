@@ -45,7 +45,7 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Παραγγελίες', link: '/el/admin/sales/orders' },
       { text: 'Καλάθια', link: '/el/admin/sales/carts' },
-      { text: 'Τιμολόγια', link: '/el/admin/sales/invoices' },
+      { text: 'Αποδείξεις', link: '/el/admin/sales/receipts' },
       { text: 'Τρόποι πληρωμής', link: '/el/admin/sales/payment-methods' },
       { text: 'Προσφορές', link: '/el/admin/sales/promotions' },
       { text: 'Κωδικοί κουπονιών', link: '/el/admin/sales/coupon-codes' },

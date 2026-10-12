@@ -57,7 +57,7 @@ Some lists show a tab strip at the top so you can hop between related screens wi
 
 | Where | Tabs |
 |---|---|
-| Orders | Orders, Invoices, and — for platform operators only — Stock Logs and Order History |
+| Orders | Orders, Receipts, Credit Documents, and — for platform operators only — Stock Logs and Order History |
 | BoxNow | BoxNow Shipments, BoxNow Lockers, and BoxNow Events for platform operators |
 | ACS | ACS Shipments, ACS Stations, and ACS Pickup Lists, ACS COD Payouts and ACS Tracking Events for platform operators |
 | Product options | Attributes, Attribute Values, Variant Groups |
