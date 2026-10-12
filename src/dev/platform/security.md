@@ -165,7 +165,11 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
   unsealed copies: they are the only plaintext.
 - **Per-merchant secrets are Tenant-row fields**, edited in the platform
   admin, excluded from the audit history, and served to the gateway only
-  on the internal-token path. No env var carries a merchant's key.
+  on the internal-token path. No env var carries a merchant's key. They are
+  encrypted at rest (`core/db/encrypted_fields.py: EncryptedCharField`,
+  Fernet with the keys in `FIELD_ENCRYPTION_KEYS`); key handling and
+  rotation are in
+  [Encryption of merchant secrets at rest](/dev/django/reference/secret-encryption).
 - **Comparisons are constant-time** (`secrets.compare_digest` in Django,
   the media stream's `InternalSecretGuard`), and internal endpoints fail
   closed when the secret is empty.

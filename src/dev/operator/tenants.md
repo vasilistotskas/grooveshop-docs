@@ -302,8 +302,8 @@ hard line through them:
   (`_get_tenant_field(name, settings_fallback=...)`): store name, contact
   email, TOTP issuer, branding.
 - **Third-party credentials never fall back.** `stripe_credentials`,
-  `viva_wallet_credentials`, `acs_credentials`, `box_now_credentials` and
-  the Meta CAPI helpers return empty when the tenant field is empty.
+  `viva_wallet_credentials`, `acs_credentials`, `box_now_credentials`,
+  `mydata_credentials` and the Meta CAPI helpers return empty when the tenant field is empty.
   `PayWayService.is_provider_configured` and the carrier adapters read that
   as *unavailable*, not as *ask settings*. **There is no platform-wide
   fallback for money or secrets.** A merchant's keys must never leak across
@@ -318,6 +318,7 @@ hard line through them:
 | BoxNow | `box_now_partner_id` (public, digits only), `box_now_client_id`, `box_now_client_secret`, `box_now_warehouse_id`, `box_now_notify_phone`, `box_now_webhook_secret` |
 | Meta CAPI | `meta_capi_access_token`, `meta_capi_dataset_id` |
 | Agentic commerce | `chat_api_key`, `acp_bearer_token` |
+| myDATA invoicing | `mydata_user_id`, `mydata_subscription_key` |
 
 Three of these deserve their own warning:
 
@@ -333,12 +334,21 @@ Three of these deserve their own warning:
   endpoint, which is never cached and is marked
   `Cache-Control: private, no-store`.
 
-Twelve credential fields are excluded from the row's `HistoricalRecords`
-(`excluded_fields` on `history`), because every save — including every
-suspend and activate — would otherwise write another plaintext copy of a
-merchant's secrets into a table with no retention or access policy of its
-own. Never print a credential value into a ticket, a log, a shell history
-or a document.
+Fourteen secret fields (every `EncryptedCharField` on the row) are excluded
+from the row's `HistoricalRecords` (`excluded_fields` on `history`), because
+every save — including every suspend and activate — would otherwise write
+another copy of a merchant's secrets into a table with no retention or
+access policy of its own.
+
+Those fields are **encrypted at rest**: each maps onto a `<name>_encrypted`
+text column holding a Fernet token, and the attribute reads and writes plain
+strings. The keys come from `FIELD_ENCRYPTION_KEYS` (first encrypts, all
+decrypt), the empty string is stored empty, and a lookup on a non-empty
+value can never match, so filter on a plain column and compare in Python.
+Key rotation, the loss of a key and the `rotate_tenant_secrets` command are
+in [Encryption of merchant secrets at rest](/dev/django/reference/secret-encryption).
+Never print a credential value into a ticket, a log, a shell history or a
+document.
 
 ## Who may edit what
 
