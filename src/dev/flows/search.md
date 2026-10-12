@@ -167,6 +167,49 @@ necessary because indexing knows nothing about the plan flag —
 `BlogPostTranslation.meili_filter` gates on `is_published` alone — so the
 documents exist either way.
 
+### Attribute filters and their facet counts
+
+A shopper who ticks Black and White under Colour and 2 m under Length
+means (Black OR White) AND 2 m. The storefront sends one flat list
+(`attributeValues=10,11,20`), so the grouping happens in Django:
+`product/attribute_selection.py: AttributeSelection.from_value_ids` groups
+the ids by the attribute each value belongs to. **OR within one
+attribute, AND across attributes**, and every surface that filters by
+attribute value reads the selection through it, so they cannot drift:
+
+| Surface | How the selection is applied |
+|---|---|
+| `GET /api/v1/search/product` (`product_meili_search`) | `filter_search`: one `attribute_values IN [...]` clause per attribute; Meilisearch ANDs the elements of a filter list |
+| `GET /api/v1/product` (`attributeValue_In`, `product/filters/product.py`) | `filter_products`: one subquery per attribute, ids parsed as integers (garbage is a 400), a product carrying two values of one attribute listed once |
+
+An id that belongs to no attribute (a deleted value in a stale link) stays
+a group of its own and matches nothing, so the request lists nothing
+rather than silently losing the filter, as an unknown category does. The
+federated search has no attribute filter, and the agent gateway sends
+none.
+
+**Facet counts are disjunctive.** An attribute's own selection does not
+shrink its own counts, or the alternatives to the value you picked would
+vanish; the other attributes' selections still narrow them. When the
+request asks for the `attribute_values` facet, `filter_search` registers
+each attribute as a facet group (`meili/querysets.py:
+IndexQuerySet.filter_facet_group`), and `IndexQuerySet.search` sends one
+`multi-search` request: the main query plus one count-only query
+(`limit: 0`) per selected attribute, with that attribute's own clause left
+out. The count queries repeat the main query's text, matching strategy
+and locales, so they match the same documents. Only the unselected
+siblings are read from a count query; a selected value keeps the main
+query's count, which is already its disjunctive count. Without a
+selection, or without the facet requested, it stays a single query, so a
+filtered listing costs `1 + N` engine queries in one round trip, `N`
+being the attributes with a selection.
+
+The storefront's attribute facet query
+(`app/composables/useProductSearchData.ts`) sends the selected
+`attributeValues` along with `facets=attribute_values`, and its cache key
+includes them, so a selected colour narrows the sizes' counts and leaves
+the other colours' counts alone.
+
 ### The relaxed-query retry
 
 `_relaxed_query(query)` returns the query with its **leading** word removed,
@@ -313,6 +356,11 @@ every failure — tracking must never affect the shopper. It no-ops without a
   would leave stale data searchable forever.
 - **Sort and facet parameters are allowlisted** and mapped to real index
   attribute names before they reach the query DSL.
+- **Attribute values combine OR within an attribute and AND across
+  attributes**, on every surface, through `AttributeSelection` alone.
+  Never filter on the flat `attribute_values` list directly.
+- **An attribute's facet counts ignore its own selection** and honour
+  every other filter.
 - **Analytics never block a response.** Every write is a Celery dispatch, and
   every failure is logged, not raised.
 
@@ -348,6 +396,12 @@ every failure — tracking must never affect the shopper. It no-ops without a
   field carries a `*_greeklish_variants` bag — long fields deliberately do
   not — and whether the query's first word is the unmatched one, in which
   case the relaxed retry should already have rescued it.
+- **A filtered listing shows nothing although each picked value has
+  products.** Check that no picked id is a deleted value: an unknown id is
+  a group of its own and matches nothing, on purpose.
+- **Attribute counts shrink to the picked values.** The facet request
+  left out `attributeValues`, or asked without
+  `facets=attribute_values`, so no facet groups were registered.
 - **Search analytics full of non-searches.** The middleware's exclusion list
   is a suffix match on `/trending` and `/analytics`; a new non-query
   endpoint under `/search/` must be added to `_NON_QUERY_SEARCH_SUFFIXES`.
@@ -366,7 +420,9 @@ every failure — tracking must never affect the shopper. It no-ops without a
 |---|---|
 | `grooveshop-django-api/meili/models.py` | `IndexMixin`, `MeiliMeta`, `get_meili_index_name`, serialization |
 | `grooveshop-django-api/meili/_client.py` | Master and search clients, tenant tokens, index settings, paged `get_indexes` |
-| `grooveshop-django-api/meili/querysets.py` | `IndexQuerySet.search`, hit hydration through each model's `get_search_result_queryset` |
+| `grooveshop-django-api/meili/querysets.py` | `IndexQuerySet.search`, `filter_facet_group` and the disjunctive-facet `multi-search`, hit hydration through each model's `get_search_result_queryset` |
+| `grooveshop-django-api/product/attribute_selection.py` | `AttributeSelection`: grouping, `filter_search`, `filter_products` |
+| `grooveshop-django-api/product/filters/product.py` | `attributeValue_In` on the product list |
 | `grooveshop-django-api/meili/_settings.py` | Search-key fallback |
 | `grooveshop-django-api/meili/apps.py` | Signal wiring, index-or-delete branch |
 | `grooveshop-django-api/meili/tasks.py` | `index_document_task`, `delete_document_task`, `reindex_model_task` |
@@ -381,6 +437,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 | `grooveshop-django-api/blog/managers/post.py` | `published()` — the schedule gate search does not apply |
 | `grooveshop-storefront-ui-node-nuxt/server/api/search/` | Storefront proxies |
 | `grooveshop-storefront-ui-node-nuxt/server/api/products/search.get.ts` | Cached product search |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useProductSearchData.ts` | Category and attribute facet queries, the attribute one carrying the selection |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useSearchClickTracking.ts` | Click attribution |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Search/` | Modal, input, result tile |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml` | PreSync step 3/4 |
