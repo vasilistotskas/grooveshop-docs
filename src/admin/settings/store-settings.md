@@ -197,7 +197,7 @@ The storefront reads every public setting in one request and keeps the answer fo
 - Your store profile (branding, colours, social links, pixels, payment and courier credentials) is a separate form, not a setting. See [Roles & team](/admin/getting-started/roles-and-team) for where it lives.
 - The currency cannot be changed by the store; every money path in the back office uses euro, and a storefront showing another symbol over euro amounts would misprice everything.
 - Settings whose description mentions a validator reject malformed JSON on save with an error message.
-- The dashboard shows a "seller identity missing" warning to platform operators while any of `INVOICE_SELLER_NAME`, `INVOICE_SELLER_VAT_ID`, `INVOICE_SELLER_TAX_OFFICE` is empty.
+- The dashboard reminds Owners and Admins when the legal details the law requires on your website are still empty (name, legal form, `INVOICE_SELLER_REGISTRATION_NUMBER`, VAT ID, address, email). While myDATA is on, it also warns in red when `INVOICE_SELLER_NAME`, `INVOICE_SELLER_VAT_ID` or `INVOICE_SELLER_TAX_OFFICE` is empty, because receipts cannot be submitted without them.
 
 ## Related
 
