@@ -341,7 +341,7 @@ The template renders **five** Ingress objects
 |---|---|---|---|
 | `<slug>-ingress-storefront` | apex + `www.`, `web` and `websecure` | redirect-https, security-headers, compress-responses | `<slug>-tls`, `<slug>-www-tls` |
 | `<slug>-ingress-api` | `api.`, `web` and `websecure` | redirect-https, rate-limit-api, security-headers, compress-responses | `<slug>-api-tls` |
-| `<slug>-ingress-agent` | `/mcp`, `/.well-known/ucp`, `/feeds`, `/acp` on the apex, `websecure` | security-headers, rate-limit-agent, compress-responses | reuses `<slug>-tls` via SNI |
+| `<slug>-ingress-agent` | `/mcp`, `/.well-known/ucp`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json`, `/feeds`, `/acp` on the apex, `websecure` | security-headers, rate-limit-agent, compress-responses | reuses `<slug>-tls` via SNI |
 | `<slug>-ingress-agent-chat` | `/chat` on the apex | security-headers, rate-limit-chat, compress-responses | reuses `<slug>-tls` |
 | `<slug>-ingress-contact-attachment` | `/api/contact/attachment` on the apex and `/api/v1/contact/attachment` on `api.` | security-headers, rate-limit-api, limit-attachment-body | reuses the certs above |
 
@@ -445,7 +445,8 @@ Run after the sync completes and the certificates are `Ready=True`.
    Stripe, ACS and BoxNow the merchant enabled, confirm the credential
    helper reports it configured; an empty field is silent.
 9. **Agent surfaces**, if `agent_commerce_enabled` is on: `/mcp`,
-   `/.well-known/ucp`, `/feeds`, `/acp` on the apex. With no
+   `/.well-known/ucp`, `/.well-known/ard.json`,
+   `/.well-known/ai-catalog.json`, `/feeds`, `/acp` on the apex. With no
    `chat_api_key`, `/chat` answers **404** with a chat-disabled message —
    a per-tenant capability that is off, not a fault
    (`grooveshop-agent-gateway/internal/chat/handler.go`).

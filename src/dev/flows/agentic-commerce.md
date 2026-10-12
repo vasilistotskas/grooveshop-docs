@@ -391,10 +391,11 @@ store`. They share `publicDocument` for CORS (`OPTIONS` answers 204),
 `Cache-Control: public, max-age=3600` and ETag / `If-None-Match`
 revalidation.
 
-The ingress routing of `/.well-known/ard.json` and
-`/.well-known/ai-catalog.json` to the gateway on every store host lands
-with grooveshop-infrastructure PR #184; once it is live, the storefront's
-former `ai-catalog.json` route is deleted (storefront PR #104).
+The ingress routes `/.well-known/ard.json` and
+`/.well-known/ai-catalog.json` to the gateway on every store host as
+`Exact` paths beside `/.well-known/ucp`
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml`);
+the storefront serves neither.
 
 ### Order events
 
@@ -450,11 +451,10 @@ beats Traefik 502s.
 Each tenant path-routes five prefixes to `agent-gateway-service`, split
 across **two** Ingress objects in
 `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml`:
-`TENANT_SLUG-ingress-agent` carries `/mcp`, `/.well-known/ucp`, `/feeds` and
+`TENANT_SLUG-ingress-agent` carries `/mcp`, `/.well-known/ucp`,
+`/.well-known/ard.json`, `/.well-known/ai-catalog.json`, `/feeds` and
 `/acp`, while `/chat` gets its own `TENANT_SLUG-ingress-agent-chat` so it can
-take the `rate-limit-chat` Traefik middleware the other four must not.
-The two discovery documents join the agent Ingress with infrastructure
-PR #184 (see Agent discovery above).
+take the `rate-limit-chat` Traefik middleware the others must not.
 The payment-handler documents are served host-scoped on
 `payments.grooveshop.space`, which the mux binds explicitly and which takes no
 tenant middleware — it is a platform artifact, not a tenant.
