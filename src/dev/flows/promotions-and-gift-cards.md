@@ -408,6 +408,11 @@ badge a card shows cannot disagree:
 
 #### Keeping the index in step
 
+The same queue also keeps the consumer price records in step (see
+[The listed price and the Omnibus prior price](#the-listed-price-and-the-omnibus-prior-price)):
+its drain task re-records the products' prices first, then reindexes them, and
+it no longer depends on Meilisearch being online.
+
 `on_offer` can go stale without any Product being saved: an admin edits a
 promotion, a window opens or closes, or a usage limit is reached. Three
 producers feed one coalescing queue in `promotion/offer_sync.py`.
@@ -426,9 +431,9 @@ What each signal records:
 **The window sweep** is the beat entry `reindex-offer-window-changes`
 (`settings.py`, every 5 minutes). It runs
 `tenant.tasks.fanout_reindex_offer_window_changes` →
-`reindex_window_changes`:
-- It reindexes the products of every active promotion whose `starts_at` or
-  `ends_at` fell inside `(cursor, now]`.
+`refresh_window_changes`:
+- It refreshes (price records, then the index) the products of every active
+  promotion whose `starts_at` or `ends_at` fell inside `(cursor, now]`.
 - The cursor (`promotion-offer:window-cursor`) moves only after dispatch.
   A crash repeats the window instead of skipping it.
 - A missing cursor falls back to one day back. Reindexing is idempotent.
@@ -437,18 +442,72 @@ What each signal records:
 - Marks are stored as per-schema cache sets, then committed.
 - One `reindex_offer_products_task` runs `REINDEX_DELAY_SECONDS` (15 s) after
   the first mark and drains them all. An admin save that fires a dozen signals
-  reindexes once.
+  refreshes once.
 
 Two changes are **not** covered:
 - the reverse side of the M2M (`product.promotions.add`);
 - the merchant's `PROMOTIONS_ENABLED` toggle.
 
 The nightly full sync (`sync-meilisearch-indexes` →
-`tenant.tasks.fanout_sync_meilisearch_indexes`) repairs both.
+`tenant.tasks.fanout_sync_meilisearch_indexes`) repairs both, and the nightly
+`reevaluate-price-episodes` beat entry does the same for the price records.
 
 A deploy that changes the indexed fields needs a one-time
 `meilisearch_sync_all_indexes --all-tenants --app product`, or `onOffer` filters
 on documents that lack the field.
+
+### The listed price and the Omnibus prior price
+
+A reduction a customer is shown (a struck "was" price, a "−N%" badge, an
+"offer" label) must state the **prior price**: the lowest price of the 30 days
+before the reduction started. The API records it, so a client never derives it
+from the list price. The rule is the strictest of Greece and Cyprus, so there is
+no per-country switch.
+
+What is recorded:
+- `ProductPriceSpell` is an append-only record of the consumer **gross** unit
+  price per period. It is the legal record: the history purge never touches it
+  and nothing deletes a spell.
+- `Product.effective_price` is the price a shopper pays for one unit now:
+  `final_price` minus what the **unconditional automatic promotions** take off.
+  `Product.prior_price` is the frozen reference and
+  `Product.reduction_started_at` marks the reduction in force. All three are
+  derived columns, written only by `product/pricing/service.py`.
+
+What counts as a reduction:
+- a product markdown (`discount_percent > 0`), or
+- an automatic promotion scoped to products or categories, a percentage or fixed
+  amount, with no minimum quantity or subtotal, no first-order rule and no
+  per-customer limit (`price_reducing_promotions`).
+
+Conditional promotions, buy-X-get-Y, gifts, free shipping and code promotions are
+deals on a basket, not a price the product is offered at, and record nothing. The
+unit discount is computed by the cart's own rules over a one-line cart
+(`PromotionEngine.single_unit_discount`), so a listing and the cart agree to the
+cent.
+
+How `evaluate_reduction` decides (pure, `product/pricing/evaluation.py`):
+- The reference is the minimum price of the 30 days **before** the reduction
+  started, fixed at the start, never rolling.
+- A product on sale for less than 30 days announces nothing.
+- A further drop inside an uninterrupted reduction keeps the reference only
+  within 60 days of the start. A price increase, the reduction stopping, or the
+  price reaching the reference ends the episode; the next reduction is new.
+- The announced percent is the floor of the drop **from the prior price** to the
+  effective price (CJEU C-330/23), never from the list price.
+
+Every path that moves a price records it: `Product.save` (price, markdown,
+VAT), a `Vat` rate edit or deletion, an unconditional promotion starting,
+ending or being edited (the offer queue above), a promotion window opening or
+closing (the sweep above), and the nightly `reevaluate-price-episodes`
+reconciliation. A price field must never change through `queryset.update()`.
+
+The API exposes `priorPrice`, `effectivePrice` and `announcedDiscountPercent`
+from the stored columns (no query per row) and `prior_price` /
+`announced_discount_percent` in the Meilisearch document. `discountPercent`,
+`discountValue` and `priceSavePercent` are the merchant's markdown, deprecated
+for one release. Full reference:
+[Product pricing](/dev/django/reference/product-pricing).
 
 ### Gift cards: a ledger, not a balance column
 
@@ -581,6 +640,9 @@ whose plan enables it, and Django still gates the data.
 - **One coupon per cart** in v1, enforced in `CouponService.apply`.
 - **The on-offer badge and the on-offer filter agree.** Both read
   `offer_kind_expression`; never compute "on offer" anywhere else.
+- **A reduction is announced only with its prior price.** `priorPrice` and
+  `announcedDiscountPercent` come from `ProductPriceSpell`; never compute a
+  "was" price or a percentage from `price` or `discount_percent`.
 - **Free shipping always combines**; `stackable` does not apply to it.
 - **Non-monetary applications still write redemption rows**, or their usage
   limits count nothing.
@@ -668,10 +730,14 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/promotion/enum.py` | Trigger, benefit, scope, rejection vocabulary |
 | `grooveshop-django-api/promotion/managers/promotion.py` | `publicly_listable`, `publishable_code_q` — the ONE advertisability rule |
 | `grooveshop-django-api/promotion/services.py` | `PromotionEngine`, `CouponService`, `ProductPromotionService`, `CouponPickerService` |
-| `grooveshop-django-api/promotion/offers.py` | `offer_kind_expression`, `live_offer_promotions`, `scope_product_ids` — the ONE on-offer rule |
-| `grooveshop-django-api/promotion/offer_sync.py` | Coalesced `on_offer` reindex queue and the window sweep |
+| `grooveshop-django-api/promotion/offers.py` | `offer_kind_expression`, `live_offer_promotions`, `price_reducing_promotions`, `scope_product_ids` — the ONE on-offer rule |
+| `grooveshop-django-api/promotion/offer_sync.py` | Coalesced refresh queue (price records, then `on_offer` reindex) and the window sweep |
 | `grooveshop-django-api/promotion/signals.py` | Promotion, scope and usage-limit changes that queue the reindex |
 | `grooveshop-django-api/promotion/tasks.py` | `reindex_offer_products_task`, `reindex_offer_window_changes_task` |
+| `grooveshop-django-api/product/models/price_spell.py` | `ProductPriceSpell`, the append-only price record |
+| `grooveshop-django-api/product/pricing/evaluation.py` | `evaluate_reduction`, `announced_discount_percent` — the Omnibus rule |
+| `grooveshop-django-api/product/pricing/service.py` | The one writer of spells and the derived `Product` columns |
+| `grooveshop-django-api/product/tasks.py` | `reevaluate_price_episodes`, `sync_price_records` |
 | `grooveshop-django-api/product/managers/product.py` | `ProductQuerySet.with_offer_kind()` |
 | `grooveshop-django-api/product/models/product.py` | `Product.offer_kind`, the indexed `on_offer` field, `get_meilisearch_queryset` |
 | `grooveshop-django-api/search/views.py` | The `onOffer` search filter |
