@@ -203,6 +203,16 @@ snapshot is retail, which makes the resulting drift warning noise rather
 than evidence of a mispriced order. The symptom is a log full of false
 drift on wholesale reorders, not money lost.
 
+**A line staff add to a wholesale order keeps the order's group price.**
+`POST /api/v1/order-items` takes no price from the request; it prices the
+new line with `order/views/item.py: OrderItemViewSet._line_price`. On an
+order whose `metadata["b2b_pricing"]` marker names the group that priced
+it at checkout, that is `B2BPricingService.resolve_single(product, group).final`
+for that group, not for the buyer's group today; on any other order, the
+product's VAT-inclusive `final_price`, as checkout stores it. If the
+group no longer exists, the line is refused with a 400 on `order` rather
+than sold at retail.
+
 `CartItem.price` and `CartItem.final_price` read
 `getattr(self.cart, "_b2b_pricing", None)` and fall back to retail. The
 fallback is safe — never wrong-priced — which is exactly why a missing
@@ -380,6 +390,7 @@ points-earned promise and the redemption widget.
 | `grooveshop-django-api/cart/models/item.py` | `_b2b_resolved`, `price`, `final_price` |
 | `grooveshop-django-api/cart/serializers/cart.py` | The `b2bPricing` payload |
 | `grooveshop-django-api/order/services.py` | Binding, loyalty suppression, minimum gate, metadata marker |
+| `grooveshop-django-api/order/views/item.py` | `_line_price`: a staff-added line priced for the order's stamped group |
 | `grooveshop-django-api/order/models/order.py` | Billing snapshot columns |
 | `grooveshop-django-api/order/serializers/order.py` | Invoice cross-field validation |
 | `grooveshop-django-api/tenant/models.py` | `b2b_enabled` and the invoicing exception |

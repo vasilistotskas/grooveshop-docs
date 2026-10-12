@@ -191,7 +191,7 @@ Most entries fall back to hourly when `DEBUG` is on.
 |---|---|
 | `core/tasks.py` | health monitor, backups, cache clear, session and history cleanup, abandoned carts, Meilisearch sync, inactive-user mail |
 | `tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
-| `order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each with a Redis reservation key so a duplicate signal cannot send twice), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, checkout abandonment, `push_order_event_to_gateway` |
+| `order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, checkout abandonment, `push_order_event_to_gateway` |
 | `order/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
 | `shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list (and the order notes for a refused one), COD reconciliation and alerts, arrival notification |
 | `shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, arrival notification |

@@ -506,7 +506,9 @@ queues the buyer's receipt, and queues delivery **only when there is no
 Refunds go back to the source cards, **whole and once**.
 `giftcard/signals.py` listens on `order_canceled` and on `order_refunded`,
 and for a refund acts only when the order's `payment_status` is REFUNDED,
-that is with the refund that leaves nothing to refund. It queues
+that is with the refund that leaves nothing to refund. The payment
+ledger decides that (`order/payment_ledger.py: PaymentLedger.refund_status`,
+refunded against captured), however many refunds it took. It queues
 `credit_refund_to_gift_cards(order_id)`, and
 `GiftCardService.credit_refund` writes one `REFUND_CREDIT` per card for
 exactly what that card's `REDEEM` row took from it. A partial refund
@@ -679,6 +681,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` (`refunded_amount`) |
 | `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, `credit_refund`, `handle_purchase_reversal`, expiry |
 | `grooveshop-django-api/giftcard/signals.py` | Cancel credit-back, and refund credit-back only on REFUNDED |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED |
 | `grooveshop-django-api/order/views/viva_webhook.py` | `_process_gift_card_purchase_event`: purchase refunds accumulated, card voided at the purchase amount |
 | `grooveshop-django-api/giftcard/tasks.py` | Delivery, receipts, reminders, expiry, refund credit |
 | `grooveshop-django-api/giftcard/admin.py` | `save_model` issuing, Resend delivery action |

@@ -275,11 +275,20 @@ together.
 
 - **Per-event reservation flags** on `order.metadata` guard each email
   task: `confirmation_email_sent_at`, `payment_failed_email_sent`,
-  `refund_confirmation_email_sent`, `invoice_email_sent`,
-  `shipping_notification_email_sent`, and
+  `invoice_email_sent`, `shipping_notification_email_sent`, and
   `status_update_email_sent_<STATUS>` per transition. Tasks reserve
   before sending and release on permanent failure so an operator can
   retry.
+- **The refund confirmation is one email per refund, not per order.**
+  `handle_order_refunded` queues `send_refund_confirmation_email(refund_id)`
+  on commit for each REFUND row of the payment ledger, so an order
+  refunded in parts sends one email per part. The task claims its refund
+  before sending by inserting a `RefundNotification`
+  (`order/models/refund_notification.py`, one-to-one with the refund, so
+  the database decides between two workers handed the same refund) and
+  deletes the claim on permanent failure. A refund the ledger already
+  holds never signals again, so the webhook that reports a refund the
+  platform made sends no second email.
 - **The confirmation email additionally holds a Redis execution lock**
   (`order:confirm_email_lock:<id>`, 90s). The permanent guard is a
   timestamp written *after* the send; the lock covers the window before
@@ -352,7 +361,8 @@ Retry policy differs by intent. The six **reservation-guarded** customer
 emails — confirmation, payment failed, refund confirmation, status update,
 shipping notification and invoice — use
 `max_retries=3, default_retry_delay=300`, catch broadly, and release the
-reservation flag on permanent failure. The rest do not follow that shape:
+reservation on permanent failure (the flag, or for the refund email its
+`RefundNotification` claim). The rest do not follow that shape:
 the merchant and dispute emails and the two sweep tasks use
 `autoretry_for=(Exception,)` with backoff and jitter and hold no
 reservation flag at all, `send_invoice_to_mydata` uses
@@ -504,7 +514,8 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-storefront-ui-node-nuxt/app/components/User/NotificationsBell.vue` | Opens a notification path under the viewer's locale |
 | `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_admin_recipients` |
 | `grooveshop-django-api/user/utils/subscription.py` | `build_transactional_list_headers` |
-| `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers |
+| `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
+| `grooveshop-django-api/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
 | `grooveshop-django-api/order/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask` |
 | `grooveshop-django-api/tenant/celery.py` | `TenantTask`, `dispatch_on_commit` |

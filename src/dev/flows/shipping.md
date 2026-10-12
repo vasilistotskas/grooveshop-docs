@@ -432,6 +432,21 @@ person and already had the DELIVERED notification. The backfill command
 passes it only when given `--silent`, which is why that flag matters
 below.
 
+**The status flip and its ledger row are one step.**
+`_mark_cod_order_paid_if_pending` calls
+`order/services.py: OrderService.settle_cod_payment`, which locks the
+order, re-reads its payment status under the lock and, only if it is still
+PENDING, runs `mark_as_paid` and writes a `COD_COLLECTION` row on the
+payment ledger (provider `acs_cod`, the voucher number, the voucher's
+`cod_amount`; nothing for a zero amount) in one atomic block. A failed
+ledger insert rolls the status back, so the next payout run still sees
+PENDING instead of skipping an order that is paid but unrecorded. It
+returns `True` only to the call that settled the order, and only that call
+sends `order_paid` and attempts the auto-advance, so the nightly reconcile
+and the staff **Record COD received outside ACS** action
+(`shipping_acs/admin.py`, `AcsService.record_cod_received_outside_acs`,
+which goes through the same method) settle one order once.
+
 Unattributable rows are still persisted (it is real money) and reported
 separately: `unmatched` means a legible voucher nobody recognises,
 usually a voucher created by hand in the ACS portal; `skipped` means no
@@ -522,7 +537,11 @@ misconfiguration would freeze parcel state silently.
 
 `delivered` is proof of payment for `carrier_terminal` orders:
 `_mark_cod_order_paid_on_delivery` moves the order's **payment status**
-from PENDING to COMPLETED with `payment_method="boxnow_cod"`. It does not
+from PENDING to COMPLETED with `payment_method="boxnow_cod"`, through
+`OrderService.settle_cod_payment` like ACS, so the status and its
+`COD_COLLECTION` ledger row (provider `boxnow_cod`, the parcel id,
+`amount_to_be_collected`) are written together or not at all, and
+`order_paid` is sent only by the call that settled it. It does not
 move `Order.status`, which the carrier events drive separately.
 `final-destination` triggers `boxnow_send_arrival_notification`.
 
@@ -573,6 +592,12 @@ move `Order.status`, which the carrier events drive separately.
   (`AcsService.cancel_voucher`, `BoxNowService.cancel_shipment`), so a
   customer who retries after a cancel that stopped half way is not
   refused.
+- **A COD order's payment status and its `COD_COLLECTION` ledger row are
+  written in one atomic step under the order lock**
+  (`OrderService.settle_cod_payment`), with the status read under that
+  lock. A failed insert rolls the status back, so a payout retry never
+  skips an order that is paid but unrecorded, and two callers settle one
+  order once.
 
 ## Failure modes
 
@@ -652,13 +677,14 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping/admin.py` | `ShippingRateInline` on `ShippingProviderAdmin` |
 | `grooveshop-django-api/shipping/carriers/flat_rate.py` | Merchant-fulfilled, lifecycle-only adapter |
 | `grooveshop-django-api/country/filters.py` | `?shippable=true` |
-| `grooveshop-django-api/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider` |
+| `grooveshop-django-api/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider`, `settle_cod_payment` |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
 | `grooveshop-django-api/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
 | `grooveshop-django-api/shipping/alerts.py` | `send_ops_alert` and the two operational alerts |
 | `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
 | `grooveshop-django-api/shipping/urls.py` | Options, free-shipping-info, providers |
-| `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile, status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
-| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments` and the `label_printed_at` empty filter |
+| `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
+| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs` and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |
 | `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
 | `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
