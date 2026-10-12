@@ -45,7 +45,8 @@ Each of these creates a notification for the customer who owns the order or acco
 | Order created | Every order placed by a signed-in customer. |
 | Payment confirmed / Payment failed | Stripe reports the charge. |
 | Order shipped | The order reaches Shipped. |
-| Order delivered / completed / canceled / refunded | The order reaches that status. |
+| Order delivered / completed / canceled | The order reaches that status. |
+| Refund processed | Each time money goes back on the order: from the order's **Refund (amount, reason)** button, a cancellation or the payment provider's dashboard, a partial refund included. |
 | ACS parcel out for delivery | ACS tracking reports it out for delivery. |
 | BoxNow parcel at locker / delivered | BoxNow reports the parcel. |
 | Price drop / Back in stock | A favourited product changes. |

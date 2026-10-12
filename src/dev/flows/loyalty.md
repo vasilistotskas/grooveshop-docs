@@ -116,7 +116,11 @@ rest, and taking all of it for a small goodwill refund would wipe the
 points of an order the shopper keeps. The refund that leaves nothing to
 refund moves the payment to REFUNDED and reverses everything; when the
 refund came first, the later status step is a no-op through the
-idempotency guard below.
+idempotency guard below. Which refund that is comes from the payment
+ledger, not from the path that made it: `PaymentLedger.refund_status`
+(`order/payment_ledger.py`) sets REFUNDED once the refunds recorded for
+the order reach what was captured, whether they came from the admin's
+Refund action, a cancel or a provider's dashboard, in one go or in parts.
 
 `reverse_order_points(order_id)` is careful about order of operations:
 
@@ -342,6 +346,7 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/loyalty/enum.py` | `TransactionType`, `PriceBasis` |
 | `grooveshop-django-api/loyalty/services.py` | `is_enabled`, award, reverse, redeem, tiers, expiry, bonus |
 | `grooveshop-django-api/loyalty/signals.py` | Order hooks (reversal on cancel, full refund and the REFUNDED status), tier-change detection, tier-up notification |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED |
 | `grooveshop-django-api/loyalty/tasks.py` | `process_order_points`, `reverse_order_points`, expiry, tier-up notification |
 | `grooveshop-django-api/loyalty/views/loyalty.py` | Summary, transactions, redeem, product points, tiers |
 | `grooveshop-django-api/loyalty/urls.py` | Endpoint paths |

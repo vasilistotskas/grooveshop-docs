@@ -1,16 +1,17 @@
 ---
 title: Order lifecycle
-description: "The order and payment state machines: who moves each transition, what it triggers, and the invariants the code enforces."
+description: "The order and payment state machines, the payment ledger and every refund path: who moves each transition, what it triggers, and the invariants the code enforces."
 ---
 
 # Order lifecycle
 
 An order carries two independent states. `Order.status` is fulfilment and
 is guarded by a transition table; `Order.payment_status` is money and has
-no table at all — it is assigned directly by whoever learns the truth.
-Decoupling them is what lets a cash-on-delivery parcel be SHIPPED while
-payment is still PENDING, and it is why nothing should ever derive one
-from the other.
+no table at all — it is assigned directly by whoever learns the truth,
+except after a refund, when it is derived from the payment ledger (see
+Refunds below). Decoupling them is what lets a cash-on-delivery parcel be
+SHIPPED while payment is still PENDING, and it is why nothing should ever
+derive one from the other.
 
 The exhaustive reference, including the audit history behind each rule,
 is [Order system](/dev/django/reference/order-system). This page is the
@@ -53,6 +54,7 @@ stateDiagram-v2
   CANCELED --> PENDING
   COMPLETED --> REFUNDED
   COMPLETED --> PARTIALLY_REFUNDED
+  PARTIALLY_REFUNDED --> REFUNDED
   REFUNDED --> [*]
   PARTIALLY_REFUNDED --> [*]
 ```
@@ -61,7 +63,8 @@ The edges back into PENDING are real: `payment_intent.requires_action`
 relaxes PROCESSING or PENDING back to PENDING, and
 `POST /api/v1/order/{id}/retry-payment` accepts FAILED, PENDING or
 CANCELED and mints a fresh intent. Nothing leaves COMPLETED except a
-refund.
+refund, and PARTIALLY_REFUNDED leaves only through further refunds, any
+number of them, until nothing is left to refund.
 
 ## How it works
 
@@ -115,7 +118,7 @@ unwound.
 | Event | Side effects |
 |---|---|
 | Order created | `order_created` → confirmation email (offline and already-paid only), merchant new-order email, `notify_order_created_live`, history note, cart clear unless `awaits_online_payment` |
-| Payment succeeded | `mark_as_paid`, PROCESSING advance with the customer notification suppressed, carrier dispatch on commit, confirmation email, `notify_payment_confirmed_live`, Redis payment-status publish |
+| Payment succeeded | A CHARGE row on the payment ledger (written before any guard, so a stale or repeated event and a charge on a CANCELED order still leave theirs), `mark_as_paid`, PROCESSING advance with the customer notification suppressed, carrier dispatch on commit, confirmation email, `notify_payment_confirmed_live`, Redis payment-status publish |
 | Payment failed | `payment_status=FAILED`, failure email, `notify_payment_failed_live`. No stock movement |
 | → PROCESSING | `order_paid` when already paid → cart clear, Meta CAPI Purchase. No customer email, no toast |
 | → SHIPPED | `order_shipped`, history row, `send_shipping_notification_email` (self-gates), SHIPPED toast |
@@ -123,7 +126,7 @@ unwound.
 | → DELIVERED | `order_delivered`, status email, DELIVERED toast, then the COMPLETED auto-advance for paid orders |
 | → COMPLETED | `order_completed` → invoice generation when `document_type == INVOICE`, loyalty points earned, status email, COMPLETED toast |
 | → CANCELED | `order_canceled` → carrier voucher cascade (skipped when the cancel already asked the courier), gift-card credit, loyalty reversal, status email, CANCELED toast |
-| Refund recorded | `order_refunded` (always with the `amount` of this refund) → refund email, `notify_order_refunded_live`, Meta CAPI Refund, history row; the gift-card credit and the loyalty reversal only once `payment_status` is REFUNDED |
+| Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row; the gift-card credit and the loyalty reversal only once `payment_status` is REFUNDED |
 | Status, payment status or tracking changed | `push_order_event_to_gateway` when `AGENT_GATEWAY_INTERNAL_URL` is set |
 
 The gateway push is one `POST /internal/events/order-status` carrying
@@ -277,37 +280,113 @@ beside a carrier-aware field listed orders whose own flag said no.
 
 ### Refunds
 
-**There is no admin refund button and no `refund_order` action on the
-order viewset.** `order/urls.py` registers no such path, and
-`OrderViewSet` has no such method. `OrderService.refund_order` exists but
-has exactly one production caller: `cancel_order`, when
-`refund_payment=True` and the order is paid.
+Every refund, made in the admin, by a cancel or in a provider's dashboard,
+ends the same way: a REFUND row on the payment ledger, from which
+`payment_status` is derived. The exhaustive reference is §7.2 and §7.3 of
+[Order system](/dev/django/reference/order-system).
 
-What does exist:
+#### The payment ledger
+
+`PaymentTransaction` (`order/models/payment_transaction.py`) is the only
+record of money a provider or a courier moved for an order. It is
+append-only, like `GiftCardTransaction`: a row is never updated, and the
+foreign key to the order is `PROTECT`. Rows are written only through
+`order/payment_ledger.py: PaymentLedger`, and every writer holds the order
+row lock.
+
+| Column | Meaning |
+|---|---|
+| `kind` | `CHARGE` (a provider captured money), `REFUND` (a provider paid it back) or `COD_COLLECTION` (a courier collected cash), from `order/enum/payment_transaction.py: PaymentTransactionKind`. There is no chargeback kind: nothing writes one yet |
+| `amount` | Always positive; the kind gives the direction |
+| `provider` | `stripe`, `viva_wallet`, `acs_cod` or `boxnow_cod` |
+| `provider_reference` | The provider's own id for the movement: PaymentIntent, Viva transaction, refund id, voucher or parcel. A Stripe dashboard refund has no id in `charge.refunded`, so it carries the event id |
+| `charge` | On a REFUND, the CHARGE it reverses; null otherwise. A check constraint enforces both |
+| `description` | The reason given for a refund |
+
+`UNIQUE (provider, provider_reference, kind)`
+(`unique_payment_transaction_reference`) is every writer's idempotency: a
+delivery the provider repeats records nothing the second time, and the
+`record_*` methods say so by returning `created=False`.
+
+| Kind | Writers |
+|---|---|
+| CHARGE | `OrderService.handle_payment_succeeded` (the event's `amount_received`), `handle_stripe_checkout_completed` (`amount_total`), `viva_webhook._handle_payment_created` (the verified amount), and `PaymentLedger.ensure_charge`, which reads a capture the ledger lacks from the provider once, when a refund first needs it |
+| COD_COLLECTION | `OrderService.settle_cod_payment`, in the same atomic step as the payment status (see [Shipping](/dev/flows/shipping)) |
+| REFUND | `OrderService.refund_order`, `handle_stripe_charge_refunded` and `viva_webhook._handle_reversal_created`, all through `PaymentLedger.record_refund` |
+
+**One function decides REFUNDED versus PARTIALLY_REFUNDED.**
+`PaymentLedger.refund_status` compares the REFUND sum with the CHARGE sum:
+REFUNDED once refunded is at least captured, PARTIALLY_REFUNDED below
+that. `record_refund` writes the row and the derived status in one step,
+so no path decides the status for itself and it cannot go backwards. What
+can still be refunded (`PaymentLedger.refundable`) is computed payment by
+payment, from CHARGE rows only, so cash a courier collected never counts.
+`Order.paid_amount` is the amount owed when the order was created and is
+never consulted for a refund. There is no `PaymentStatus.after_refund`, no
+`PaymentProvider.captured_amount` and no `Order.metadata["refunds"]` any
+more.
+
+Orders paid before the ledger existed were backfilled from what their rows
+prove (`order/migrations/0067_backfill_payment_transactions.py`); §7.3 of
+[Order system](/dev/django/reference/order-system) lists what the backfill
+could not reconstruct.
+
+#### Refund paths
 
 | Path | Effect |
 |---|---|
-| `POST /api/v1/order-items/{id}/refund` (`order/views/item.py: refund`) | Staff only. Requires the order in DELIVERED, COMPLETED or RETURNED. Restocks the units and raises `refunded_quantity`. Does not touch `Order.payment_status` |
-| Cancel a paid order with `refundPayment` true | Calls the provider's refund API through `OrderService.refund_order`, writes `payment_status`, appends to `metadata["refunds"]`, fires `order_refunded` |
-| The admin's `mark_as_canceled` bulk action | The same path. It calls `cancel_order(order, customer_initiated=False)` with no `refund_payment` argument, and the parameter **defaults to `True`** — so bulk-cancelling a paid order does issue a provider refund. This is the closest thing to an admin refund button, and it is not labelled as one |
-| Stripe `charge.refunded` webhook (`order/signals/handlers.py: handle_stripe_charge_refunded`) | Full refund → REFUNDED and `order_refunded` fires with the refunded amount; partial → PARTIALLY_REFUNDED and **no signal**, so no email |
-| Viva event 1797 (`order/views/viva_webhook.py: _handle_reversal_created`) | A refund made anywhere, the Viva dashboard included, booked as partial or full; see below |
+| The staff **Refund (amount, reason)** detail action (`order/admin.py: OrderAdmin.refund_payment`, form `RefundOrderForm`) | Offered only on DELIVERED, COMPLETED and RETURNED orders (`order/enum/status.py: RETURN_HANDLING_STATUSES`, checked by `has_refund_permission`) to staff with the order's change permission. The amount defaults to `PaymentLedger.refundable`. It calls `refund_order(order, amount, reason)` and reports one of three outcomes: all of it refunded, part refunded and the rest declined, or nothing refunded. Whenever money moved it writes an admin log entry, because a staff identity lives in the platform schema and cannot be a foreign key on the tenant's ledger row. It changes neither the order status nor the stock |
+| Cancel a paid order with `refundPayment` true | `cancel_order` calls `refund_order(amount=None)`: everything still refundable |
+| The admin's `mark_as_canceled` bulk action | The same path. It calls `cancel_order(order, customer_initiated=False)` with no `refund_payment` argument, and the parameter **defaults to `True`**, so bulk-cancelling a paid order does issue a provider refund |
+| `POST /api/v1/order-items/{id}/restock` (`order/views/item.py: restock`) | Staff only, on a DELIVERED, COMPLETED or RETURNED order. Puts returned units back in stock and records them on the line (`refunded_quantity`, `is_refunded`). It **moves no money** and says so: a line's snapshot price is not what the customer paid for it (tax, shared discounts, shipping), so money is decided at order level. It replaced `.../refund`, which answered "Refund processed successfully" for money that never moved |
+| Stripe `charge.refunded` (`order/signals/handlers.py: handle_stripe_charge_refunded`) | Brings the ledger up to the charge's cumulative `amount_refunded`: records the charge first if the ledger lacks it, then the difference as one REFUND keyed on the event id. A refund this app made, a redelivery and an older event arriving late add nothing. Every refund it records signals, partial ones included |
+| Viva event 1797 (`order/views/viva_webhook.py: _handle_reversal_created`) | A refund made anywhere, the Viva dashboard included; see below |
 
-**What a refund books comes from the provider.** `Order.paid_amount` is
-the amount owed when the order was created, not what the provider holds.
-`refund_order` with `amount=None` records and signals the amount the
-provider reports it paid back; a part refund is compared with
-`PaymentProvider.captured_amount`, read **before** refunding, and an
-unreadable figure refuses the refund instead of leaving money returned
-and the order unbooked. `PaymentStatus.after_refund(refunded, captured)`
-(`order/enum/status.py`) picks PARTIALLY_REFUNDED while part of the
-capture remains and REFUNDED once nothing does; `refund_order` applies it
-too, because a provider answers REFUNDED for a partial refund as well. A
-refund the provider did not make changes nothing on the order: no
-`payment_status` write, no `metadata["refunds"]` entry, no signal, just a
-staff-only NOTE. Stripe amounts are integers in the currency's own
-smallest unit and go through `order/payment.py: money_from_minor_units`,
-which takes the exponent from `moneyed` instead of assuming two decimals.
+**`refund_order(order, amount=None, reason="")`** (`order/services.py`)
+takes the order row lock before it reads the ledger, then:
+
+- refuses, before any provider call and as a `PaymentError`, an amount
+  that is not positive or exceeds the remainder (`Refund amount (X) cannot
+  exceed the refundable amount (Y).`), an order with nothing left (`This
+  order has already been refunded.`) and an order no provider was paid
+  through, such as cash on delivery, a gift card or a hand edit (`This
+  order was not paid through a payment provider, so there is nothing to
+  refund here.`);
+- plans the refund payment by payment, oldest first
+  (`PaymentLedger.plan_refund`): an order paid twice under two Viva codes
+  holds two CHARGE rows, and an amount larger than one payment's remainder
+  is split, one provider call and one REFUND row per share;
+- passes `idempotency_key=f"order-{order.pk}-refund-{n}"`, where `n` is the
+  ledger's REFUND count plus one, counted under the same lock
+  (`PaymentLedger.next_refund_number`). An attempt whose outcome is unknown
+  left no row and did not move `n`, so a retry reuses the key and Stripe
+  returns the refund it already made. Viva's cancel-transaction call takes
+  no idempotency parameter; the unique constraint on the refund
+  transaction id keeps a Viva refund from being recorded twice;
+- records and signals each share as the provider accepts it, so a decline
+  on the second payment keeps, and has announced, the first;
+- returns a `RefundResult`: `refunded` (the `Money` that actually moved),
+  `refund_ids`, and `declined` (the provider's answer for the share it did
+  not make, `None` when every share was), with `complete` and
+  `paid_something` as the two questions callers ask. `declined["error"]`
+  can carry raw provider text, so it goes to logs and staff screens, never
+  to a customer;
+- for an order whose capture the ledger never recorded, reads it from the
+  provider once (`PaymentLedger.ensure_charge`). A capture the provider
+  cannot confirm refuses the refund with a staff NOTE instead of leaving
+  money returned and the order unbooked.
+
+Stripe answers `succeeded` for a partial refund as for a full one, so a
+provider's refund status never decides the payment status; the ledger's
+sums do. `succeeded` and `pending` are recorded
+(`StripePaymentProvider._ACCEPTED_REFUND_STATUSES`); `requires_action`,
+`failed` and `canceled` record nothing and leave Stripe's refund id and
+status in the NOTE. A refund the provider did not make changes nothing on
+the order: no row, no status write, no signal, only a staff-only NOTE
+(`Refund via <provider> was not processed: …`). Stripe amounts are integers
+in the currency's own smallest unit and go through
+`order/payment.py: money_from_minor_units`, which takes the exponent from
+`moneyed` instead of assuming two decimals.
 
 **Viva 1797.** The event's `TransactionId` is the refund, a transaction
 of its own; `ParentId` names the payment it reverses.
@@ -317,35 +396,52 @@ order's issued order codes, have status `F`, a refund or void type
 (`VIVA_REFUND_TRANSACTION_TYPE_IDS`; the "Refund Claimed" chargeback types
 are deliberately absent) and a negative amount, whose absolute value is
 the refund. An unreadable answer raises, so Viva retries and the
-multi-tenant candidate loop moves on. The handler then requires `ParentId`
-to be the order's `payment_id`, skips a refund id already in
-`metadata["refunds"]` (Viva also notifies the refunds `refund_order`
-makes), accepts only a COMPLETED or PARTIALLY_REFUNDED order, and adds the
-refund to the earlier ones before `after_refund` compares the total with
-the captured amount. `VivaWebhookEvent.outcome` records what really
-happened: `skipped` for every refusal above, `processed` for a booked
-refund. The tenant's Viva account must have the *Transaction Reversal
-Created* webhook subscribed, or no dashboard refund reaches the order (see
-[Onboarding](/dev/operator/onboarding)).
+multi-tenant candidate loop moves on. The refund is then attached to the
+order's own CHARGE row whose reference is `ParentId`: `ParentId` can only
+refuse, never grant. For an order whose capture was never recorded, a
+`ParentId` equal to the order's `payment_id` is read from Viva once and
+recorded (an unreadable answer raises, so Viva retries); any other
+`ParentId` is skipped. `record_refund` keys the REFUND on the refund
+transaction id, so the 1797 Viva sends for a refund `refund_order` made,
+and every redelivery, changes nothing. `VivaWebhookEvent.outcome` records
+what really happened: `skipped` for every refusal above, `processed` for a
+booked refund. The tenant's Viva account must have the *Transaction
+Reversal Created* webhook subscribed, or no dashboard refund reaches the
+order (see [Onboarding](/dev/operator/onboarding)).
 
-**The `order_refunded` contract** (`order/signals/__init__.py`): it
-always carries `amount`, a `Money` holding what this refund paid back,
-and the receivers that use it declare it as a required argument, so a
-sender that leaves it out raises. The history row, the toast and the
-Meta `Refund` event fire on every refund; the refund email is reserved
-once per order (`order/tasks.py: send_refund_confirmation_email`), so a
-second partial refund sends none. Whatever hangs off the
-order's total is released only once, with the refund that makes the
-order REFUNDED: the gift-card redemption
-(`giftcard/signals.py: handle_order_refunded_giftcard`) and the loyalty
-points (`loyalty/signals.py: handle_order_refunded_loyalty`). A partial
-refund is paid back by the provider first, so a slice of the redemption
-on top of it would hand back more than that refund was worth.
+**The `order_refunded` contract** (`order/signals/__init__.py`): it is sent
+once per REFUND row the ledger took and always carries `amount`, a `Money`
+holding what this refund paid back, and `refund`, that row. The receivers
+that use them declare them as required arguments, so a sender that leaves
+one out raises. The history row, the toast and the Meta `Refund` event
+fire on every refund. The email is one per refund too:
+`handle_order_refunded` queues `send_refund_confirmation_email(refund.pk)`
+on commit, and the task claims the refund before it sends by inserting a
+`RefundNotification` (`order/models/refund_notification.py`, one-to-one
+with the REFUND row, so the database decides between two workers). A task
+delivered twice, or a retry racing its original, finds the claim and sends
+nothing, and a send that fails for good deletes the claim. A worker that
+dies between the claim and the send loses that one email, the accepted
+price of never sending it twice. Whatever hangs off the order's total is
+released only once, with the refund that makes the order REFUNDED: the
+gift-card redemption (`giftcard/signals.py: handle_order_refunded_giftcard`)
+and the loyalty points (`loyalty/signals.py: handle_order_refunded_loyalty`).
+A partial refund is paid back by the provider first, so a slice of the
+redemption on top of it would hand back more than that refund was worth.
 
 `Order.status` is never moved automatically by a refund. The table only
 reaches REFUNDED from RETURNED, and deciding that the goods came back is
 a business call an operator makes with the admin's **Mark selected orders
 as returned** and **Mark selected orders as refunded** actions.
+
+**Cancelled but still paid.** A cancel whose refund the provider declined
+leaves the order CANCELED with its payment COMPLETED, or PARTIALLY_REFUNDED
+when a split refund was declined part-way, and the reason in a staff NOTE.
+The order list's **Refund** filter, value "Cancelled but still paid"
+(`order/admin.py: RefundOwedFilter`), lists exactly those orders. The staff
+Refund action is not offered on a CANCELED order, so what is still owed
+goes back through the provider's dashboard, whose webhook records it on the
+ledger.
 
 ### VAT on an order
 
@@ -378,6 +474,20 @@ admin offers `vat_rate` for correction only until the order's invoice
 carries a MARK, and hides it on the add page, where `save()` snapshots the
 product's rate. The full rationale, with the legal references, is in
 [Order system](/dev/django/reference/order-system).
+
+### Staff-added order lines
+
+`POST /api/v1/order-items` is staff-only, and the line price is never a
+request field: `OrderItemViewSet.perform_create` stores
+`_line_price(order, product)` (`order/views/item.py`). That is the figure
+checkout stores, VAT included and after the product discount: the
+product's `final_price`, never its net `price`, which left a staff-added
+line under-priced by its VAT on the invoice and in myDATA. An order priced
+for a wholesale group at checkout (`metadata["b2b_pricing"]`) prices the
+new line for that same group, through `B2BPricingService.resolve_single`,
+not for the buyer's group today. If that group no longer exists the line
+is refused with a 400 on `order` rather than sold at retail. See
+[B2B](/dev/flows/b2b).
 
 ### Auto-cancel of stuck pending orders
 
@@ -427,9 +537,26 @@ online payment. Nothing happens at the moment the payment fails.
 - **`canBeCanceled` never calls a carrier.** It reads the same local
   guards the carriers apply before they call out, so it stays cheap on
   every order read.
-- **`order_refunded` always carries `amount`, and the gift-card
-  redemption and loyalty points come back only on REFUNDED**, once, with
-  the last refund.
+- **Money moved for an order is recorded once, on the append-only
+  ledger,** keyed on the provider's own id
+  (`unique_payment_transaction_reference`). What can still be refunded is
+  read from it under the order row lock, never from `Order.paid_amount`
+  or a provider's refund status.
+- **`PaymentLedger.refund_status` is the one place that decides REFUNDED
+  versus PARTIALLY_REFUNDED.** No path writes either for itself; a refund
+  is as many `refund_order` calls as it takes, never past the remainder.
+- **`refund_order` reports what moved, never a yes/no.** A split refund
+  declined part-way keeps and reports the shares already made, and every
+  caller (the staff action, `cancel_order`) says so.
+- **A Stripe refund carries `order-<id>-refund-<n>` as its idempotency
+  key**, `n` counted from the ledger under the order lock.
+- **`order_refunded` fires once per REFUND row and always carries `amount`
+  and `refund`, and the gift-card redemption and loyalty points come back
+  only on REFUNDED**, once, with the last refund.
+- **One refund email per REFUND row,** claimed by inserting its
+  `RefundNotification` before the send, never decided by comparing counts.
+- **Restocking moves no money.** `restock` is stock only; money is decided
+  at order level.
 - **An order's tax documents never re-read the catalogue's VAT.** The
   invoice and myDATA split each line at `OrderItem.vat_rate` and tax
   shipping and the fee at the goods' rates (`order/taxation.py`).
@@ -505,7 +632,26 @@ online payment. Nothing happens at the moment the payment fails.
   that the tenant's Viva account subscribes *Transaction Reversal
   Created*, then the `VivaWebhookEvent` row for the refund's transaction
   id: `skipped` names a refusal in `_handle_reversal_created`, and the
-  WARNING or ERROR beside it says which.
+  WARNING or ERROR beside it says which. A `ParentId` that is none of the
+  order's own payments is logged at ERROR and skipped.
+- **The Refund action says "cannot exceed the refundable amount".** The
+  ledger holds less than staff expected: an earlier refund (in-app or a
+  dashboard refund the webhook recorded) already took part of it. The
+  order page's **Payment Transactions** tab lists every row.
+- **"N of M refunded; the rest was declined".** A refund split across two
+  payments (an order paid twice under two Viva codes) was declined on the
+  second. The first share is recorded and emailed, the provider's reason
+  is in the order's history, and the rest stays refundable: run the action
+  again once the cause is fixed, or refund it in the Viva dashboard.
+- **A Stripe refund left the order COMPLETED.** Stripe answered
+  `requires_action`, `failed` or `canceled`; the NOTE on the order carries
+  Stripe's refund id and status. A retry from the admin reuses the same
+  idempotency key, to which Stripe repeats its first answer, so refund it
+  in the Stripe dashboard instead; the `charge.refunded` webhook records
+  it.
+- **A cancelled order is still paid.** The provider declined the cancel's
+  refund. The **Refund** filter's "Cancelled but still paid" lists every
+  such order; refund it in the provider's dashboard.
 - **A part refund left the gift card and the points alone.** By design:
   they come back with the refund that makes the payment REFUNDED.
 - **An invoice registered with myDATA before the VAT snapshot shipped is
@@ -517,21 +663,26 @@ online payment. Nothing happens at the moment the payment fails.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/order/enum/status.py` | `OrderStatus`, `PaymentStatus`, `PaymentStatus.after_refund`, `SETTLED_PAYMENT_STATUSES` |
+| `grooveshop-django-api/order/enum/status.py` | `OrderStatus`, `PaymentStatus`, `SETTLED_PAYMENT_STATUSES`, `RETURN_HANDLING_STATUSES` |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `refund_status`, `plan_refund`, `next_refund_number`, `record_charge`, `record_cod_collection`, `record_refund`, `ensure_charge` |
+| `grooveshop-django-api/order/models/payment_transaction.py` | `PaymentTransaction`, its unique and check constraints |
+| `grooveshop-django-api/order/enum/payment_transaction.py` | `PaymentTransactionKind` |
+| `grooveshop-django-api/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
+| `grooveshop-django-api/order/migrations/0067_backfill_payment_transactions.py` | Ledger backfill for orders paid before it existed |
 | `grooveshop-django-api/order/enum/cancel_error.py` | `OrderCancelErrorType`: `parcel_with_courier`, `courier_unreachable` |
 | `grooveshop-django-api/order/exceptions.py` | `OrderCancellationError`, `ParcelWithCourierError`, `CourierUnreachableError` |
 | `grooveshop-django-api/order/models/order.py` | `Order.save()` timestamp rules, `mark_as_paid`, `can_be_canceled`, `can_be_canceled_by_customer`, `awaits_online_payment`, `calculate_order_total_amount`, `AMOUNT_MISMATCH_FLAG` |
 | `grooveshop-django-api/order/managers/order.py` | `with_shipments`, `for_list` |
-| `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `refund_order`, `add_tracking_info` |
-| `grooveshop-django-api/order/payment.py` | `PaymentProvider.captured_amount`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
+| `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `refund_order`, `RefundResult`, `_note_refund_declined`, `add_tracking_info` |
+| `grooveshop-django-api/order/payment.py` | `refund_payment` per provider, `StripePaymentProvider._ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
 | `grooveshop-django-api/order/views/viva_webhook.py` | `_verify_viva_refund`, `_handle_reversal_created` |
 | `grooveshop-django-api/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_stripe_charge_refunded` and every other domain receiver |
 | `grooveshop-django-api/order/signals/__init__.py` | The ten order signals and the `order_refunded` contract |
-| `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `check_pending_orders`, `push_order_event_to_gateway`, every email task |
+| `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `check_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email` |
 | `grooveshop-django-api/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
-| `grooveshop-django-api/order/views/item.py` | The order-item refund action |
-| `grooveshop-django-api/order/admin.py` | `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK |
+| `grooveshop-django-api/order/views/item.py` | `restock`, and `_line_price` for a staff-added line |
+| `grooveshop-django-api/order/admin.py` | `refund_payment`, `RefundOrderForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK |
 | `grooveshop-django-api/order/models/item.py` | `OrderItem.vat_rate` and the snapshot in `save()` |
 | `grooveshop-django-api/order/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
 | `grooveshop-django-api/order/invoicing.py` | Invoice totals from the VAT lines, `_persist_invoice_row` reusing frozen figures after a MARK |

@@ -200,6 +200,56 @@ plus pay-way fee, minus loyalty, minus the gift-card plan) and raises
 produced it. The order is created `status=PENDING` with the
 provider-reported payment status.
 
+**The provider is asked before the transaction opens.**
+`create_order_from_cart` is not `@transaction.atomic`, and neither is
+`OrderViewSet.create`. `OrderService._retrieve_payment_intent` reads the
+intent (for Stripe a `PaymentIntent.retrieve` and the dj-stripe sync)
+and refuses one that is not PENDING, PROCESSING or COMPLETED with nothing
+locked. `_create_order_for_verified_intent` is the one transaction, and it
+makes no provider call: it re-compares only the intent's amount and
+currency with the total it computes under lock. Inside the transaction
+that HTTP round trip held the cart row and every live automatic
+`Promotion` row, which every concurrent checkout locks too, and left the
+connection idle in a transaction that `idle_in_transaction_session_timeout`
+kills. A cart that cannot be checked out therefore costs one provider read
+first.
+
+**One order per payment intent.** `Order.payment_id` carries a partial
+unique index over non-empty ids (`order_payment_id_unique`, migration
+`order/migrations/0069_order_payment_id_unique.py`; `''` and NULL stay
+repeatable), and `_order_created_for_payment` looks the intent up twice:
+once without a lock before the provider is asked, so a repeat does not
+depend on the provider being reachable, and again under the cart row lock,
+which serialises two first submits of one cart. Both run before cart
+validation, because the first order already took the stock. A repeat for
+the same cart gets the first order back, and the view answers `201` with
+it, so a double click or a retry after a timeout yields one order and one
+stock decrement. An intent that belongs to another cart, or to a canceled
+or deleted order, is refused as `PaymentVerificationError`, 400
+`payment_verification`. Two different carts racing for one intent can
+both miss the lookup; the index then rejects the second insert, and
+`create_order_from_cart` recognises the constraint by name
+(`PAYMENT_ID_UNIQUE_CONSTRAINT`, `order/models/order.py`) and answers it
+the same way. Any other integrity error stays a generic
+`invalid_order_data`. The order-first path is **not** idempotent: a
+repeated Viva submit creates a second PENDING order, which the stuck-order
+sweep cancels.
+
+**Products are locked in primary-key order.** Both paths lock every
+product the order touches (cart lines, the session's reservations,
+free-gift products) in one statement ordered by pk
+(`OrderService._lock_order_products` calling
+`order/stock.py: StockManager.lock_products`), before the first
+`OrderItem` insert; the cart-item query locks only the cart lines
+(`of=("self",)`). Two carts holding the same products in different line
+orders used to lock them in opposite orders, and PostgreSQL broke the
+cycle by aborting one checkout. The lock must precede the inserts because
+each insert takes `FOR KEY SHARE` on its product, which conflicts with
+`FOR UPDATE`. `cancel_order` and the expired-reservation sweep lock through
+the same helper, the bulk discount admin actions in `product/admin.py`
+lock in pk order, and the guest-to-user cart merge (`cart/services.py`)
+no longer locks products through its join.
+
 The order-first path creates `status=PENDING, payment_status=PENDING`,
 stamps `payment_id = "offline_<uuid>"` for non-online settlements, and
 then branches on coverage: if deductions cover the whole total the order
@@ -238,17 +288,22 @@ bare `X-Forwarded-For` entry. Idempotency is a database row, not metadata:
 Event 1796 checks `StatusId == "F"`, then verifies the transaction
 belongs to this order, then currency, then amount within one cent. A
 verified charge whose amount disagrees stamps `AMOUNT_MISMATCH_FLAG` on
-the order and refuses to mark it paid. On success it writes
+the order and refuses to mark it paid. A charge that passes every check
+is recorded on the payment ledger as a CHARGE row keyed on the
+transaction id, before the canceled-order and settled guards, so a second
+payment under another of the order's codes is a second row. On success it
+writes
 `payment_id`, `payment_status=COMPLETED`, `payment_method="viva_wallet"`,
 flips PENDING to PROCESSING inline, and dispatches the carrier task.
 Event 1798 marks the payment failed. Event 1797 books a refund: its
 `TransactionId` is the refund itself, verified through Retrieve
 Transaction (`_verify_viva_refund`: one of the order's codes, status `F`,
-a refund or void type, a negative amount), and the order becomes
-PARTIALLY_REFUNDED or REFUNDED depending on how much of the capture has
-come back in total. The handler records its real outcome on
-`VivaWebhookEvent.outcome`, so a refused event reads `skipped`, not
-`processed`. Refunds are covered in
+a refund or void type, a negative amount), and it is recorded as a REFUND
+row against the order's CHARGE row that its `ParentId` names. The payment
+status, PARTIALLY_REFUNDED or REFUNDED, follows from the ledger's sums
+(`order/payment_ledger.py: PaymentLedger.refund_status`). The handler
+records its real outcome on `VivaWebhookEvent.outcome`, so a refused event
+reads `skipped`, not `processed`. Refunds and the ledger are covered in
 [Order lifecycle](/dev/flows/order-lifecycle).
 
 After payment Viva redirects to a static URL configured per tenant in the
@@ -270,9 +325,14 @@ against that schema's `WebhookEndpoint` secret. Handlers live in
 `order/signals/handlers.py`: `payment_intent.succeeded`,
 `payment_intent.payment_failed`, `payment_intent.requires_action`,
 `charge.refunded`, `charge.dispute.created`, `checkout.session.completed`
-and `checkout.session.expired`. Each marks
+and `checkout.session.expired`. Each except `charge.refunded` marks
 `metadata["webhook_processed_<event_id>"]` under a row lock before doing
-any work.
+any work; `charge.refunded` is guarded by the payment ledger instead,
+because it carries the charge's cumulative refunded amount and the ledger
+records only what it does not hold yet. `payment_intent.succeeded` and
+`checkout.session.completed` record the charge on the ledger (the
+event's `amount_received`, or the session's `amount_total`, keyed on the
+PaymentIntent id), so the second of the two adds nothing.
 
 Errors inside the succeeded, refunded and checkout-completed handlers are
 allowed to **propagate**. They run inside dj-stripe's own atomic block,
@@ -286,6 +346,11 @@ advances PENDING to PROCESSING
 (`AcsService._advance_pending_order_to_processing`). Payment stays
 `PENDING` until ACS remits, which the nightly reconcile detects —
 measured lag is around four days. That is by design, not a stuck order.
+The reconcile settles the order through `OrderService.settle_cod_payment`,
+which writes `payment_status=COMPLETED` and a `COD_COLLECTION` ledger row
+in one atomic step under the order lock; see
+[Shipping](/dev/flows/shipping). Cash never counts toward what a refund
+can return.
 
 This waiting period is specific to `courier_cash`. It is **not** shared
 by the other collect-on-delivery settlement: `PaySettlement`'s
@@ -299,7 +364,8 @@ pickup and activates the collection PIN when it clears. The `delivered`
 webhook event is therefore proof of payment, and
 `BoxNowService._mark_cod_order_paid_on_delivery` moves the order's
 payment status from PENDING to `COMPLETED` with
-`payment_method="boxnow_cod"`. It leaves `Order.status` alone. There is
+`payment_method="boxnow_cod"`, through the same `settle_cod_payment`
+step and its `COD_COLLECTION` row. It leaves `Order.status` alone. There is
 no remittance reconcile on this path, and no multi-day wait.
 
 **Bank transfer.** Settlement `offline_transfer` exists and
@@ -333,8 +399,16 @@ arrived through a real checkout — see
   attempt and reuses it across automatic retries
   (`useCheckoutSubmit.ts`), clearing it on success or on a
   non-retryable error.
+- **Payment-first order creation.** One order per payment intent: a
+  repeat for the same cart returns the first order, backed by the
+  `order_payment_id_unique` index (section 5).
 - **Stripe webhooks.** `metadata["webhook_processed_<event_id>"]`,
-  written under `select_for_update` before processing.
+  written under `select_for_update` before processing, except
+  `charge.refunded`, which the ledger guards.
+- **Money movements.** The payment ledger's
+  `UNIQUE (provider, provider_reference, kind)` records each charge,
+  cash collection and refund once, whichever webhook or caller reports
+  it.
 - **Viva webhooks.** The `VivaWebhookEvent` unique constraint, written
   *last* so a handler that raised leaves nothing behind.
 - **Carrier tasks.** Each provider's create-shipment task is idempotent
@@ -405,6 +479,18 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   means no option, no quote and a 400 at order creation, on both sides
   (`shipping/services.py`, `order/services.py`,
   `app/composables/useCheckoutForm.ts`).
+- **One order per provider payment.** `Order.payment_id` is unique when
+  non-empty (`order_payment_id_unique`), and `create_order_from_cart`
+  answers a repeat of the same cart's intent with the first order and
+  refuses an intent of another cart or of a canceled or deleted order as
+  `payment_verification`, the race between two carts included.
+- **No provider call inside the order-creation transaction**, nor in a
+  view-level `atomic`: the intent is read first, and the transaction only
+  re-compares its amount and currency with the total computed under lock.
+- **Product rows are locked in ascending pk order, in one statement,
+  before the first row that references a product is inserted**
+  (`StockManager.lock_products`); a cart-item lock never joins the
+  products.
 - **The charged amount is always `Order.calculate_order_total_amount()`.**
   Every charge site, every verification and every webhook amount guard
   reads it; `total_price` is the undiscounted figure and charging it is
@@ -442,6 +528,21 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   `cart/create-payment-intent` received. Changing a deduction after the
   intent exists is the usual cause, which is why the storefront drops
   the intent whenever loyalty, gift cards or a coupon change.
+- **400 `payment_verification` on a Stripe order.** Besides an intent in
+  an invalid state, the intent already belongs to another order: a
+  different cart's, or a canceled or deleted one. A repeat for the same
+  cart is not refused; it gets the first order back. A repeat after the
+  first order emptied the last units or deleted the cart is refused by
+  the view's own cart validation, before the service, with no duplicate.
+- **Migration `0069_order_payment_id_unique` stops the deploy.** Existing
+  duplicate `payment_id`s abort it before anything is built (an
+  `IntegrityError` naming the values and their row counts), so the PreSync
+  hook fails and the old pods keep serving. It never deletes or merges
+  rows: decide which order is real, cancel and clear the other, then sync
+  again. The build is
+  `core/db/migration_operations.py: AddUniqueConstraintAdaptively`,
+  concurrent outside a transaction; a failed concurrent build drops its
+  own INVALID index.
 - **Shopper pays on a stale Viva tab after the total moved.** The
   webhook verifies a real charge whose amount disagrees, so it refuses
   to mark the order paid and stamps `AMOUNT_MISMATCH_FLAG`.
@@ -482,7 +583,11 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | File | Role |
 |---|---|
 | `grooveshop-django-api/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `create_order_from_cart_offline`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `OrderAttributionService` |
+| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
+| `grooveshop-django-api/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
+| `grooveshop-django-api/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION and REFUND rows, `refund_status` |
 | `grooveshop-django-api/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
 | `grooveshop-django-api/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
 | `grooveshop-django-api/shipping/services.py` | `quote`, `assert_available`, `available_options` |
@@ -491,7 +596,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id` |
-| `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities and `captured_amount`, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
+| `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
 | `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798, `_verify_viva_refund` |
 | `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
@@ -500,7 +605,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/order/enum/attribution.py` | `OrderSourceType` |
 | `grooveshop-django-api/order/serializers/order.py` | `OrderAttributionInputSerializer` (write), `OrderAttributionSerializer` (read) |
 | `grooveshop-django-api/order/filters.py` | `source` and `sourceType` order filters |
-| `grooveshop-django-api/order/stock.py` | `StockManager` reserve, convert, decrement, increment, cleanup |
+| `grooveshop-django-api/order/stock.py` | `StockManager` reserve, convert, decrement, increment, cleanup, `lock_products` |
 | `grooveshop-django-api/pay_way/services.py` | `is_provider_configured`, `filter_by_carrier`, `filter_by_shipping_kind`, `process_payment` |
 | `grooveshop-django-api/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
 | `grooveshop-django-api/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
