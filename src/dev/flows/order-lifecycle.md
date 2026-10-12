@@ -456,12 +456,30 @@ were backfilled from their product (`order/migrations/0065_backfill_orderitem_va
 Nothing reads `product.vat` for an order again, so editing, re-pointing or
 deleting a `Vat` row leaves existing orders' documents alone.
 
+Every line also stores the part of the order's discount it carries
+(`order/models/item.py: OrderItem.discount_allocation`). A promotion lands
+on the lines it covers, not on every line: the engine splits each applied
+promotion over the cart lines in its scope
+(`promotion/services.py: PromotionEngine._clamp`, reported as
+`CartDiscountResult.line_discounts`), both checkout paths freeze that on the
+order lines (`order/services.py: OrderService._snapshot_line_discounts`), and
+the loyalty redemption, being order-wide, is spread over the value left on
+every line (`order/discounts.py: spread_by_remaining_value`). One rule
+(`order/discounts.py: allocate_capped`, largest remainder to the cent)
+serves the cart preview, the payment intent and order creation. Orders that
+predate the column, or were created by the previous release during its
+rollout, get the proportional allocation from `heal_discount_allocation`
+(`order/discount_snapshot.py`, migration `order/migrations/0073_backfill_orderitem_discount_allocation.py`
+and the `heal_discount_allocation` command); until then the tax documents
+refuse the order instead of billing a total the customer never owed.
+
 `order/taxation.py: order_vat_lines` is the one rule. It yields the goods
-lines at their snapshotted rates (after the order-level discount
-allocation in `order/discounts.py`), then shipping, then the payment-method
-fee. Shipping and the fee take the goods' rate; a basket that mixes rates
-splits each charge over the rates in proportion to the goods' value at
-each (`_rate_weights`, largest remainder to the cent). Each line is split
+lines at their snapshotted rates (less the line's discount allocation, read
+by `order/discounts.py: discounted_line_gross`), then shipping, then the
+payment-method fee. Shipping and the fee take the goods' rate; a basket that
+mixes rates splits each charge over the rates in proportion to the value of
+the goods charged at each, after their discounts (`_rate_weights`, largest
+remainder to the cent; AADE circular Εγκ. 10/1987). Each line is split
 into a net rounded half-up and the VAT left of its gross
 (`split_gross`), then summed. The invoice (`order/invoicing.py`), its
 persisted totals and the myDATA payload (`order/mydata/builder.py`) all
@@ -688,6 +706,8 @@ online payment. Nothing happens at the moment the payment fails.
 | `grooveshop-django-api/order/admin.py` | `refund_payment`, `RefundOrderForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK |
 | `grooveshop-django-api/order/models/item.py` | `OrderItem.vat_rate` and the snapshot in `save()` |
 | `grooveshop-django-api/order/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
+| `grooveshop-django-api/order/discounts.py` | `allocate_capped`, `discounted_line_gross`, `spread_by_remaining_value` |
+| `grooveshop-django-api/order/discount_snapshot.py` | `heal_discount_allocation` |
 | `grooveshop-django-api/order/invoicing.py` | Invoice totals from the VAT lines, `_persist_invoice_row` reusing frozen figures after a MARK |
 | `grooveshop-django-api/order/mydata/builder.py` | myDATA lines and summary from the same VAT lines |
 | `grooveshop-django-api/shipping/services.py` | `ShippingService.cancel_shipment`, `can_cancel_shipment` |
