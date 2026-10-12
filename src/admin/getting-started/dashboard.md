@@ -20,7 +20,8 @@ Three buttons at the top: **New product**, **Orders** and **Customers**.
 Messages that need someone's attention appear above the figures, and only when there is something to do:
 
 - **Your legal pages need an update**: the platform added text to its legal documents, and these pages were not changed for you because their text is yours. Each page is listed with a link; open it to see the text to add. Shown to anyone who may edit content pages.
-- **Invoice seller details are incomplete** (platform operators): the **Company name**, **VAT ID (ΑΦΜ)** or **Tax office (ΔΟΥ)** missing, with a **Fix in settings** link. Invoices issued meanwhile carry no legal identity.
+- **Your business's legal details are missing**: the law requires your website to show who is selling, and some of those details are still empty (company name, legal form, GEMI number, VAT ID, address, contact email). The missing ones are listed, with an **Fill in details** link. A reminder, not an error: nothing stops working. Shown to Owners and Admins, who can change the store settings.
+- **Details needed to issue receipts are missing**: shown only while myDATA is on, when the company name, **VAT ID (ΑΦΜ)** or **Tax office (ΔΟΥ)** is empty. Receipts cannot be submitted to AADE without them, so this one is red. It has a **Fill in details** link and is shown to the same people.
 - **myDATA** (platform operators): credentials missing while myDATA is on, invoices rejected in the last 7 days, or a reminder that submissions still go to the AADE sandbox.
 
 These are checked on every page load, so fixing a setting clears its warning at once.
