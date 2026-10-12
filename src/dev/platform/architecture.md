@@ -37,7 +37,8 @@ flowchart LR
 ```
 
 - The storefront and the gateway share the tenant's domain: Traefik
-  path-routes `/mcp`, `/.well-known/ucp`, `/acp`, `/feeds` and `/chat` to
+  path-routes `/mcp`, `/.well-known/ucp`, `/.well-known/ard.json`,
+  `/.well-known/ai-catalog.json`, `/acp`, `/feeds` and `/chat` to
   the gateway and everything else to Nuxt
   (`grooveshop-infrastructure/.../overlays/production/tenants/TEMPLATE/ingress.yaml`).
 - The API host (`api.<tenant domain>`) goes straight to Django; the asset

@@ -321,8 +321,11 @@ that. `record_refund` writes the row and the derived status in one step,
 so no path decides the status for itself and it cannot go backwards. What
 can still be refunded (`PaymentLedger.refundable`) is computed payment by
 payment, from CHARGE rows only, so cash a courier collected never counts.
-`Order.paid_amount` is the amount owed when the order was created and is
-never consulted for a refund. There is no `PaymentStatus.after_refund`, no
+`Order.amount_due` (it was `paid_amount` until migrations 0070 and 0071
+renamed it) is what the customer owes, and is never consulted for a
+refund. What is left to pay is `Order.remaining_amount`: `amount_due`
+while the payment is not settled, 0 once it is, so a refund never
+creates an amount owed (`grooveshop-django-api/order/models/order.py`). There is no `PaymentStatus.after_refund`, no
 `PaymentProvider.captured_amount` and no `Order.metadata["refunds"]` any
 more.
 
@@ -540,7 +543,7 @@ online payment. Nothing happens at the moment the payment fails.
 - **Money moved for an order is recorded once, on the append-only
   ledger,** keyed on the provider's own id
   (`unique_payment_transaction_reference`). What can still be refunded is
-  read from it under the order row lock, never from `Order.paid_amount`
+  read from it under the order row lock, never from `Order.amount_due`
   or a provider's refund status.
 - **`PaymentLedger.refund_status` is the one place that decides REFUNDED
   versus PARTIALLY_REFUNDED.** No path writes either for itself; a refund

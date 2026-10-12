@@ -262,7 +262,7 @@ infrastructure step.
 |---|---|---|---|
 | `<slug>-ingress-storefront` | apex + `www.` | `frontend-nuxt-service` | redirect-https, security-headers, compress-responses |
 | `<slug>-ingress-api` | `api.` | `backend-service` | the same plus `rate-limit-api` |
-| `<slug>-ingress-agent` | apex, paths `/mcp`, `/.well-known/ucp`, `/feeds`, `/acp` | `agent-gateway-service` | security-headers, `rate-limit-agent`, compress-responses |
+| `<slug>-ingress-agent` | apex, paths `/mcp`, `/.well-known/ucp`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json`, `/feeds`, `/acp` | `agent-gateway-service` | security-headers, `rate-limit-agent`, compress-responses |
 | `<slug>-ingress-agent-chat` | apex, path `/chat` | `agent-gateway-service` | `rate-limit-chat` — the chat surface pays per LLM token |
 | `<slug>-ingress-contact-attachment` | apex `/api/contact/attachment` and `api.` `/api/v1/contact/attachment` | Nuxt and Django respectively | `limit-attachment-body` — the ingress is the only place an oversized body can be refused for free, because Django's ASGI body spool happens before any application code |
 
