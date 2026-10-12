@@ -41,12 +41,12 @@ Select rows and pick one of **Mark selected orders as processing / shipped / del
 
 ### The order page
 
-A row of cards at the top gives the order at a glance: **Status** (and how long ago it last changed), **Payment** (and the method), **Total** (and the number of items), **Customer** (linking to the account), **Shipment** (and the tracking number) and **Invoice** (its number and myDATA state).
+A row of cards at the top gives the order at a glance: **Status** (and how long ago it last changed), **Payment** (and the method), **Total** (and the number of items), **Customer** (linking to the account), **Shipment** (and the tracking number) and **Receipt** (its number and myDATA state; **Invoice** for an invoice order, with the number you recorded from timologio).
 
 Below them the page is split into tabs:
 
 - **Order Information**: UUID, the **Status** (read-only here; change it with the actions above), created, updated and status-updated timestamps.
-- **Billing / Invoice**: **Document type** (Receipt or Invoice), and for invoice orders the buyer's company name, VAT ID (ΑΦΜ), tax office (ΔΟΥ), business activity and registered billing address. **Wholesale pricing** shows which B2B group priced the order, or "Retail (no group pricing)".
+- **Billing / Invoice**: **Document type** (Receipt or Invoice), and for invoice orders the buyer's company name, VAT ID (ΑΦΜ), tax office (ΔΟΥ), business activity and registered billing address, a **To issue in timologio** summary, and the fields where you record the number and MARK of the invoice (and credit invoice) you issued in timologio. **Wholesale pricing** shows which B2B group priced the order, or "Retail (no group pricing)".
 - **Customer Information**: linked account (empty for guests), name, email, phone.
 - **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty. Saving a change to the country, region, street, number or postcode checks the address the way checkout does: the postcode must match the country's format, a region is required for a country that has regions and must belong to it, the street must contain a letter, and the number must not be a postcode. An old order with an address that fails is not blocked from other edits; the check runs only when you change the address.
 - **Payment Information**: **Payment Method** (what the customer chose), the editable **Payment status**, **Payment Gateway** (the gateway that took the charge), **Payment ID**, **Paid Amount**, and the read-only **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** stamped at checkout.
@@ -55,7 +55,7 @@ Below them the page is split into tabs:
 
 Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), **Payment Transactions** (read-only: every charge, cash-on-delivery collection and refund recorded for the order, with **Created At**, **Kind**, **Amount**, **Provider**, **Provider reference** and, for a refund, the reason in **Description**), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
 
-The header carries **Refund (amount, reason)** on a delivered, completed or returned order (see [Refunds](#refunds)), **Download shipping voucher (PDF)** and an **Invoicing & myDATA** menu with **Generate invoice**, **Regenerate invoice (same number)**, **Send invoice to myDATA** and **Cancel invoice in myDATA**. See [Invoices](/admin/sales/invoices).
+The header carries **Refund (amount, reason)** on a delivered, completed or returned order (see [Refunds](#refunds)), **Download shipping voucher (PDF)** and an **Invoicing & myDATA** menu with **Issue receipt (myDATA)**, **Regenerate receipt (same number)**, **Send receipt to myDATA**, **Issue credit documents (myDATA)** and **Cancel receipt in myDATA (issued in error)**. See [Receipts and credit documents](/admin/sales/receipts).
 
 ## Order statuses
 
@@ -171,8 +171,8 @@ There is no other way: **Status** is read-only on the order page.
 - **Courier voucher**: created right after checkout for cash on delivery, after the payment succeeds for online orders. Its arrival moves the order to Processing and sets the tracking number.
 - **Carrier tracking** moves the order through Shipped and Delivered, and a delivered, paid order to Completed.
 - **Cash on delivery stays payment-Pending until the courier pays out.** ACS remits collected cash days later; a nightly reconciliation matches the payout report to orders and marks them Completed, silently for the customer. That is by design, not a stuck order.
-- **Invoices** are generated when an order with document type **Invoice** reaches Completed. See [Invoices](/admin/sales/invoices).
-- **Emails** to the customer: order received (immediately for cash on delivery, after payment for online orders), payment failed, shipped (when genuinely in transit), delivered, canceled, completed, refunded, returned, invoice, refund confirmation. **Pending** and **Processing** never email the customer, and neither does the automatic step to **Completed**: the customer has just had the delivered message, so only a Completed you trigger yourself emails them. The store also gets a new-order email. Templates are under [Email templates](/admin/storefront/email-templates).
+- **Receipts** are issued when a receipt order ships, and a **credit document** for every refund. Invoice orders get no document from the platform: you issue the invoice in timologio. See [Receipts and credit documents](/admin/sales/receipts).
+- **Emails** to the customer: order received (immediately for cash on delivery, after payment for online orders), payment failed, shipped (when genuinely in transit), delivered, canceled, completed, refunded, returned, receipt, refund confirmation. **Pending** and **Processing** never email the customer, and neither does the automatic step to **Completed**: the customer has just had the delivered message, so only a Completed you trigger yourself emails them. The store also gets a new-order email. Templates are under [Email templates](/admin/storefront/email-templates).
 - **In-app notifications** mirror the same milestones for customers with an account; guests only get email. See [Notifications](/admin/sales/notifications).
 - **History** logs every status change, payment update, shipping update, note and refund, with the user who did it or "System".
 
@@ -239,7 +239,7 @@ A guest order has no account in **Customer Information**. Everything else works 
 
 ## Related
 
-- [Invoices](/admin/sales/invoices)
+- [Receipts and credit documents](/admin/sales/receipts)
 - [Payment methods](/admin/sales/payment-methods)
 - [Carts](/admin/sales/carts)
 - [ACS Courier](/admin/shipping/acs)

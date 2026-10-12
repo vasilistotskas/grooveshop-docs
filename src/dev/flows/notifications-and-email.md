@@ -332,7 +332,8 @@ together.
 | → CANCELED | `send_order_status_update_email` | CANCELED toast |
 | → RETURNED, → REFUNDED | `send_order_status_update_email` | none |
 | Refund recorded | `send_refund_confirmation_email` | `notify_order_refunded_live` |
-| Invoice generated | `send_invoice_email`, chained after myDATA when enabled | — |
+| Retail receipt registered with myDATA | `send_invoice_email`, chained from `send_invoice_to_mydata` once the MARK is on the PDF (never for an unregistered receipt) | — |
+| Retail credit document registered with myDATA | `send_credit_email` (`credit_email_sent_<id>` flag) | — |
 | Stripe dispute opened | `send_dispute_notification_email` to staff | — |
 | Pending order, 24h+, online only | `check_pending_orders` reminder, up to 3 with widening intervals | — |
 | Reservation expired without an order | `send_checkout_abandonment_emails` | — |

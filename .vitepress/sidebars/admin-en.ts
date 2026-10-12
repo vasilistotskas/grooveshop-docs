@@ -48,7 +48,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Orders', link: '/admin/sales/orders' },
       { text: 'Carts', link: '/admin/sales/carts' },
-      { text: 'Invoices', link: '/admin/sales/invoices' },
+      { text: 'Receipts', link: '/admin/sales/receipts' },
       { text: 'Payment methods', link: '/admin/sales/payment-methods' },
       { text: 'Promotions', link: '/admin/sales/promotions' },
       { text: 'Coupon codes', link: '/admin/sales/coupon-codes' },

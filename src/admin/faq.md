@@ -77,9 +77,9 @@ Platform operators can check the Viva Webhook Events ledger for the order id: no
 
 Stock reserved for an order is released by the stuck-order cleanup that runs every fifteen minutes, not at the moment the payment fails. Wait for the next run or cancel the order. See [Background jobs](/admin/system/background-jobs).
 
-### Why is the invoice number not the next one I expected?
+### Why is the receipt number not the next one I expected?
 
-Numbers are taken from a per-year counter that only moves forward; a deleted invoice does not return its number. See [Reconciliation](/admin/system/reconciliation) and [Invoices](/admin/sales/invoices).
+Numbers are taken from a per-year counter that only moves forward; a deleted receipt does not return its number. See [Reconciliation](/admin/system/reconciliation) and [Receipts and credit documents](/admin/sales/receipts).
 
 ## Shipping
 

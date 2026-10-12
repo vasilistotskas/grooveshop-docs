@@ -263,20 +263,29 @@ survive later profile edits, and the tax register attaches to the order row.
 
 1. `document_type = INVOICE` while `B2B_INVOICING_ENABLED` is off is
    **rejected**, so the API cannot be used while the UI hides the toggle.
-2. `INVOICE` requires `billing_vat_id`, or the myDATA submission would
-   silently downgrade or hard-fail at the worker.
+2. `INVOICE` requires `billing_vat_id`: without a buyer ΑΦΜ staff cannot
+   issue the invoice.
 3. `INVOICE` requires company name, tax office and activity.
 4. A blank billing address means "same as delivery" and is copied explicitly
    onto the order. A **partial** explicit address is rejected, because the
    invoice would otherwise mix the billing street with the shipping city.
 
-`billing_country` is stored against the VAT id so the AADE invoice type can
-be chosen from it. Only two types are implemented today:
-`order/mydata/builder.py: _pick_invoice_type` returns 11.1 for B2C retail or
-1.1 for domestic B2B, and nothing else. Intra-EU (1.2) and third-country
-(1.3) are deferred, so a non-domestic B2B order currently falls back to
-11.1. The `billing_country` help text on the model claims otherwise and is
-wrong.
+**The platform issues no invoice.** AADE decision Α.1128/2025 art. 1(2)
+requires 1.1 and 5.1 documents, from 2.11.2026, to come from a licensed
+provider or the free timologio app, and an invoice sent over the ERP channel
+counts as not issued. `order/mydata/builder.py` therefore builds 11.1 and 11.4
+only, and a `document_type = INVOICE` order never gets an `Invoice` row, a
+PDF, an email or a myDATA submission (`order/invoicing.py: receipt_issuable`
+refuses it). The order confirmation says an invoice was *requested*.
+
+Staff issue the invoice by hand in timologio. The order admin's
+`OrderAdmin.timologio_summary` (`order/admin.py`) lists the buyer identity and
+the VAT rows of the order, taken from `order/taxation.py`, and four fields on
+`Order` record what was issued: `timologio_invoice_number`,
+`timologio_invoice_mark`, `timologio_credit_number`, `timologio_credit_mark`.
+The storefront's checkout fields and the buyer's `billing_*` snapshot are
+unchanged. See `docs/order-system.md` §7.4 in the Django repository for the
+retail documents the platform does issue.
 
 ### Storefront
 
@@ -393,6 +402,7 @@ points-earned promise and the redemption widget.
 | `grooveshop-django-api/order/views/item.py` | `_line_price`: a staff-added line priced for the order's stamped group |
 | `grooveshop-django-api/order/models/order.py` | Billing snapshot columns |
 | `grooveshop-django-api/order/serializers/order.py` | Invoice cross-field validation |
+| `grooveshop-django-api/order/admin.py` | `OrderAdmin.timologio_summary`, the `timologio_*` fields |
 | `grooveshop-django-api/tenant/models.py` | `b2b_enabled` and the invoicing exception |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/b2b-enabled.ts` | Fail-closed two-tier gate |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useB2BPricing.ts` | Post-hydration price swap |

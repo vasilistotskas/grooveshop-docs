@@ -44,8 +44,8 @@ flowchart LR
 
 - The product stores a **net** price and a link to a VAT rate. The storefront, the cart and the order work with the VAT-inclusive final price.
 - A product with no VAT rate is treated as 0 %.
-- **Each order line records the rate it was sold at.** The invoice and myDATA use that rate, never the product's current one.
-- The invoice groups lines by rate and backs the VAT out of each line. Order-level discounts are spread across lines first, so VAT is computed on what was actually paid. Gift-card amounts are payment and do not touch VAT. See [Invoices](/admin/sales/invoices).
+- **Each order line records the rate it was sold at.** The receipt and myDATA use that rate, never the product's current one.
+- The receipt groups lines by rate and backs the VAT out of each line. Order-level discounts are spread across lines first, so VAT is computed on what was actually paid. Gift-card amounts are payment and do not touch VAT. See [Receipts and credit documents](/admin/sales/receipts).
 - Shipping and payment-method fees are entered as VAT-inclusive amounts and taxed at the rate of the products they come with. When an order mixes rates, each charge is split across the rates in proportion to the value of the products at each rate.
 - Wholesale prices for business customers are net prices too; the product's own rate is applied on top. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
 
@@ -69,7 +69,7 @@ There is no "default rate" setting. A new product has no rate until you pick one
 2. Delete the old row once unused. Existing orders keep their line prices and the rate each line was sold at, so their invoices do not change.
 
 ### Correct the rate of one order line
-If an order was placed with the wrong rate on a line, correct it on the line itself, not here. See [Invoices](/admin/sales/invoices), "Correct the VAT rate of an order line".
+If an order was placed with the wrong rate on a line, correct it on the line itself, not here. See [Receipts and credit documents](/admin/sales/receipts), "Correct the VAT rate of an order line".
 
 ## Things to know
 
@@ -81,6 +81,6 @@ If an order was placed with the wrong rate on a line, correct it on the line its
 ## Related
 
 - [Products](/admin/catalog/products)
-- [Invoices](/admin/sales/invoices)
+- [Receipts and credit documents](/admin/sales/receipts)
 - [Customer groups & price lists](/admin/b2b/groups-and-price-lists)
 - [Cache](/admin/system/cache)

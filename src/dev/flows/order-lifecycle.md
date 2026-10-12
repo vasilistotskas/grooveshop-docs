@@ -121,12 +121,12 @@ unwound.
 | Payment succeeded | A CHARGE row on the payment ledger (written before any guard, so a stale or repeated event and a charge on a CANCELED order still leave theirs), `mark_as_paid`, PROCESSING advance with the customer notification suppressed, carrier dispatch on commit, confirmation email, `notify_payment_confirmed_live`, Redis payment-status publish |
 | Payment failed | `payment_status=FAILED`, failure email, `notify_payment_failed_live`. No stock movement |
 | → PROCESSING | `order_paid` when already paid → cart clear, Meta CAPI Purchase. No customer email, no toast |
-| → SHIPPED | `order_shipped`, history row, `send_shipping_notification_email` (self-gates), SHIPPED toast |
+| → SHIPPED | `order_shipped`, history row, `send_shipping_notification_email` (self-gates), SHIPPED toast, and the retail receipt: `generate_order_invoice` once for a RECEIPT order while `MYDATA_ENABLED` and `MYDATA_AUTO_SUBMIT` are on (`order/invoicing.py: receipt_issuable`; ΕΛΠ art. 13(a): issued at the start of the shipment), registered with myDATA (11.1) and only then emailed |
 | Tracking first set | `order_shipment_dispatched` → the same shipping email, which sends whichever condition completes second |
 | → DELIVERED | `order_delivered`, status email, DELIVERED toast, then the COMPLETED auto-advance for paid orders |
-| → COMPLETED | `order_completed` → invoice generation when `document_type == INVOICE`, loyalty points earned, status email, COMPLETED toast |
+| → COMPLETED | `order_completed` → loyalty points earned, status email, COMPLETED toast. Nothing is issued for an `INVOICE` order: invoices are issued by hand in timologio |
 | → CANCELED | `order_canceled` → carrier voucher cascade (skipped when the cancel already asked the courier), gift-card credit, loyalty reversal, status email, CANCELED toast |
-| Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row; the gift-card credit and the loyalty reversal only once `payment_status` is REFUNDED |
+| Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row; the gift-card credit and the loyalty reversal only once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund once the order's receipt has a MARK (`order/credit_documents.py: create_pending_credits`, task `issue_pending_credits`); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
 | Status, payment status or tracking changed | `push_order_event_to_gateway` when `AGENT_GATEWAY_INTERNAL_URL` is set |
 
 The gateway push is one `POST /internal/events/order-status` carrying
@@ -708,7 +708,9 @@ online payment. Nothing happens at the moment the payment fails.
 | `grooveshop-django-api/order/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
 | `grooveshop-django-api/order/discounts.py` | `allocate_capped`, `discounted_line_gross`, `spread_by_remaining_value` |
 | `grooveshop-django-api/order/discount_snapshot.py` | `heal_discount_allocation` |
-| `grooveshop-django-api/order/invoicing.py` | Invoice totals from the VAT lines, `_persist_invoice_row` reusing frozen figures after a MARK |
+| `grooveshop-django-api/order/invoicing.py` | Receipt totals from the VAT lines, `_persist_invoice_row` reusing frozen figures after a MARK, `receipt_issuable`, `render_credit_pdf` |
+| `grooveshop-django-api/order/credit_documents.py` | `create_pending_credits`, `credit_breakdown` (cumulative net, never past the receipt), settlement credit |
+| `grooveshop-django-api/order/models/retail_credit.py` | `RetailCredit`, `CreditCounter` |
 | `grooveshop-django-api/order/mydata/builder.py` | myDATA lines and summary from the same VAT lines |
 | `grooveshop-django-api/shipping/services.py` | `ShippingService.cancel_shipment`, `can_cancel_shipment` |
 | `grooveshop-django-api/shipping/exceptions.py` | `CarrierError`, `CarrierUnavailableError` |

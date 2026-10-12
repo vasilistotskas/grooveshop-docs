@@ -1,6 +1,6 @@
 ---
 title: Reconciliation
-description: "ACS pickup lists, ACS cash-on-delivery payouts and the invoice counter — what each is, the daily routine behind it, and how to read the numbers."
+description: "ACS pickup lists, ACS cash-on-delivery payouts and the receipt and credit counters — what each is, the daily routine behind it, and how to read the numbers."
 ---
 
 # Reconciliation
@@ -9,7 +9,7 @@ description: "ACS pickup lists, ACS cash-on-delivery payouts and the invoice cou
 
 **Platform operators only.** These three screens refuse to open for anyone else. Owners see the effect of the routines on their orders and shipments; this page explains what happens behind them and what an operator does when asked.
 
-Pickup lists and cash-on-delivery payouts are explained in depth, from the store's side, in [ACS Courier](/admin/shipping/acs). This page covers the two ledgers themselves and the Invoice Counter.
+Pickup lists and cash-on-delivery payouts are explained in depth, from the store's side, in [ACS Courier](/admin/shipping/acs). This page covers the two ledgers themselves and the Receipt and Credit Counters.
 
 ## ACS Pickup Lists
 
@@ -55,21 +55,21 @@ To run the import outside the schedule, open a payout row and click **Run COD re
 - **COD payment date** is when ACS credited you; the order's payment stays Pending until this row exists. That gap of several days is expected. See the note in [Orders](/admin/sales/orders).
 - A delivered COD order that stays Pending for more than a week has either no payout row (ACS did not pay yet, or the row was skipped) or a row whose voucher did not match. Search the voucher here first.
 
-## Invoice Counter
+## Receipt Counter and Credit Counter
 
-One row per year, with **Year** and **Next Number**. Every invoice takes the next number under a row lock, so two invoices issued at the same moment cannot receive the same number and the sequence has no gaps.
+One row per year in each, with **Year** and **Next Number**. Every receipt takes the next number of the Receipt Counter, and every credit document the next number of the Credit Counter, under a row lock, so two documents issued at the same moment cannot receive the same number and each sequence has no gaps.
 
-Unlike the two ledgers above, this row **is** editable, and only a platform operator can reach it. The only reason to edit it is to reserve a range, for example when numbers up to a certain point were issued by a previous system. Set **Next Number** to the first free number **before** the first invoice of the year. Never lower it: two invoices would receive the same number, and the tax authority sees the sequence.
+Unlike the two ledgers above, this row **is** editable, and only a platform operator can reach it. The only reason to edit it is to reserve a range, for example when numbers up to a certain point were issued by a previous system. Set **Next Number** to the first free number **before** the first document of the year. Never lower it: two documents would receive the same number, and the tax authority sees the sequence.
 
 ## Things to know
 
 - ACS is the cash-on-delivery carrier here; online payments settle through the payment provider, not through this ledger.
 - A pickup list row is written only when ACS accepted the list. No row for a working day means nothing was waiting for a list, ACS refused it over unprinted vouchers (noted on each order it held back), or the issue failed for another reason, whose text is in the application log.
-- Deleting an invoice does not give its number back. The counter only moves forward.
+- Deleting a receipt or credit document does not give its number back. The counter only moves forward.
 
 ## Related
 
 - [ACS Courier](/admin/shipping/acs)
 - [Orders](/admin/sales/orders)
-- [Invoices](/admin/sales/invoices)
+- [Receipts and credit documents](/admin/sales/receipts)
 - [Background jobs](/admin/system/background-jobs)

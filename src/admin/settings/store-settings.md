@@ -88,7 +88,7 @@ Shipping prices, free-shipping thresholds and the countries you deliver to are n
 
 ### Invoicing & myDATA
 
-Fill the seller identity **before the first invoice**: the values are printed on every invoice PDF and published in the storefront footer as your legal identity.
+Fill the seller identity **before the first receipt**: the values are printed on every receipt and credit document PDF and published in the storefront footer as your legal identity.
 
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
@@ -99,16 +99,17 @@ Fill the seller identity **before the first invoice**: the values are printed on
 | `INVOICE_SELLER_REGISTRATION_NUMBER` | Business registry number (Γ.Ε.ΜΗ.). | empty | no |
 | `INVOICE_SELLER_BUSINESS_ACTIVITY` | Main business activity. | empty | no |
 | `INVOICE_SELLER_ADDRESS_LINE_1/_2`, `_CITY`, `_POSTAL_CODE`, `_COUNTRY` | Registered address. | empty | no |
-| `INVOICE_SELLER_PHONE`, `INVOICE_SELLER_EMAIL` | Seller contact details on the invoice. | empty | no |
+| `INVOICE_SELLER_PHONE`, `INVOICE_SELLER_EMAIL` | Seller contact details on the receipt. | empty | no |
 | `INVOICE_SELLER_IN_LIQUIDATION` | Disclose that the business is in liquidation. | off | no |
 | `B2B_INVOICING_ENABLED` | Let customers request an invoice instead of a receipt at checkout. Available on every plan, with no plan flag behind it. | on | yes |
 | `B2B_WHOLESALE_ENABLED` | Your half of the wholesale switch (business profiles, customer groups, price lists). | off | yes |
 | `B2B_ALLOW_PROMOTIONS` | Let promotions and coupons stack on top of wholesale prices. | off | no |
 | `B2B_LOYALTY_ENABLED` | Let wholesale orders take part in loyalty. One switch for both earning and redeeming. | off | no |
-| `MYDATA_ENABLED` | Master switch of the AADE myDATA integration. | off | no |
-| `MYDATA_AUTO_SUBMIT` | Submit each invoice automatically once its PDF is rendered; otherwise only through the invoice action. | off | no |
+| `MYDATA_ENABLED` | Master switch of the AADE myDATA integration (receipts and credit documents; invoices are issued in timologio). | off | no |
+| `MYDATA_AUTO_SUBMIT` | Issue the retail documents by itself: the receipt when an order ships, a credit document when money goes back. Otherwise only through the order's Invoicing & myDATA actions. | off | no |
 | `MYDATA_ENVIRONMENT` | `dev` (sandbox) or `prod`. Separate credentials for each; the credentials themselves are on your store profile, not here. | dev | no |
-| `MYDATA_INVOICE_SERIES_PREFIX` | Prefix of the AADE series code, combined with year. | GRVP | no |
+| `MYDATA_INVOICE_SERIES_PREFIX` | Prefix of the AADE series code of the receipts, combined with year. | GRVP | no |
+| `MYDATA_CREDIT_SERIES_PREFIX` | Prefix of the AADE series code of the credit documents, a gapless series of their own. | GRVC | no |
 | `MYDATA_ISSUER_BRANCH` | AADE branch code; 0 is the main branch. | 0 | no |
 | `MYDATA_REQUEST_TIMEOUT_SECONDS` | Timeout for AADE calls. | 30 | no |
 | `MYDATA_GIFT_CARD_PAYMENT_TYPE` | AADE payment type for amounts settled by gift card (3 cash, 5 on credit). | 3 | no |
@@ -204,4 +205,4 @@ The storefront reads every public setting in one request and keeps the answer fo
 - [Promotions](/admin/sales/promotions)
 - [Gift cards](/admin/sales/gift-cards)
 - [Tiers & points](/admin/loyalty/tiers-and-points)
-- [Invoices](/admin/sales/invoices)
+- [Receipts and credit documents](/admin/sales/receipts)
