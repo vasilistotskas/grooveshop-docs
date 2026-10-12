@@ -18,6 +18,7 @@ secrets.
 |---|---|
 | `/mcp` | MCP server (streamable HTTP): the UCP checkout tools, ergonomic commerce tools, account tools for linked shoppers |
 | `GET /.well-known/ucp` | UCP business profile, including the platform payment handler |
+| `GET /mcp/server-card`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json` | Agent discovery: the MCP Server Card, the ARD manifest and the AI Catalog, the last two cut from one entry (`internal/mcpsrv/discovery.go`); see [Agentic commerce](/dev/flows/agentic-commerce) |
 | `/acp/checkout_sessions*` | ACP agentic checkout REST (create, get, update, complete, cancel), gated per tenant by the tenant's own `acpBearerToken` |
 | `/feeds/*` | Product feeds: `google.xml`, `meta.xml`, `tiktok.xml`, `acp.json` |
 | `POST /chat` | First-party shopping chatbot (SSE) over an OpenAI-compatible provider; the model key is per tenant |

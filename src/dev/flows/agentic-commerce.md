@@ -1,6 +1,6 @@
 ---
 title: Agentic commerce
-description: "The Go agent gateway: MCP tools, UCP checkout and its payment handler, ACP, catalog feeds, the storefront chatbot, identity linking and order events."
+description: "The Go agent gateway: MCP tools, UCP checkout and its payment handler, ACP, catalog feeds, the storefront chatbot, identity linking, agent discovery and order events."
 ---
 
 # Agentic commerce
@@ -15,6 +15,7 @@ secrets.
 |---|---|
 | `/mcp` | MCP server, stateless streamable HTTP. Registered without a method, unlike every other route, because streamable HTTP uses POST, GET and DELETE on the one path |
 | `GET /.well-known/ucp` | UCP business profile |
+| `GET /mcp/server-card`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json` | Agent discovery: the MCP Server Card, the ARD manifest and the AI Catalog |
 | `/acp/*` | ACP agentic-checkout REST |
 | `/feeds/*` | `google.xml`, `meta.xml`, `tiktok.xml`, `acp.json` |
 | `POST /chat` | First-party shopping chatbot, SSE |
@@ -85,7 +86,7 @@ value per surface and a payload missing a field decodes as off.
 
 | Field | Accessor | Guards |
 |---|---|---|
-| `agentCommerceEnabled` | `AgentCommerceOn()` | `/mcp`, `/.well-known/ucp`, `/acp/*`, `/chat` |
+| `agentCommerceEnabled` | `AgentCommerceOn()` | `/mcp` and `/mcp/server-card`, `/.well-known/ucp`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json`, `/acp/*`, `/chat` |
 | `productFeedsEnabled` | `ProductFeedsOn()` | `/feeds/*`, subordinate to agent commerce |
 | `agentHostedPaymentEnabled` | `HostedPaymentOn()` | The hosted-selection extension, subordinate to agent commerce |
 
@@ -340,14 +341,8 @@ storefront advertises it. `server/routes/.well-known/oauth-protected-resource/mc
 returns the RFC 9728 document naming the tenant's **own API origin**
 (`TenantConfig.apiDomain`) as the authorization server, with
 `scopes_supported` of `openid`, `profile`, `email`, `orders:read`,
-`loyalty:read` and `favourites:read`.
-Discovery follows SEP-2127: the storefront's
-`server/routes/.well-known/ai-catalog.json.get.ts` lists one
-`application/mcp-server-card+json` entry, and the gateway serves the card at
-the reserved `<streamable-http-url>/server-card` (`/mcp/server-card`,
-`internal/mcpsrv/servercard.go`) — identity and remotes only, no tools, which
-clients read from `tools/list`. The card's name, title and version are the
-ones `initialize` reports (`mcpsrv.IdentityFor`).
+`loyalty:read` and `favourites:read`. The documents that describe the MCP
+server itself are the gateway's (see Agent discovery below).
 
 `internal/identity` is **optional** auth on `/mcp`: anonymous shopping stays
 open, a present bearer is verified against Django's `/agent/me`, and an
@@ -363,6 +358,43 @@ the scopes**. `agent/views.py` accepts OIDC bearer tokens only — never Knox,
 never session auth — and tenant scoping is structural rather than a
 permission: the OIDC token tables live in the tenant schema, so a token
 issued by one store cannot be found on another's host.
+
+### Agent discovery
+
+The gateway serves every document that describes the store's MCP server,
+so an agent finds the server, its name and its tools from one owner
+(`internal/mcpsrv/discovery.go`, `internal/mcpsrv/servercard.go`):
+
+| Route | Content-Type | Content |
+|---|---|---|
+| `GET /mcp/server-card` | `application/mcp-server-card+json` | The MCP Server Card at the reserved `<streamable-http-url>/server-card`: identity and remotes only, no tools, which clients read from `tools/list`. Its name, title and version are the ones `initialize` reports (`mcpsrv.IdentityFor`) |
+| `GET /.well-known/ard.json` | `application/json` | The Agentic Resource Discovery manifest, the document ARD consumers must fetch. One entry: `identifier`, `type`, `url`, plus `displayName`, `description`, `capabilities` and `representativeQueries` |
+| `GET /.well-known/ai-catalog.json` | `application/ai-catalog+json` | The AI Catalog, through which MCP Server Card discovery (SEP-2127) goes. The same entry cut to `identifier`, `type` and `url`, because the catalog spec makes the card authoritative for its name and description |
+
+Both well-known documents are built from one entry, `storeEntry`, so they
+cannot disagree about what they describe. `displayName` and `description`
+are the Server Card's own title and description (`Identity.Description()`,
+so the string exists once); `capabilities` is `registeredToolNames`, read
+off the same toolset `NewServer` registers from, so a new tool is
+advertised the moment it is served; the four `representativeQueries` sit
+next to the tool definitions in `internal/mcpsrv/server.go`. `identifier`
+is `urn:air:<primary domain>:mcp:store`, the primary domain lower-cased in
+ASCII (IDNA) because the ARD URN admits no internationalised form, and
+`url` is the Server Card on the request's own store host
+(`internal/storefront/urls.go: MCPServerCard`). The envelope carries
+`specVersion` and a `host` naming the store and its primary domain.
+
+All three sit behind the same gate as `/mcp` (`describeMCP` in
+`internal/server/routes.go`): a store with agent commerce off answers 404
+`not found`, and an unknown host the tenant middleware's 404 `unknown
+store`. They share `publicDocument` for CORS (`OPTIONS` answers 204),
+`Cache-Control: public, max-age=3600` and ETag / `If-None-Match`
+revalidation.
+
+The ingress routing of `/.well-known/ard.json` and
+`/.well-known/ai-catalog.json` to the gateway on every store host lands
+with grooveshop-infrastructure PR #184; once it is live, the storefront's
+former `ai-catalog.json` route is deleted (storefront PR #104).
 
 ### Order events
 
@@ -421,6 +453,8 @@ across **two** Ingress objects in
 `TENANT_SLUG-ingress-agent` carries `/mcp`, `/.well-known/ucp`, `/feeds` and
 `/acp`, while `/chat` gets its own `TENANT_SLUG-ingress-agent-chat` so it can
 take the `rate-limit-chat` Traefik middleware the other four must not.
+The two discovery documents join the agent Ingress with infrastructure
+PR #184 (see Agent discovery above).
 The payment-handler documents are served host-scoped on
 `payments.grooveshop.space`, which the mux binds explicitly and which takes no
 tenant middleware — it is a platform artifact, not a tenant.
@@ -448,6 +482,10 @@ yourself, then bumping the pin in the infrastructure repo.
 - **Every tenant gate is read through its accessor**, which encodes the
   subordination to agent commerce; a missing field decodes as off.
 - **A disabled surface answers 404.**
+- **Agent discovery has one owner and one entry.** The ARD manifest and the
+  AI Catalog are both cut from `storeEntry`, whose name and description are
+  the Server Card's and whose capabilities are the registered tools; never
+  a second list.
 - **`/readyz` never fails on Django.** Only Redis flips it.
 - **Redis keys are `ag:{schema}:…`**, except the tenant cache
   (`ag:tenant:{host}`) and the shared order-event queue.
@@ -465,6 +503,10 @@ yourself, then bumping the pin in the infrastructure repo.
 - **A tenant's agent surfaces all 404.** `agentCommerceEnabled` is off at one
   of its two tiers, or the host resolved to no tenant. Check the resolve
   payload first; the negative cache holds a confirmed-unknown host briefly.
+- **`/.well-known/ard.json` or `ai-catalog.json` 404s.** The documents share
+  the `/mcp` gate, so a store with agent commerce off has none. If
+  `/mcp/server-card` answers on the same host, the ingress is not routing
+  the well-known path to the gateway yet.
 - **`/chat` 404s with a localized message.** The tenant has no `chatApiKey`.
   Remember that the key only arrives on an internally-authenticated resolve,
   so a config served from the Redis tier has it empty — `/chat` uses the
@@ -511,7 +553,10 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/django/dto.go` | `TenantConfig` and the gate accessors |
 | `grooveshop-agent-gateway/internal/django/client_agent.go` | `/agent/me` and the scoped resources |
 | `grooveshop-agent-gateway/internal/identity/identity.go` | Optional bearer verification, per-tenant cache key |
-| `grooveshop-agent-gateway/internal/mcpsrv/server.go` | Tool registration |
+| `grooveshop-agent-gateway/internal/mcpsrv/server.go` | Tool registration, `registeredToolNames`, `representativeQueries` |
+| `grooveshop-agent-gateway/internal/mcpsrv/discovery.go` | `storeEntry`, `ARDHandler`, `AICatalogHandler` |
+| `grooveshop-agent-gateway/internal/mcpsrv/servercard.go` | `ServerCardHandler`, `IdentityFor`, `publisher`, `publicDocument` |
+| `grooveshop-agent-gateway/internal/storefront/urls.go` | `MCPServerCard` and every other link into the storefront |
 | `grooveshop-agent-gateway/internal/ucp/profile.go` | Business profile document |
 | `grooveshop-agent-gateway/internal/ucp/handler.go` | Payment handler, instruments, hosted selection |
 | `grooveshop-agent-gateway/internal/ucp/webhook.go` | Order-event queue and signed delivery |
@@ -534,5 +579,5 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-django-api/agent/views.py`, `agent/oidc.py` | Agent resources and scopes |
 | `grooveshop-django-api/order/tasks.py` | Order-event push |
 | `grooveshop-django-api/core/cache/gateway.py` | Feed invalidation call |
-| `grooveshop-storefront-ui-node-nuxt/server/routes/.well-known/` | Server card and OAuth resource metadata |
+| `grooveshop-storefront-ui-node-nuxt/server/routes/.well-known/oauth-protected-resource/mcp.get.ts` | OAuth protected-resource metadata for `/mcp` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml` | Path routing |
