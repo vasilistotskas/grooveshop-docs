@@ -29,7 +29,7 @@ Each row has two quick actions: **Download shipping voucher (PDF)** and **Custom
 
 ### Filters
 
-The **Filters** panel offers, top to bottom: **Status** and **Payment Status**, where you may pick several at once (Pending and Processing together are the orders still to handle; Failed and Pending together are the payments needing attention), **Document Type**, **Wholesale** (orders priced with a B2B customer group, or retail), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), **Source type** and **Order source** (see [Order source](#order-source)), created and status-updated date ranges, **Country** and **Region** (type to search), the pay way, the gateway that processed the charge, shipping provider, **Shipping Kind** and, for BoxNow orders, the parcel state. Choose any number of them and press **Apply Filters** once. A date drill-down by creation date sits above the table.
+The **Filters** panel offers, top to bottom: **Status** and **Payment Status**, where you may pick several at once (Pending and Processing together are the orders still to handle; Failed and Pending together are the payments needing attention), **Document Type**, **Wholesale** (orders priced with a B2B customer group, or retail), **Refund** (**Cancelled but still paid**: cancelled orders whose money has not all gone back, see [Orders cancelled but still paid](#orders-cancelled-but-still-paid)), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), **Source type** and **Order source** (see [Order source](#order-source)), created and status-updated date ranges, **Country** and **Region** (type to search), the pay way, the gateway that processed the charge, shipping provider, **Shipping Kind** and, for BoxNow orders, the parcel state. Choose any number of them and press **Apply Filters** once. A date drill-down by creation date sits above the table.
 
 ### Search
 
@@ -53,9 +53,9 @@ Below them the page is split into tabs:
 - **Shipping & Tracking**: shipping provider, shipping kind, shipping price, tracking number, carrier name.
 - **Additional Information**: the customer's notes from checkout, then the read-only order source fields: **Source type**, **Order source**, **Traffic medium**, **Campaign name**, **Referrer host** and **Landing page**. All show "-" on an order placed before the store started recording them.
 
-Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
+Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), **Payment Transactions** (read-only: every charge, cash-on-delivery collection and refund recorded for the order, with **Created At**, **Kind**, **Amount**, **Provider**, **Provider reference** and, for a refund, the reason in **Description**), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
 
-The header carries **Download shipping voucher (PDF)** and an **Invoicing & myDATA** menu with **Generate invoice**, **Regenerate invoice (same number)**, **Send invoice to myDATA** and **Cancel invoice in myDATA**. See [Invoices](/admin/sales/invoices).
+The header carries **Refund (amount, reason)** on a delivered, completed or returned order (see [Refunds](#refunds)), **Download shipping voucher (PDF)** and an **Invoicing & myDATA** menu with **Generate invoice**, **Regenerate invoice (same number)**, **Send invoice to myDATA** and **Cancel invoice in myDATA**. See [Invoices](/admin/sales/invoices).
 
 ## Order statuses
 
@@ -94,8 +94,8 @@ Only **Pending** and **Processing** orders can be canceled. A customer has one m
 | **Processing** | The provider is still working on the charge. | The provider, when it reports back. |
 | **Completed** | Paid in full. Also used when gift cards, points or a 100% promotion covered the whole total. | Viva Wallet or Stripe confirming the charge, the nightly match against the ACS cash-on-delivery payout report, BoxNow reporting a paid parcel delivered, or you, by editing the field. |
 | **Failed** | The online charge was declined. The order stays Pending and is auto-canceled after the grace period. | The provider, when it reports the decline. |
-| **Refunded** | Fully refunded: nothing is left to give back. | Cancelling a paid order, or refunds made in the Viva Wallet or Stripe dashboard that add up to the whole payment, in one go or in parts. |
-| **Partially Refunded** | Part of the money went back. | A partial refund made in the Viva Wallet or Stripe dashboard. |
+| **Refunded** | Fully refunded: nothing is left to give back. | The refund that returns the last of the payment, in one go or after earlier partial refunds: the **Refund (amount, reason)** button, cancelling a paid order, or a refund made in the Viva Wallet or Stripe dashboard. |
+| **Partially Refunded** | Part of the money went back; more refunds can follow until nothing is left. | A partial refund from the **Refund (amount, reason)** button or the Viva Wallet or Stripe dashboard, or a cancellation whose refund the provider completed only in part. |
 | **Canceled** | Nothing was collected and nothing is owed. Set when an unpaid order is canceled or comes back **Returned** (cash on delivery the customer refused or never collected, or an online payment that never completed), or when Viva Wallet reverses a payment that never completed. | The cancellation or the return itself, or Viva Wallet. |
 
 Once a payment is Completed, Refunded, Partially Refunded or Canceled, a late or duplicated provider message can never move it back to Pending or Failed.
@@ -147,7 +147,7 @@ There is no other way: **Status** is read-only on the order page.
 2. The platform restores the stock, releases any leftover reservation, records the cancellation in the history, asks the courier to cancel the voucher and emails the customer.
 3. If the courier refuses (for example the voucher is already on a pickup list) or cannot be reached, the order is canceled all the same. An error message at the top of the list names the order and the courier's reply, and a note in the order's history says the same: the parcel may still be delivered, so arrange its return with the courier.
 
-**This action refunds the money too**, when there is money to refund: an order whose payment status is Completed and that was charged by Viva Wallet or Stripe gets a full provider refund as part of the cancellation, and the payment status becomes Refunded. Cash on delivery, bank transfer and orders settled entirely by gift card have nothing for a provider to send back; the gift-card part goes back to the cards either way. If the provider refuses the refund, the order is still canceled, the payment status stays Completed, an error message says the payment was not refunded and the provider's reason is noted in the order's history.
+**This action refunds the money too**, when there is money to refund: an order whose payment status is Completed and that was charged by Viva Wallet or Stripe gets a full provider refund as part of the cancellation, and the payment status becomes Refunded. Cash on delivery, bank transfer and orders settled entirely by gift card have nothing for a provider to send back; the gift-card part goes back to the cards either way. If the provider refuses the refund, the order is still canceled, the payment status stays Completed, an error message says the payment was not refunded and the provider's reason is noted in the order's history. Such orders are listed by the **Refund** filter; see [Orders cancelled but still paid](#orders-cancelled-but-still-paid).
 
 ### Confirm a bank transfer or other offline payment
 1. Open the order and go to **Payment Information**.
@@ -192,12 +192,33 @@ Rarely, the order moves on while the courier is answering, for example because y
 
 ## Refunds
 
-There is no refund button in the admin: nothing on the order page or in the bulk-action list refunds money on its own. There are exactly two ways money goes back.
+Money goes back to the customer in three ways: the **Refund (amount, reason)** button on a delivered or returned order, a cancellation, or a refund made in the payment provider's own dashboard. Whichever you use, every refund is recorded on the order, the payment status follows from how much has gone back in total, and the customer gets one refund email for each refund.
 
-- **Cancel the order** while it is still Pending or Processing. If it was paid online, the cancellation includes a full provider refund, as described above.
-- **Refund it in the provider's own dashboard** (Viva Wallet or Stripe). The refund reaches the order on its own: the payment status becomes **Partially Refunded** while part of the payment is still with you and **Refunded** once all of it has gone back, several partial refunds adding up. Each refund writes a history entry. The customer gets one refund email: with the first Viva Wallet refund, or with a full Stripe refund (a partial Stripe refund sends none). If a Viva Wallet refund does not show up on the order, ask the platform team to check that the store's Viva account sends refund notifications.
+### Refund a delivered or returned order
+Use this for returns (including the customer's 14-day right of withdrawal), goodwill refunds and anything else after delivery.
+1. Open the order. The **Refund (amount, reason)** button is in the header of an order that is **Delivered**, **Completed** or **Returned**, for team members who can edit orders.
+2. **Amount** is filled in with everything that can still be refunded; lower it for a partial refund. Fill in **Reason**: it is kept with the refund.
+3. Confirm. The money goes back through the provider that took it (Viva Wallet or Stripe), and the message at the top of the page says how it went:
+   - "Order N refunded €X.": done.
+   - "Order N: €X of €Y refunded; the rest was declined: …": part went back and the provider refused the rest. What went back is recorded; try the rest again later, or refund it in the provider's dashboard.
+   - "Order N was not refunded; see the order history.": nothing went back. The provider's reason is in the order's history.
+4. After a partial refund the payment status is **Partially Refunded** and the button is still there: refund the rest, in one go or in several steps. Once nothing is left the payment status becomes **Refunded**.
 
-Either way the order status is not changed for you: when the goods are back, run **Mark selected orders as returned** and then **Mark selected orders as refunded**.
+You cannot refund more than is left: the platform refuses and tells you how much can still be refunded. An order paid by cash on delivery, bank transfer or entirely by gift card has nothing a provider can send back, and the platform says so. Each refund is listed on the order's **Payment Transactions** tab with its amount and reason, and the platform records which team member ran it.
+
+The button changes neither the order status nor the stock. When the goods are back, run **Mark selected orders as returned**, and if you want the order closed as refunded, **Mark selected orders as refunded** after it.
+
+### Cancel before shipping
+Cancelling a **Pending** or **Processing** order that was paid online refunds it in full as part of the cancellation. See [Cancel an order](#cancel-an-order).
+
+### Refunds made in the provider's dashboard
+A refund made in the Viva Wallet or Stripe dashboard reaches the order on its own: it is recorded on the order, the payment status becomes **Partially Refunded** or **Refunded**, and the customer gets a refund email for it, a partial refund included. A refund you made from the admin is never counted twice when the provider reports it back. If a Viva Wallet refund does not show up on the order, ask the platform team to check that the store's Viva account sends refund notifications.
+
+### Orders cancelled but still paid
+When a provider refuses the refund of a cancelled order, the order stays **Canceled** and the money stays with you. Choose **Refund → Cancelled but still paid** in the filters to list every such order, including ones refunded only in part. The **Refund (amount, reason)** button is not offered on a cancelled order, so refund what is left in the Viva Wallet or Stripe dashboard; the refund then reaches the order on its own.
+
+### What the customer receives
+One refund email for each refund: a partial refund and the later refund of the rest send one each. Customers with an account also get an in-app notification for each refund.
 
 Gift cards and loyalty points come back only when **all** the money has been refunded, or when the order is canceled. Each card then gets back exactly what it paid; the points spent on the order are given back and the points earned on it are taken back. A partial refund leaves both alone; they come back, in full, with the refund that returns the rest. See [Gift cards](/admin/sales/gift-cards) and [Tiers & points](/admin/loyalty/tiers-and-points).
 
@@ -208,7 +229,7 @@ A guest order has no account in **Customer Information**. Everything else works 
 ## Things to know
 
 - **Status cannot be edited on the order page.** Every change goes through the bulk actions, which check that the move is allowed, restore stock on a cancellation and refund a paid order.
-- **Editing money fields does not move money.** Changing the paid amount only changes what the screen shows; nothing is charged or refunded. **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** are read-only for that reason: they are stamped at checkout and the matching coupon, points and gift-card records already exist.
+- **Editing money fields does not move money.** Changing the paid amount only changes what the screen shows; nothing is charged or refunded. Setting **Payment status** to Refunded or Partially Refunded by hand sends nothing back either, and adds nothing to **Payment Transactions**: to give money back, use **Refund (amount, reason)**. **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** are read-only for that reason: they are stamped at checkout and the matching coupon, points and gift-card records already exist.
 - **Payment status Completed by hand** is right for bank transfers and cash collected in person. Do not use it for card payments still awaited from a provider.
 - **Payment Method and Payment Gateway are different fields.** **Payment Method** is the dropdown, and it holds what the customer chose at checkout. **Payment Gateway** next to it is written by the platform and records which gateway took the money (`stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`); it is used to match incoming provider messages, so leave it alone.
 - **Wholesale orders** keep the group name and discount percent they were priced with; changing the customer's group later does not touch old orders. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
