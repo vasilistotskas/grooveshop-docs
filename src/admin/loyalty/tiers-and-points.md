@@ -53,7 +53,9 @@ Guest orders earn nothing. Points are awarded once per order; a repeated job run
 
 ## Cancellations and refunds
 
-When an order is cancelled or refunded, a job reverses it: points spent on the order are given back, and the points earned on it — including the **new customer bonus**, if this was the order that granted it — are taken back as **Adjust** transactions (never below zero). XP is reduced by the earned points only, since the bonus never added any, and the tier is recalculated. Reversal runs once per order. The bonus is not granted again on a later order, and a cancelled or refunded order earns no points even when its earning job runs after the reversal.
+When an order is cancelled, fully refunded, or moved to **Refunded**, a job reverses it: points spent on the order are given back, and the points earned on it — including the **new customer bonus**, if this was the order that granted it — are taken back as **Adjust** transactions (never below zero). XP is reduced by the earned points only, since the bonus never added any, and the tier is recalculated. Reversal runs once per order. The bonus is not granted again on a later order, and a cancelled or refunded order earns no points even when its earning job runs after the reversal.
+
+A partial refund reverses nothing. Because the reversal happens only once and takes everything, the points stay until the refund that returns the rest of the money, so a small goodwill refund does not wipe the points of an order the customer keeps.
 
 ## Expiry
 

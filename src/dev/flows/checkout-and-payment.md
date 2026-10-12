@@ -241,7 +241,15 @@ verified charge whose amount disagrees stamps `AMOUNT_MISMATCH_FLAG` on
 the order and refuses to mark it paid. On success it writes
 `payment_id`, `payment_status=COMPLETED`, `payment_method="viva_wallet"`,
 flips PENDING to PROCESSING inline, and dispatches the carrier task.
-Event 1798 marks the payment failed; 1797 marks it refunded.
+Event 1798 marks the payment failed. Event 1797 books a refund: its
+`TransactionId` is the refund itself, verified through Retrieve
+Transaction (`_verify_viva_refund`: one of the order's codes, status `F`,
+a refund or void type, a negative amount), and the order becomes
+PARTIALLY_REFUNDED or REFUNDED depending on how much of the capture has
+come back in total. The handler records its real outcome on
+`VivaWebhookEvent.outcome`, so a refused event reads `skipped`, not
+`processed`. Refunds are covered in
+[Order lifecycle](/dev/flows/order-lifecycle).
 
 After payment Viva redirects to a static URL configured per tenant in the
 merchant portal. It lands on the Nitro route
@@ -483,8 +491,8 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id` |
-| `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry |
-| `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 |
+| `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities and `captured_amount`, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
+| `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798, `_verify_viva_refund` |
 | `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
 | `grooveshop-django-api/order/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |

@@ -65,6 +65,7 @@ The optional hooks are where a carrier states what it is:
 | `dispatch_create_shipment_task` | Enqueue the Celery task that talks to the carrier API |
 | `supported_settlements` | Which settlements the carrier can physically perform |
 | `filter_pay_ways` | Derived from the above; overriding it directly is almost always wrong |
+| `can_cancel_shipment` | Whether the carrier would still accept a cancel, judged from local rows only, never a carrier call. It must be the same rule the carrier's `cancel_shipment` checks before it calls out, because the order's `canBeCanceled` reads it. The default `True` suits a carrier with no cancel rule (the merchant's own delivery) |
 
 `supported_settlements` is a capability declaration, not a preference.
 ACS returns `{online, courier_cash, offline_transfer}` — a courier takes
@@ -158,6 +159,18 @@ rest is built on it:
 | `free_shipping_info(country_code)` | The "free shipping from X" promise; defaults to the first shippable country and echoes the `country_code` it used |
 
 The exceptions live in `shipping/exceptions.py`.
+
+The same module roots the carrier error hierarchy. Every carrier app's
+errors derive from `CarrierError` (`AcsError`, `BoxNowError`), and the
+ones that mean "the courier gave no answer" derive from
+`CarrierUnavailableError` as well: `AcsRetryableError` (and with it
+`AcsAuthError`), `AcsConfigError`, `BoxNowRetryableError`,
+`BoxNowAuthError` and `BoxNowConfigError`. Order code tells a refusal
+from an outage by these two classes alone, without importing a carrier:
+a customer cancel answers 400 `parcel_with_courier` for a `CarrierError`
+and 503 `courier_unreachable` for a `CarrierUnavailableError`
+([Order lifecycle](/dev/flows/order-lifecycle)). A new carrier gets the
+same behaviour by deriving its errors the same way.
 
 ### Method offering at checkout
 
@@ -550,8 +563,16 @@ move `Order.status`, which the carrier events drive separately.
 - **Exactly one task owns a dead voucher: `check_stale_acs_shipments`.**
   Every other task that trips over one defers to it rather than raising
   a second alarm.
-- **Cancelling an order cascades to the carrier from two entry points**,
-  guarded by the `shipment_cancel` breadcrumb so it fires once.
+- **A customer cancel asks the carrier first; staff and system cancels
+  ask afterwards.** A customer cancel goes on only when the courier
+  confirms or there is no shipment. A staff or system cancel cascades to
+  the carrier from two entry points (`cancel_order` and the
+  `order_canceled` receiver), guarded by the `shipment_cancel` breadcrumb
+  so it fires once.
+- **Both carriers' cancel is idempotent on a canceled shipment**
+  (`AcsService.cancel_voucher`, `BoxNowService.cancel_shipment`), so a
+  customer who retries after a cancel that stopped half way is not
+  refused.
 
 ## Failure modes
 
@@ -604,19 +625,27 @@ move `Order.status`, which the carrier events drive separately.
 - **Heavy cart to a capped destination.** `quote` raises
   `ShippingWeightExceededError`; checkout already showed the option as
   disabled through `exceeds_max_weight`.
-- **Cancel cascade refused.** ACS will not delete a voucher already on a
-  pickup list; BoxNow will not cancel a parcel already accepted at a
-  locker. The rejection is swallowed and recorded on
-  `metadata["cancellation"]["shipment_cancel"]` so an operator can see
-  why and arrange the return out of band.
+- **Cancel refused by the courier.** ACS will not delete a voucher
+  already on a pickup list; BoxNow will not cancel a parcel past `NEW`.
+  For a customer cancel the whole cancel is refused (400
+  `parcel_with_courier`) and nothing changes. For a staff or system cancel
+  the order is canceled anyway, and the rejection is recorded on
+  `metadata["cancellation"]["shipment_cancel"]`, written as a staff-only
+  history note and shown as an error by the admin cancel action, so an
+  operator can arrange the return out of band.
+- **Courier unreachable during a customer cancel.** Any
+  `CarrierUnavailableError` (the transient ACS 406 included) answers 503
+  `courier_unreachable` and changes nothing; the customer tries again.
 
 ## Source
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/shipping/interfaces.py` | `ShippingCarrierInterface`, `_REGISTRY`, `register_provider`, `all_payload_keys` |
-| `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `sanitize_delivery_notes` |
-| `grooveshop-django-api/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError` |
+| `grooveshop-django-api/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment`), `_REGISTRY`, `register_provider`, `all_payload_keys` |
+| `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
+| `grooveshop-django-api/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError` |
+| `grooveshop-django-api/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy |
+| `grooveshop-django-api/shipping_boxnow/exceptions.py` | BoxNow errors on the carrier hierarchy |
 | `grooveshop-django-api/shipping/models/provider.py` | `ShippingProvider` fields and kind-aware logo resolution |
 | `grooveshop-django-api/shipping/models/rate.py` | `ShippingRate`: fields, constraints, `clean()` |
 | `grooveshop-django-api/shipping/migrations/0011_convert_legacy_pricing_to_rates.py` | Settings-to-rates conversion per tenant |
@@ -628,14 +657,14 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping/alerts.py` | `send_ops_alert` and the two operational alerts |
 | `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
 | `grooveshop-django-api/shipping/urls.py` | Options, free-shipping-info, providers |
-| `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel, pickup list, polling, COD reconcile, status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
+| `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile, status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
 | `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments` and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |
 | `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
 | `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
 | `grooveshop-django-api/shipping_boxnow/webhook.py` | Raw-bytes `data` extraction and HMAC verification |
 | `grooveshop-django-api/shipping_boxnow/views/webhook.py` | Tenant resolution and the response contract |
-| `grooveshop-django-api/shipping_boxnow/services.py` | Shipment creation, `apply_webhook_event`, locker sync (`skipped_no_country`), COD on delivery |
+| `grooveshop-django-api/shipping_boxnow/services.py` | Shipment creation, `apply_webhook_event`, locker sync (`skipped_no_country`), COD on delivery, `cancel_shipment` and `can_cancel_shipment` |
 | `grooveshop-django-api/shipping_boxnow/carrier.py` | BoxNow adapter, `supported_settlements`, the locker-country check in `validate_order_payload` |
 | `grooveshop-django-api/shipping_boxnow/models/locker.py` | `BoxNowLocker.country_code`, no default |
 | `grooveshop-django-api/pay_way/services.py` | `filter_by_carrier`, `filter_by_shipping_kind` |
