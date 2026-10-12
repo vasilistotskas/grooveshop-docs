@@ -58,7 +58,7 @@ under `overlays/staging/` with its own values.
 
 | Secret | Keys | Consumed by |
 |---|---|---|
-| `backend-secrets` | `SECRET_KEY`, `AGENT_GATEWAY_INTERNAL_SECRET`, `NUXT_CACHE_PURGE_TOKEN`, `MEILI_SEARCH_KEY`, `FLOWER_BASIC_AUTH`, `DEEPL_AUTH_KEY`, `EMAIL_*` (backend, host, port, TLS, user, password, default from), `SOCIALACCOUNT_GOOGLE_*`, `SOCIALACCOUNT_FACEBOOK_*`, `SOCIALACCOUNT_DISCORD_*` | backend, celery-worker, celery-beat, flower, PreSync job |
+| `backend-secrets` | `SECRET_KEY`, `FIELD_ENCRYPTION_KEYS` (comma-separated Fernet keys encrypting merchant secrets in the database; first encrypts, all decrypt — [rotation](/dev/django/reference/secret-encryption)), `AGENT_GATEWAY_INTERNAL_SECRET`, `NUXT_CACHE_PURGE_TOKEN`, `MEILI_SEARCH_KEY`, `FLOWER_BASIC_AUTH`, `DEEPL_AUTH_KEY`, `EMAIL_*` (backend, host, port, TLS, user, password, default from), `SOCIALACCOUNT_GOOGLE_*`, `SOCIALACCOUNT_FACEBOOK_*`, `SOCIALACCOUNT_DISCORD_*` | backend, celery-worker, celery-beat, flower, PreSync job |
 | `frontend-secrets` | `NUXT_SESSION_PASSWORD`, `NUXT_CACHE_PURGE_TOKEN`, `NUXT_OAUTH_GOOGLE_*`, `NUXT_OAUTH_FACEBOOK_*`, `NUXT_OAUTH_DISCORD_*`, `NODE_AUTH_TOKEN` | frontend-nuxt |
 | `media-stream-secrets` | `INTERNAL_DOMAINS_SECRET`, `NODE_AUTH_TOKEN` | media-stream |
 | `media-stream-internal-secret` | `secret` (the `INTERNAL_ADMIN_SECRET` that guards `flush-tenant`) | media-stream, and the backend as `MEDIA_STREAM_INTERNAL_SECRET` |

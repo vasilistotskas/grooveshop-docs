@@ -107,8 +107,7 @@ Fill the seller identity **before the first invoice**: the values are printed on
 | `B2B_LOYALTY_ENABLED` | Let wholesale orders take part in loyalty. One switch for both earning and redeeming. | off | no |
 | `MYDATA_ENABLED` | Master switch of the AADE myDATA integration. | off | no |
 | `MYDATA_AUTO_SUBMIT` | Submit each invoice automatically once its PDF is rendered; otherwise only through the invoice action. | off | no |
-| `MYDATA_ENVIRONMENT` | `dev` (sandbox) or `prod`. Separate credentials for each. | dev | no |
-| `MYDATA_USER_ID`, `MYDATA_SUBSCRIPTION_KEY` | Credentials from the myDATA developer portal. | empty | no |
+| `MYDATA_ENVIRONMENT` | `dev` (sandbox) or `prod`. Separate credentials for each; the credentials themselves are on your store profile, not here. | dev | no |
 | `MYDATA_INVOICE_SERIES_PREFIX` | Prefix of the AADE series code, combined with year. | GRVP | no |
 | `MYDATA_ISSUER_BRANCH` | AADE branch code; 0 is the main branch. | 0 | no |
 | `MYDATA_REQUEST_TIMEOUT_SECONDS` | Timeout for AADE calls. | 30 | no |
