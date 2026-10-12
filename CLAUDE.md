@@ -63,14 +63,12 @@ These are the quality gate that makes the docs usable by AI agents. They are not
 
 ## Repository visibility
 
-This repository is **private**. The developer tree documents cluster topology,
-deploy runbooks, secrets handling and the security model, much of it derived
-from the private `grooveshop-infrastructure` repository; publishing that source
-publicly would defeat the basic-auth gate on `/dev/`. The published admin guide
-at `docs.grooveshop.space` is public regardless of repository visibility.
-
-Consequence: there is no `editLink` in the theme, since it would 404 for every
-reader who is not a collaborator.
+This repository is **public**. The developer tree (cluster topology, deploy
+runbooks, the security model, much of it derived from the private
+`grooveshop-infrastructure` repository) is therefore readable on GitHub, and the
+basic-auth gate on `/dev/` only keeps the rendered pages out of search engines
+and casual browsing. Never commit credentials, tenant data or anything from an
+`untracked/` tree here. The site has no `editLink` in the theme.
 
 The release image is a deliberate exception. It contains the developer pages,
 and the Docker Hub repository holding it is **public** (decided 2026-09-12), so
