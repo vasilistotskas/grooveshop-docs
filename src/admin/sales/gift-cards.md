@@ -42,7 +42,7 @@ Every change to a card is a signed row of one kind:
 |---|---|---|
 | **Issue** | + | Issuing the card. |
 | **Redeem** | − | Checkout, one row per order. |
-| **Refund credit** | + | An order paid with the card being canceled or refunded. |
+| **Refund credit** | + | An order paid with the card being canceled or fully refunded. |
 | **Adjust** | + or − | You, through **Adjust balance**, with a reason. |
 | **Expire** | − | The nightly expiry sweep, zeroing the remaining balance. |
 
@@ -77,7 +77,9 @@ The **Gift Card Transactions** screen (search palette) lists every row read-only
 
 ## Refunds and cancellations
 
-When an order that was paid partly or fully with gift cards is canceled or refunded, the gift-card portion goes back to the source cards as **Refund credit**, split in proportion to what each card gave; the provider refund covers only what the provider charged. A partial refund credits only the refunded amount. A card that expired while its value sat on the order gets a fresh validity window so the credit is spendable. Each card is credited at most once per order; a later, larger refund on the same order needs a manual **Adjust balance**.
+When an order that was paid partly or fully with gift cards is canceled or **fully** refunded, each card gets back exactly what it paid for the order, as one **Refund credit** row; the provider refund covers only what the provider charged. A partial refund credits nothing to the cards: their part comes back, whole, with the refund that returns the rest of the money, or with a cancellation. If a customer needs card value back sooner, use **Adjust balance**. A card that expired while its value sat on the order gets a fresh validity window so the credit is spendable. Each card is credited at most once per order.
+
+A refund of a **gift card purchase** made in the Viva Wallet dashboard is added up on the purchase, under **Refunded Amount** in **Gift Card Purchases**. The card is voided (its balance set to zero and the card disabled) only once the refunds reach the whole purchase amount; a partial refund leaves the card and its balance alone. A card that has already been spent is not voided: the platform team is alerted and decides what to do.
 
 ## Expiry
 

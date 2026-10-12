@@ -37,7 +37,7 @@ flowchart TD
 
   Due["amount due"] --> Plan["GiftCardService.plan_redemption"]
   Plan --> Ledger["REDEEM rows, negative"]
-  Refund["order refunded / canceled"] --> Credit["REFUND_CREDIT rows"]
+  Refund["order fully refunded / canceled"] --> Credit["REFUND_CREDIT rows"]
 ```
 
 ## How it works
@@ -503,12 +503,34 @@ guard. It flips the purchase to `PAID`, mints the card through `issue`,
 queues the buyer's receipt, and queues delivery **only when there is no
 `deliver_at` or it has already passed**.
 
-Refunds go back to the source cards. `giftcard/signals.py` listens on
-`order_refunded` and `order_canceled` and queues
-`credit_refund_to_gift_cards`, passing the **actual refunded amount** —
-crediting the full redemption for a partial refund would put money on the
-card that was never returned. The provider refund only ever covers the
+Refunds go back to the source cards, **whole and once**.
+`giftcard/signals.py` listens on `order_canceled` and on `order_refunded`,
+and for a refund acts only when the order's `payment_status` is REFUNDED,
+that is with the refund that leaves nothing to refund. It queues
+`credit_refund_to_gift_cards(order_id)`, and
+`GiftCardService.credit_refund` writes one `REFUND_CREDIT` per card for
+exactly what that card's `REDEEM` row took from it. A partial refund
+credits nothing: the provider pays its share back first, and a slice of
+the redemption on top of it handed back more than the refund was worth (a
+EUR 5 refund once put EUR 60 back on a card). Crediting proportionally
+would not work either, because the `(gift_card, order)` constraint allows
+one `REFUND_CREDIT` per card, so a later refund could never top the card
+up. Full-only returns exactly provider share plus redemption, the order's
+total, over the order's life. The provider refund only ever covers the
 provider-charged remainder.
+
+A refund of a gift-card **purchase** is a Viva 1797 against the purchase
+(`order/views/viva_webhook.py: _process_gift_card_purchase_event`),
+verified by the same `_verify_viva_refund` as an order refund but bound to
+the purchase's own order code, since that code is visible to the buyer.
+The card is the whole purchase, so each verified refund is added to
+`GiftCardPurchase.refunded_amount` and the card is voided
+(`GiftCardService.handle_purchase_reversal`) only once the refunds reach
+the purchase amount; a part refund leaves the value the buyer still owns.
+Each refund counts once: its `VivaWebhookEvent` row, unique per
+transaction and event type, is written in the same transaction, so a
+parallel duplicate rolls its increment back. A card whose balance was
+already spent is not voided; the handler logs an ERROR for ops.
 
 Three daily sweeps run, each reached through a per-tenant fanout wrapper
 rather than scheduled directly — beat fires in the public schema, where the
@@ -614,9 +636,14 @@ whose plan enables it, and Django still gates the data.
   intent and the order: a promotion's window closed, a usage limit filled, a
   gift card was spent elsewhere, or a wholesale binding changed. The locked
   recomputation is right and the intent is stale.
-- **A partial refund credits the whole redemption.** Only if the `amount`
-  kwarg is dropped on the way to `_queue_refund_credit`; the `order_refunded`
-  contract treats an absent amount as a **full** refund.
+- **A partial refund put nothing back on the gift card.** By design: the
+  redemption comes back with the refund that makes the order REFUNDED, or
+  with a cancel. A card that needs value back before then gets a manual
+  `ADJUST`.
+- **A refunded gift-card purchase left the card spendable.** Either the
+  refunds so far are below the purchase amount (`refunded_amount` on the
+  purchase says how much came back), or the card had already been spent,
+  which the 1797 handler logs at ERROR and leaves to a person.
 - **A gift card in the wrong currency blocks checkout.** By design — the
   error names the card. There is no conversion path.
 
@@ -649,9 +676,10 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
 | `grooveshop-django-api/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
 | `grooveshop-django-api/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
-| `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` |
-| `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, refund credit, expiry |
-| `grooveshop-django-api/giftcard/signals.py` | Refund and cancel credit-back |
+| `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` (`refunded_amount`) |
+| `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, `credit_refund`, `handle_purchase_reversal`, expiry |
+| `grooveshop-django-api/giftcard/signals.py` | Cancel credit-back, and refund credit-back only on REFUNDED |
+| `grooveshop-django-api/order/views/viva_webhook.py` | `_process_gift_card_purchase_event`: purchase refunds accumulated, card voided at the purchase amount |
 | `grooveshop-django-api/giftcard/tasks.py` | Delivery, receipts, reminders, expiry, refund credit |
 | `grooveshop-django-api/giftcard/admin.py` | `save_model` issuing, Resend delivery action |
 | `grooveshop-django-api/giftcard/views.py` | `check`, `purchase`, `purchase_status`, `mine` |

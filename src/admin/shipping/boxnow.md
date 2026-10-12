@@ -123,6 +123,7 @@ The row stays in **Pending creation** and the store's admins receive an email na
 1. Only a parcel in state **New** can be cancelled through BoxNow. Anything later needs BoxNow support.
 2. Open the shipment and click **Cancel parcel via BoxNow API**, or select rows and run **Cancel parcels via BoxNow API**.
 3. Cancelling the order in <span class="sidebar-path">Sales → Orders</span> also cancels the parcel when it is still New. A row that never got a parcel ID is simply marked Canceled locally.
+4. A customer can cancel the order from their account only while the parcel is still New. After that their cancel is refused and the order is left as it is.
 
 ### Check what BoxNow reported
 

@@ -135,6 +135,7 @@ Issued lists are visible to superusers at <span class="sidebar-path">System → 
 
 - Cancelling the order in <span class="sidebar-path">Sales → Orders</span> also asks ACS to delete the voucher, when it is still allowed. See [Orders](/admin/sales/orders).
 - ACS refuses to delete a voucher that is already on a pickup list. Contact ACS for a manual return instead.
+- A customer can cancel the order from their account only until its voucher is on a pickup list. After that their cancel is refused and the order is left as it is.
 - A cancelled voucher can be reissued: click **Issue ACS voucher now** on the Canceled row. The old voucher number is kept in the row's metadata history.
 
 ### Deal with a shipment that stopped moving

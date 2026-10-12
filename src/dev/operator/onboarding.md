@@ -299,7 +299,12 @@ dashboard first.
 Viva Wallet is registered by hand in the Viva portal, at
 `https://api.example.com/viva-wallet/webhook/`. Because the URL is on the
 store's own host, the GET verification challenge is answered with that
-store's own `viva_wallet_webhook_verification_key`. BoxNow needs no
+store's own `viva_wallet_webhook_verification_key`. Subscribe the URL to
+the three events the handler processes (`order/views/viva_webhook.py`):
+*Transaction Payment Created* (1796), *Transaction Reversal Created*
+(1797) and *Transaction Failed* (1798). Without 1797 a refund made in
+Viva's dashboard never reaches the order; a refund the platform makes
+itself is booked without it. BoxNow needs no
 per-tenant URL: the handler resolves the tenant from the signed parcel id
 before verifying the HMAC with that store's `box_now_webhook_secret`.
 
@@ -391,7 +396,7 @@ kubectl -n grooveshop get certificate | grep "<store-slug>"
 |---|---|---|
 | Social OAuth providers | The allauth callback on the store's **API** host, `https://api.example.com/accounts/<provider>/login/callback/` (allauth is mounted at `accounts/`, `core/urls.py`). The browser flow POSTs to the tenant's own API origin — `app/composables/useAllAuthAuthentication.ts` — precisely so the OAuth flow runs in that store's schema | No, if the store offers social login |
 | Stripe | Nothing by hand; step 4 creates the endpoint on the merchant's own account | — |
-| Viva Wallet | The webhook URL on the store's API host (step 4) | No, if Viva is enabled |
+| Viva Wallet | The webhook URL on the store's API host, subscribed to events 1796, 1797 and 1798 (step 4) | No, if Viva is enabled |
 | Google Analytics / Meta / TikTok | The merchant's own property or pixel, then the id on the tenant row | Yes |
 
 Two related facts, because the infrastructure runbook still says
@@ -515,6 +520,7 @@ Applications.
 | `grooveshop-django-api/page_config/management/commands/legal_text_status.py` | Which tenants have legal pages behind the platform text |
 | `grooveshop-django-api/recommendation/presets.py` | `seed_recommendation_slots`, `reset_slot_to_preset` |
 | `grooveshop-django-api/core/utils/tenant_urls.py` | `resolve_tenant_api_domain`, tenant-scoped link building |
+| `grooveshop-django-api/order/views/viva_webhook.py` | The Viva events the webhook processes: 1796, 1797, 1798 |
 | `grooveshop-django-api/core/urls.py` | allauth mounted at `accounts/` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useAllAuthAuthentication.ts` | Social login posts to the tenant's own API origin |
 | `grooveshop-agent-gateway/internal/chat/handler.go` | Chat is off, not broken, when the tenant has no chat key |

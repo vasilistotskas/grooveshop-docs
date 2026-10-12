@@ -27,7 +27,7 @@ Filters: issue date range, **Has PDF** (Rendered / Pending render), **myDATA Sta
 
 ### The invoice page
 
-Read-only, in four blocks: **Invoice** (number, issue date, order link, document, timestamps), **Totals** (subtotal excluding VAT, total VAT, total, currency and the **VAT breakdown**, one row per rate with net, VAT and gross), **Snapshots** (the seller and buyer details exactly as they were at issue time) and **myDATA (AADE)** (status, invoice type, series, serial number, UID, MARK, QR URL, authentication code, cancellation MARK, last error code and message, submitted and confirmed timestamps).
+Read-only, in four blocks: **Invoice** (number, issue date, order link, document, timestamps), **Totals** (subtotal excluding VAT, total VAT, total, currency and the **VAT breakdown**, one row per rate with net, VAT and gross, shipping and the payment fee included), **Snapshots** (the seller and buyer details exactly as they were at issue time) and **myDATA (AADE)** (status, invoice type, series, serial number, UID, MARK, QR URL, authentication code, cancellation MARK, last error code and message, submitted and confirmed timestamps).
 
 Only superusers can delete an invoice, and doing so leaves a gap in the sequence; it is not something to do casually.
 
@@ -62,9 +62,16 @@ At checkout the shopper chooses **Receipt** or **Invoice**. Choosing Invoice req
 Customers download their own copy from their account or from the invoice email.
 
 ### Fix a wrong invoice PDF
-1. Correct the source: the seller details under Store settings (every key whose name starts with `INVOICE_SELLER_`), the product VAT rates, or the order's billing fields.
+1. Correct the source: the seller details under Store settings (every key whose name starts with `INVOICE_SELLER_`), the order's billing fields, or the VAT rate of one of its lines (see the next task). Changing a product's VAT rate does not change an order that was already placed.
 2. On the order page choose **Invoicing & myDATA → Regenerate invoice (same number)**. The number and issue date are kept; the PDF, the snapshots and the totals are recomputed.
-3. If the invoice was already confirmed in myDATA, a regenerated PDF does not change what AADE holds. Use **Cancel invoice in myDATA** while the cancellation window is open, or issue a credit note through your accountant.
+3. If the invoice was already confirmed in myDATA, a regenerated PDF does not change what AADE holds, and its totals stay the ones AADE registered. Use **Cancel invoice in myDATA** while the cancellation window is open, or issue a credit note through your accountant.
+
+### Correct the VAT rate of an order line
+1. Open the order and, in its order items, open the line from its row.
+2. Under **Order Item Information**, correct **VAT Rate** and save. Only the rates myDATA accepts are allowed.
+3. Back on the order, choose **Invoicing & myDATA → Regenerate invoice (same number)**.
+
+Once the order's invoice has a myDATA MARK, **VAT Rate** is shown read-only: the registered document can no longer change, so cancel it in myDATA or issue a credit note instead.
 
 ### Submit or cancel in myDATA by hand
 1. On the order page open **Invoicing & myDATA**.
@@ -77,7 +84,9 @@ Superusers only. Under <span class="sidebar-path">System → Reconciliation → 
 ## Things to know
 
 - **Numbering is allocated under a lock**, so two invoices generated at the same moment can never share a number. The counter is the only source of truth; the count of invoices in the archive is not.
-- **The VAT table is frozen at issue.** Changing a VAT rate later does not change old invoices; regenerating one recomputes from the order's lines with the rates the products carry now, so regenerate only when that is what you intend.
+- **Each order line keeps the VAT rate it was sold at.** Editing or deleting a rate under [VAT rates](/admin/sales/vat-rates), or moving a product to another rate, never changes an existing order or its invoice. Regenerating an invoice recomputes it from the order's lines at their own rates; once the invoice has a myDATA MARK, regenerating keeps the totals AADE registered.
+- **Shipping and the payment fee take the products' VAT rate.** When all the products in the order carry one rate, shipping and the fee are taxed at that rate. When the order mixes rates, each charge is split over the rates in proportion to the value of the products at each rate. The PDF lists shipping and the fee with VAT included above the net subtotal, and their VAT is part of the VAT breakdown. The PDF and the myDATA submission always show the same figures, to the cent.
+- **An order with shipping or a fee but no products left cannot be invoiced**: there is no rate for the charge to follow. The generate action shows the error; add the products back or correct the order first.
 - **Seller details come from Store settings**, not from the store record the platform team keeps: legal name, legal form, VAT ID, tax office, address and so on, under the keys whose names start with `INVOICE_SELLER_`. Fill them before the first invoice.
 - **myDATA settings** live under Store settings too: `MYDATA_ENABLED`, `MYDATA_AUTO_SUBMIT`, `MYDATA_ENVIRONMENT` (dev or prod), `MYDATA_USER_ID`, `MYDATA_SUBSCRIPTION_KEY`, `MYDATA_INVOICE_SERIES_PREFIX`, `MYDATA_ISSUER_BRANCH`. Submission is refused while the integration is off or credentials are missing.
 - **Only VAT rates AADE recognises are accepted** on [VAT rates](/admin/sales/vat-rates); an invoice with an unrecognised rate would be rejected by myDATA.

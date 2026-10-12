@@ -25,7 +25,7 @@ stateDiagram-v2
   XP --> Tier: recalculate_tier
   Tier --> Notify: direction up only
   Ledger --> Redeem: checkout or redeem endpoint
-  Ledger --> Reverse: order_canceled / order_refunded
+  Ledger --> Reverse: canceled, fully refunded or status REFUNDED
   Reverse --> Restore: REDEEM restored first
   Restore --> Clamp: EARN reversed, clamped at zero
   Ledger --> Expire: daily sweep
@@ -99,11 +99,24 @@ welcome bonus either.
 
 ### Reversing
 
-Reversal **is** implemented, on both cancellation and refund.
-`loyalty/signals.py` listens on `order_completed` (award),
-`order_canceled` and `order_refunded` (both reverse), skips guest orders, and
-dispatches through `tenant.celery.dispatch_on_commit` so the tenant schema
-rides the message.
+Reversal **is** implemented, on cancellation and on a full refund.
+`loyalty/signals.py` listens on `order_completed` (award) and reverses on
+three signals, skipping guest orders and dispatching through
+`tenant.celery.dispatch_on_commit` so the tenant schema rides the message:
+
+| Receiver | Reverses when |
+|---|---|
+| `handle_order_canceled_loyalty` | `order_canceled` |
+| `handle_order_refunded_loyalty` | `order_refunded`, **only** when the order's `payment_status` is REFUNDED |
+| `handle_order_status_refunded_loyalty` | `order_status_changed` to the REFUNDED order status, the manual RETURNED to REFUNDED step that sends no `order_refunded` |
+
+A partial refund reverses nothing. The reversal is all-or-nothing and runs
+once per order, so taking it on the first slice would never take the
+rest, and taking all of it for a small goodwill refund would wipe the
+points of an order the shopper keeps. The refund that leaves nothing to
+refund moves the payment to REFUNDED and reverses everything; when the
+refund came first, the later status step is a no-op through the
+idempotency guard below.
 
 `reverse_order_points(order_id)` is careful about order of operations:
 
@@ -268,6 +281,8 @@ storefront never advertises a reward the backend will not grant.
   earning and reversal move it.
 - **Redemption never touches XP**, so a refund restores points without
   changing the tier.
+- **Only a full refund reverses.** `handle_order_refunded_loyalty` returns
+  unless `payment_status` is REFUNDED.
 - **One redemption per order**, enforced under the user lock in the service
   and again in the view.
 - **Reversal restores the redemption before reversing the earn**, or the
@@ -289,6 +304,9 @@ storefront never advertises a reward the backend will not grant.
   while the program is off keeps its `EARN` rows and its XP. Re-enabling and
   re-running the reversal task is the recovery; the `ADJUST` idempotency guard
   makes that safe.
+- **A partial refund left the points alone.** Expected: the points go with
+  the refund that makes the payment REFUNDED, or with the REFUNDED order
+  status.
 - **A reversal is clamped.** Logged as a warning naming the expected and
   actual amounts. It means the customer had already spent points earned
   elsewhere; the clamp is correct, the log exists so the gap is visible.
@@ -323,7 +341,7 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/loyalty/models/tier.py` | `LoyaltyTier`, `required_level`, multiplier |
 | `grooveshop-django-api/loyalty/enum.py` | `TransactionType`, `PriceBasis` |
 | `grooveshop-django-api/loyalty/services.py` | `is_enabled`, award, reverse, redeem, tiers, expiry, bonus |
-| `grooveshop-django-api/loyalty/signals.py` | Order hooks, tier-change detection, tier-up notification |
+| `grooveshop-django-api/loyalty/signals.py` | Order hooks (reversal on cancel, full refund and the REFUNDED status), tier-change detection, tier-up notification |
 | `grooveshop-django-api/loyalty/tasks.py` | `process_order_points`, `reverse_order_points`, expiry, tier-up notification |
 | `grooveshop-django-api/loyalty/views/loyalty.py` | Summary, transactions, redeem, product points, tiers |
 | `grooveshop-django-api/loyalty/urls.py` | Endpoint paths |

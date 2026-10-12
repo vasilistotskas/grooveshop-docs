@@ -80,11 +80,11 @@ stateDiagram-v2
 | **Shipped** | The carrier reports the parcel moving. | Automatic, from the regular ACS tracking checks or from BoxNow's own parcel updates; or the bulk action. |
 | **Delivered** | The carrier reports delivery. | Automatic from the carrier; or the bulk action. |
 | **Completed** | Delivered and paid. Final. | Automatic once a delivered order is paid (for cash on delivery, when the courier's payout is reconciled); or the bulk action. |
-| **Canceled** | Closed before shipping. Stock was restored. Final. | The customer from their account, the cancel bulk action, or the automatic clean-up of unpaid orders. |
-| **Returned** | The carrier brought the parcel back, or the customer returned it. For a cash-on-delivery order nothing was collected, so the payment status becomes **Canceled** at the same time and the order is closed; a paid order keeps its payment until you refund it. Stock is not restored on its own: put the goods back once you have the parcel in hand. | Automatic from the carrier; otherwise you, by editing **Status** on the order page (there is no bulk action for it). |
-| **Refunded** | A returned order whose money went back. Final. | You, by editing **Status** on a Returned order. |
+| **Canceled** | Closed before shipping. Stock was restored. Final. | The customer from their account (only while the courier can still cancel the parcel), the cancel bulk action, or the automatic clean-up of unpaid orders. |
+| **Returned** | The carrier brought the parcel back, or the customer returned it. For a cash-on-delivery order nothing was collected, so the payment status becomes **Canceled** at the same time and the order is closed; a paid order keeps its payment until you refund it. Stock is not restored on its own: put the goods back once you have the parcel in hand. | Automatic from the carrier; otherwise you, with **Mark selected orders as returned**. |
+| **Refunded** | A returned order whose money went back. Final. | You, with **Mark selected orders as refunded** on a Returned order. |
 
-Only **Pending** and **Processing** orders can be canceled. **Completed**, **Canceled** and **Refunded** have no exit.
+Only **Pending** and **Processing** orders can be canceled. A customer has one more condition: the courier must still be able to cancel the parcel (see [Cancellations by the customer](#cancellations-by-the-customer)). **Completed**, **Canceled** and **Refunded** have no exit.
 
 ## Payment statuses
 
@@ -94,8 +94,8 @@ Only **Pending** and **Processing** orders can be canceled. **Completed**, **Can
 | **Processing** | The provider is still working on the charge. | The provider, when it reports back. |
 | **Completed** | Paid in full. Also used when gift cards, points or a 100% promotion covered the whole total. | Viva Wallet or Stripe confirming the charge, the nightly match against the ACS cash-on-delivery payout report, BoxNow reporting a paid parcel delivered, or you, by editing the field. |
 | **Failed** | The online charge was declined. The order stays Pending and is auto-canceled after the grace period. | The provider, when it reports the decline. |
-| **Refunded** | Fully refunded. | Cancelling a paid order, or a full refund made in the Stripe dashboard. |
-| **Partially Refunded** | Part of the money went back. | A partial refund made in the Stripe dashboard. |
+| **Refunded** | Fully refunded: nothing is left to give back. | Cancelling a paid order, or refunds made in the Viva Wallet or Stripe dashboard that add up to the whole payment, in one go or in parts. |
+| **Partially Refunded** | Part of the money went back. | A partial refund made in the Viva Wallet or Stripe dashboard. |
 | **Canceled** | Nothing was collected and nothing is owed. Set when an unpaid order is canceled or comes back **Returned** (cash on delivery the customer refused or never collected, or an online payment that never completed), or when Viva Wallet reverses a payment that never completed. | The cancellation or the return itself, or Viva Wallet. |
 
 Once a payment is Completed, Refunded, Partially Refunded or Canceled, a late or duplicated provider message can never move it back to Pending or Failed.
@@ -140,14 +140,14 @@ The dashboard's **Orders by source** chart counts the last 30 days of orders by 
 2. Choose **Mark selected orders as shipped** (or processing, delivered, completed) and confirm.
 3. Read the flash messages: a skipped row tells you why, usually because the transition is not allowed from its current status.
 
-Prefer the bulk action over editing the **Status** field on the order page. The bulk action validates the transition; the field does not.
+There is no other way: **Status** is read-only on the order page.
 
 ### Cancel an order
 1. Tick the order in the list and run **Cancel selected orders and restore stock**.
 2. The platform restores the stock, releases any leftover reservation, records the cancellation in the history, asks the courier to cancel the voucher and emails the customer.
-3. If the courier refuses (for example the parcel is already on a pickup list), the order is still canceled locally and the refusal is noted in the order's data; deal with the parcel through the carrier.
+3. If the courier refuses (for example the voucher is already on a pickup list) or cannot be reached, the order is canceled all the same. An error message at the top of the list names the order and the courier's reply, and a note in the order's history says the same: the parcel may still be delivered, so arrange its return with the courier.
 
-**This action refunds the money too**, when there is money to refund: an order whose payment status is Completed and that was charged by Viva Wallet or Stripe gets a full provider refund as part of the cancellation, and the payment status becomes Refunded. Cash on delivery, bank transfer and orders settled entirely by gift card have nothing for a provider to send back; the gift-card part goes back to the cards either way. If the provider refuses the refund, the order is still canceled and the failure is logged, so check the payment status afterwards.
+**This action refunds the money too**, when there is money to refund: an order whose payment status is Completed and that was charged by Viva Wallet or Stripe gets a full provider refund as part of the cancellation, and the payment status becomes Refunded. Cash on delivery, bank transfer and orders settled entirely by gift card have nothing for a provider to send back; the gift-card part goes back to the cards either way. If the provider refuses the refund, the order is still canceled, the payment status stays Completed, an error message says the payment was not refunded and the provider's reason is noted in the order's history.
 
 ### Confirm a bank transfer or other offline payment
 1. Open the order and go to **Payment Information**.
@@ -176,14 +176,30 @@ Prefer the bulk action over editing the **Status** field on the order page. The 
 - **In-app notifications** mirror the same milestones for customers with an account; guests only get email. See [Notifications](/admin/sales/notifications).
 - **History** logs every status change, payment update, shipping update, note and refund, with the user who did it or "System".
 
+## Cancellations by the customer
+
+A customer sees a **Cancel order** button on the order in their account while it is **Pending** or **Processing** and the courier can still take the parcel back: no voucher yet, an ACS voucher that is not yet on a pickup list, or a BoxNow parcel still in state **New**.
+
+When they press it, the platform asks the courier to cancel the parcel **first**:
+
+- **The courier agrees**, or there is no parcel yet: the order is canceled exactly as your own cancel would do it, with the stock restored and the money refunded.
+- **The courier refuses**, because it already has the parcel: nothing changes. The customer is told the order can no longer be canceled; expect them to contact you about a return.
+- **The courier cannot be reached**: nothing changes either. The customer is asked to try again.
+
+Your own cancel from the list is not held back like this: it cancels the order whatever the courier answers (see [Cancel an order](#cancel-an-order)).
+
+Rarely, the order moves on while the courier is answering, for example because you marked it shipped at that moment. The parcel is then canceled but the order is not, and the order's history gets a note saying that the shipment no longer has a voucher. If the order still has to ship, create a new voucher for it; for ACS, see [ACS Courier](/admin/shipping/acs).
+
 ## Refunds
 
 There is no refund button in the admin: nothing on the order page or in the bulk-action list refunds money on its own. There are exactly two ways money goes back.
 
 - **Cancel the order** while it is still Pending or Processing. If it was paid online, the cancellation includes a full provider refund, as described above.
-- **Refund it in the provider's own dashboard** (Viva Wallet or Stripe). A Stripe refund reaches the order on its own and sets the payment status to Refunded or Partially Refunded, emails the customer and writes a history entry.
+- **Refund it in the provider's own dashboard** (Viva Wallet or Stripe). The refund reaches the order on its own: the payment status becomes **Partially Refunded** while part of the payment is still with you and **Refunded** once all of it has gone back, several partial refunds adding up. Each refund writes a history entry. The customer gets one refund email: with the first Viva Wallet refund, or with a full Stripe refund (a partial Stripe refund sends none). If a Viva Wallet refund does not show up on the order, ask the platform team to check that the store's Viva account sends refund notifications.
 
-Either way the order status is not changed for you: when the goods are back, set **Status** to Returned and then Refunded on the order page. Those are the only two statuses with no bulk action. Money paid through gift cards goes back to the cards automatically when an order is canceled or refunded, split across the cards in proportion to what each gave. See [Gift cards](/admin/sales/gift-cards).
+Either way the order status is not changed for you: when the goods are back, run **Mark selected orders as returned** and then **Mark selected orders as refunded**.
+
+Gift cards and loyalty points come back only when **all** the money has been refunded, or when the order is canceled. Each card then gets back exactly what it paid; the points spent on the order are given back and the points earned on it are taken back. A partial refund leaves both alone; they come back, in full, with the refund that returns the rest. See [Gift cards](/admin/sales/gift-cards) and [Tiers & points](/admin/loyalty/tiers-and-points).
 
 ## Guest orders
 
@@ -191,7 +207,7 @@ A guest order has no account in **Customer Information**. Everything else works 
 
 ## Things to know
 
-- **Editing Status on the order page skips the safety checks.** It still emails the customer, logs history and, for Canceled, asks the courier to cancel, but it does not restore stock, it does not refund anything, and it lets you jump to any state. Use the bulk actions.
+- **Status cannot be edited on the order page.** Every change goes through the bulk actions, which check that the move is allowed, restore stock on a cancellation and refund a paid order.
 - **Editing money fields does not move money.** Changing the paid amount only changes what the screen shows; nothing is charged or refunded. **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** are read-only for that reason: they are stamped at checkout and the matching coupon, points and gift-card records already exist.
 - **Payment status Completed by hand** is right for bank transfers and cash collected in person. Do not use it for card payments still awaited from a provider.
 - **Payment Method and Payment Gateway are different fields.** **Payment Method** is the dropdown, and it holds what the customer chose at checkout. **Payment Gateway** next to it is written by the platform and records which gateway took the money (`stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`); it is used to match incoming provider messages, so leave it alone.

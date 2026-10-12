@@ -225,7 +225,7 @@ The success page reads the ids back through the order serializer's
 |---|---|
 | `order_paid` | `Purchase` |
 | `order_created` | `InitiateCheckout`, plus `Purchase` for **offline** pay-ways |
-| `order_refunded` | `Refund` (custom) |
+| `order_refunded` | `Refund` (custom), one per refund, valued at that refund's `amount` |
 | `user_signed_up` | `CompleteRegistration` |
 
 `CompleteRegistration` carries a consent gate of its own, separate from the
