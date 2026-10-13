@@ -232,7 +232,10 @@ reviews, blog comments, contact messages and business profiles) feeds both
 the **Needs attention** card and the sidebar badges, read once per request.
 Receipts myDATA rejected in the last `MYDATA_REJECTED_DAYS` are a card row
 only, gated on `StoreFeatures.mydata` (`MYDATA_ENABLED`); no sidebar entry
-carries them. `StoreAlerts._mydata` keeps only the superuser-facing
+carries them. A row that counts a rolling window (`MYDATA_REJECTED_DAYS`,
+`NEW_MESSAGES_DAYS`, one constant per row in `queries.py`) links its
+changelist with the same cutoff (`updated_at__gte` / `created_at__gte`),
+so the list it opens holds exactly what it counted. `StoreAlerts._mydata` keeps only the superuser-facing
 configuration alerts (missing credentials, sandbox environment).
 `StoreKpis` renders **Average order** as "—" with no trend when the period
 has no paid orders.
@@ -297,7 +300,7 @@ includes `core/templates/admin/footer.html` on every non-popup page. The
 footer context comes from `admin/mixins.py: AdminFooterMixin`, shared by
 both sites: the site header, `RELEASE_VERSION`, a **Help & Guides** link
 when `ADMIN_DOCS_URL` is set, and **API docs** (`api_docs_url_name`,
-`swagger-ui` on the store site) for platform superusers.
+`swagger-ui`, which both sites' URLconfs serve) for platform superusers.
 
 `admin/environment.py` supplies `ENVIRONMENT` and
 `ENVIRONMENT_TITLE_PREFIX` for the store site. Both return `None` on

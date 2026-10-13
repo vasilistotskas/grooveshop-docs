@@ -67,7 +67,9 @@ rather than only sidebar titles, and the sidebar below. `SITE_DROPDOWN` is
 only when its `ADMIN_*_URL` is set. The **Help & Guides** link sits in the
 footer that `admin/mixins.py: AdminFooterMixin` gives both sites, next to
 the running `RELEASE_VERSION`, and only when `ADMIN_DOCS_URL` is set, so a
-local checkout renders no link at all.
+local checkout renders no link at all. The same footer links **API docs**
+(`PlatformAdminSite.api_docs_url_name = "swagger-ui"`, which the public
+URLconf serves too) for platform superusers.
 
 ### Registration is copied, not re-declared
 

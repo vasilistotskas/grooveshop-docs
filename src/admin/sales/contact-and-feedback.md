@@ -65,7 +65,7 @@ Every submission emails the store's contact address, like a contact message, and
 ## Things to know
 
 - **Nothing here is a ticket.** There is no assignment, status or reply workflow. If you need one, forward the notification emails into your helpdesk.
-- **The badge counts this week, not unread.** Because there is no read flag, the sidebar number is the messages of the last seven days: it goes down as messages turn a week old, not when you open them. The same count appears as **New messages** under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard).
+- **The badge counts the last seven days, not unread.** Because there is no read flag, the sidebar number is the messages of the last seven days: it goes down as messages turn a week old, not when you open them. The same count appears as **New messages** under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard), and that line opens this list filtered to the same seven days.
 - **Attachment downloads are staff-only** and served as plain downloads, never opened in the browser, because the sender is anonymous.
 - **Export before you delete** if you keep records elsewhere; deletion is immediate.
 
