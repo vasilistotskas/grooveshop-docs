@@ -138,6 +138,7 @@ Open the shipment and read the events tab, or go to <span class="sidebar-path">S
 
 ## Things to know
 
+- **Test keys or live keys.** BoxNow issues separate test and production keys, and each only works with its own BoxNow system. The **BoxNow Live Mode** switch on the store's platform record, next to the BoxNow keys, says which kind the store holds: on for production keys, off for test keys. Keep it matching the keys, otherwise BoxNow refuses every request. A store on test keys never ships a real parcel, which is what a demo store wants. After changing it, run **Sync lockers from BoxNow API** again, because the test and production locker lists differ. A staging copy of a store is always held on test mode, whatever the switch says.
 - **Payment mode** on the shipment follows the order's payment method. PAY ON THE GO shows as **Cash on delivery**, which is BoxNow's word for "collect at the locker". Online and bank-transfer orders show as **Prepaid**, with nothing to collect. Cash to a courier is never allowed on a locker, so such an order cannot be placed in the first place.
 - **Amount to be collected** is filled in when the delivery request is sent and equals the order's paid amount, so a loyalty discount is reflected.
 - **Weight** is sent in kilograms with three decimals, and is capped at BoxNow's own maximum. A zero weight is accepted by BoxNow.
