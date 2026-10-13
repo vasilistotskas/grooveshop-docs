@@ -32,7 +32,7 @@ separate Ingress objects **without** the basic-auth middleware:
 
 | Path or host | Reason |
 |---|---|
-| `/_nuxt`, `/_ipx`, `/_fonts` on the storefront host | The browser fetches the Nuxt module graph, image proxy and font files without credentials. A 401 on a `/_nuxt` chunk does not show an error page; hydration silently hangs and the page looks dead. |
+| `/_nuxt`, `/_ipx` on the storefront host | The browser fetches the Nuxt module graph, image proxy and font files (`/_nuxt/fonts`) without credentials. A 401 on a `/_nuxt` chunk does not show an error page; hydration silently hangs and the page looks dead. |
 | the media-stream host (`/media_stream-image`) | Images are loaded by `<img>` tags, same reasoning; the media origin has its own rate limiting. |
 | `/mcp`, `/.well-known/ucp`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json`, `/feeds`, `/acp`, `/chat` on the storefront host | Agent-gateway surfaces called by external agents; they have their own rate-limit middlewares. |
 | `/stripe/webhook`, `/viva-wallet/webhook/`, `/boxnow/webhook/` on the API host | Provider webhooks cannot send basic-auth (`overlays/staging/ingress-webhooks.yaml`). |
