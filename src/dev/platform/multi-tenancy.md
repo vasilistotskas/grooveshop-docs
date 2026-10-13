@@ -151,7 +151,14 @@ Every commercial feature has a **plan** tier the operator controls and a
 Rules the code encodes:
 
 - A disabled feature answers **404, never 403**, so a disabled endpoint is
-  indistinguishable from one that was never registered.
+  indistinguishable from one that was never registered. Only the server
+  log tells them apart: every refusal goes through
+  `tenant/permissions.py: refuse()`, which logs `feature_gate:refused`
+  with the gate, the switch and the route, and the infrastructure's
+  `GrooveShopFeatureGateRefused` alert fires on it. A route a client still
+  calls stays in the OpenAPI documents once gated, so the deploy's contract
+  check cannot catch it: ship the client release that stops calling it
+  first.
 - Public-schema requests are never gated: they are platform-operator
   calls.
 - Chrome toggles fail open (`default=True`); commercial gates fail closed
