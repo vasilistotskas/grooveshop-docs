@@ -1,6 +1,6 @@
 ---
 title: Admin (Unfold)
-description: The two Unfold admin sites, BaseModelAdmin and the guarantees its tests enforce (filters, foreign keys, query growth, templates, inlines), withholding, actions and dialogs, datasets, JSON Schema fields, the dashboards, the per-request store sidebar and site menu, the header and footer, and how to add an admin section.
+description: The two Unfold admin sites, BaseModelAdmin and the guarantees its tests enforce (filters, foreign keys, query growth, templates, inlines), withholding, actions and dialogs, datasets, JSON Schema fields, the dashboards, the per-request store sidebar and site menu, the ⌘K command palette, the header and footer, and how to add an admin section.
 ---
 
 # Admin (Unfold)
@@ -266,8 +266,9 @@ every store-admin page. Every entry is decided there:
   that enforces it for shoppers (the service's `is_enabled()`, the
   permission classes' flag and setting names). The blog follows its plan
   flag only; reviews, feedback, favourites, newsletter and blog comments
-  follow their setting; a carrier's pages follow its active
-  `ShippingProvider`;
+  follow their setting (`StoreFeatures.absent_models`, which `page()`
+  drops and the ⌘K palette also reads); a carrier's pages follow its
+  active `ShippingProvider`;
 - a sub-menu (`_menu`) left with one child is replaced by that child;
 - badges count waiting work only, from `queries.attention_counts`.
 
@@ -292,6 +293,46 @@ store's **Settings** group: Email Templates for `order.view_order`,
 Translations (Rosetta) where `core.rosetta_access.tenant_scoped_rosetta_access`
 allows it, Cache for `core.purge_cache` holders (store ADMIN and OWNER;
 STAFF may not change store settings).
+
+## Command palette
+
+Both sites answer ⌘K through `admin/search.py: CommandSearchMixin`, which
+overrides Unfold's `search` view and renders Unfold's own
+`command_results.html`, so only what is found changes. Unfold's version
+matched the term against app names as well as model names (typing
+"orders" listed every model of the `order` app before the Orders page),
+compared accents exactly, offered the screens of features a store does
+not have, read every match of every model unbounded, and cached results.
+In order:
+
+1. **Sidebar pages**, from `get_sidebar_list` (the same per-request menu,
+   permissions applied), compared through `fold()` (casefold, accents
+   stripped) and ranked: exact title, title prefix, word prefix, anywhere,
+   then every page of a section or sub-menu whose name matches.
+2. **Other screens** the viewer can open (Django's app list), by their own
+   name only.
+3. **Records**, for terms of at least `MIN_RECORD_TERM` characters: up to
+   `RECORDS_PER_MODEL` per model through that model's own admin
+   `get_search_results` and ordering, the sidebar's models first, plus a
+   "View all" result linking the changelist with `?q=` when there are more.
+
+`sidebar_icons(sidebar)` maps every page the sidebar lists (its address
+without a query, in sidebar order) to its icon; it orders the records and
+marks which screens the sidebar lists. `command_hidden(request)` names the
+app labels (`"blog"`) and model labels (`"blog.BlogComment"`) to leave out
+of 2 and 3, except a screen the sidebar lists, which stays searchable (a
+platform superuser's System section keeps the ACS logs while ACS is
+inactive). The platform site hides nothing; the store site returns
+`StoreFeatures.absent_apps() | StoreFeatures.absent_models()`
+(`admin/features.py`): the apps of plan features that are not
+configurable and of inactive carriers, and the shopper-input pages whose
+setting is off. `absent_models` is the same list `store_sidebar` drops, so
+the sidebar and the palette cannot disagree. `UNFOLD["COMMAND"]` and
+`UNFOLD_PLATFORM["COMMAND"]` keep only `show_history`.
+`tests/integration/admin/test_command_search.py` covers the ranking,
+accent folding, section and sub-menu matches, the hidden apps and
+switched-off pages, what the sidebar lists staying searchable, the record
+cap and order, and the two-character minimum.
 
 ## Header and footer
 
@@ -406,7 +447,9 @@ holds lazy strings evaluated after the request has reset the language.
 | `grooveshop-django-api/admin/displays.py`, `admin/filters.py`, `admin/datasets.py` | Shared displays, filters, datasets |
 | `grooveshop-django-api/admin/dashboard/` | Dashboard widgets and the cached queries |
 | `grooveshop-django-api/admin/navigation.py` | Per-request store sidebar, `changelist_link`, site menu, storefront link |
-| `grooveshop-django-api/admin/features.py` | `StoreFeatures`, `Availability`: plan flag and store setting per optional feature |
+| `grooveshop-django-api/admin/features.py` | `StoreFeatures`, `Availability`: plan flag and store setting per optional feature; `absent_apps`, `absent_models` |
+| `grooveshop-django-api/admin/search.py` | `CommandSearchMixin`: the ⌘K palette on both sites |
+| `grooveshop-django-api/tests/integration/admin/test_command_search.py` | The palette's ordering, folding, hidden screens and record cap |
 | `grooveshop-django-api/admin/environment.py` | Environment label and tab-title prefix |
 | `grooveshop-django-api/core/templates/admin/base_site.html`, `core/templates/admin/footer.html` | Header link, footer |
 | `grooveshop-django-api/admin/branding.py` | Logo, icon and favicons per store |

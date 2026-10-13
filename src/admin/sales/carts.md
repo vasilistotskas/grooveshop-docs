@@ -37,7 +37,7 @@ Cart ID, and the owner's email, username, first or last name.
 
 The unit price is written as "net → price paid" whenever the two differ, which is any product carrying VAT or a markdown. The left figure is the price before VAT; the right one is what the shopper is charged, with VAT added and any markdown taken off. It is not an old price next to a new one.
 
-There is also a separate **Cart Items** screen, not on the sidebar but reachable through the search palette, with bulk actions **Increase quantity by 1**, **Decrease quantity by 1** and **Remove from cart**. **Decrease quantity by 1** deletes any selected line that is already at one, so it can empty a basket.
+There is also a separate **Cart Items** screen. It is not in the sidebar: press **Ctrl+K** (**⌘K** on a Mac) and type its name to open it from the [command palette](/admin/getting-started/search-and-command-palette). It has bulk actions **Increase quantity by 1**, **Decrease quantity by 1** and **Remove from cart**. **Decrease quantity by 1** deletes any selected line that is already at one, so it can empty a basket.
 
 ## Tasks
 

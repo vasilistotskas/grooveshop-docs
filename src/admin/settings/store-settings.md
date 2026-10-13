@@ -54,7 +54,7 @@ The admin follows the same two switches, so its sidebar and dashboard only offer
 | <span class="sidebar-path">Marketing → Recommendations</span> | the plan has no **Recommendations Enabled** | `PRODUCT_SUGGESTIONS_ENABLED` is off |
 | <span class="sidebar-path">Content → Blog</span> | the plan has no **Blog Enabled** | never: the blog has no setting of its own |
 
-**Pages that only collect what shoppers send.** These have nothing to prepare, so they leave the sidebar while their setting is off and come back, with everything already received, when you switch it on.
+**Pages that only collect what shoppers send.** These have nothing to prepare, so they leave the sidebar and the [command palette](/admin/getting-started/search-and-command-palette) while their setting is off and come back, with everything already received, when you switch it on.
 
 | Sidebar entry | Not shown while |
 |---|---|

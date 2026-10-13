@@ -15,7 +15,7 @@ The dashboard is the landing page after login and the first entry in the sidebar
 
 At the top, a greeting with your first name (good morning, afternoon or evening by the store's time) and today's date, followed by the period on display.
 
-On the right, the period switch: **7 days**, **30 days**, **13 weeks** and **12 months**. The dashboard opens on **30 days**. Every figure on the page that covers a period follows this switch, and the choice is kept in the page address (`?period=`), so a link you share or bookmark opens the same view and the browser's back button works.
+On the right, the period switch: **7 days**, **30 days**, **13 weeks** and **12 months**. The dashboard opens on **30 days**. Every figure on the page that covers a period follows this switch, and the choice is kept in the page address (`?period=`), so a link you share or bookmark opens the same view and the browser's back button works. The cards below do not repeat the period in their subtitles: the header and the switch show it once for the whole page.
 
 A period is made of whole days, weeks or months ending with the current one, in the store's time zone: **7 days** is today and the six days before it, **13 weeks** is this week (from Monday) and the twelve before it, **12 months** is this month and the eleven before it. Each period is compared with the stretch of the same length just before it.
 
@@ -65,11 +65,11 @@ A line appears only when its count is above zero and you may open the list it le
 
 ### Latest orders
 
-The six newest orders, whatever the period: order number, customer email (or **Guest**), when it was placed, status and total. A link opens the full order list.
+The six newest orders, whatever the period: order number, customer email (or **Guest**), when it was placed, status and total. **View all**, at the foot of the card, opens the full order list.
 
 ### Best sellers
 
-The five products with the most units paid for in the period: units from orders whose payment is Completed, minus any units refunded. Each name opens the product.
+Subtitled **Units paid for**: the five products with the most units paid for in the period, counting units from orders whose payment is Completed, minus any units refunded. Each name opens the product, and **View all**, at the foot of the card, opens the product list.
 
 ### Checkout funnel
 
@@ -81,13 +81,18 @@ The orders of the period per [order source](/admin/sales/orders#order-source), a
 
 ### Store search
 
-From the storefront's search log, for the period:
+From the storefront's search log, for the period. First, three rows, each a label with its value:
 
 - **Searches**: how many searches shoppers ran.
 - **Found nothing**: the share of searches that returned nothing.
 - **Clicked a result**: clicks on a search result, as a share of the searches. It shows a dash until click tracking has recorded anything, so an unmeasured zero is never mistaken for "nobody clicks".
 
-Below the figures a switch shows one of two lists, five searches each: **Found nothing**, the searches to fix with synonyms, products or content, and **Top searches**, what shoppers look for most. Fragments shorter than three characters are ignored, because search-as-you-type records a row per keystroke, and a search counts as "found nothing" only if it never returned a result in the period.
+Below them, two lists one under the other, each with up to five searches and how many times each was made:
+
+- **Found nothing**: the searches to fix, as its note says: **Add synonyms, products or content for these.** With none, it reads **Every search found something**.
+- **Top searches**: **What shoppers look for most.** With none, it reads **No searches in this period**.
+
+Fragments shorter than three characters are ignored, because search-as-you-type records a row per keystroke, and a search counts as "found nothing" only if it never returned a result in the period.
 
 A card with nothing to show for the period says so in words instead of drawing an empty frame.
 

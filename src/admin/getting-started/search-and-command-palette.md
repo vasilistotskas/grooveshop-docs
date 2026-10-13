@@ -1,6 +1,6 @@
 ---
 title: Search & command palette
-description: Find any record fast with the command palette, the sidebar filter, list search boxes, filters and column sorting.
+description: Reach any page or record fast with the command palette, which lists sidebar pages first, then other screens, then records; plus the sidebar filter, list search boxes, filters and column sorting.
 ---
 
 # Search & command palette
@@ -9,16 +9,21 @@ The admin offers four ways to find things: the command palette, the sidebar filt
 
 ## Command palette
 
-Press **Ctrl+K** (Windows, Linux) or **⌘K** (macOS) anywhere in the admin.
+Press **Ctrl+K** (Windows, Linux) or **⌘K** (macOS) anywhere in the admin and start typing. The results come in three groups, in this order:
 
-- Type part of a name, an email, an order number, a SKU or a voucher number. The palette searches **every screen your role can open**, using the same fields each list's own search box uses. It also matches the names of the sidebar sections themselves.
-- Results are grouped by screen. Pick one with the arrow keys and **Enter** to open its edit page.
-- The palette also keeps a **history** of records you recently opened, shown before you type.
+1. **Pages of the sidebar.** Every sidebar page you can open whose name matches what you typed. Names are matched in the language the admin is shown in, ignoring case and Greek accents: in the Greek admin, «παραγγελιες» finds **Παραγγελίες**. The best matches come first: the name itself, then names that start with what you typed, then names with a word that starts with it, then names that contain it anywhere. Typing the name of a section or a sub-menu, such as **Customers** or **Wholesale**, also lists every page in it, after the direct matches.
+2. **Other screens you can open**, the ones the sidebar leaves out, such as **Order Items**, **Cart Items** or **Tagged Items**. These are matched by their own name only.
+3. **Records**, once you have typed at least two characters. Each screen gives up to five records that its own list search box would find, with the sidebar's screens first. When a screen has more than five, a **View all** result opens that list already searched for your term.
+
+After its name, each result shows where it sits in the sidebar (a page), the area it belongs to (another screen) or what kind of record it is. Pick one with the arrow keys and **Enter**, or click it.
+
+- What your store does not have, or has switched off, is not offered, exactly as in the sidebar: no screen and no records. That covers a feature off your plan, a courier that is not active, and the pages that leave the sidebar while their setting is off (Reviews, Feedback, Favourites, Newsletter, Blog Comments). A feature on your plan that you switched off in **Store Settings** keeps its sidebar menu, marked **Off**, so it is still found. A page the sidebar does list is always searchable.
+- The palette keeps a **history** of what you recently opened from it, shown before you type.
 - Pressing **Enter** with no result highlighted does nothing.
 
-Examples of what works: a customer's email, a product name in any language, an order id, an ACS voucher number, a BoxNow parcel id, a membership by email.
+Examples of records it finds: a customer's email, a product name in any language, an order id, an ACS voucher number, a BoxNow parcel id, a membership by email.
 
-Results are held for about five minutes per person and per search term, so repeating a search is instant and a record created seconds ago may take a moment to appear.
+Every search runs afresh, so a record saved a moment ago is found straight away.
 
 ## Sidebar filter
 
@@ -65,7 +70,7 @@ Some lists show a tab strip at the top so you can hop between related screens wi
 
 ## Things to know
 
-- The palette respects permissions: a Staff member does not get results from screens they cannot open.
+- The palette respects permissions: a Staff member gets no page, screen or record from a screen they cannot open.
 - Searching a translated field (product name, category name) finds the record whichever language the text was entered in.
 
 ## Related
