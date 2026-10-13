@@ -447,10 +447,11 @@ What each signal records:
 Switching promotions off or on moves every promoted price at once, so it
 does not mark products: `promotion/signals.py` queues the store's whole
 `product.tasks.reevaluate_price_episodes` sweep (through
-`tenant/celery.py: dispatch_on_commit`, schema pinned) when the merchant's
-`PROMOTIONS_ENABLED` row is saved in a tenant schema, or when a `Tenant`
-save moves `promotions_enabled` (a `pre_save` snapshot tells a real change
-from an unrelated save).
+`tenant/celery.py: dispatch_on_commit`, schema pinned) when a save in a
+tenant schema changes the merchant's stored `PROMOTIONS_ENABLED`, or when a
+`Tenant` save changes `promotions_enabled`. `pre_save` snapshots of the
+stored values tell a real change from an unrelated or unchanged save, and a
+partial `Tenant` save whose `update_fields` leaves the flag out never counts.
 
 One change is **not** covered: the reverse side of the M2M
 (`product.promotions.add`). The nightly full sync (`sync-meilisearch-indexes`
@@ -629,9 +630,10 @@ that matters.
 Endpoints answer **404**, never 403: `PublicPromotionListView` chains
 `IsPromotionsEnabled` and `IsPromotionsRuntimeEnabled`, and `GiftCardViewSet`
 chains `IsGiftCardsEnabled` and `IsGiftCardsRuntimeEnabled`, adding
-`IsAuthenticated` on exactly one action, `mine`. `purchase_status` keeps only
-the plan tier, because the shopper polling it has already paid. Everything
-but `mine` is `AllowAny` and relies on a tight throttle instead.
+`IsAuthenticated` on exactly one action, `mine`. `purchase_status` has no
+feature gate at all: the shopper polling it has already paid, and a store
+that never sold cards has no purchase to find. Everything but `mine` is
+`AllowAny` and relies on a tight throttle instead.
 
 While promotions are off, `cart/serializers/cart.py` lists no applied coupon
 (`applied_coupon_codes` and `applied_coupons` are empty): no code applies, and
