@@ -77,7 +77,7 @@ Six entries carry a number, and each counts only work that is waiting for someon
 | **Wholesale** | Business accounts waiting to be verified. |
 | **Blog** | Blog comments waiting for approval, while blog comments are on. |
 
-A number disappears while its count is zero. It is refreshed at once when a record it counts is saved, and at least once a minute otherwise. The dashboard's **Needs attention** card shows the same numbers. Carts, Blog Posts and Promotions carry no number: they count nothing anyone has to act on.
+A number disappears while its count is zero. It is refreshed at once when a record it counts is saved, and at least once a minute otherwise. The dashboard's **Needs attention** card shows the same numbers, plus the receipts myDATA rejected while myDATA is on. Carts, Blog Posts and Promotions carry no number: they count nothing anyone has to act on.
 
 ### Search and your account
 

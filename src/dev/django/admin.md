@@ -227,9 +227,15 @@ equal length before), and its sales chart one measure, picked by
 the address can be shared. A widget for a feature `admin.features` reports
 absent or switched off is not drawn, and a link is drawn only when
 `admin.navigation.changelist_link` says the viewer may open it.
-`queries.attention_counts` (60 s, cleared by orders, products, reviews,
-blog comments, contact messages and business profiles) feeds both the
-**Needs attention** card and the sidebar badges, read once per request.
+`queries.attention_counts` (60 s, cleared by orders, receipts, products,
+reviews, blog comments, contact messages and business profiles) feeds both
+the **Needs attention** card and the sidebar badges, read once per request.
+Receipts myDATA rejected in the last `MYDATA_REJECTED_DAYS` are a card row
+only, gated on `StoreFeatures.mydata` (`MYDATA_ENABLED`); no sidebar entry
+carries them. `StoreAlerts._mydata` keeps only the superuser-facing
+configuration alerts (missing credentials, sandbox environment).
+`StoreKpis` renders **Average order** as "—" with no trend when the period
+has no paid orders.
 
 The platform dashboard reads `tenant.TenantStatsSnapshot`, refreshed every
 30 minutes by `tenant.tasks.fanout_refresh_stats_snapshots`, instead of

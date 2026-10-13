@@ -133,7 +133,7 @@ They request it from their account; the file is ready for seven days. Platform o
 
 ### The dashboard numbers look a few minutes old
 
-Each block is kept for one to fifteen minutes and refreshed at once when an order, product, review, blog comment, contact message or business account it counts is saved. New customers, open carts and search figures wait for their time to run out. See [Dashboard](/admin/getting-started/dashboard).
+Each block is kept for one to fifteen minutes and refreshed at once when an order, receipt, product, review, blog comment, contact message or business account it counts is saved. New customers, open carts and search figures wait for their time to run out. See [Dashboard](/admin/getting-started/dashboard).
 
 ### The Messages number does not go down when I read messages
 

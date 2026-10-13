@@ -28,7 +28,7 @@ Messages that need someone's attention appear below the header, and only when th
 - **Your legal pages need an update**: the platform added text to its legal documents, and these pages were not changed for you because their text is yours. Each page is listed with a link; open it to see the text to add. Shown to anyone who may edit content pages.
 - **Your business's legal details are missing**: the law requires your website to show who is selling, and some of those details are still empty (company name, legal form, GEMI number, VAT ID, address, contact email). The missing ones are listed, with a **Fill in details** link. A reminder, not an error: nothing stops working. Shown to Owners and Admins, who can change the store settings.
 - **Details needed to issue receipts are missing**: shown only while myDATA is on, when the company name, **VAT ID (ΑΦΜ)** or **Tax office (ΔΟΥ)** is empty. Receipts cannot be submitted to AADE without them, so this one is red. It has a **Fill in details** link and is shown to the same people.
-- **myDATA** (platform operators): credentials missing while myDATA is on, invoices rejected in the last 7 days, or a reminder that submissions still go to the AADE sandbox.
+- **myDATA** (platform operators): credentials missing while myDATA is on, or a reminder that submissions still go to the AADE sandbox. Receipts that myDATA rejected are not a warning here; they are a line under **Needs attention**, below.
 
 These are checked on every page load, so fixing a setting clears its warning at once.
 
@@ -40,7 +40,7 @@ Four cards for the period on display. Each shows the figure, its change against 
 |---|---|
 | **Revenue** | Money from paid orders (payment status Completed) placed in the period. Opens the order list filtered to paid orders. |
 | **Orders** | Every order placed in the period, whatever its status. Opens the order list. |
-| **Average order** | Revenue divided by the number of paid orders. |
+| **Average order** | Revenue divided by the number of paid orders. With no paid order in the period it shows **—** and no percentage, since there is nothing to average. |
 | **New customers** | Customer accounts created in the period. Underneath, the share of paying customers who ordered again: customers with two or more paid orders in the period, out of all customers with at least one. Guest orders are left out, since a guest has no account to come back to. Opens the customer list. |
 
 ### Sales chart
@@ -55,12 +55,13 @@ Work that is waiting, each line opening the list it counts, already filtered:
 |---|---|---|
 | **Orders to process** | Orders in status Pending. | always |
 | **Running low on stock** | Active products with fewer than 10 left in stock (and at least one). | always |
+| **Receipts rejected by myDATA** | Receipts that AADE rejected in the last 7 days. The line opens the receipts list filtered to every rejected receipt; fix the cause and resend from the order. See [Receipts and credit documents](/admin/sales/receipts). | myDATA is on |
 | **Reviews to approve** | Product reviews in status New, hidden from shoppers until approved. | product reviews are on |
 | **Blog comments to approve** | Comments not approved yet, hidden from readers until approved. | the blog is on your plan and blog comments are on |
 | **New messages** | Contact-form messages received in the last 7 days. | always |
 | **Business accounts to verify** | Wholesale applications waiting for review. | wholesale is on your plan and switched on |
 
-A line appears only when its count is above zero and you may open the list it leads to. With nothing waiting, the card says **All caught up: nothing is waiting for you.** The same numbers appear beside the matching sidebar entries; see [Welcome](/admin/).
+A line appears only when its count is above zero and you may open the list it leads to. With nothing waiting, the card says **All caught up: nothing is waiting for you.** Apart from rejected receipts, the same numbers appear beside the matching sidebar entries; see [Welcome](/admin/).
 
 ### Latest orders
 
@@ -107,7 +108,7 @@ Click a line under **Needs attention**. It opens the list filtered to exactly th
 ## Things to know
 
 - Revenue counts **paid** orders only, on the day each order was placed. A cash-on-delivery order is added to the day it was placed once the courier's payout is reconciled, days after delivery, so recent days can grow after the fact. See [Reconciliation](/admin/system/reconciliation).
-- Each figure is kept for a short while: **Needs attention** for one minute; the headline figures, the sales chart and the latest orders for five minutes; best sellers, the funnel, order sources and search for fifteen. A figure is cleared at once when a record it counts is saved or deleted — an order, a product, a review, a blog comment, a contact message, a business account — so an edit shows on the next load. Counts that nothing clears, such as new customers, open carts and the search log, can lag by up to that time.
+- Each figure is kept for a short while: **Needs attention** for one minute; the headline figures, the sales chart and the latest orders for five minutes; best sellers, the funnel, order sources and search for fifteen. A figure is cleared at once when a record it counts is saved or deleted — an order, a receipt, a product, a review, a blog comment, a contact message, a business account — so an edit shows on the next load. Counts that nothing clears, such as new customers, open carts and the search log, can lag by up to that time.
 - A widget for a feature your plan does not include, or that you have switched off in [Store settings](/admin/settings/store-settings), is not drawn at all.
 - There is no failed-job counter here. Failed background jobs are listed on the platform console, because one list covers every store. See [Background jobs](/admin/system/background-jobs).
 
