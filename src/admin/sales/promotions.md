@@ -9,7 +9,7 @@ description: "Rule-based promotions: benefit types, targeting, conditions and li
 
 A promotion is a rule the cart evaluates: "10% off the whole order over 50 €", "free shipping", "buy 3 get 1 free in this category", "a free gift with your first order". Automatic promotions apply on their own; code promotions need a coupon code, managed under [Coupon codes](/admin/sales/coupon-codes).
 
-Promotions ship dark. They work only when both switches are on: the platform has enabled promotions for the store, and `PROMOTIONS_ENABLED` is on under [Store settings](/admin/settings/store-settings). With either off, nothing here applies and the storefront's offers page answers "no offers". The sidebar follows the same switches: without promotions on your plan the **Promotions** menu is not shown at all; with them on the plan but the setting off, the menu stays and carries an **Off** badge, so you can prepare promotions and codes before shoppers see them.
+Promotions ship dark. They work only when both switches are on: the platform has enabled promotions for the store, and `PROMOTIONS_ENABLED` is on under [Store settings](/admin/settings/store-settings). With either off, nothing here applies and the storefront's offers page answers "no offers". Switching promotions off or on updates the prices shown in product lists and search right away, and while they are off a cart lists no coupon code: codes already entered stay on the cart for when you switch promotions back on. The sidebar follows the same switches: without promotions on your plan the **Promotions** menu is not shown at all; with them on the plan but the setting off, the menu stays and carries an **Off** badge, so you can prepare promotions and codes before shoppers see them.
 
 ## What you see
 
