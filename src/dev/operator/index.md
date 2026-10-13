@@ -59,9 +59,10 @@ A tenant host never loads that module at all.
 stock install: the `Control plane` subheader, the `hub` symbol,
 `ENVIRONMENT` pointing at `admin/permissions.py: platform_environment`
 (which renders a permanent amber **Control plane** badge, because the two
-consoles look alike enough to edit the wrong one), a `COMMAND` block so
-the ⌘K palette searches records
-rather than only sidebar titles, and the sidebar below. `SITE_DROPDOWN` is
+consoles look alike enough to edit the wrong one), a `COMMAND` block that
+only turns on the ⌘K palette's history (what the palette finds is
+`admin/search.py: CommandSearchMixin`, shared with the store site; see
+[Admin (Unfold)](/dev/django/admin#command-palette)), and the sidebar below. `SITE_DROPDOWN` is
 `admin/navigation.py: ops_site_dropdown`, shared with the store site: the
 `ADMIN_OPS_LINKS` consoles (Flower, Mailpit, Meilisearch, RabbitMQ), each
 only when its `ADMIN_*_URL` is set. The **Help & Guides** link sits in the

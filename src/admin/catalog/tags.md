@@ -41,7 +41,7 @@ The tag form has **Tag Information** (**Label** per language, **Active**), **Org
 ### Merge two tags
 Not available as an action, and there is no undo, so work in this order.
 
-1. Open the tagged-items list at `/admin/tag/taggeditem/` and filter **Tag** to the one you want to drop. It lists every product carrying it.
+1. Open the **Tagged Items** list, which is not in the sidebar: press **Ctrl+K** (**⌘K** on a Mac) and type its name, or go to `/admin/tag/taggeditem/`. Filter **Tag** to the one you want to drop. It lists every product carrying it.
 2. Open each of those products and add the surviving tag in its **Tags** tab.
 3. Only when all of them carry the survivor, delete the old tag. That removes it from every product at once.
 
