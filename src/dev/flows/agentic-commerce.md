@@ -53,8 +53,10 @@ and trusting a client-supplied forwarded host would let a caller pivot between
 tenant schemas.
 
 `internal/tenant/resolver.go` layers three tiers: process memory with a TTL
-(plus stale-if-error retention), Redis at `ag:tenant:{host}` shared across
-pods, then Django. Lookups are collapsed with `singleflight`; a confirmed
+(plus stale-if-error retention), Redis at `ag:tenant:v2:{host}` shared across
+pods, then Django. The key's version moves with the cached `TenantConfig`
+shape, so a pod never reads an entry written without a field as that field
+off. Lookups are collapsed with `singleflight`; a confirmed
 unknown host gets a short negative TTL under a sentinel so scanner traffic
 cannot stampede Django; a Django outage serves the last known config marked
 `Stale`.
@@ -95,11 +97,31 @@ value per surface and a payload missing a field decodes as off.
 indistinguishable from a route that never existed. Always read through the
 accessors — they encode the subordination.
 
+Store features follow the same rule one level down. `features` on
+`tenant/resolve` (`TenantConfig.Features`) is each optional store feature's
+effective state, which Django folds in `tenant/features.py:
+effective_features` from the same permission classes that answer 404 for it.
+The gateway decodes the four that something of it serves, and reads nothing
+else for them:
+
+| Feature | Off means |
+|---|---|
+| `productReviews` | `get_product_reviews` is not served; `search_products` and `get_product` carry no rating or review count; the chatbot's prompt does not offer reviews |
+| `loyalty` | `my_loyalty_points` is not served |
+| `favourites` | `my_favourites` is not served |
+| `promotions` | `checkout.ApplyDiscountCodes` refuses every code as `discount_code_invalid` without applying it (Django's coupon routes answer 404 with the plan flag off and would fail the request) and clears the cart's old coupon best effort; ACP sessions do not declare the discount extension |
+
+A switch reaches the gateway within twice `TENANT_CACHE_TTL` (five minutes by
+default). Django drops its own resolve cache at once, but the Redis tier and
+then each pod's memory can each hold the previous config for one TTL.
+
 ### MCP
 
 `internal/mcpsrv/server.go` registers the tool surface. One server is built
-per tenant (they differ only in the store name advertised at `initialize`) and
-cached by schema.
+per store and cached by schema, identity and feature set: it advertises the
+store's name at `initialize` and registers only the tools of the features
+the store has on (`onlyWith`), so a switched-off tool is neither listed nor
+callable, and a switch reaches `tools/list` without a restart.
 
 Ergonomic commerce tools: `search_products`, `get_product`,
 `list_categories`, `get_trending_searches`, `get_product_reviews`,
@@ -110,6 +132,9 @@ Ergonomic commerce tools: `search_products`, `get_product`,
 
 Account tools, which need a linked credential: `my_orders`,
 `my_loyalty_points`, `my_favourites`.
+
+A rating is the average of the product's review rates, on Django's 1–10
+scale (`product/enum/review.py: RateEnum`).
 
 The UCP checkout capability's five canonical tools plus `get_order`:
 `create_checkout`, `get_checkout`, `update_checkout`, `complete_checkout`,
@@ -232,6 +257,11 @@ empty token means ACP is disabled for that tenant and every bearer gets the
 same 401 as a wrong one. Idempotency keys are namespaced per schema and
 operation at `ag:{schema}:acp:idem:{op}:{key}`.
 
+A session declares the discount extension in `capabilities.extensions` only
+while the store has promotions on (`internal/acp/render.go:
+capabilitiesOf`); with promotions off every submitted code comes back in
+`discounts.rejected`.
+
 ### Catalog feeds
 
 `internal/feeds/` streams four artifacts per tenant, cached in Redis at
@@ -283,8 +313,8 @@ a configurable TTL and turn cap.
 
 `internal/chat/bridge.go` connects an in-process MCP client to the **same**
 tool server over in-memory transports, so the chatbot's tool definitions are
-derived from the server's own schemas and the two can never drift. Two
-groups are withheld, and a third is kept but marked:
+derived from the server's own schemas and the two can never drift. Three
+groups are withheld, and a fourth is kept but marked:
 
 - **`checkoutTools`** — the five canonical UCP tools. Their arguments are
   shaped for a platform generating calls from an OpenRPC document, not for a
@@ -293,6 +323,10 @@ groups are withheld, and a third is kept but marked:
 - **`accountTools`** — they need an OAuth-linked agent credential on the MCP
   HTTP request; the chat widget's shopper authenticates through the storefront
   session, which already shows orders and loyalty.
+- **Tools of a feature the store has off.** The bridge's server is shared
+  by every store, so it is built with `mcpsrv.EveryFeature`, and
+  `bridge.tools` drops each tool `mcpsrv.Offered` refuses for the store.
+  Only an offered tool is callable.
 - Cart tools are kept but flagged, so a successful call tells the widget to
   refresh its cart store.
 
@@ -374,9 +408,9 @@ so an agent finds the server, its name and its tools from one owner
 Both well-known documents are built from one entry, `storeEntry`, so they
 cannot disagree about what they describe. `displayName` and `description`
 are the Server Card's own title and description (`Identity.Description()`,
-so the string exists once); `capabilities` is `registeredToolNames`, read
-off the same toolset `NewServer` registers from, so a new tool is
-advertised the moment it is served; the four `representativeQueries` sit
+so the string exists once); `capabilities` is `toolNamesFor` the store's
+features, read off the same toolset `NewServer` registers from, so a new
+tool is advertised the moment it is served and a switched-off one is not; the four `representativeQueries` sit
 next to the tool definitions in `internal/mcpsrv/server.go`. `identifier`
 is `urn:air:<primary domain>:mcp:store`, the primary domain lower-cased in
 ASCII (IDNA) because the ARD URN admits no internationalised form, and
@@ -484,11 +518,14 @@ yourself, then bumping the pin in the infrastructure repo.
 - **A disabled surface answers 404.**
 - **Agent discovery has one owner and one entry.** The ARD manifest and the
   AI Catalog are both cut from `storeEntry`, whose name and description are
-  the Server Card's and whose capabilities are the registered tools; never
-  a second list.
+  the Server Card's and whose capabilities are the tools the store is
+  served; never a second list.
+- **A store feature switched off is off on every agent surface.** Read
+  `TenantConfig.Features`, never a flag or setting of your own; a tool that
+  serves a feature is registered with `onlyWith`.
 - **`/readyz` never fails on Django.** Only Redis flips it.
 - **Redis keys are `ag:{schema}:…`**, except the tenant cache
-  (`ag:tenant:{host}`) and the shared order-event queue.
+  (`ag:tenant:v2:{host}`) and the shared order-event queue.
 - **No tenant label on Prometheus metrics** — unbounded cardinality; tenant
   goes in the logs.
 - **The gateway is retail-only.** Every catalog, cart and checkout call is
@@ -507,6 +544,10 @@ yourself, then bumping the pin in the infrastructure repo.
   the `/mcp` gate, so a store with agent commerce off has none. If
   `/mcp/server-card` answers on the same host, the ingress is not routing
   the well-known path to the gateway yet.
+- **An agent finds no reviews, loyalty or favourites tool, or every
+  discount code is refused.** The store has that feature off at one of its
+  tiers; check `features` on the resolve payload. Right after a switch,
+  allow twice `TENANT_CACHE_TTL`.
 - **`/chat` 404s with a localized message.** The tenant has no `chatApiKey`.
   Remember that the key only arrives on an internally-authenticated resolve,
   so a config served from the Redis tier has it empty — `/chat` uses the
@@ -553,7 +594,10 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/django/dto.go` | `TenantConfig` and the gate accessors |
 | `grooveshop-agent-gateway/internal/django/client_agent.go` | `/agent/me` and the scoped resources |
 | `grooveshop-agent-gateway/internal/identity/identity.go` | Optional bearer verification, per-tenant cache key |
-| `grooveshop-agent-gateway/internal/mcpsrv/server.go` | Tool registration, `registeredToolNames`, `representativeQueries` |
+| `grooveshop-agent-gateway/internal/mcpsrv/server.go` | Tool registration, `onlyWith`, `toolNamesFor`, `Offered`, `EveryFeature`, `representativeQueries` |
+| `grooveshop-agent-gateway/internal/mcpsrv/catalog.go` | Catalog tools, `ratingOf` |
+| `grooveshop-agent-gateway/internal/checkout/discounts.go` | `ApplyDiscountCodes`, shared by UCP and ACP |
+| `grooveshop-django-api/tenant/features.py` | `STORE_FEATURES`, `effective_features` |
 | `grooveshop-agent-gateway/internal/mcpsrv/discovery.go` | `storeEntry`, `ARDHandler`, `AICatalogHandler` |
 | `grooveshop-agent-gateway/internal/mcpsrv/servercard.go` | `ServerCardHandler`, `IdentityFor`, `publisher`, `publicDocument` |
 | `grooveshop-agent-gateway/internal/storefront/urls.go` | `MCPServerCard` and every other link into the storefront |
@@ -564,6 +608,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/ucp/profiles.go` | Platform profile fetch, validation and cache |
 | `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
 | `grooveshop-agent-gateway/internal/acp/handler.go` | ACP routes and bearer auth |
+| `grooveshop-agent-gateway/internal/acp/render.go` | Session rendering, `capabilitiesOf` |
 | `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, VAT-inclusive prices, skip rules |
 | `grooveshop-agent-gateway/internal/feeds/acp.go` | ACP feed shape |
 | `grooveshop-agent-gateway/internal/media/url.go` | Asset origin fallback |

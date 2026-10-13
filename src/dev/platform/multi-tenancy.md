@@ -79,7 +79,14 @@ because `SHOW_PUBLIC_IF_NO_TENANT_FOUND` is not set.
 (`tenant/views.py: tenant_resolve`) is anonymous, lives in the shared URL
 patterns so it works on any host, and returns `TenantConfigSerializer`
 (`tenant/serializers.py`): branding, locales, currency, the domain set,
-the feature flags, pixel ids and CSP sources. The payload is cached for an
+the feature flags, pixel ids and CSP sources. `features` is every optional
+store feature's effective state: its plan flag on `Tenant`, if it has one,
+AND every store setting it needs, read in the store's own schema through
+the same permission classes that answer 404 for it (`tenant/features.py:
+STORE_FEATURES`, `effective_features`; all off on the platform). A client
+reads that, never the two tiers combined itself, and a change to one of
+those settings bumps the store's resolve-cache generation
+(`tenant/signals.py: bump_generation_on_agent_setting_change`). The payload is cached for an
 hour under a schema-independent key that includes a fingerprint of the
 serializer's field names (`tenant/cache.py: tenant_resolve_key`), so a
 release that adds a field never serves the old shape. When the caller
@@ -331,6 +338,7 @@ are the bugs it exists to catch.
 | `grooveshop-django-api/tenant/internal.py` | Internal domains feed and token check |
 | `grooveshop-django-api/tenant/views.py` | `tenant_resolve` |
 | `grooveshop-django-api/tenant/serializers.py` | `TenantConfigSerializer`, folded gates, domain derivation |
+| `grooveshop-django-api/tenant/features.py` | `STORE_FEATURES`, `effective_features`: what `features` on the resolve payload says |
 | `grooveshop-django-api/tenant/cache.py` | `make_tenant_key`, `tenant_resolve_key` |
 | `grooveshop-django-api/tenant/credentials.py` | Credential helpers and the no-fallback rule |
 | `grooveshop-django-api/tenant/permissions.py` | Plan and runtime feature gates |

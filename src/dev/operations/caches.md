@@ -90,8 +90,8 @@ Django key patterns, Nuxt key patterns, an optional `invalidated_by` list
 of model labels and `related` surfaces. `core/cache/surfaces.py` registers
 the core set: `pay_way`, `recommendations`, `shipping`, `products`,
 `categories`, `blog`, `regions_countries`, `loyalty`, `page_config`,
-`promotions`, `tags`, `settings`, `sitemap_seo`, `translations`. Apps may
-add their own in `AppConfig.ready()`.
+`promotions`, `tags`, `settings`, `store_pages`, `sitemap_seo`,
+`translations`. Apps may add their own in `AppConfig.ready()`.
 
 `CacheService.purge(codes, dry_run=, actor=, include_related=)`
 (`core/cache/service.py`) expands related surfaces, runs each surface's
@@ -119,6 +119,19 @@ otherwise empty the store's product cache on each sale. The `pageConfigNavigatio
 name is what the `page_config` surface must match; a shorter pattern
 purged zero keys and reported success, which is why the surface file
 carries the exact name.
+
+A **store feature switch** purges `store_pages`: the storefront's
+settings read (`settingsPublic`) and every page it has rendered for the
+store, since the navigation, footer and product cards of every page show
+what the store offers. `tenant/signals.py` registers
+`tenant/switches.py: on_switch_change` over every setting and plan flag in
+`tenant/features.py: STORE_FEATURES`, which queues
+`core/tasks.py: purge_store_pages_task` in the store's schema on a real
+change. A store setting purges at once. A plan flag waits
+`STOREFRONT_TENANT_CACHE_SECONDS` (300 by default): the storefront reads
+plan flags from its copy of the resolve payload, kept in each pod's memory
+that long (`server/utils/tenant.ts`), and a page rendered from that copy
+before it expired would be cached with the old flag again.
 
 ### Ways to invoke it
 
@@ -306,6 +319,7 @@ PageSpeed runs while Traefik's counters never moved.
 | Edit visible with `?cb=1` but not on the plain URL for over a minute | Cloudflare, the store's tag purge failed | Celery log for `purge_edge_cache_task`; the store's Cloudflare credentials |
 | Content edit not visible on a rendered page after ~40 s | Nitro `nitro:routes:` (the edit bypassed signals, or its model is not in the surface's `invalidated_by`) | the surface's Cache tool purge from the tenant admin (`page_config` covers `/`, `/about`, `/contact`, …), or the purge endpoint with `*routes*` |
 | Navigation menu edit not showing | Nitro handler `pageConfigNavigation` | `clear_cache page_config` (purges `*pageConfig*`) |
+| A switched-off feature still on a page | Nitro `nitro:routes:`; after a plan-flag change, until `STOREFRONT_TENANT_CACHE_SECONDS` has passed | `clear_cache store_pages` |
 | One API route returns pre-edit data | Nitro `nitro:handlers:<name>` | purge endpoint with `*<handlerName>*` |
 | Replaced product image still served | media-stream `image:{schema}` | `flush-tenant` with the internal secret |
 | Google/Meta/TikTok feed stale | gateway feeds | `clear_cache products` (calls `invalidate_feeds`) |
@@ -348,7 +362,9 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook |
 | `grooveshop-django-api/tenant/media_flush.py`, `tenant/tasks.py` | Media flush |
-| `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `CLOUDFLARE_PLATFORM_*` |
+| `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
+| `grooveshop-django-api/tenant/switches.py`, `tenant/features.py`, `core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The storefront's in-memory copy of the resolve payload |
 | `grooveshop-storefront-ui-node-nuxt/server/api/admin/cache/purge.post.ts` | Nitro purge endpoint |
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts`, `shared/constants/prerender.ts` | SWR route rules |
 | `grooveshop-media-stream/src/MediaStream/Cache/controllers/admin-cache.controller.ts` | `flush-tenant` |
