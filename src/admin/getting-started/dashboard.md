@@ -49,13 +49,13 @@ One bar per day (for **7 days** and **30 days**), per week (**13 weeks**) or per
 
 ### Needs attention
 
-Work that is waiting, each line opening the list it counts, already filtered to exactly those records. A line that counts the last 7 days says **In the last 7 days** under its name and opens its list filtered to the same 7 days.
+Work that is waiting, each line opening the list it counts, already filtered to exactly those records. **New messages** counts the last 7 days, says **In the last 7 days** under its name, and opens the messages list filtered to the same 7 days.
 
 | Line | What it counts | Shown when |
 |---|---|---|
 | **Orders to process** | Orders in status Pending. | always |
 | **Running low on stock** | Active products with fewer than 10 left in stock (and at least one). | always |
-| **Receipts rejected by myDATA** | Receipts that AADE rejected in the last 7 days. The line opens the receipts list filtered to those same receipts; fix the cause and resend from the order. See [Receipts and credit documents](/admin/sales/receipts). | myDATA is on |
+| **Receipts rejected by myDATA** | Every receipt still marked Rejected, however old. A rejection does not go away on its own: the line stays until someone corrects the details and sends the receipt again, or cancels it. It reads **Correct the details and send them again** and opens the receipts list filtered to the rejected ones. See [Receipts and credit documents](/admin/sales/receipts). | myDATA is on |
 | **Reviews to approve** | Product reviews in status New, hidden from shoppers until approved. | product reviews are on |
 | **Blog comments to approve** | Comments not approved yet, hidden from readers until approved. | the blog is on your plan and blog comments are on |
 | **New messages** | Contact-form messages received in the last 7 days. | always |

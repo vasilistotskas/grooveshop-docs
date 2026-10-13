@@ -230,13 +230,16 @@ absent or switched off is not drawn, and a link is drawn only when
 `queries.attention_counts` (60 s, cleared by orders, receipts, products,
 reviews, blog comments, contact messages and business profiles) feeds both
 the **Needs attention** card and the sidebar badges, read once per request.
-Receipts myDATA rejected in the last `MYDATA_REJECTED_DAYS` are a card row
-only, gated on `StoreFeatures.mydata` (`MYDATA_ENABLED`); no sidebar entry
-carries them. A row that counts a rolling window (`MYDATA_REJECTED_DAYS`,
-`NEW_MESSAGES_DAYS`, one constant per row in `queries.py`) links its
-changelist with the same cutoff (`updated_at__gte` / `created_at__gte`),
-so the list it opens holds exactly what it counted. `StoreAlerts._mydata` keeps only the superuser-facing
-configuration alerts (missing credentials, sandbox environment).
+Receipts myDATA rejected are a card row only, gated on
+`StoreFeatures.mydata` (`MYDATA_ENABLED`); no sidebar entry carries them.
+The row counts every `Invoice` whose `mydata_status` is `REJECTED`, with
+no time window: the status is terminal until the receipt is corrected and
+resent or cancelled, either of which changes it, so an old rejection must
+not drop off the card unhandled. **New messages** counts a rolling window
+(`NEW_MESSAGES_DAYS`) and links its changelist with the same cutoff
+(`created_at__gte`), so the list it opens holds exactly what it counted.
+`StoreAlerts._mydata` keeps only the superuser-facing configuration alerts
+(missing credentials, sandbox environment).
 `StoreKpis` renders **Average order** as "—" with no trend when the period
 has no paid orders.
 
