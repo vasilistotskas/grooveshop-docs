@@ -26,7 +26,7 @@ pnpm build            # vitepress build + postbuild artefacts into dist/
 pnpm build:full       # sync + build (what CI does)
 pnpm preview          # serve dist/
 pnpm check:admin      # fails if the admin guide names anything from the codebase
-pnpm check:claims     # fails if a page cites a file or admin screen that no longer exists
+pnpm check:claims     # fails if a page cites a file that no longer exists, or a sidebar path the admin menu does not have
                       # (needs the sibling repos; it reports what it could not check)
 pnpm typecheck        # vue-tsc over .vitepress/
 ```
