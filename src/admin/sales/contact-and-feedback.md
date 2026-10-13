@@ -5,9 +5,9 @@ description: The contact-form inbox with its attachments and the feedback submis
 
 # Contact messages & feedback
 
-<span class="sidebar-path">Sales → Contact Messages</span> and <span class="sidebar-path">Sales → Feedback</span>
+<span class="sidebar-path">Customers → Messages</span> and <span class="sidebar-path">Customers → Feedback</span>
 
-Two inboxes for what visitors send through the storefront. **Contact Messages** are enquiries from the contact page: a name, an email, a message, and optionally a subject, company, phone and attached files. **Feedback** entries come from the feedback page: a one-to-five star rating with a category and a comment, optionally signed. Both are read-only records of what arrived; replying happens from your own mailbox.
+Two inboxes for what visitors send through the storefront. **Messages** are enquiries from the contact page: a name, an email, a message, and optionally a subject, company, phone and attached files. **Feedback** entries come from the feedback page: a one-to-five star rating with a category and a comment, optionally signed. Both are read-only records of what arrived; replying happens from your own mailbox.
 
 ## Contact messages
 
@@ -22,7 +22,7 @@ Two inboxes for what visitors send through the storefront. **Contact Messages** 
 | **Timing** | Date and relative age. |
 | **Priority** | A triage hint: **Urgent** under two hours old, **High** for long messages, **Medium** under a day, **Low** otherwise. Nothing you set. |
 
-Filters: **Contact Period** (Today, This Week, This Month, This Quarter), **Message Length**, a text filter on **Subject**, created and updated date ranges. Search by name, email, message, company, phone. Bulk actions export the selection as CSV or XML. The blue badge on the sidebar entry is the total number of messages; there is no read or unread flag.
+Filters: **Contact Period** (Today, This Week, This Month, This Quarter), **Message Length**, a text filter on **Subject**, created and updated date ranges. Search by name, email, message, company, phone. Bulk actions export the selection as CSV or XML. The number beside the **Messages** entry in the sidebar counts the messages received in the last seven days, the same window as **Contact Period → This Week**; there is no read or unread flag.
 
 The message page shows **Contact Information** (name, email, company, phone), the **Message** (subject and body) and an **Attachments** tab: file name as a download link, content type, size, scan verdict and time. Attachments can be deleted from here, which removes the file as well; they cannot be added by staff.
 
@@ -60,12 +60,12 @@ Filters: category, rating, created date. Search by name, email, message. Bulk ac
 
 ### What happens automatically
 
-Every submission emails the store's contact address, like a contact message, and is skipped in the same way when no address is set. The storefront feedback page exists only while `FEEDBACK_ENABLED` is on (it is on by default); turning it off makes the page answer "not found" and rejects submissions.
+Every submission emails the store's contact address, like a contact message, and is skipped in the same way when no address is set. The storefront feedback page exists only while `FEEDBACK_ENABLED` is on (it is on by default); turning it off makes the page answer "not found" and rejects submissions. While it is off, **Feedback** is also left out of the sidebar, since nothing new can arrive; the entries already received come back when you turn it on again.
 
 ## Things to know
 
 - **Nothing here is a ticket.** There is no assignment, status or reply workflow. If you need one, forward the notification emails into your helpdesk.
-- **The badge counts everything.** Because there is no read flag, the sidebar number only goes down when messages are deleted.
+- **The badge counts the last seven days, not unread.** Because there is no read flag, the sidebar number is the messages of the last seven days: it goes down as messages turn a week old, not when you open them. The same count appears as **New messages** under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard), and that line opens this list filtered to the same seven days.
 - **Attachment downloads are staff-only** and served as plain downloads, never opened in the browser, because the sender is anonymous.
 - **Export before you delete** if you keep records elsewhere; deletion is immediate.
 

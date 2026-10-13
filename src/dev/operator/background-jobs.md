@@ -220,8 +220,8 @@ and never fails the purge it records.
 ### Why the log is platform-side and the button is not
 
 The purge itself is a **store** operation. **Cache Management** is reached
-from the store console's site dropdown
-(`UNFOLD["SITE_DROPDOWN"]` → `admin:clear-cache`, served by
+from the store sidebar's **Settings → Cache** entry
+(`admin/navigation.py: store_sidebar` → `admin:clear-cache`, served by
 `MyAdminSite.clear_cache_view` in `admin/admin.py`), and that page shows
 the twenty most recent log rows inline so the operator sees the effect of
 what they just did.

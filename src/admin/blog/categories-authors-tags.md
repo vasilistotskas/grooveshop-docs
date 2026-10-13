@@ -5,7 +5,7 @@ description: The three supporting lists of the blog - the category tree, the aut
 
 # Categories, authors & tags
 
-<span class="sidebar-path">Blog → Blog Categories</span>, <span class="sidebar-path">Blog → Blog Authors</span>, <span class="sidebar-path">Blog → Blog Tags</span>
+<span class="sidebar-path">Content → Blog → Blog Categories</span>, <span class="sidebar-path">Content → Blog → Blog Authors</span>, <span class="sidebar-path">Content → Blog → Blog Tags</span>
 
 Posts reference these three lists. All blog pages share a tab strip at the top (Blog Posts, Categories, Authors, Comments, Tags), so you can move between them without the sidebar.
 

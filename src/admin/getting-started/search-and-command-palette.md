@@ -22,7 +22,7 @@ Results are held for about five minutes per person and per search term, so repea
 
 ## Sidebar filter
 
-The box above the sidebar sections narrows the menu entries as you type. It matches section and entry titles only; it does not search records.
+The search box at the top of the sidebar narrows the menu entries as you type. It matches section and entry titles only; it does not search records. The sidebar only ever lists the screens your role can open and the features your store has, so a screen missing from it is not hidden by the filter; see [Welcome](/admin/).
 
 ## List search box
 
@@ -32,9 +32,9 @@ Every list has a search box at the top. It searches the fields defined for that 
 |---|---|
 | Orders | order id, customer email and name, and more |
 | Products | name in every language, SKU |
-| Users | email, username, name |
+| Customers | email, username, name |
 | Stock Logs | product name, SKU, order id, reason |
-| Extra Settings | setting name and description |
+| Store Settings | setting name and description |
 
 The exact fields per list are documented on that list's page in this guide. Searching is case-insensitive and matches partial words.
 
@@ -42,10 +42,10 @@ The exact fields per list are documented on that list's page in this guide. Sear
 
 The filter panel on the right narrows the list by status, dates, related records and other facets. Two behaviours to know:
 
-- Most lists apply a filter as soon as you pick it. On **Extra Settings** the panel has a **submit** button; pick several filters and apply them together.
+- Most lists apply a filter as soon as you pick it. On **Store Settings** the panel has a **submit** button; pick several filters and apply them together.
 - Date-range filters accept a from and a to value. Lists with a date hierarchy (Stock Logs, Meta CAPI Event Log) additionally show a year, month, day drill-down above the table.
 
-Filters are reflected in the address. Bookmark a filtered address to return to the same view, for example the pending orders view the dashboard links to.
+Filters are reflected in the address. Bookmark a filtered address to return to the same view, for example the pending orders view that **Orders to process** on the dashboard links to.
 
 ## Sorting
 
@@ -57,7 +57,7 @@ Some lists show a tab strip at the top so you can hop between related screens wi
 
 | Where | Tabs |
 |---|---|
-| Orders | Orders, Receipts, Credit Documents, and — for platform operators only — Stock Logs and Order History |
+| Orders | Orders, Order Items, Receipts, Credit Documents, and — for platform operators only — Stock Logs and Order History. **Order Items** has no sidebar entry; it lists every order line, and filtering it by product shows who bought that product. |
 | BoxNow | BoxNow Shipments, BoxNow Lockers, and BoxNow Events for platform operators |
 | ACS | ACS Shipments, ACS Stations, and ACS Pickup Lists, ACS COD Payouts and ACS Tracking Events for platform operators |
 | Product options | Attributes, Attribute Values, Variant Groups |

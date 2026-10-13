@@ -5,7 +5,7 @@ description: How the loyalty programme earns, redeems and expires points, how le
 
 # Tiers & points
 
-<span class="sidebar-path">Loyalty → Loyalty Tiers</span> and <span class="sidebar-path">Loyalty → Points Transactions</span>
+<span class="sidebar-path">Customers → Loyalty → Loyalty Tiers</span> and <span class="sidebar-path">Customers → Loyalty → Points Transactions</span>
 
 The loyalty programme rewards signed-in customers with **points** they can spend at checkout, and with **XP** that never decreases through spending and drives a **level** and a **tier**. Everything is recorded in an append-only ledger: a customer's balance is the sum of their transactions.
 
@@ -14,9 +14,11 @@ The loyalty programme rewards signed-in customers with **points** they can spend
 Two switches must both be on, and only one of them is yours:
 
 1. The store's plan must include loyalty. That is set by the platform team and you cannot change it here.
-2. **LOYALTY_ENABLED** in <span class="sidebar-path">Settings → Extra Settings</span>, off by default.
+2. **LOYALTY_ENABLED** in <span class="sidebar-path">Settings → Store Settings</span>, off by default.
 
 **LOYALTY_ENABLED** is one switch for the whole programme, covering earning and redeeming together. There is no way to let customers earn but not spend, or the other way round. When it is off, no points are earned on completed orders, no points are reversed on cancellations, and the checkout refuses to redeem points with the message "Loyalty system is currently disabled." Balances are kept, so turning it back on resumes where it stopped.
+
+The admin follows the same two switches. Without loyalty on your plan, the **Loyalty** menu is not in the sidebar at all. With loyalty on your plan but **LOYALTY_ENABLED** off, the menu stays, marked **Off**, so you can prepare tiers before customers see them.
 
 Wholesale customers have their own single switch, with the same all-or-nothing shape: **B2B_LOYALTY_ENABLED** decides whether orders priced through a customer group both earn and redeem. It is off by default because points are worked out from retail prices, so a negotiated price would earn full retail points. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
 
@@ -93,21 +95,21 @@ Filters: **Transaction Type**, **User**, **Created at** range. Search matches th
 ### Set up the programme
 
 1. Ask the platform team to confirm loyalty is included in the store's plan.
-2. In <span class="sidebar-path">Settings → Extra Settings</span> review **LOYALTY_POINTS_FACTOR**, **LOYALTY_PRICE_BASIS**, **LOYALTY_XP_PER_LEVEL**, **LOYALTY_REDEMPTION_RATIO_EUR**, **LOYALTY_POINTS_EXPIRATION_DAYS** and the two new-customer bonus settings. See [Store settings](/admin/settings/store-settings).
-3. Create tiers in <span class="sidebar-path">Loyalty → Loyalty Tiers</span> with rising **Required Level** values. Turn on **LOYALTY_TIER_MULTIPLIER_ENABLED** only if higher tiers should earn faster.
+2. In <span class="sidebar-path">Settings → Store Settings</span> review **LOYALTY_POINTS_FACTOR**, **LOYALTY_PRICE_BASIS**, **LOYALTY_XP_PER_LEVEL**, **LOYALTY_REDEMPTION_RATIO_EUR**, **LOYALTY_POINTS_EXPIRATION_DAYS** and the two new-customer bonus settings. See [Store settings](/admin/settings/store-settings).
+3. Create tiers in <span class="sidebar-path">Customers → Loyalty → Loyalty Tiers</span> with rising **Required Level** values. Turn on **LOYALTY_TIER_MULTIPLIER_ENABLED** only if higher tiers should earn faster.
 4. Set **LOYALTY_ENABLED** to on. Earning starts with the next completed order.
 
 ### Add or remove points for a customer
 
-1. Open the customer in <span class="sidebar-path">Customers → Users</span> and click **Adjust loyalty points**. Only platform operators see the button.
+1. Open the customer in <span class="sidebar-path">Customers → Customers</span> and click **Adjust loyalty points**. Only platform operators see the button.
 2. Enter the **Points** (positive adds, negative removes; between minus and plus ten thousand) and a **Reason**, then submit. The change appears at once as an **Adjust** row with your account as creator and the reason as its description, and cannot be undone except by a further adjustment.
 
 Adjustments change the balance only, never XP, level or tier.
 
 ### Explain a balance to a customer
 
-1. Open <span class="sidebar-path">Loyalty → Points Transactions</span>, filter by **User**.
-2. Read the rows in order: earnings per order line, bonuses, redemptions with the discount in the description, expiries and reversals. The account page in <span class="sidebar-path">Customers → Users</span> shows the resulting **Points Balance**, **Total XP**, **Level** and **Tier**.
+1. Open <span class="sidebar-path">Customers → Loyalty → Points Transactions</span>, filter by **User**.
+2. Read the rows in order: earnings per order line, bonuses, redemptions with the discount in the description, expiries and reversals. The account page in <span class="sidebar-path">Customers → Customers</span> shows the resulting **Points Balance**, **Total XP**, **Level** and **Tier**.
 
 ### Change tier thresholds
 

@@ -5,11 +5,11 @@ description: Issuing gift cards, the balance ledger, delivery emails, redemption
 
 # Gift cards
 
-<span class="sidebar-path">Sales → Gift Cards</span>
+<span class="sidebar-path">Marketing → Gift Cards → Gift Cards</span>
 
 A gift card is stored value: a secret code with a balance that the shopper spends at checkout. It is a payment, not a discount, so it never lowers the taxable value of an order. Balance is never stored as a number; it is the sum of an append-only ledger, which is what makes every card auditable.
 
-Gift cards ship dark. They work only when the platform has enabled them for the store and `GIFT_CARDS_ENABLED` is on under [Store settings](/admin/settings/store-settings).
+Gift cards ship dark. They work only when the platform has enabled them for the store and `GIFT_CARDS_ENABLED` is on under [Store settings](/admin/settings/store-settings). The sidebar follows the same two switches: without gift cards on your plan the **Gift Cards** menu is not shown at all; with them on the plan but the setting off, the menu stays and carries an **Off** badge, so you can issue cards before shoppers can redeem them.
 
 ## What you see
 
@@ -46,7 +46,7 @@ Every change to a card is a signed row of one kind:
 | **Adjust** | + or − | You, through **Adjust balance**, with a reason. |
 | **Expire** | − | The nightly expiry sweep, zeroing the remaining balance. |
 
-The **Gift Card Transactions** screen (search palette) lists every row read-only, with CSV and XML export. **Gift Card Purchases** lists storefront purchases with their payment status (Pending payment, Paid, Failed, Canceled), also read-only.
+<span class="sidebar-path">Marketing → Gift Cards → Transactions</span> lists every row read-only, with CSV and XML export. <span class="sidebar-path">Marketing → Gift Cards → Purchases</span> lists storefront purchases with their payment status (Pending payment, Paid, Failed, Canceled), also read-only.
 
 ## Tasks
 
@@ -79,7 +79,7 @@ The **Gift Card Transactions** screen (search palette) lists every row read-only
 
 When an order that was paid partly or fully with gift cards is canceled or **fully** refunded, each card gets back exactly what it paid for the order, as one **Refund credit** row; the provider refund covers only what the provider charged. A partial refund credits nothing to the cards: their part comes back, whole, with the refund that returns the rest of the money, or with a cancellation. If a customer needs card value back sooner, use **Adjust balance**. A card that expired while its value sat on the order gets a fresh validity window so the credit is spendable. Each card is credited at most once per order.
 
-A refund of a **gift card purchase** made in the Viva Wallet dashboard is added up on the purchase, under **Refunded Amount** in **Gift Card Purchases**. The card is voided (its balance set to zero and the card disabled) only once the refunds reach the whole purchase amount; a partial refund leaves the card and its balance alone. A card that has already been spent is not voided: the platform team is alerted and decides what to do.
+A refund of a **gift card purchase** made in the Viva Wallet dashboard is added up on the purchase, under **Refunded Amount** in **Purchases**. The card is voided (its balance set to zero and the card disabled) only once the refunds reach the whole purchase amount; a partial refund leaves the card and its balance alone. A card that has already been spent is not voided: the platform team is alerted and decides what to do.
 
 ## Expiry
 

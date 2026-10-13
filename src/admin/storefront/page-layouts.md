@@ -5,7 +5,7 @@ description: Compose the home page and the branded bands of other storefront pag
 
 # Page layouts
 
-<span class="sidebar-path">Not in the sidebar. Open the command palette (Ctrl+K / ⌘K) and type "Page Layout", or go to `/admin/page_config/pagelayout/`.</span>
+<span class="sidebar-path">Content → Page Layouts</span>
 
 A page layout is a list of **sections** the storefront renders in order for one page type. The home page is built entirely from its layout; other page types only get an optional branded band above their own content.
 
@@ -77,7 +77,7 @@ Every store starts with a published `home` layout of four sections: Blog Categor
 ### Put a banner on the home page
 1. Open the `home` layout and find the **Hero Carousel** section.
 2. In **Props**, set `{"images": ["/img/banner.png"], "mobile_images": ["/img/banner-mobile.png"], "link": "/products/123/my-product"}`. The images must already be reachable on the storefront.
-3. Save, then purge **Pages & navigation** in the [Cache](/admin/system/cache) tool.
+3. Save. The **Pages & navigation** cache is purged on its own about ten seconds later (see [Cache](/admin/system/cache)).
 
 ### Add a section
 1. In **Page Sections** click add, pick the **Component Type** and fill **Title**.
@@ -90,16 +90,16 @@ Open the section's **Locale Overrides**, add the other language and fill its tit
 1. Click **Add**, set **Page Type** to `about`, a **Title**, and tick **Is Published**.
 2. Add sections and fill their props. Stay with blocks that work on every store, such as **Media + Text**, **Image Gallery**, **Story Timeline**, **FAQ Accordion**, **Rich Text Block** and **Call to Action Banner**. Do not reach for **Page Hero** or **About Content** unless you have confirmed your storefront design renders them.
 3. Fill **Seo Title** and **Seo Description**; without them the page uses its built-in title and the store description.
-4. Save, purge the cache, then open `/about` and check every section you added is actually on the page.
-5. Link the page from a menu with `"to": "/about"`.
+4. Save, give the cache the ten seconds it takes to clear itself, then open `/about` and check every section you added is actually on the page.
+5. Link the page from a menu: add a link and pick the layout under **Custom page** (see [Navigation](/admin/storefront/navigation)).
 
 ## Things to know
 
 - Only **published** layouts are served, and a section with **Is Visible** off is never sent to the browser at all. Neither is merely hidden with styling.
-- **Cache**: layouts and the rendered home, about, contact, feedback and info pages are cached on the storefront. Saving a layout does not purge them. Purge **Pages & navigation** to publish a change.
+- **Cache**: layouts and the rendered home, about, contact, feedback and info pages are cached on the storefront. Saving a layout or a section purges them on its own about ten seconds later; purge **Pages & navigation** by hand only if a change still does not show.
 - **Sections cannot be reordered.** New ones always go last and **Sort Order** is read-only, so getting a different order means deleting the sections below the insertion point and adding them back in sequence. Plan the order before you build a long page.
-- The **Recently Viewed Rail** also needs the **RECENTLY_VIEWED_ENABLED** setting on, and **Business Hours** reads its opening times from **BUSINESS_HOURS**, both under <span class="sidebar-path">Settings → Extra Settings</span>. Neither block warns you when its setting is missing.
-- Recommendation slots are configured elsewhere, not in page layouts.
+- The **Recently Viewed Rail** also needs the **RECENTLY_VIEWED_ENABLED** setting on, and **Business Hours** reads its opening times from **BUSINESS_HOURS**, both under <span class="sidebar-path">Settings → Store Settings</span>. Neither block warns you when its setting is missing.
+- Recommendation slots are configured under <span class="sidebar-path">Marketing → Recommendations → Slots</span>, not in page layouts. That menu is there only when your plan includes product suggestions.
 
 ## Related
 

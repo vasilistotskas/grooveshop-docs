@@ -5,7 +5,7 @@ description: Define attributes such as Colour or Size, their values, and assign 
 
 # Attributes & values
 
-<span class="sidebar-path">Catalog → Attributes</span> and <span class="sidebar-path">Catalog → Attribute Values</span>
+<span class="sidebar-path">Catalog → Attributes → Attributes</span> and <span class="sidebar-path">Catalog → Attributes → Attribute Values</span>
 
 An **attribute** is a property type (Colour, Size, Capacity). An **attribute value** is one option of it (Red, Large, 256 GB). Products point at values, not at attributes.
 
@@ -53,8 +53,8 @@ The value form has **Value Information** (**Attribute**, **Value** per language,
 ## Tasks
 
 ### Create an attribute with its values
-1. Open <span class="sidebar-path">Catalog → Attributes</span>, click **Add**, type the Greek **Name** and the other languages, save.
-2. Open <span class="sidebar-path">Catalog → Attribute Values</span>, click **Add**, pick the **Attribute**, type the **Value** in each language, save. Repeat per option.
+1. Open <span class="sidebar-path">Catalog → Attributes → Attributes</span>, click **Add**, type the Greek **Name** and the other languages, save.
+2. Open <span class="sidebar-path">Catalog → Attributes → Attribute Values</span>, click **Add**, pick the **Attribute**, type the **Value** in each language, save. Repeat per option.
 3. Back on the attribute page, drag the rows of the **Values** tab into the order you want customers to see.
 
 ### Assign values to a product

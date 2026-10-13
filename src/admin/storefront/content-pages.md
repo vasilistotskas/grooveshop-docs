@@ -5,7 +5,7 @@ description: Write and publish your own policy and information pages - terms, pr
 
 # Content pages
 
-<span class="sidebar-path">Not in the sidebar. Open the command palette (Ctrl+K / ⌘K) and type "Content", or go to `/admin/page_config/contentpage/`.</span>
+<span class="sidebar-path">Content → Pages</span>
 
 A content page is a slug plus a rich-text body per language. It is meant for the pages a store owns end to end: return policy, terms, privacy, cookies, FAQ, about, shipping information. Page layouts (structured section builders) are a different tool; see [Page layouts](/admin/storefront/page-layouts).
 
@@ -71,28 +71,28 @@ The first such update adds a **Server logs** section to the privacy policy. Ever
 2. Replace the placeholder **Body** with your text in Greek; switch language tab to add English and German if the store serves them.
 3. Fill **Seo Title** and **Seo Description** if the defaults are not right.
 4. Tick **Is Published**, save.
-5. Purge **Pages & navigation** in the [Cache](/admin/system/cache) tool so `/terms-of-use` picks up the new text.
+5. Within about ten seconds `/terms-of-use` shows the new text: saving purges the **Pages & navigation** cache on its own (see [Cache](/admin/system/cache)).
 
 ### Review a platform update
-1. Open the page from the dashboard warning, or from **Content Pages**.
+1. Open the page from the dashboard warning, or from <span class="sidebar-path">Content → Pages</span>.
 2. Read the **Text to add**. Add it to your page in every language your store serves, in the place that fits your document, and adjust it if your store works differently.
-3. Save, and purge **Pages & navigation** in the [Cache](/admin/system/cache) tool.
+3. Save. The **Pages & navigation** cache is purged on its own within about ten seconds.
 4. In the list of content pages, tick the page, choose **Mark platform legal update as reviewed** from the actions and run it. The warnings disappear.
 
 Marking a page reviewed only records that you have dealt with the update; it does not change the text. Marking it without adding the text leaves your privacy policy incomplete.
 
 ### Add a new page
 1. Click **Add**, type the Greek **Title** and **Body**, set a short lowercase **Slug**, save.
-2. Publish when ready. Link to it from a menu with `"to": "/info/<slug>"` (see [Navigation](/admin/storefront/navigation)); the footer **Pages** column links it automatically.
+2. Publish when ready. To link it from a menu, add a link and pick the page under **Content page** (see [Navigation](/admin/storefront/navigation)); the footer **Pages** column links it automatically.
 
 ### Take a page down
-Untick **Is Published**. Visitors get a 404 at `/info/<slug>`, and for a legal document at its own address too: unpublishing `terms`, `privacy` or `cookies` takes that document off your store, so replace the text rather than unpublishing it. Purge **Pages & navigation** or the old text lingers in the cache.
+Untick **Is Published**. Visitors get a 404 at `/info/<slug>`, and for a legal document at its own address too: unpublishing `terms`, `privacy` or `cookies` takes that document off your store, so replace the text rather than unpublishing it. The cached copy is purged on its own within about ten seconds, and any menu link to the page disappears with it.
 
 ## Things to know
 
 - **There is no switch for content pages.** Publishing is the only gate. Nothing in your plan or your store settings turns them off.
 - **Published At** is filled in automatically the first time you publish. It is not a schedule: a page goes live the moment **Is Published** is on, whatever date sits in that field.
-- **Cache**: the page list is kept 10 minutes on the storefront and served stale for up to a day while it refreshes; a single page is kept 10 minutes and served stale for up to two hours. Saving purges neither. Use the Cache tool.
+- **Cache**: the page list is kept 10 minutes on the storefront and served stale for up to a day while it refreshes; a single page is kept 10 minutes and served stale for up to two hours. Saving a page purges both, and the rendered pages built from them, about ten seconds later; the Cache tool is for when something still looks old.
 - **There is no language fallback on the storefront, except on the three legal addresses** (see above). Elsewhere a visitor sees the text written in their own language and nothing else: where it is missing the page renders with an empty title and an empty body, and the footer shows the raw slug in place of a title. Fill in every language your store serves, not just Greek. This screen is more forgiving and will show you any language it has, so a page that looks complete here can still be blank to a shopper.
 - The slug is unique and becomes part of the public URL; changing it breaks existing links.
 

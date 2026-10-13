@@ -5,7 +5,7 @@ description: Newsletter and notification topics, each subscriber's status and co
 
 # Subscriptions
 
-<span class="sidebar-path">Customers → Subscriptions</span> and <span class="sidebar-path">Newsletter → Subscription Topics</span>
+<span class="sidebar-path">Customers → Newsletter → Subscriptions</span> and <span class="sidebar-path">Customers → Newsletter → Subscription Topics</span>
 
 A **topic** is something a customer can opt in to: the weekly newsletter, product updates, promotions. A **subscription** is one subscriber's relationship to one topic, with a status and timestamps. A subscriber is either a customer account or, for signups from the storefront's newsletter form, a guest known only by an email address. Customers manage their own subscriptions from their account page on the storefront; these screens are for support and for shaping the topic catalogue.
 
@@ -57,7 +57,7 @@ Bulk actions: **Resend confirmation** and **Deactivate selected subscriptions**.
 
 ### Create a topic
 
-1. Open <span class="sidebar-path">Newsletter → Subscription Topics</span> and add a topic with a slug, a category and a name in each language.
+1. Open <span class="sidebar-path">Customers → Newsletter → Subscription Topics</span> and add a topic with a slug, a category and a name in each language.
 2. Decide the three switches. **Requires Confirmation** on gives you a double opt-in record, which every marketing topic should have. **Default Subscription** means something different per category, see the table above.
 3. Leave **Active** on. Turning it off later hides the topic from the storefront and stops new subscriptions to it, without touching existing ones.
 
@@ -71,7 +71,7 @@ A visitor enters an email and ticks the consent box, which is never ticked in ad
 
 ### Unsubscribe a customer on request
 
-1. Open <span class="sidebar-path">Customers → Subscriptions</span>, search the email.
+1. Open <span class="sidebar-path">Customers → Newsletter → Subscriptions</span>, search the email.
 2. Select the rows and run **Deactivate selected subscriptions**. Only Active rows change; they become Unsubscribed with the current time recorded.
 
 ### Send a confirmation email again
@@ -87,7 +87,7 @@ A Bounced subscription is set when the mail system reported the address as undel
 - The consent record for a subscription is the row itself: the consent sentence, language, IP address and browser at signup, the confirmation time and IP, **Subscribed At** and **Unsubscribed At**. Do not delete rows to "clean up"; deactivate instead so the history survives.
 - Guest signups that are never confirmed are deleted automatically 30 days after the confirmation email was sent.
 - Subscriptions are included in the customer's own data export bundle, together with guest signups made with any of the customer's verified email addresses, see [Data exports (GDPR)](/admin/customers/data-exports). Deleting the account deletes those guest signups too.
-- The subscription list has no export button. To pull a mailing list, filter the user list by **Users with Subscriptions** in <span class="sidebar-path">Customers → Users</span> and use its CSV or XML export, or read the subscriber counts per topic here.
+- The subscription list has no export button. To pull a mailing list, filter the customer list by **Users with Subscriptions** in <span class="sidebar-path">Customers → Customers</span> and use its CSV or XML export, or read the subscriber counts per topic here.
 - New accounts are subscribed at registration only to default **Account Updates** and **System Notifications** topics. Marketing topics never subscribe anyone who has not asked to.
 
 ## Things to know
@@ -96,6 +96,7 @@ A Bounced subscription is set when the mail system reported the address as undel
 - Deactivating in bulk does not send any email.
 - The confirmation email is sent in the background, and retried up to three times five minutes apart if the mail fails.
 - Deleting a topic deletes every subscription to it, and with them the consent record. Deactivate the topic instead.
+- Both screens are listed only while `NEWSLETTER_ENABLED` is on. With it off, the **Newsletter** menu leaves the sidebar; the topics and subscriptions themselves are kept and come back with the setting.
 
 ## Related
 

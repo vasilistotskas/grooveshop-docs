@@ -46,7 +46,7 @@ Same shape: **Credit Number** (`CRD-YYYY-NNNNNN`), order, **Reason**, issue date
 | **Pending submission** | Queued for sending; nothing has gone to AADE yet. |
 | **Submitted** | Sent, waiting for AADE. After the automatic retries are used up it stays here until you resend. |
 | **Confirmed (MARK assigned)** | Registered. The PDF carries the MARK and the QR code. |
-| **Rejected** | AADE returned a validation error. Fix the cause and resend from the order page. |
+| **Rejected** | AADE returned a validation error. Fix the cause and resend from the order page. While myDATA is on, every receipt still in this status, however old, is counted on the dashboard under **Needs attention** as **Receipts rejected by myDATA**, for anyone who may open this list; it leaves the count once it is resent or cancelled. |
 | **Canceled in myDATA** | A cancellation succeeded; the cancellation MARK is on the row. |
 
 A receipt or credit document that AADE has not registered is **never emailed to the customer**: the email goes out once the document carries its MARK.

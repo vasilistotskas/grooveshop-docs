@@ -5,9 +5,11 @@ description: BoxNow locker deliveries in Greece and Cyprus, the synced locker li
 
 # BoxNow
 
-<span class="sidebar-path">Shipping → BoxNow Shipments</span> and <span class="sidebar-path">Shipping → BoxNow Lockers</span>
+<span class="sidebar-path">Shipping → BoxNow Shipments</span> and <span class="sidebar-path">Shipping → Pickup Points → BoxNow Lockers</span>
 
 BoxNow delivers to automated lockers. A customer picks a locker on the checkout map, the platform sends BoxNow a delivery request, and BoxNow reports every parcel movement back through a signed webhook. A check with BoxNow every fifteen minutes runs as a safety net in case a webhook is lost.
+
+Both entries are in the sidebar only while the BoxNow row under [Shipping providers](/admin/shipping/providers) is active. When ACS is not active, **Pickup Points** holds nothing but the lockers, so **BoxNow Lockers** sits directly under **Shipping** instead.
 
 ## Lockers
 
@@ -79,10 +81,10 @@ BoxNow also delivers from Greek shops to its locker network in Cyprus. It uses t
 
 ### Set it up
 
-1. Open <span class="sidebar-path">Shipping → Shipping Providers</span>, then the BoxNow row, and scroll to **Rates**.
+1. Open <span class="sidebar-path">Settings → Shipping Providers</span>, then the BoxNow row, and scroll to **Rates**.
 2. Add a line: **Country** Cyprus, **Shipping Kind** pickup point, your **Price**, a **Free Shipping Threshold** if you want one, and **Max Weight (grams)** `4000`. BoxNow accepts at most 4 kg per parcel to Cyprus.
 3. Tick **Is Active** and save. Cyprus now appears in the checkout country list, and BoxNow is offered for it. Couriers without a Cyprus rate are not.
-4. Check that the Cypriot lockers are in <span class="sidebar-path">Shipping → BoxNow Lockers</span>: filter **Country Code** by `CY`. They arrive with the nightly sync; if none are there yet, run **Sync lockers from BoxNow API**.
+4. Check that the Cypriot lockers are in <span class="sidebar-path">Shipping → Pickup Points → BoxNow Lockers</span>: filter **Country Code** by `CY`. They arrive with the nightly sync; if none are there yet, run **Sync lockers from BoxNow API**.
 5. Place a test order to a Cypriot locker, print its voucher and send it to BoxNow so they can confirm the setup. BoxNow asks for this before you start shipping to Cyprus.
 
 For the general steps of adding a country, see [Shipping providers](/admin/shipping/providers).
@@ -115,7 +117,7 @@ For the general steps of adding a country, see [Shipping providers](/admin/shipp
 The row stays in **Pending creation** and the store's admins receive an email naming the order and BoxNow's error code. The **Diagnostics** section on the shipment also holds the last error.
 
 - **P402 invalid locker**: the locker is unknown to the store's BoxNow account. Run **Sync lockers from BoxNow API** and check the locker is active; a catalogue synced under different credentials produces this for every order.
-- **Missing credentials**: the platform team must add the store's BoxNow client ID, secret and partner ID; nothing retries until then.
+- **Missing credentials**: an Owner or Admin must add the store's BoxNow client ID, secret and partner ID on <span class="sidebar-path">Settings → Store Profile</span>; nothing retries until then.
 - Once the data is fixed, open the shipment and press **Create BoxNow parcel now**. The failure is also written as a note in the order's history, with the same instruction.
 
 ### Cancel a parcel

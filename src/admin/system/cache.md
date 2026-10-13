@@ -5,9 +5,9 @@ description: Why an edit may not show on the storefront right away, what the Cac
 
 # Cache
 
-<span class="sidebar-path">Site dropdown → Cache</span>
+<span class="sidebar-path">Settings → Cache</span>
 
-The storefront keeps rendered pages and data in a cache so it can serve visitors fast. Most edits reach the storefront on their own within minutes; the Cache page is for when you need it now. Every admin user can open it, Staff included.
+The storefront keeps rendered pages and data in a cache so it can serve visitors fast. Most edits reach the storefront on their own within minutes; the Cache page is for when you need it now. Owners and Admins can open it; Staff do not see the entry, because purging is a settings-level action.
 
 ## Why a change does not show
 
@@ -18,7 +18,7 @@ Two caches sit between the admin and a visitor:
 
 Also, your own browser may show a cached page. Reload with the cache bypassed (Ctrl+Shift+R) before assuming the server is stale.
 
-Very little purges on its own. Saving a **payment method**, in any language, purges the payment-methods and shipping-options surfaces, because the checkout renders the text you wrote. Saving a product, a category, a curated product relation or a suggestion slot purges the **Product recommendations** surface. That is the whole list: a product's own price, stock and images are *not* purged by saving the product, because a catalogue import would otherwise sweep the cache once per row. Everything else waits for its time to expire or for a manual purge.
+Most edits purge on their own. Saving a product (its text, images, attributes, brand or variant group), a category, a blog post, category, tag or author, a tag, a promotion, a payment method, a shipping provider or rate, a content page, a page layout or a menu marks the matching surface stale, in any language; about ten seconds later one purge clears every surface marked in that window, so a catalogue import costs one purge rather than one per row. A product whose stock alone changed is not purged, because every order changes it and checkout checks stock again anyway. Coupon codes, reviews and comments, loyalty tiers, store settings, the sitemap and the translations are not purged on save either: they wait for their time to expire or for a manual purge.
 
 ## What you see
 
@@ -38,7 +38,7 @@ The page lists **surfaces**, grouped as catalog, commerce, config and content. E
 | **Pages & navigation** | a page layout, a section's props, a content page, or a menu, and the rendered pages built from them. | |
 | **Tags** | tags, which products and posts share. | |
 | **Sitemap & SEO** | anything that should appear in the sitemap, the RSS feed or the AI-readable index right away. | |
-| **Site settings** | any Extra Setting, and the seller identity shown in the footer. | Payment methods, Shipping options and Loyalty. |
+| **Site settings** | any value under Store Settings, and the seller identity shown in the footer. | Payment methods, Shipping options and Loyalty. |
 | **Translations (parler)** | marked **Heavy**. Forces every translated row to be re-read from the database. Use only when told to. | |
 
 Below the cards: your store's twenty most recent purges (who, when, which surfaces, how many entries). Only your own appear here — another store's purges are never shown, and yours are never shown to them.
@@ -49,7 +49,7 @@ If the storefront purge is not configured for the environment, the page says so 
 
 ### Purge one area
 
-1. Open the site dropdown (store name at the top of the sidebar) and click **Cache**.
+1. Open <span class="sidebar-path">Settings → Cache</span>.
 2. Tick the surface or surfaces you edited. **Select all** and **Select none** are above the cards.
 3. **Include related surfaces** is ticked by default and also purges everything in the "Also purges" column above. Untick it for a narrower purge.
 4. Click **Purge selected**.

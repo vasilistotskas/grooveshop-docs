@@ -5,7 +5,7 @@ description: Wholesale tiers, percentage discounts and per-product net prices, h
 
 # Customer groups & price lists
 
-<span class="sidebar-path">Sales → Customer Groups</span> and <span class="sidebar-path">Sales → B2B Price Lists</span>
+<span class="sidebar-path">Customers → Wholesale → Customer Groups</span> and <span class="sidebar-path">Customers → Wholesale → B2B Price Lists</span>
 
 A customer group is a wholesale tier: a name, a percentage off the retail net price, an optional minimum order value, and, per product, an optional fixed net price that overrides the percentage. Approved business customers are assigned to one group and their cart is priced with it. See [Business customers](/admin/b2b/business-customers) for the approval side.
 
@@ -75,7 +75,7 @@ Single rows can also be added under **B2B Price Lists** by picking the group and
 - **An inactive group is the same as no group.** Members are priced at retail with no message. Use it to pause a tier without unassigning anyone.
 - **Deleting a group** removes its price-list rows and leaves its members with no group, hence retail pricing. Prefer deactivating.
 - **A price-list row overrides the percent, never adds to it.**
-- **Wholesale needs the feature on** at both tiers (platform and `B2B_WHOLESALE_ENABLED`); with it off, groups can still be prepared but nobody is priced with them.
+- **Wholesale needs the feature on** at both tiers (platform and `B2B_WHOLESALE_ENABLED`); with it off, groups can still be prepared but nobody is priced with them. While only the setting is off, the **Wholesale** menu stays in the sidebar marked **Off**; without B2B on your plan it is not shown at all.
 
 ## Related
 

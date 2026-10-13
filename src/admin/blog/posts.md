@@ -5,13 +5,13 @@ description: Write, translate, schedule and publish blog posts, with categories,
 
 # Posts
 
-<span class="sidebar-path">Blog → Blog Posts</span>
+<span class="sidebar-path">Content → Blog → Blog Posts</span>
 
-Blog posts are articles shown under `/blog` on the storefront. The whole blog is switched on or off per store by the platform plan; when it is off the Blog link disappears and the pages answer 404.
+Blog posts are articles shown under `/blog` on the storefront. The whole blog is switched on or off per store by the platform plan; when it is off the Blog link disappears, the pages answer 404, and the **Blog** menu is not shown in the admin sidebar.
 
 ## What you see
 
-The sidebar entry carries a yellow badge with the number of unpublished posts. The list has a date drill-down by publication date and shares a tab strip with Categories, Authors, Comments and Tags.
+The number beside the **Blog** menu in the sidebar counts comments waiting for approval, not drafts; see [Comments](/admin/blog/comments). The list has a date drill-down by publication date and shares a tab strip with Categories, Authors, Comments and Tags.
 
 | Column | Meaning |
 |---|---|
@@ -84,10 +84,10 @@ Untick **Is Published**. Visitors get a 404 at `/blog/post/<id>/<slug>` and so d
 - **Rich text and video.** The body keeps what the editor produces: formatting, links, images and tables. To embed a video, paste a YouTube or Vimeo link into **Insert → Media**; video files and other hosts are refused. Anything the storefront cannot show, including markup pasted through **Source code**, stops the save with a message naming it instead of being removed silently. The same rule applies to every rich-text field: product and category descriptions, author bios, content pages and payment instructions.
 - **Storefront visibility** needs Is Published on and Published At not in the future. A draft is invisible to everyone, you included: signing in to the admin does not let you preview one on the storefront, so the only way to see a post as a reader is to publish it.
 - **Search index**: only posts with Is Published on are indexed, and the index ignores the date. A scheduled post can therefore turn up in search results before its publication time, even though the blog pages still hide it. Keep long-lead posts as drafts until close to the date.
-- **Comments cannot be switched off for one post.** There is no per-post setting; the store-wide **BLOG_COMMENTS_ENABLED** under <span class="sidebar-path">Settings → Extra Settings</span> is all or nothing. To close one conversation, unapprove its comments; see [Comments](/admin/blog/comments).
+- **Comments cannot be switched off for one post.** There is no per-post setting; the store-wide **BLOG_COMMENTS_ENABLED** under <span class="sidebar-path">Settings → Store Settings</span> is all or nothing. To close one conversation, unapprove its comments; see [Comments](/admin/blog/comments).
 - Deleting a category or an author does not delete posts; the field is simply cleared.
 - **Deleting a post does not delete its comments.** They stay behind with no post attached. Clear them from [Comments](/admin/blog/comments) first if you want them gone.
-- **Cache**: blog pages and lists are cached on the storefront; purge the **Blog** surface from the [Cache](/admin/system/cache) tool to show an edit immediately.
+- **Cache**: blog pages and lists are cached on the storefront. Saving a post, category, author or tag purges the **Blog** surface on its own about ten seconds later; if an edit still does not show, purge it from the [Cache](/admin/system/cache) tool.
 - The slug is unique and part of the URL; a blank slug is generated on save.
 - Likes are given by customers on the storefront; the admin only shows the count.
 

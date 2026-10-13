@@ -5,9 +5,9 @@ description: The payment methods offered at checkout, what each settlement type 
 
 # Payment methods
 
-<span class="sidebar-path">Sales → Payment Methods</span>
+<span class="sidebar-path">Settings → Payment Methods</span>
 
-A payment method is one option the shopper sees at checkout: Viva Wallet, Stripe, cash on delivery, BoxNow's pay-on-pickup, bank transfer and so on. This screen controls which are offered, in what order, what they cost the shopper and what the customer is told. It does not hold credentials: API keys for Viva Wallet, Stripe and the carriers live on the store's platform record and are managed by the platform team, and an online method whose credentials are missing is hidden from shoppers automatically.
+A payment method is one option the shopper sees at checkout: Viva Wallet, Stripe, cash on delivery, BoxNow's pay-on-pickup, bank transfer and so on. This screen controls which are offered, in what order, what they cost the shopper and what the customer is told. It does not hold credentials: API keys for Viva Wallet, Stripe and the carriers are on the store profile, <span class="sidebar-path">Settings → Store Profile</span>, which Owners and Admins can edit, and an online method whose credentials are missing is hidden from shoppers automatically.
 
 ## What you see
 
@@ -44,7 +44,7 @@ The page has tabs:
 | **Paid to the carrier before pickup** | BoxNow collects payment online after dispatch: it sends a payment link when it picks the parcel up, and the locker PIN activates once the shopper pays. | Voucher is created immediately with the amount. Payment status stays Pending until BoxNow reports the parcel delivered, which it can only be after payment; it then flips to Completed. |
 | **Settled off-platform (e.g. bank transfer)** | The shopper pays outside the platform. | Order and voucher are created immediately; nothing marks it paid. You confirm the payment on the order page. |
 
-Only the online settlement needs the payment provider's credentials, which belong to the store's own settings (see [Store settings](/admin/settings/store-settings)); the other three collect money without the platform calling anyone.
+Only the online settlement needs the payment provider's credentials, which belong to the store profile (see [Roles & team](/admin/getting-started/roles-and-team)); the other three collect money without the platform calling anyone.
 
 ## Tasks
 
@@ -68,7 +68,7 @@ Only the online settlement needs the payment provider's credentials, which belon
 
 ## Things to know
 
-- **Viva Wallet is the primary online provider and Stripe the secondary.** Both are per-store accounts. If a store has not given its keys to the platform, the method is not shown to shoppers even if it is Active here, and checkout refuses to start a session for it.
+- **Viva Wallet is the primary online provider and Stripe the secondary.** Both are per-store accounts. If the store profile holds no keys for one, the method is not shown to shoppers even if it is Active here, and checkout refuses to start a session for it.
 - **Cash on delivery and BoxNow pay-on-pickup are different products** even though both are collected on delivery: one is cash to a courier, the other a payment link from the carrier. Keep both rows; do not point a courier method at a locker.
 - **The name is a key, not free text.** Pick the key that matches the product; the Greek and English labels come with it. The storefront uses the same key to translate the label.
 - **Fees are VAT-inclusive amounts** in the store currency and appear on the invoice as a separate line.

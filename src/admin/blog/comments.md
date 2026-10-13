@@ -5,17 +5,17 @@ description: Moderate blog comments - approve, unapprove, remove spam, understan
 
 # Comments
 
-<span class="sidebar-path">Blog → Blog Comments</span>
+<span class="sidebar-path">Content → Blog → Blog Comments</span>
 
 Customers comment on blog posts and reply to each other. This screen is where you approve, hide and remove what they write.
 
-**Read this before you plan a moderation routine.** New comments are normally **approved the moment they are posted** and appear on the blog immediately. Holding them for review first is a platform-level choice, not a store setting, so it is not something you can switch on from the admin. If yours holds them, the sidebar badge counts up as comments arrive; if the badge stays at zero while comments keep appearing on your posts, yours publishes them straight away and this screen is for taking bad ones down afterwards. Ask the platform team to change which way it works.
+**Read this before you plan a moderation routine.** New comments are normally **approved the moment they are posted** and appear on the blog immediately. Holding them for review first is a platform-level choice, not a store setting, so it is not something you can switch on from the admin. If yours holds them, the number beside the **Blog** menu in the sidebar counts up as comments arrive; if no number appears while comments keep appearing on your posts, yours publishes them straight away and this screen is for taking bad ones down afterwards. Ask the platform team to change which way it works.
 
-Comments can be switched off entirely, store-wide, with the **BLOG_COMMENTS_ENABLED** setting under <span class="sidebar-path">Settings → Extra Settings</span>. Your plan's blog feature also has to be on.
+Comments can be switched off entirely, store-wide, with the **BLOG_COMMENTS_ENABLED** setting under <span class="sidebar-path">Settings → Store Settings</span>. Your plan's blog feature also has to be on. With the setting off, **Blog Comments** leaves the sidebar and the **Blog** menu counts nothing; without the blog on your plan, the whole **Blog** menu is hidden.
 
 ## What you see
 
-The sidebar entry carries a blue badge with the number of unapproved comments. The list shows 30 comments per page in thread order, with a date drill-down by creation date.
+The **Blog** menu in the sidebar shows the number of unapproved comments, and the dashboard lists them under **Needs attention** as **Blog comments to approve**. The list shows 30 comments per page in thread order, with a date drill-down by creation date.
 
 | Column | Meaning |
 |---|---|
@@ -59,7 +59,7 @@ stateDiagram-v2
 ### Work through the queue
 Only useful on a store whose comments are held for review. Where they publish on arrival this filter is normally empty, and the section below is what you want instead.
 
-1. Open <span class="sidebar-path">Blog → Blog Comments</span> and filter **Approved** to No.
+1. Open <span class="sidebar-path">Content → Blog → Blog Comments</span> and filter **Approved** to No.
 2. Read the content; open the **Post** link for context.
 3. Tick **Approved** on the good ones and press **Save**, or select them and run **Approve selected comments**.
 4. Select the spam and run **Mark as spam and delete**.
@@ -90,7 +90,7 @@ Untick **Approved**. Its replies are kept but hidden along with it, and they com
 - Deleting a customer account keeps their comments and shows them as **Anonymous**.
 - **Mark as spam and delete** cannot be undone. Use **Unapprove** when in doubt.
 - Editing **Content** rewrites the customer's words under their name; prefer unapproving to editing.
-- The sidebar badge is recalculated at most once a minute. The list itself is always current.
+- The number beside **Blog** is refreshed whenever a comment is saved or deleted, and at least once a minute otherwise. The list itself is always current.
 - Blog pages are cached on the storefront; a newly approved comment may take a few minutes to show unless you purge the **Blog** surface in the [Cache](/admin/system/cache) tool.
 
 ## Related

@@ -245,7 +245,7 @@ tenant #1's owner.
    `UserAccount` with `is_active` and `is_staff`. Create it if it does not
    exist; a shopper account on the store is not this and cannot be
    promoted into it.
-2. <span class="sidebar-path">Control plane → Memberships → Add</span> — pick the user, pick the tenant,
+2. <span class="sidebar-path">Control plane → Memberships</span>, **Add** — pick the user, pick the tenant,
    pick the role, leave **Active** ticked.
 3. That is all. Nothing else is provisioned: the permissions are computed
    from the role on the next request.

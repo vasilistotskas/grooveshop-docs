@@ -171,7 +171,7 @@ store's author and verification tokens.
 Seven booleans on the row are the **plan tier** — what the operator has
 sold this store.
 
-| Plan flag | Default | Runtime twin (a store's own **Extra Settings**) | Enforced by |
+| Plan flag | Default | Runtime twin (a store's own **Store Settings**) | Enforced by |
 |---|---|---|---|
 | `loyalty_enabled` | `False` | `LOYALTY_ENABLED` | `IsLoyaltyEnabled` |
 | `blog_enabled` | `True` | *(none — plan tier only)* | `IsBlogEnabled` |
@@ -216,6 +216,11 @@ How the two tiers combine:
 - Chrome toggles fail open (`default=True`); commercial gates fail closed
   (`IsB2BWholesaleEnabled`, `IsPromotionsRuntimeEnabled`,
   `IsContactAttachmentsEnabled`).
+- The store admin reads the two tiers separately
+  (`admin/features.py: StoreFeatures`, through the same services and
+  permission classes): plan off hides the feature's sidebar menu and
+  dashboard rows; plan on with the runtime twin off keeps its setup pages,
+  marked "Off", without counters. See [Admin (Unfold)](/dev/django/admin).
 
 See [Multi-tenancy](/dev/platform/multi-tenancy) for the same gate from the
 request's side.
@@ -438,7 +443,7 @@ a common bug:
 ## Failure modes
 
 - **A feature is on in the console and still missing on the storefront**:
-  the runtime tier is off in that store's own Extra Settings, or the key is
+  the runtime tier is off in that store's own Store Settings, or the key is
   not in `PUBLIC_SETTING_KEYS`. Both tiers must hold.
 - **A feature endpoint answers 404 and you expected 403**: that is the
   design. Disabled is indistinguishable from non-existent.

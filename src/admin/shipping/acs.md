@@ -7,7 +7,7 @@ description: Operating ACS shipments end to end, from voucher creation and therm
 
 <span class="sidebar-path">Shipping → ACS Shipments</span>
 
-Every order shipped with ACS has one ACS shipment record. The record is created at checkout, receives its voucher from ACS a few seconds later, is printed and collected, and is then tracked by polling ACS every fifteen minutes until it reaches a final state. Store staff work mostly from this list and from the order page. Superusers also see the pickup lists, the cash-on-delivery payouts and the raw tracking events under <span class="sidebar-path">System</span>.
+Every order shipped with ACS has one ACS shipment record. The record is created at checkout, receives its voucher from ACS a few seconds later, is printed and collected, and is then tracked by polling ACS every fifteen minutes until it reaches a final state. Store staff work mostly from this list and from the order page. The ACS entries are in the sidebar only while the ACS row under [Shipping providers](/admin/shipping/providers) is active. Superusers also see the pickup lists, the cash-on-delivery payouts and the raw tracking events under <span class="sidebar-path">System</span>.
 
 ## The lifecycle at a glance
 
@@ -89,7 +89,7 @@ Nothing to do in the normal case: the voucher is minted automatically. If an ord
 2. Fix the cause on the order. Checkout now requires a postcode in the country's format, a street that contains a letter, and a street number that is not a postcode, so a mistyped address rarely reaches ACS; the platform strips the space in a postcode such as "703 00" before sending. Orders placed before that check can still carry a bad address: correct it in the order's **Shipping Address** section, where the same check applies. ACS also rejects a phone number that is not a plain 10-digit Greek number, an address it cannot place, and a Smartpoint it does not recognise.
 3. Back on <span class="sidebar-path">Shipping → ACS Shipments</span>, click **Issue ACS voucher now** on the row. It is refused for an order whose online payment is still pending, so an unpaid order never gets a voucher; that voucher is issued automatically once the payment is confirmed. The failure is also written as a note in the order's history.
 
-A missing ACS credential is a different failure. Nothing is retried, because credentials do not appear on their own; the store's admins are emailed at once and the order waits. Tell the platform team.
+A missing ACS credential is a different failure. Nothing is retried, because credentials do not appear on their own; the store's admins are emailed at once and the order waits. An Owner or Admin fills the ACS credentials in on <span class="sidebar-path">Settings → Store Profile</span>; ask the platform team if you do not have them.
 
 ### Print the voucher
 
@@ -172,7 +172,7 @@ See [Reconciliation](/admin/system/reconciliation) for the finance view.
 
 ### Smartpoint stations
 
-<span class="sidebar-path">Shipping → ACS Stations</span> is a local copy of ACS shops and Smartpoint lockers, refreshed daily at 03:00. Columns: **External ID** (the area station code), **Name**, **Shop kind**, **City**, **Postal code**, **Country code**, **Is active**. Filters: **Shop kind**, **Country code**, **Is active**. Search matches ID, name, city and postcode. **Last synced at** is read-only. There is no sync button on this screen; the nightly refresh is the only way the list changes. It covers exactly the countries that have an active rate on the ACS provider row: which countries ACS serves for your store is decided by those rates, not by a separate setting.
+<span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span> is a local copy of ACS shops and Smartpoint lockers, refreshed daily at 03:00. Columns: **External ID** (the area station code), **Name**, **Shop kind**, **City**, **Postal code**, **Country code**, **Is active**. Filters: **Shop kind**, **Country code**, **Is active**. Search matches ID, name, city and postcode. **Last synced at** is read-only. There is no sync button on this screen; the nightly refresh is the only way the list changes. It covers exactly the countries that have an active rate on the ACS provider row: which countries ACS serves for your store is decided by those rates, not by a separate setting.
 
 Notes:
 

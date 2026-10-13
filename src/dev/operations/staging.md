@@ -125,7 +125,8 @@ to read it:
 kubectl -n grooveshop-staging port-forward svc/mailpit 8025:8025
 ```
 
-The admin's site dropdown links to it when `ADMIN_MAILPIT_URL` is set.
+The admin's site dropdown links to it, for platform superusers, when
+`ADMIN_MAILPIT_URL` is set.
 
 ## What staging cannot reproduce
 

@@ -5,11 +5,11 @@ description: Business profiles for the wholesale program, the approval workflow,
 
 # Business customers
 
-<span class="sidebar-path">Sales → Business Customers</span>
+<span class="sidebar-path">Customers → Wholesale → Business Customers</span>
 
-A business profile is a customer's company identity for the wholesale program: company name, VAT number (ΑΦΜ), tax office (ΔΟΥ), business activity and registered address. Customers apply from their account; you review, approve into a customer group, reject with a reason, or suspend. Approval is what switches that customer's cart to wholesale prices. The orange badge on the sidebar entry counts applications waiting for review.
+A business profile is a customer's company identity for the wholesale program: company name, VAT number (ΑΦΜ), tax office (ΔΟΥ), business activity and registered address. Customers apply from their account; you review, approve into a customer group, reject with a reason, or suspend. Approval is what switches that customer's cart to wholesale prices. The number beside the **Wholesale** menu in the sidebar counts applications waiting for review.
 
-The wholesale program ships dark. It works only when the platform has enabled B2B for the store and `B2B_WHOLESALE_ENABLED` is on under [Store settings](/admin/settings/store-settings). Invoice-at-checkout is separate and available to every shopper; see [Receipts and credit documents](/admin/sales/receipts).
+The wholesale program ships dark. It works only when the platform has enabled B2B for the store and `B2B_WHOLESALE_ENABLED` is on under [Store settings](/admin/settings/store-settings). Without B2B on your plan the **Wholesale** menu is not in the sidebar at all. With B2B on your plan but the setting off, the menu stays so you can prepare groups and price lists, marked **Off**, and it counts nothing. Invoice-at-checkout is separate and available to every shopper; see [Receipts and credit documents](/admin/sales/receipts).
 
 ## What you see
 
@@ -73,7 +73,7 @@ flowchart LR
 ## Tasks
 
 ### Review an application
-1. Filter **Status → Pending review**, or click the badge.
+1. Filter **Status → Pending review**, or click **Business accounts to verify** under **Needs attention** on the [dashboard](/admin/getting-started/dashboard).
 2. Open the profile. Compare the company details with the **VIES** tab; a **Valid** result with a matching name is strong evidence. **Invalid** or **Service unavailable** means check the number with the customer or re-run the check.
 3. **Approve** and pick the **Customer group**, or **Reject** with a reason the customer will read. The Approve dialog lists active groups only, so create or reactivate the tier first if it is not there.
 

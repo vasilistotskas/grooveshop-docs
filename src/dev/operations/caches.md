@@ -122,7 +122,9 @@ carries the exact name.
 
 ### Ways to invoke it
 
-- **Admin**: the site dropdown's **Cache** tool (`admin:clear-cache`,
+- **Admin**: the store sidebar's **Settings → Cache** entry
+  (`admin/navigation.py: store_sidebar`, listed for `core.purge_cache`
+  holders; `admin:clear-cache`,
   `admin/admin.py: MyAdminSite.clear_cache_view`) lists every surface
   with a live key count, purges the selection, and shows the result. On a
   tenant host the purge is scoped to that tenant's storefront host; on the

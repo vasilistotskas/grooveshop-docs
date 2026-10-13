@@ -32,7 +32,7 @@ A customer account registered on your storefront cannot sign in to the admin, ev
 
 ### Change your password
 
-1. Open the user menu (your name in the top-right corner).
+1. Open your account menu (your name and email at the bottom of the sidebar).
 2. Click **Change password**.
 3. Enter the old password and the new one twice.
 
@@ -40,7 +40,7 @@ Changing your password ends every other browser session of yours. The one you ar
 
 ### Sign out
 
-Open the user menu and click **Log out**. Sessions otherwise expire two weeks after you sign in, and using the panel does not extend them.
+Open your account menu and click **Log out**. Sessions otherwise expire two weeks after you sign in, and using the panel does not extend them.
 
 ### Sign a device out remotely
 
@@ -66,8 +66,8 @@ Social login (Google and others) is available when the platform has configured a
 
 ## Things to know
 
-- The admin address carries the language for anything but Greek: `/admin/` is Greek, `/en/admin/` is English, `/de/admin/` is German. Greek, English and German are also offered in the header switcher once you are signed in; it changes your own view only, never your storefront.
-- The admin never lists the platform staff accounts; those live on the platform console. Your team is managed through memberships, see [Roles & team](/admin/getting-started/roles-and-team).
+- The admin address carries the language for anything but Greek: `/admin/` is Greek, `/en/admin/` is English, `/de/admin/` is German. Greek, English and German are also offered in your account menu at the bottom of the sidebar once you are signed in; it changes your own view only, never your storefront.
+- The admin never lists the platform staff accounts; those live on the platform console. Your team is managed through memberships under <span class="sidebar-path">Settings → Team</span>, see [Roles & team](/admin/getting-started/roles-and-team).
 - If a staff member leaves, untick **Is active** on their membership rather than sharing a password. Removing their platform staff flag is a platform action and also cuts off any API access they had.
 
 ## Related

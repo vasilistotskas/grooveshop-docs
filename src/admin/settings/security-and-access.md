@@ -1,13 +1,13 @@
 ---
 title: Security & access
-description: "The five identity lists under System → Security & Access, whose records they hold on a store's admin, and the safe actions on each."
+description: "The identity lists under System → Security & Access, whose records they hold on a store's admin, and the safe actions on each."
 ---
 
 # Security & access
 
 <span class="sidebar-path">System → Security & Access</span>
 
-**Platform operator tools.** The whole **System** section is hidden from the sidebar unless you are a platform operator, so a store Owner, Admin or Staff member never sees these five entries. Hidden is not the same as sealed off, though: unlike the audit and reconciliation screens, these five are not locked at the page itself. The last section explains what that means for you.
+**Platform operator tools.** The whole **System** section, collapsed at the bottom of the sidebar, is shown only to platform operators, so a store Owner, Admin or Staff member never sees these entries. Hidden is not the same as sealed off, though: unlike the audit and reconciliation screens, most of these are not locked at the page itself. The last section explains what that means for you.
 
 On a store's admin the lists show that **store's customers**. Platform staff identities live on the platform console instead, and nothing here touches them.
 
@@ -67,9 +67,19 @@ Safe actions:
 - **Delete** a token to revoke it immediately.
 - Creating a token from this screen shows the secret once, in a message at the top of the page, and it cannot be recovered afterwards. There is rarely a reason to do this for a customer.
 
+## Social Login Apps, OAuth Clients and OAuth Tokens
+
+Three more entries in the same menu hold configuration rather than customer records:
+
+- **Social Login Apps**: the store's registration with each sign-in provider (Google and the others) behind the storefront's social login. Which of them your store offers is still the `SOCIAL_LOGIN_PROVIDERS` setting.
+- **OAuth Clients**: the outside applications, such as AI shopping agents, that may ask a customer to link their account to the store.
+- **OAuth Tokens**: the tokens issued to those applications when a customer agrees. Delete one to cut that application off from that customer.
+
+A store role cannot open OAuth Clients or OAuth Tokens at all, whatever address is typed.
+
 ## Things to know
 
-- **These five screens are hidden, not blocked.** The audit ledgers and the reconciliation screens refuse to open for anyone but a platform operator, whatever address you type. These five do not: an Owner or Admin who has the address can open them and delete rows, and Staff can open them and add or edit but not delete. Treat that as a reason to keep the Admin role to people you would trust with a customer's sign-in, not as an invitation.
+- **These screens are hidden, not blocked.** The audit ledgers and the reconciliation screens refuse to open for anyone but a platform operator, whatever address you type. Apart from OAuth Clients and OAuth Tokens, these do not: an Owner or Admin who has the address can open them and delete rows, and Staff can open them and add or edit but not delete. Treat that as a reason to keep the Admin role to people you would trust with a customer's sign-in, not as an invitation.
 - Nothing here touches the platform staff who sign in to the admin. A staff password reset or session revocation is done on the platform console.
 - Permission groups are a platform tool and play no part in store roles. The group screen is not listed anywhere in a store's admin any more, and a store role cannot open it whatever address is typed; it is managed on the platform console. See [Roles & team](/admin/getting-started/roles-and-team).
 - The other platform-owned lists a store's admin used to show — store addresses, the record of cache purges, the schedule of recurring work, countries and regions — now refuse to open on a store's address too. They are listed under [Welcome](/admin/).

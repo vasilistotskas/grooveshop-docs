@@ -122,7 +122,7 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
 
 Flower runs as its own Deployment (`backend.yaml`, port 5555) and refuses
 to start without `FLOWER_BASIC_AUTH`; the admin's site dropdown links to
-it only when `ADMIN_FLOWER_URL` is set.
+it, for platform superusers, only when `ADMIN_FLOWER_URL` is set.
 
 ## Tenant fan-out
 

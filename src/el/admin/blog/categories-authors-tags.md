@@ -5,7 +5,7 @@ description: Οι τρεις βοηθητικές λίστες του blog - τ�
 
 # Κατηγορίες, συντάκτες & ετικέτες
 
-<span class="sidebar-path">Blog → Κατηγορίες Blog</span>, <span class="sidebar-path">Blog → Συντάκτες Blog</span>, <span class="sidebar-path">Blog → Ετικέτες Blog</span>
+<span class="sidebar-path">Περιεχόμενο → Blog → Κατηγορίες Blog</span>, <span class="sidebar-path">Περιεχόμενο → Blog → Συντάκτες Blog</span>, <span class="sidebar-path">Περιεχόμενο → Blog → Ετικέτες Blog</span>
 
 Τα άρθρα αναφέρονται σε αυτές τις τρεις λίστες. Όλες οι σελίδες του blog μοιράζονται λωρίδα καρτελών στην κορυφή (Άρθρα Blog, Κατηγορίες, Συντάκτες, Σχόλια, Ετικέτες), ώστε να μετακινείστε χωρίς το πλάγιο μενού.
 
