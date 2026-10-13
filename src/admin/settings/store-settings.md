@@ -1,13 +1,13 @@
 ---
 title: Store settings
-description: "Every runtime setting under Settings → Extra Settings, grouped by area, with its meaning, default and whether the storefront can read it; plus how the two-tier feature switches work."
+description: "Every runtime setting under Settings → Store Settings, grouped by area, with its meaning, default and whether the storefront can read it; plus how the two-tier feature switches work and what the admin shows while a feature is off."
 ---
 
 # Store settings
 
-<span class="sidebar-path">Settings → Extra Settings</span>
+<span class="sidebar-path">Settings → Store Settings</span>
 
-Extra Settings is the list of runtime knobs of your store: prices and thresholds, feature switches, legal identity, integrations. Admin and Owner can edit them; Staff see the entry but cannot open it. Every row belongs to your store only.
+Store Settings is the list of runtime knobs of your store: prices and thresholds, feature switches, legal identity, integrations. Admin and Owner can edit them; Staff do not see the entry. Every row belongs to your store only.
 
 ## What you see
 
@@ -38,6 +38,35 @@ If the plan flag is off, turning the setting on does nothing. If the plan flag i
 | Blog and blog comments | **Blog Enabled** | `BLOG_COMMENTS_ENABLED` |
 
 Commercial features (loyalty, promotions, gift cards, wholesale, suggestions) default to **off** and fail closed: if the setting cannot be read, the feature stays hidden, so nothing is ever on by accident. Interface toggles (cart, catalogue, bottom nav) default to **on** and fail open, so a temporary error never blanks the storefront.
+
+## What the admin shows
+
+The admin follows the same two switches, so its sidebar and dashboard only offer what your store actually has.
+
+**Plan features.** Without the plan flag, the feature's menu is not in the sidebar at all. With the plan flag on and your setting off, the menu stays, marked **Off**: its setup pages work as usual, so you can prepare tiers, coupons, price lists or gift cards before shoppers see them, but its count in the sidebar and its line on the dashboard disappear, since nothing new can arrive. Switching the setting on brings them back on the next page.
+
+| Sidebar entry | Not shown when | Marked **Off** while |
+|---|---|---|
+| <span class="sidebar-path">Customers → Loyalty</span> | the plan has no **Loyalty Enabled** | `LOYALTY_ENABLED` is off |
+| <span class="sidebar-path">Customers → Wholesale</span> | the plan has no **B2B Enabled** | `B2B_WHOLESALE_ENABLED` is off |
+| <span class="sidebar-path">Marketing → Promotions</span> | the plan has no **Promotions Enabled** | `PROMOTIONS_ENABLED` is off |
+| <span class="sidebar-path">Marketing → Gift Cards</span> | the plan has no **Gift Cards Enabled** | `GIFT_CARDS_ENABLED` is off |
+| <span class="sidebar-path">Marketing → Recommendations</span> | the plan has no **Recommendations Enabled** | `PRODUCT_SUGGESTIONS_ENABLED` is off |
+| <span class="sidebar-path">Content → Blog</span> | the plan has no **Blog Enabled** | never: the blog has no setting of its own |
+
+**Pages that only collect what shoppers send.** These have nothing to prepare, so they leave the sidebar while their setting is off and come back, with everything already received, when you switch it on.
+
+| Sidebar entry | Not shown while |
+|---|---|
+| <span class="sidebar-path">Catalog → Reviews</span> | `PRODUCT_REVIEWS_ENABLED` is off |
+| <span class="sidebar-path">Customers → Feedback</span> | `FEEDBACK_ENABLED` is off |
+| <span class="sidebar-path">Customers → Favourites</span> | `FAVOURITES_ENABLED` is off |
+| <span class="sidebar-path">Customers → Newsletter</span> | `NEWSLETTER_ENABLED` is off |
+| <span class="sidebar-path">Content → Blog → Blog Comments</span> | `BLOG_COMMENTS_ENABLED` is off |
+
+**Couriers.** ACS Shipments and ACS Stations are listed only while ACS is active under [Shipping providers](/admin/shipping/providers); BoxNow Shipments and BoxNow Lockers only while BoxNow is.
+
+None of this changes what a role may do: an entry a role cannot open stays hidden from that role whatever the switches say. See [Welcome](/admin/).
 
 ## Settings by category
 
@@ -71,10 +100,10 @@ Defaults are what a fresh store starts with. Money is in euro.
 | `PENDING_ORDER_REMINDER_MAX_COUNT` | Maximum reminder emails for a pending order. | 3 | no |
 | `PENDING_ORDER_REMINDER_INTERVAL_DAYS_1/_2/_3` | Days after placement for the first, second and third reminder. | 1, 3, 7 | no |
 | `CHECKOUT_ABANDONMENT_HOURS` | Hours of inactivity before a checkout counts as abandoned for the reminder email. | 2 | no |
-| `CART_ABANDONED_HOURS` | Hours of inactivity before a cart counts as abandoned, for the Active and Abandoned filters on the carts list. The sidebar badge ignores it and always uses one day. | 24 | no |
+| `CART_ABANDONED_HOURS` | Hours of inactivity before a cart counts as abandoned, for the Active and Abandoned filters on the carts list. | 24 | no |
 | `ABANDONED_CART_CLEANUP_DAYS` | Days after which abandoned carts are deleted. | 7 | no |
 | `OLD_GUEST_CART_CLEANUP_DAYS` | Days after which guest carts are deleted. | 30 | no |
-| `LOW_STOCK_THRESHOLD` | Present in the list but read by nothing. The hourly low-stock alert uses each product's own **Low stock threshold** field instead, and the sidebar badge uses a fixed band of 1 to 9. | 10 | no |
+| `LOW_STOCK_THRESHOLD` | Present in the list but read by nothing. The hourly low-stock alert uses each product's own **Low stock threshold** field instead, and the sidebar number on **Products** and the dashboard's **Running low on stock** use a fixed band of 1 to 9. | 10 | no |
 
 ### Shipping
 
@@ -180,7 +209,7 @@ Fill the seller identity **before the first receipt**: the values are printed on
 
 ### Change a value
 
-1. Open <span class="sidebar-path">Settings → Extra Settings</span>.
+1. Open <span class="sidebar-path">Settings → Store Settings</span>.
 2. Search the name, open the row.
 3. Edit the input that matches the **Type** and **Save**.
 
@@ -188,13 +217,13 @@ The storefront reads every public setting in one request and keeps the answer fo
 
 ### Turn a commercial feature on
 
-1. Confirm with the platform that the plan flag is on (it shows read-only on your store profile).
-2. Set the matching setting to on.
+1. Check that your plan includes it. If the feature's menu is in the sidebar, it does; an **Off** badge on it means only your setting is missing. The plan flags also show read-only on your store profile. If the menu is absent, ask the platform.
+2. Set the matching setting to on. The **Off** badge goes on the next page.
 3. Purge **Site settings** if you want the storefront to pick it up immediately.
 
 ## Things to know
 
-- Your store profile (branding, colours, social links, pixels, payment and courier credentials) is a separate form, not a setting. See [Roles & team](/admin/getting-started/roles-and-team) for where it lives.
+- Your store profile (branding, colours, social links, pixels, payment and courier credentials) is a separate form, not a setting: <span class="sidebar-path">Settings → Store Profile</span>. See [Roles & team](/admin/getting-started/roles-and-team) for what you can change there.
 - The currency cannot be changed by the store; every money path in the back office uses euro, and a storefront showing another symbol over euro amounts would misprice everything.
 - Settings whose description mentions a validator reject malformed JSON on save with an error message.
 - The dashboard reminds Owners and Admins when the legal details the law requires on your website are still empty (name, legal form, `INVOICE_SELLER_REGISTRATION_NUMBER`, VAT ID, address, email). While myDATA is on, it also warns in red when `INVOICE_SELLER_NAME`, `INVOICE_SELLER_VAT_ID` or `INVOICE_SELLER_TAX_OFFICE` is empty, because receipts cannot be submitted without them.

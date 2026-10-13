@@ -42,13 +42,13 @@ Translations you enter in a language the storefront does not show are still stor
 
 ## Admin interface language
 
-The admin has a language switcher in its header (Greek, English, German) once you are signed in. It changes only your own view, never your storefront. The address carries the language: `/admin/` is Greek, `/en/admin/` English, `/de/admin/` German. The login page itself has no switcher, so open the language-prefixed address directly if you want the form in English or German.
+The admin has a language switcher in the account menu at the bottom of the sidebar (Greek, English, German) once you are signed in. It changes only your own view, never your storefront. The address carries the language: `/admin/` is Greek, `/en/admin/` English, `/de/admin/` German. The login page itself has no switcher, so open the language-prefixed address directly if you want the form in English or German.
 
-## Rosetta: the interface wording
+## Translations: the interface wording
 
-**Rosetta** in the site dropdown is the editor for the wording of the admin itself and of the emails it sends — labels, messages, subjects. It edits one platform-wide catalogue shared by every store, so it is restricted to the platform console. On a store's admin the link lands on a login page and nothing can be changed there. If a label is wrong or untranslated, tell the platform which screen and which text.
+<span class="sidebar-path">Settings → Translations</span> is the editor for the wording of the admin itself and of the emails it sends — labels, messages, subjects. It edits one platform-wide catalogue shared by every store, so it is reserved for the platform: the entry is listed only where the platform has opened the editor for your store, and a store's sidebar normally does not show it. If a label is wrong or untranslated, tell the platform which screen and which text.
 
-The storefront's own wording (buttons, menus, checkout text) is not in Rosetta either; it lives in the storefront application and changes with a release.
+The storefront's own wording (buttons, menus, checkout text) is not in this editor either; it lives in the storefront application and changes with a release.
 
 ## Things to know
 

@@ -112,13 +112,22 @@ for (const repoName of [...present, null]) {
   }
 }
 
-/** Admin sidebar entries, so a `sidebar-path` span cannot name a dead screen. */
+/**
+ * Admin sidebar entries, so a `sidebar-path` span cannot name a dead screen.
+ *
+ * Two sources: the store sidebar is built per request by
+ * `admin/navigation.py` (every title there is a `_("…")` call), while the
+ * platform sidebar and the tab strips stay `"title": _("…")` entries in
+ * `settings.py`. Reading only one would let a whole admin's paths go unchecked.
+ */
 function adminScreens() {
-  const settings = join(WORKSPACE, 'grooveshop-django-api', 'settings.py')
-  if (!existsSync(settings)) return null
-  const text = readFileSync(settings, 'utf8')
+  const django = join(WORKSPACE, 'grooveshop-django-api')
+  const settings = join(django, 'settings.py')
+  const navigation = join(django, 'admin', 'navigation.py')
+  if (!existsSync(settings) || !existsSync(navigation)) return null
   const names = new Set()
-  for (const m of text.matchAll(/"title":\s*_\("([^"]+)"\)/g)) names.add(m[1])
+  for (const m of readFileSync(settings, 'utf8').matchAll(/"title":\s*_\("([^"]+)"\)/g)) names.add(m[1])
+  for (const m of readFileSync(navigation, 'utf8').matchAll(/\b_\(\s*"([^"]+)"\s*\)/g)) names.add(m[1])
   // Greek renderings of the same labels, so the el pages can be checked too.
   const po = join(WORKSPACE, 'grooveshop-django-api', 'locale', 'el', 'LC_MESSAGES', 'django.po')
   if (existsSync(po)) {
@@ -198,17 +207,20 @@ for (const file of walk(SRC, /\.md$/)) {
       for (const m of line.matchAll(SPAN_RE)) {
         const span = m[1].trim()
         // Spans also carry directions ("Not in the sidebar. Open the command
-        // palette…") and non-sidebar surfaces ("Site dropdown → Cache").
-        // Only the clean `Section → Screen` form is checkable.
+        // palette…") and non-sidebar surfaces. Only the clean
+        // `Section → Screen` form, with any sub-menu levels between, is
+        // checkable.
         const parts = span.split('→').map(x => x.trim())
-        const wellFormed = parts.length === 2
+        const wellFormed = parts.length >= 2
           && parts.every(x => x && x.length <= 40 && !/[.`/]|Ctrl|⌘/.test(x))
-        // An unknown first part means a non-sidebar surface (the site dropdown,
-        // in either language), not a broken citation.
+        // An unknown first part means a non-sidebar surface, not a broken
+        // citation.
         if (!wellFormed || !SCREENS.has(parts[0])) continue
         stats.screens++
-        if (!SCREENS.has(parts[1])) {
-          problems.push(`${where}  screen not under that section: "${parts[1]}" (from "${span}")`)
+        for (const part of parts.slice(1)) {
+          if (!SCREENS.has(part)) {
+            problems.push(`${where}  not an admin sidebar entry: "${part}" (from "${span}")`)
+          }
         }
       }
     }

@@ -5,7 +5,7 @@ description: The customer notification centre, which events create notifications
 
 # Notifications
 
-<span class="sidebar-path">Sales → Notifications</span>
+<span class="sidebar-path">Customers → Notifications → Notifications</span>
 
 A notification is the bell in the storefront: a short in-app message a signed-in customer sees the moment it is created, and can find later in their notification centre. The platform creates them for order and account events; you can also create announcements by hand. Notifications are separate from email: a shipped order sends both an email and a notification, but the two are produced by different parts of the system and this screen only concerns the in-app side.
 
@@ -34,7 +34,7 @@ Filters: **Notification Status** (Active, Expired, Urgent Priority, Recent, Has 
 
 ### Recipients
 
-A notification reaches nobody on its own. Delivery is one **Notification User** row per recipient, which records whether and when that person saw it. The **Notification Users** screen is not on the sidebar; open it from the search palette. It lists user, notification, seen or unseen, priority and timing, with filters for **User Status** (Seen, Unseen, Seen Today, Urgent & Unseen, Expired Notifications) and search by the user's email or username.
+A notification reaches nobody on its own. Delivery is one **Notification User** row per recipient, which records whether and when that person saw it. Those rows are under <span class="sidebar-path">Customers → Notifications → Recipients</span>, which lists user, notification, seen or unseen, priority and timing, with filters for **User Status** (Seen, Unseen, Seen Today, Urgent & Unseen, Expired Notifications) and search by the user's email or username.
 
 ## What the platform sends automatically
 
@@ -59,13 +59,13 @@ Each of these creates a notification for the customer who owns the order or acco
 
 ### Send an announcement to specific customers
 1. **Add notification**. Write **Title** and **Message** in each language, choose **Kind** (Info for news, Warning for something that needs action), **Category** (System or Promotion), **Priority**, and a **Link** if there is a page to open. Leave **Notification Type** blank. Save.
-2. Open **Notification Users** from the search palette and **Add** one row per recipient: pick the user and the notification you just created.
+2. Open <span class="sidebar-path">Customers → Notifications → Recipients</span> and **Add** one row per recipient: pick the user and the notification you just created.
 3. Each row you save is delivered to that customer at once, over the live connection if they are online and in their notification centre otherwise.
 
 There is no "send to everyone" button; a store-wide broadcast means one row per customer.
 
 ### Check whether a customer saw a notification
-1. Open **Notification Users**, search by the customer's email.
+1. Open **Recipients**, search by the customer's email.
 2. The **Seen** column and the seen timestamp tell you; the analytics block on the row shows how long they took.
 
 ### Withdraw a notification

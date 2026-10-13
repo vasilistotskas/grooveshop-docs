@@ -8,7 +8,7 @@
  *
  * What stays allowed, because the reader actually sees or types it:
  *   - on-screen labels, sidebar paths, admin URLs they may paste
- *   - keys listed on Settings → Extra Settings, and stored choice values the
+ *   - keys listed on Settings → Store Settings, and stored choice values the
  *     admin renders in columns and matches in its search box. Both allowlists
  *     are READ FROM THE DJANGO SOURCE at run time rather than duplicated here,
  *     so a new key or choice never trips this guard and a removed one stops
@@ -42,7 +42,7 @@ function* walk(dir, match = /\.md$/) {
 /**
  * Uppercase tokens the owner legitimately reads, types or searches for:
  *
- *   - keys on the Settings → Extra Settings screen, which lists the key itself
+ *   - keys on the Settings → Store Settings screen, which lists the key itself
  *   - stored choice values, which the admin shows verbatim in columns and
  *     filters and which the search box matches on, so a page telling the owner
  *     to search for one is giving a real instruction, not citing code

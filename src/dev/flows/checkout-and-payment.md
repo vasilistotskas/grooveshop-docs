@@ -461,7 +461,9 @@ query) are stored. The result is an `OrderSourceType`
 (null for an order older than the table), the `source` / `sourceType`
 filters (`order/filters.py`), and in the admin a source badge column,
 two filters, read-only fields on the order's Additional Information tab
-and an "Orders by source" dashboard doughnut. The per-field reference
+and the store dashboard's "Where orders come from" card
+(`admin/dashboard/store/queries.py: order_sources`, the top five sources
+plus "Other" for the selected period). The per-field reference
 is section 3.4 of [Order system](/dev/django/reference/order-system).
 
 ## Invariants

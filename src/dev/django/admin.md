@@ -1,6 +1,6 @@
 ---
 title: Admin (Unfold)
-description: The two Unfold admin sites, BaseModelAdmin and the guarantees its tests enforce (filters, foreign keys, query growth, templates, inlines), withholding, actions and dialogs, datasets, JSON Schema fields, the dashboards, the per-request site menu and how to add an admin section.
+description: The two Unfold admin sites, BaseModelAdmin and the guarantees its tests enforce (filters, foreign keys, query growth, templates, inlines), withholding, actions and dialogs, datasets, JSON Schema fields, the dashboards, the per-request store sidebar and site menu, the header and footer, and how to add an admin section.
 ---
 
 # Admin (Unfold)
@@ -48,11 +48,14 @@ assets; any other store without a logo shows Unfold's symbol and its name.
 
 Under django-tenants a request resolves against one urlconf, so a
 `reverse_lazy` without an explicit `urlconf` can only be cast on the host
-that registers its namespace. Every sidebar link in both `UNFOLD` blocks
-is pinned (`reverse_lazy(..., urlconf=ROOT_URLCONF)` or
+that registers its namespace. Every link left in the two settings blocks
+(the platform sidebar and the `TABS` strips) is pinned
+(`reverse_lazy(..., urlconf=ROOT_URLCONF)` or
 `urlconf=PUBLIC_SCHEMA_URLCONF`), and
 `tests/unit/core/test_unfold_links_resolve.py` casts every one under both
-urlconfs.
+urlconfs. The store sidebar is not in settings: it is built per request
+on the store host (below), so its plain `reverse()` calls always resolve
+against the urlconf serving them.
 
 ## `BaseModelAdmin` (`admin/base.py`)
 
@@ -199,16 +202,34 @@ layouts of `{% component ... with component_class="..." %}` tags, and
 `@dashboard_query` (`admin/dashboard/cache.py`):
 
 ```python
-@dashboard_query("store:kpis:v1", ttl=300, depends_on=("order.Order",))
-def kpis() -> dict[str, Any]: ...
+@dashboard_query(
+    "store:overview:v1",
+    ttl=300,
+    depends_on=("order.Order",),
+    variants=PERIOD_KEYS,
+)
+def overview(key: str) -> dict[str, Any]: ...
 ```
 
 Each query caches one language-neutral payload per tenant (`per_language=True`
-where it carries translated names) and is deleted on commit of any save or
-delete of a model it `depends_on`. `UserAccount` is never a dependency —
-every login saves it. Widgets build their labels, colours (theme tokens,
-never hex) and chart JSON per request. The sidebar badges read one
-60-second `sidebar_counts` query.
+where it carries translated names; one key per entry of `variants`, so a
+request computes only the window it shows) and is deleted on commit of any
+save or delete of a model it `depends_on`, every variant at once.
+`UserAccount` is never a dependency — every login saves it. Widgets build
+their labels, colours (theme tokens, never hex) and chart JSON per request.
+
+The store dashboard (`admin/dashboard/store/widgets.py`, laid out by
+`core/templates/admin/index.html`) shows one period at a time, picked by
+`?period=` (`7d`, `30d` default, `13w`, `12m`: `queries.PERIODS`, whole
+calendar buckets ending with the current one, compared with the span of
+equal length before), and its sales chart one measure, picked by
+`?metric=` (`revenue` default, `orders`). Both are links, not script, so
+the address can be shared. A widget for a feature `admin.features` reports
+absent or switched off is not drawn, and a link is drawn only when
+`admin.navigation.changelist_link` says the viewer may open it.
+`queries.attention_counts` (60 s, cleared by orders, products, reviews,
+blog comments, contact messages and business profiles) feeds both the
+**Needs attention** card and the sidebar badges, read once per request.
 
 The platform dashboard reads `tenant.TenantStatsSnapshot`, refreshed every
 30 minutes by `tenant.tasks.fanout_refresh_stats_snapshots`, instead of
@@ -216,18 +237,67 @@ switching into every store's schema per request.
 
 ## Sidebar and site menu
 
-Sidebar groups in `UNFOLD["SIDEBAR"]["navigation"]` may carry a
-`permission` dotted path; `admin/permissions.py` provides `is_superuser`
-and `platform_environment` (the control-plane badge). The titles are what
-the admin guide names as `Sales → Orders`.
+`UNFOLD["SIDEBAR"]["navigation"]` is the callable
+`admin.navigation.store_sidebar`, which Unfold calls with the request on
+every store-admin page. Every entry is decided there:
 
-`UNFOLD["SITE_DROPDOWN"]` is `admin.navigation.store_site_dropdown`,
-built per request because Unfold renders dropdown items unchecked: Rosetta
-only where its access function allows it, Cache for `core.purge_cache`
-holders (store ADMIN and OWNER; STAFF may not change store settings),
-Email Templates for `order.view_order`, API Swagger, `ADMIN_DOCS_LINKS`,
-and `ADMIN_OPS_LINKS` (Flower, Mailpit, Meilisearch, RabbitMQ, each only
-when its `ADMIN_*_URL` is set) for platform superusers.
+- a model page is listed only when its `ModelAdmin` would open for this
+  user (`changelist_link`: `has_module_permission` and
+  `has_view_or_change_permission`), so a role never sees a link that
+  answers 403;
+- an optional feature follows `admin/features.py: StoreFeatures`, read
+  once per request. A plan-gated feature (loyalty, promotions, gift
+  cards, B2B, recommendations) is an `Availability`: `UNAVAILABLE` when
+  the `Tenant` plan flag is off (`tenant_plan_allows`) hides it,
+  `SETTING_OFF` keeps its setup pages with an "Off" badge and drops its
+  counters, `LIVE` shows everything. Each switch is read through the code
+  that enforces it for shoppers (the service's `is_enabled()`, the
+  permission classes' flag and setting names). The blog follows its plan
+  flag only; reviews, feedback, favourites, newsletter and blog comments
+  follow their setting; a carrier's pages follow its active
+  `ShippingProvider`;
+- a sub-menu (`_menu`) left with one child is replaced by that child;
+- badges count waiting work only, from `queries.attention_counts`.
+
+The titles there are what the admin guide names as `Sales → Orders`; the
+Greek guide uses their `locale/el` translations.
+`tests/integration/admin/test_store_navigation.py` covers the plan and
+setting states, the roles, the badges, and that every registered store
+page is reachable from the sidebar or a tab strip, or is named in the test
+with the reason it is not (`test_every_store_page_is_reachable`).
+
+The platform sidebar stays a static list in `UNFOLD_PLATFORM`; groups
+there may carry a `permission` dotted path, and `admin/permissions.py`
+provides `is_superuser` and `platform_environment` (the control-plane
+badge).
+
+`SITE_DROPDOWN` on both sites is `admin.navigation.ops_site_dropdown`,
+built per request because Unfold renders dropdown items unchecked:
+`ADMIN_OPS_LINKS` (Flower, Mailpit, Meilisearch, RabbitMQ, each only
+when its `ADMIN_*_URL` is set) for platform superusers, nothing for
+anyone else. The store tools it used to hold are sidebar entries in the
+store's **Settings** group: Email Templates for `order.view_order`,
+Translations (Rosetta) where `core.rosetta_access.tenant_scoped_rosetta_access`
+allows it, Cache for `core.purge_cache` holders (store ADMIN and OWNER;
+STAFF may not change store settings).
+
+## Header and footer
+
+`core/templates/admin/base_site.html` overrides Unfold's file through two
+blocks Unfold leaves empty: `nav-global-side` renders a **View store**
+link to `storefront_url` (set by `MyAdminSite.each_context` from
+`UNFOLD["SITE_URL"]`, `admin.navigation.storefront_url`), and `footer`
+includes `core/templates/admin/footer.html` on every non-popup page. The
+footer context comes from `admin/mixins.py: AdminFooterMixin`, shared by
+both sites: the site header, `RELEASE_VERSION`, a **Help & Guides** link
+when `ADMIN_DOCS_URL` is set, and **API docs** (`api_docs_url_name`,
+`swagger-ui` on the store site) for platform superusers.
+
+`admin/environment.py` supplies `ENVIRONMENT` and
+`ENVIRONMENT_TITLE_PREFIX` for the store site. Both return `None` on
+production unless the viewer `is_platform_superuser`, since a store's own
+staff only ever work in production; every other environment is labelled
+for everyone.
 
 The cache page (`admin/admin.py: MyAdminSite.clear_cache_view`) requires
 `core.purge_cache`; purges are scoped to the store's own keys, host and
@@ -235,8 +305,8 @@ edge zone. See [Caches & purging](/dev/operations/caches).
 
 ## Template overrides
 
-- `core/templates/unfold/helpers/app_list.html`, `app_list_item.html`:
-  the nested sidebar app list.
+- `core/templates/admin/base_site.html`, `footer.html`: the header link
+  and the footer (above).
 - `core/templates/admin/index.html`, `platform_index.html` and
   `admin/dashboard/`: the dashboards.
 - `core/templates/admin/clear_cache.html`,
@@ -290,7 +360,11 @@ holds lazy strings evaluated after the request has reset the language.
    they expect when one fails.
 3. Register it for the store site; add public-schema models to
    `register_platform_models()`.
-4. Add the sidebar entry with its pinned `urlconf=`.
+4. Add the sidebar entry: a `page(...)` call in
+   `admin/navigation.py: store_sidebar`, under its group or sub-menu and
+   gated on `admin.features` if it belongs to an optional feature; or, for
+   the platform site, an item in `UNFOLD_PLATFORM` with its pinned
+   `urlconf=`. A page reached only from a tab strip goes in `TABS`.
 5. Run `uv run pytest tests/unit/admin tests/integration/admin`; add the
    admin guide page in the docs repo in both locales.
 
@@ -316,13 +390,17 @@ holds lazy strings evaluated after the request has reset the language.
 | `grooveshop-django-api/admin/admin.py` | `MyAdminSite`, cache page |
 | `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite`, `register_platform_models` |
 | `grooveshop-django-api/admin/base.py` | `BaseModelAdmin`, action permissions, filter mapping, JSON Schema editor |
-| `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `AdminSiteLoginNextMixin` |
+| `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `AdminSiteLoginNextMixin`, `AdminFooterMixin` |
 | `grooveshop-django-api/admin/displays.py`, `admin/filters.py`, `admin/datasets.py` | Shared displays, filters, datasets |
 | `grooveshop-django-api/admin/dashboard/` | Dashboard widgets and the cached queries |
-| `grooveshop-django-api/admin/navigation.py` | Per-request site menu |
+| `grooveshop-django-api/admin/navigation.py` | Per-request store sidebar, `changelist_link`, site menu, storefront link |
+| `grooveshop-django-api/admin/features.py` | `StoreFeatures`, `Availability`: plan flag and store setting per optional feature |
+| `grooveshop-django-api/admin/environment.py` | Environment label and tab-title prefix |
+| `grooveshop-django-api/core/templates/admin/base_site.html`, `core/templates/admin/footer.html` | Header link, footer |
 | `grooveshop-django-api/admin/branding.py` | Logo, icon and favicons per store |
 | `grooveshop-django-api/core/json_schema.py` | `JSONSchemaValidator`, `wire_schema` |
 | `grooveshop-django-api/tenant/role_scopes.py`, `tenant/auth_backends.py` | Role grants, reference data, `core.purge_cache` |
-| `grooveshop-django-api/settings.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `ADMIN_DOCS_LINKS`, `ADMIN_OPS_LINKS` |
+| `grooveshop-django-api/settings.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `ADMIN_DOCS_URL`, `ADMIN_OPS_LINKS` |
+| `grooveshop-django-api/tests/integration/admin/test_store_navigation.py` | The store sidebar's states, roles, badges and reachability |
 | `grooveshop-django-api/core/management/commands/makemessages_unfold.py` | Extracts Unfold's strings into `locale_vendor/unfold` |
 | `grooveshop-django-api/tests/unit/admin/` | The guarantees above |

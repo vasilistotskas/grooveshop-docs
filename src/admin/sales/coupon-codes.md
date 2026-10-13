@@ -5,9 +5,11 @@ description: "Coupon codes attached to code-triggered promotions: single codes, 
 
 # Coupon codes
 
-<span class="sidebar-path">Sales → Coupon Codes</span>
+<span class="sidebar-path">Marketing → Promotions → Coupon Codes</span>
 
 A coupon code is the word a shopper types at checkout to unlock a promotion whose trigger is **Coupon code**. The code carries only identity and limits; the discount, the schedule, the targeting and the conditions all live on the promotion. See [Promotions](/admin/sales/promotions).
+
+The screen belongs to the promotions feature and follows its switches: it is not in the sidebar at all when your plan does not include promotions, and while `PROMOTIONS_ENABLED` is off the **Promotions** menu carries an **Off** badge but stays open, so you can prepare codes before shoppers can use them.
 
 ## What you see
 
@@ -55,7 +57,7 @@ Filters: active, promotion, created date. Search by code or by the assigned cust
 - **What the offers page advertises**: a code promotion is listed only when it has at least one active code that is not personal and not single-use. Single-use bulk codes are meant to be handed out, not published.
 - **Only one code per cart.** Applying a second code replaces the first. If the cart or the customer cannot use the new code, it is detached again and the cart shows the reason.
 - **Wholesale carts** refuse coupons unless `B2B_ALLOW_PROMOTIONS` is on. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
-- Redemptions are read-only under the **Promotion Redemptions** screen (search palette), with export.
+- Redemptions are read-only under <span class="sidebar-path">Marketing → Promotions → Redemptions</span>, with export.
 
 ## Related
 

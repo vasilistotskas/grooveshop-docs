@@ -5,11 +5,11 @@ description: "Rule-based promotions: benefit types, targeting, conditions and li
 
 # Promotions
 
-<span class="sidebar-path">Sales → Promotions</span>
+<span class="sidebar-path">Marketing → Promotions → Promotions</span>
 
-A promotion is a rule the cart evaluates: "10% off the whole order over 50 €", "free shipping", "buy 3 get 1 free in this category", "a free gift with your first order". Automatic promotions apply on their own; code promotions need a coupon code, managed under [Coupon codes](/admin/sales/coupon-codes). The green badge on the sidebar entry counts promotions that are live right now.
+A promotion is a rule the cart evaluates: "10% off the whole order over 50 €", "free shipping", "buy 3 get 1 free in this category", "a free gift with your first order". Automatic promotions apply on their own; code promotions need a coupon code, managed under [Coupon codes](/admin/sales/coupon-codes).
 
-Promotions ship dark. They work only when both switches are on: the platform has enabled promotions for the store, and `PROMOTIONS_ENABLED` is on under [Store settings](/admin/settings/store-settings). With either off, nothing here applies and the storefront's offers page answers "no offers".
+Promotions ship dark. They work only when both switches are on: the platform has enabled promotions for the store, and `PROMOTIONS_ENABLED` is on under [Store settings](/admin/settings/store-settings). With either off, nothing here applies and the storefront's offers page answers "no offers". The sidebar follows the same switches: without promotions on your plan the **Promotions** menu is not shown at all; with them on the plan but the setting off, the menu stays and carries an **Off** badge, so you can prepare promotions and codes before shoppers see them.
 
 ## What you see
 
@@ -83,7 +83,7 @@ Header actions: **Generate codes** (see Coupon codes) and **Duplicate**, which c
 - **Usage limits are counted on orders.** Every order that used a promotion writes a redemption row while the promotion is locked, so a limit of 100 really is 100 orders even under load. Per-customer limits use the account, or the checkout email for guests, which is best-effort.
 - **First Order Only** is checked against the account, or the checkout email for guests, again best-effort.
 - **The offers page** lists every live automatic promotion, and code promotions only when they have at least one code a shopper may be shown (active, not personal, not single-use) and have not reached their total usage limit.
-- **Redemptions are visible but not editable.** The **Promotion Redemptions** screen, reachable through the search palette, is a read-only ledger with CSV and XML export.
+- **Redemptions are visible but not editable.** <span class="sidebar-path">Marketing → Promotions → Redemptions</span> is a read-only ledger with CSV and XML export.
 - The discount an order received is stamped on the order (**Promotion discount** under Payment Information) and never recalculated.
 
 ## Related

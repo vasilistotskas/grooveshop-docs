@@ -7,7 +7,7 @@ description: Find, inspect and act on customer orders; understand every order an
 
 <span class="sidebar-path">Sales → Orders</span>
 
-Every purchase, whether it came from the storefront, a guest checkout or an AI agent, is one order. This is the screen store staff live in: it answers "where is this order, has it been paid, and what do I have to do next". The red badge on the sidebar entry is the number of orders still in **Pending**.
+Every purchase, whether it came from the storefront, a guest checkout or an AI agent, is one order. This is the screen store staff live in: it answers "where is this order, has it been paid, and what do I have to do next". The number beside the sidebar entry is the number of orders still in **Pending**; the dashboard shows the same count as **Orders to process** under **Needs attention**.
 
 ## What you see
 
@@ -26,6 +26,8 @@ Every purchase, whether it came from the storefront, a guest checkout or an AI a
 | **Created** | Date and time, with a relative age. |
 
 Each row has two quick actions: **Download shipping voucher (PDF)** and **Customer's orders**, which reopens the list filtered to the same account, or to the same email for guests.
+
+A tab strip above the list links **Orders**, **Order Items**, **Receipts** and **Credit Documents**; platform operators also get **Stock Logs** and **Order History**. **Order Items** has no sidebar entry of its own: it lists every order line separately, so filtering it by product shows who bought that product.
 
 ### Filters
 
@@ -116,7 +118,7 @@ Every new order records where the customer came from: the ad, post, search resul
 
 **Order source** is the channel's name (Instagram, Google, the referring website) and is what the list column shows. **Traffic medium** and **Campaign name** are the `utm_medium` and `utm_campaign` of a tagged link. **Referrer host** is the website the customer arrived from, without the page, and **Landing page** is the first page they saw, without its parameters.
 
-The dashboard's **Orders by source** chart counts the last 30 days of orders by the same source. See [Dashboard](/admin/getting-started/dashboard).
+The dashboard's **Where orders come from** card shows each source's share of the orders in the period you pick there: the five biggest sources by name, the rest together as **Other**. See [Dashboard](/admin/getting-started/dashboard).
 
 ### Tag a link so its orders are recognised
 1. Add `utm_source`, `utm_medium` and `utm_campaign` to the link you share, e.g. `?utm_source=newsletter&utm_medium=email&utm_campaign=autumn-sale`.

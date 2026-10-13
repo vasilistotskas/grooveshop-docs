@@ -5,9 +5,9 @@ description: The courier rows that switch delivery options on or off at checkout
 
 # Shipping providers
 
-<span class="sidebar-path">Shipping → Shipping Providers</span>
+<span class="sidebar-path">Settings → Shipping Providers</span>
 
-One row per courier integration. The row is the master switch for the courier in the storefront checkout, declares which fulfilment kinds it can serve and holds its **Rates**: the countries it delivers to and at what price. The same screen is also listed under <span class="sidebar-path">System → Configuration → Shipping Providers</span> for superusers; it is one and the same list.
+One row per courier integration. The row is the master switch for the courier in the storefront checkout, declares which fulfilment kinds it can serve and holds its **Rates**: the countries it delivers to and at what price. It also decides what the **Shipping** section of the sidebar lists: **ACS Shipments** and **ACS Stations** appear only while the ACS row is active, **BoxNow Shipments** and **BoxNow Lockers** only while the BoxNow row is.
 
 Three rows exist: **ACS Courier** (code `acs`, home delivery and Smartpoint lockers), **BoxNow** (code `boxnow`, lockers only) and **Standard delivery** (code `flat_rate`, home delivery you arrange yourself, with no courier account behind it). Every checkout option comes from one of these rows. A new store starts with Standard delivery switched on and a rate for Greece, so it can take orders before it signs with a courier.
 
@@ -73,7 +73,7 @@ What follows from it:
 - **No rate, no option.** A courier appears for a country only when it has an active rate for that country and kind. There is no store-wide fallback price: a country that no active rate covers cannot be chosen at checkout at all.
 - **The checkout country list is built from your rates.** It shows exactly the countries with at least one active rate. A customer whose saved address is in another country is asked for a new delivery address.
 - **The free-shipping threshold comes first.** Once the cart reaches it, the option is free, whatever the price or a live ACS quote would be.
-- **ACS live pricing** (**ACS_DYNAMIC_PRICING_ENABLED** in <span class="sidebar-path">Settings → Extra Settings</span>): when on, ACS is asked for a live weight-based quote at checkout. When the quote fails, the rate's **Price** is charged. It needs a merchant pickup station code (see Metadata).
+- **ACS live pricing** (**ACS_DYNAMIC_PRICING_ENABLED** in <span class="sidebar-path">Settings → Store Settings</span>): when on, ACS is asked for a live weight-based quote at checkout. When the quote fails, the rate's **Price** is charged. It needs a merchant pickup station code (see Metadata).
 - **ACS Smartpoint** needs the **ACS_SMARTPOINT_ENABLED** setting on as well as an active pickup-point rate. The setting is off by default, so a fresh store hides Smartpoint until the stations are synced.
 - **A free-shipping promotion removes the price but never opens a country.** The delivery country still needs an active rate.
 
@@ -124,7 +124,7 @@ To stop delivering to a country, untick **Is Active** on its rate lines. Once no
 
 1. Make sure ACS Stations have been synced (see [ACS Courier](/admin/shipping/acs)).
 2. Tick **Supports Pickup Point** on the ACS row and make sure it has an active pickup-point rate.
-3. Turn on **ACS_SMARTPOINT_ENABLED** in <span class="sidebar-path">Settings → Extra Settings</span>.
+3. Turn on **ACS_SMARTPOINT_ENABLED** in <span class="sidebar-path">Settings → Store Settings</span>.
 
 ### Hide a payment method for one carrier
 
@@ -139,11 +139,11 @@ To stop delivering to a country, untick **Is Active** on its rate lines. Once no
 
 ## Things to know
 
-- **Credentials are not on this screen.** The ACS and BoxNow keys, company and user IDs, billing code, partner and warehouse IDs and the BoxNow webhook secret belong to the store's own record with the platform team. You cannot view or edit them here. When they are missing the courier is hidden from checkout even with **Is Active** on, and a voucher for an order that already exists is not issued at all: the attempt stops and emails the store's admins instead of retrying, because credentials do not appear on their own.
+- **Credentials are not on this screen.** The ACS and BoxNow keys, company and user IDs, billing code, partner and warehouse IDs and the BoxNow webhook secret belong to the store profile, <span class="sidebar-path">Settings → Store Profile</span>, which Owners and Admins can edit. When they are missing the courier is hidden from checkout even with **Is Active** on, and a voucher for an order that already exists is not issued at all: the attempt stops and emails the store's admins instead of retrying, because credentials do not appear on their own.
 - **Live Mode is a label, not a switch.** It is there so you can tell at a glance that vouchers on this store are test vouchers. Moving between test and live credentials is done by the platform team.
-- Turning **Is Active** off does not touch existing shipments. Vouchers already issued keep being tracked.
+- Turning **Is Active** off does not touch existing shipments. Vouchers already issued keep being tracked, but the courier's shipment and pickup-point screens leave the sidebar until you switch the row back on.
 - The row can also be deleted, but its rates go with it, and these are the only couriers the platform supports, so deleting a row simply removes that courier from checkout until it is recreated with the same **Code**.
-- **Shipping prices are no longer in Extra Settings.** The old store-wide price and free-shipping settings were replaced by rates; each store's existing values were copied into rates for the countries it already served.
+- **Shipping prices are no longer in Store Settings.** The old store-wide price and free-shipping settings were replaced by rates; each store's existing values were copied into rates for the countries it already served.
 
 ## Related
 

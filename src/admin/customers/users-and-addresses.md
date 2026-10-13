@@ -5,13 +5,13 @@ description: Customer accounts and their saved addresses; what an admin can safe
 
 # Users & addresses
 
-<span class="sidebar-path">Customers → Users</span> and <span class="sidebar-path">Customers → User Addresses</span>
+<span class="sidebar-path">Customers → Customers</span> and <span class="sidebar-path">Customers → Addresses</span>
 
-On a store's admin these screens list the store's **customers**: everyone who registered on the storefront or was created for an order. Your own team members are not managed here. Staff roles, invitations and the owner are handled as described in [Roles & team](/admin/getting-started/roles-and-team).
+On a store's admin these screens list the store's **customers**: everyone who registered on the storefront or was created for an order. Your own team members are not managed here. Staff roles, invitations and the owner are handled under <span class="sidebar-path">Settings → Team</span>, as described in [Roles & team](/admin/getting-started/roles-and-team).
 
 ## What you see
 
-Columns of the user list:
+Columns of the customer list:
 
 | Column | Meaning |
 |---|---|
@@ -45,7 +45,7 @@ Buttons: platform operators see **Adjust loyalty points** on the account page. T
 
 ## Addresses
 
-<span class="sidebar-path">Customers → User Addresses</span> lists every saved delivery address across customers.
+<span class="sidebar-path">Customers → Addresses</span> lists every saved delivery address across customers.
 
 | Column | Meaning |
 |---|---|

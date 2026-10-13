@@ -7,7 +7,7 @@ description: What the carts list shows, how abandoned carts are identified and c
 
 <span class="sidebar-path">Sales → Carts</span>
 
-A cart is a shopper's basket before checkout. Signed-in customers have exactly one cart that follows their account; guests get one per browser session. This screen is for looking: seeing what people are about to buy, how many baskets were left behind, and whether a customer's "my cart is broken" report has a basis. The orange badge on the sidebar entry counts carts idle for more than a day but less than a month.
+A cart is a shopper's basket before checkout. Signed-in customers have exactly one cart that follows their account; guests get one per browser session. This screen is for looking: seeing what people are about to buy, how many baskets were left behind, and whether a customer's "my cart is broken" report has a basis. The sidebar entry carries no count: a basket left behind is not work waiting for you, so it is not counted like orders to process.
 
 ## What you see
 

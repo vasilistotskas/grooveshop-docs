@@ -5,7 +5,7 @@ description: Replace the storefront's built-in header, footer and mobile menus w
 
 # Navigation
 
-<span class="sidebar-path">Not in the sidebar. Open the command palette (Ctrl+K / ⌘K) and type "Navigation", or go to `/admin/page_config/navigationmenu/`.</span>
+<span class="sidebar-path">Content → Menus → Menus</span> and <span class="sidebar-path">Content → Menus → Menu Columns</span>
 
 The storefront ships with a built-in header, a built-in burger menu on phones and a built-in footer. A **Navigation Menu** row replaces one of those slots with links you choose. Store staff, admins and owners can edit them.
 
@@ -13,76 +13,58 @@ The built-in header is up to four links: **Shop** always, then **Blog**, **Offer
 
 ## What you see
 
-A list with one row per configured **Slot** and its last update. There are at most three rows, because the slot is unique: **Header**, **Footer**, **Mobile**.
+### Menus
 
-The form has three fields:
+A list with one row per configured **Slot**, the number of **Entries** in it and its last update. There are at most three rows, because the slot is unique: **Header**, **Footer**, **Mobile**.
 
-| Field | What it takes |
+The menu form holds the **Slot** and, below it, what the slot contains:
+
+- **Header** and **Mobile** take a flat list of **Links**, in the order you drag them into.
+- **Footer** takes **Navigation Columns**: a heading per column (**Label**, one per language, and an optional **Icon**), also in drag order. The links inside a column are edited on the column itself: follow **Change** on the column's row.
+
+### Menu Columns
+
+The footer columns of every menu, with their **Menu**, the number of **Links** and the sort order, filterable by slot. A column's page has **Menu**, **Label** (per language, up to 100 characters), **Icon** and the column's own **Links**.
+
+An **Icon** must start with `i-` and be all lower case, for example `i-heroicons-light-bulb`; a capital letter is rejected. Links themselves carry no icon.
+
+### Links
+
+Every link points at exactly one destination. Fill in one of these four fields and leave the other three empty; saving with none, or with two, is refused.
+
+| Field | Points at |
 |---|---|
-| **Slot** | Header, Footer or Mobile. |
-| **Items** | The menu as JSON, in the shape below. |
-| **Locale Overrides** | The same shape once more, per non-default language, e.g. `{"en": [...]}`. |
+| **Content page** | One of your [content pages](/admin/storefront/content-pages). The link follows the page if you change its slug. |
+| **Custom page** | One of your [page layouts](/admin/storefront/page-layouts). |
+| **Built-in page** | A storefront page every store has: Home, Products, Blog, Contact, Offers, Gift cards, Loyalty program, Feedback. |
+| **External link** | A full address on another site. |
 
-The form warns before you leave with unsaved changes.
-
-### Shape of Items
-
-Header and Mobile take a flat list of links:
-
-```json
-[
-  {"label": "Προϊόντα", "to": "/products", "icon": "i-heroicons-building-storefront"},
-  {"label": "Blog", "to": "/blog"},
-  {"label": "Οδηγός", "href": "https://example.com/guide"}
-]
-```
-
-Footer takes columns, each with children:
-
-```json
-[
-  {
-    "label": "Σχετικά με εμάς",
-    "icon": "i-heroicons-information-circle",
-    "children": [
-      {"label": "Ποιοι είμαστε", "to": "/info/about"},
-      {"label": "Όροι Χρήσης", "to": "/terms-of-use"}
-    ]
-  }
-]
-```
-
-Rules enforced on save (the form shows the exact error):
-
-- Every link has a **label** (up to 100 characters) and exactly one of **to** (an internal path starting with `/`) or **href** (an `https://` URL). Giving both, or neither, is rejected.
-- **icon** is optional. It must start with `i-` and be all lower case; a capital letter is rejected.
-- A menu holds at most 50 top-level entries. Footer columns count towards that; the children inside them do not.
-- A footer column must have at least one child.
-- No other keys are accepted. A misspelled key fails the save rather than being ignored.
-
-### Locale Overrides
-
-Menus are translated **whole**, not label by label: the key is the language code and the value is a complete menu in the same shape. The default language (Greek) is not a valid key; its menu is the **Items** field itself. A language with no entry gets the default menu.
+**Label** is per language and up to 100 characters. Leave it empty on a content-page or custom-page link and the menu shows the page's own title, already translated. A built-in page or an external link has no title to borrow, so write its label; a label written in one language only is shown in every language.
 
 ## Tasks
 
 ### Publish a custom header
-1. Open the list and click **Add** (or open the existing Header row).
+1. Open <span class="sidebar-path">Content → Menus → Menus</span> and click **Add** (or open the existing Header row).
 2. Set **Slot** to Header.
-3. Paste the JSON list into **Items**. Use `to` for pages of your own store and `href` for external sites.
-4. If the store serves English, add `{"en": [ ... ]}` to **Locale Overrides** with the same links and English labels.
-5. Save, then purge the cache (below).
+3. Under **Links** add one link per entry, pick its destination and, where needed, a label in every language your store serves. Drag the rows into order.
+4. Save.
+
+### Build the footer
+1. Add the menu with **Slot** Footer and save it before adding anything else: until the row is saved the form offers plain links, which a footer does not show. Once saved it offers **Navigation Columns** instead.
+2. Add a column per heading: its **Label** and, if you like, an **Icon**. Save.
+3. Follow **Change** on a column, add its links, save. Repeat for each column. All columns of all menus are also listed under <span class="sidebar-path">Content → Menus → Menu Columns</span>.
 
 ### Link to a content page
-Use `"to": "/info/<slug>"` where the slug is the page's slug in [Content pages](/admin/storefront/content-pages). The page must be published or the link leads to a 404.
+Add a link and pick the page under **Content page**. Leave **Label** empty to use the page's title. While the page is unpublished the link is left out of the menu rather than leading to a 404, and it comes back when you publish the page.
 
 ### Go back to the built-in menu
-Delete the row for that slot. An empty **Items** list has the same effect: the storefront treats a slot with no items as unconfigured.
+Delete the row for that slot. A menu with nothing visible in it has the same effect: the storefront treats a slot with no entries as unconfigured.
 
 ## Things to know
 
-- **A saved row replaces the built-in menu completely.** The moment a Header row exists with even one item, the storefront stops adding Shop, Blog, Offers and Gift cards. It is all or nothing, not a merge, so list every link you still want. This is the usual reason a shop "loses" its Offers link after a menu edit.
-- **Cache.** The storefront keeps each language's menu for 5 minutes and goes on serving the old copy for up to an hour while it fetches a new one, and the rendered pages are cached on top of that. Saving the row purges nothing by itself. Open the [Cache](/admin/system/cache) tool and purge **Pages & navigation**, which clears both the menus and the cached pages.
+- **A saved row replaces the built-in menu completely.** The moment a Header row exists with even one visible link, the storefront stops adding Shop, Blog, Offers and Gift cards. It is all or nothing, not a merge, so add every link you still want, for example as **Built-in page** links. This is the usual reason a shop "loses" its Offers link after a menu edit.
+- **Hidden links.** A link to an unpublished content page or page layout is left out, and a footer column with no visible link is left out with it, so the menu never advertises a page that answers "not found".
+- **Cache.** The storefront keeps each language's menu for 5 minutes and goes on serving the old copy for up to an hour while it fetches a new one, and the rendered pages are cached on top of that. Saving a menu, a column or a link purges both on its own about ten seconds later. If a change still does not show, purge **Pages & navigation** on the [Cache](/admin/system/cache) page.
 - On the standard footer one column is automatic: **Pages**, listing every published content page. It sits next to your configured columns, and it leaves out a legal page that one of your columns already links so the same document is not listed twice. Some storefront themes drop this column entirely.
 - Labels are your content, not translation keys. Write them exactly as they should appear.
 - The Header slot feeds both the desktop header and the burger menu on phones. The **Mobile** slot is accepted and stored, but the storefront does not read it yet; configuring it changes nothing on screen today.

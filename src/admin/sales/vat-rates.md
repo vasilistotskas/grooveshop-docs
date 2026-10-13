@@ -5,7 +5,7 @@ description: The VAT rates products can carry, which rates are accepted, how VAT
 
 # VAT rates
 
-<span class="sidebar-path">Sales → VAT Rates</span>
+<span class="sidebar-path">Settings → VAT Rates</span>
 
 A VAT rate is a single percentage. Each product points at one rate; the rate is what turns the product's net price into the price the shopper sees and what the invoice reports per band. Most stores need two or three rows: the standard rate, a reduced rate for books or food, and zero.
 

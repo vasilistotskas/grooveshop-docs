@@ -7,7 +7,7 @@ description: "ACS pickup lists, ACS cash-on-delivery payouts and the receipt and
 
 <span class="sidebar-path">System → Reconciliation</span>
 
-**Platform operators only.** These three screens refuse to open for anyone else. Owners see the effect of the routines on their orders and shipments; this page explains what happens behind them and what an operator does when asked.
+**Platform operators only.** These four screens (**ACS Pickup Lists**, **ACS COD Payouts**, **Receipt Counter**, **Credit Counter**) refuse to open for anyone else. Owners see the effect of the routines on their orders and shipments; this page explains what happens behind them and what an operator does when asked.
 
 Pickup lists and cash-on-delivery payouts are explained in depth, from the store's side, in [ACS Courier](/admin/shipping/acs). This page covers the two ledgers themselves and the Receipt and Credit Counters.
 

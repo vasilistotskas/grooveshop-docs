@@ -5,9 +5,9 @@ description: Preview every transactional email the store sends, in each language
 
 # Email templates
 
-<span class="sidebar-path">Not in the sidebar. Click the store name at the top of the sidebar and pick **Email Templates**, or go to `/admin/email-templates/management/`.</span>
+<span class="sidebar-path">Settings → Email Templates</span>
 
-The Email Template Management page lets staff see exactly what a customer receives. It is a **preview tool and nothing else**: the templates belong to the platform, and there is no way to edit one, reset one, or send a test from this page. The page exists on the store admin only, and it shows real orders of this store, so it is open only to roles that may view orders; treat what you see on it as customer data.
+The Email Template Management page lets staff see exactly what a customer receives. It is a **preview tool and nothing else**: the templates belong to the platform, and there is no way to edit one, reset one, or send a test from this page. The page exists on the store admin only, and it shows real orders of this store, so it is open, and listed in the sidebar, only for roles that may view orders; treat what you see on it as customer data.
 
 ## What you see
 
@@ -44,7 +44,7 @@ Ten templates carry a written description and a real subject pattern such as `Yo
 ## Tasks
 
 ### Check what a customer will get
-1. Open the page from the site dropdown.
+1. Open <span class="sidebar-path">Settings → Email Templates</span>.
 2. Click the template, for example **order_shipped**.
 3. Pick the **Language** the customer uses.
 4. Pick the order under **Data**.

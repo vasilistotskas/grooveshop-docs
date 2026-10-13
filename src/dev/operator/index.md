@@ -61,9 +61,13 @@ stock install: the `Control plane` subheader, the `hub` symbol,
 (which renders a permanent amber **Control plane** badge, because the two
 consoles look alike enough to edit the wrong one), a `COMMAND` block so
 the ⌘K palette searches records
-rather than only sidebar titles, and the sidebar below. `SITE_DROPDOWN`
-carries a single **Help & Guides** link, and only when `ADMIN_DOCS_URL` is
-set, so a local checkout renders no link at all.
+rather than only sidebar titles, and the sidebar below. `SITE_DROPDOWN` is
+`admin/navigation.py: ops_site_dropdown`, shared with the store site: the
+`ADMIN_OPS_LINKS` consoles (Flower, Mailpit, Meilisearch, RabbitMQ), each
+only when its `ADMIN_*_URL` is set. The **Help & Guides** link sits in the
+footer that `admin/mixins.py: AdminFooterMixin` gives both sites, next to
+the running `RELEASE_VERSION`, and only when `ADMIN_DOCS_URL` is set, so a
+local checkout renders no link at all.
 
 ### Registration is copied, not re-declared
 
@@ -177,7 +181,10 @@ renaming the console is a row change, not a code change.
 
 ## The sidebar
 
-Four groups, eighteen links (`UNFOLD_PLATFORM["SIDEBAR"]["navigation"]`).
+Four groups, twenty links (`UNFOLD_PLATFORM["SIDEBAR"]["navigation"]`).
+`tests/integration/admin/test_store_navigation.py:
+test_every_platform_page_is_in_the_platform_sidebar` fails when a model
+registered on this site has no link here.
 Every `link` is a `reverse_lazy(..., urlconf=PUBLIC_SCHEMA_URLCONF)`: an
 unpinned lazy cannot be cast on a host that does not register the
 `platform_admin` namespace, and Django's technical 500 page casts every lazy
@@ -193,6 +200,7 @@ in settings, so an unpinned link turns any local error into
 | **Plan & Billing** | `admin/platform_billing.py: PlanBillingView` | A custom Unfold page mounted only here. Documents how plans actually work and classifies every store with the same `tenant/billing.py: billing_state` the nightly dunning task acts on, so the page can never disagree with the automation. [Plans, billing & dunning](/dev/operator/billing) |
 | **Tenant Domains** | `tenant.TenantDomain` | Every hostname the platform serves, and which store it resolves to. [Domains & certificates](/dev/operator/domains) |
 | **Memberships** | `tenant.UserTenantMembership` | Staff grants: which public identity may operate which store, and in what role. [Platform staff & access](/dev/operator/team) |
+| **Tenant Archives** | `tenant.TenantArchive` | What offboarding kept of a destroyed store: the erasure record and the retained invoices' legal basis and expiry. Read-only. [Suspend, export & destroy](/dev/operator/lifecycle) |
 
 ### Identity
 
@@ -200,6 +208,7 @@ in settings, so an unpinned link turns any local error into
 |---|---|---|
 | **Platform Staff** | `user.UserAccount` (public rows) | Platform identities. On this host these are operators and store owners, never a store's shoppers — those live in each tenant's own schema |
 | **Groups** | `auth.Group` | Django groups. `auth` is in `role_scopes.PLATFORM_ONLY_APP_LABELS` precisely because a store admin who can mint groups can mint themselves any permission that exists. The store sidebar linked this until 2026-09-12; nothing in the repository creates a `Group`, so the section listed a table nothing reads while offering exactly that escalation |
+| **User Sessions** | `usersessions.UserSession` (public rows) | Platform staff's own signed-in sessions. Each store's customer sessions are in that store's admin, under System → Security & Access |
 
 ### Platform
 

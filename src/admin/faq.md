@@ -13,9 +13,9 @@ Each answer is short on purpose; follow the link for the details.
 
 The admin accepts platform staff accounts with a membership in your store, never storefront customer accounts, even with the same email. Ask an Owner to add you, and ask the platform for a staff account if you have none. See [Signing in & MFA](/admin/getting-started/login-and-mfa).
 
-### A colleague sees "permission denied" on Extra Settings
+### A colleague cannot find Store Settings, Cache or Team
 
-Their role is Staff. Staff sees the entry but cannot open it; only Admin and Owner can. Change the role on their membership. See [Roles & team](/admin/getting-started/roles-and-team).
+Their role is Staff. The sidebar leaves out every screen a role cannot open, and only Admin and Owner can open **Store Profile**, **Team**, **Store Settings** and **Cache**. Change the role on their membership. See [Roles & team](/admin/getting-started/roles-and-team).
 
 ### I cannot demote or remove the other Owner
 
@@ -27,7 +27,19 @@ Nothing prevents that, and no Admin can undo it. Ask the platform to grant an Ow
 
 ### Where is the System section? I only see up to Settings
 
-The System section (audit logs, reconciliation, identity lists) is for platform operators and is hidden from store roles. Ask the platform when you need something from there. See [Welcome](/admin/).
+The System section (audit logs, reconciliation, identity lists, Stripe) is for platform operators and is hidden from store roles. Ask the platform when you need something from there. See [Welcome](/admin/).
+
+### A menu in the sidebar is marked "Off"
+
+The feature is part of your plan but switched off in **Store Settings**. Its pages work, so you can set it up before shoppers see it; switch its setting on when you are ready. See [Store settings](/admin/settings/store-settings#what-the-admin-shows).
+
+### Loyalty, Promotions, Reviews or another entry is missing from the sidebar
+
+It depends on the entry. Loyalty, Wholesale, Promotions, Gift Cards, Recommendations and Blog are missing when your plan does not include them; ask the platform. Reviews, Feedback, Favourites, Newsletter and Blog Comments are missing while their setting is off in **Store Settings**. The ACS or BoxNow pages are missing while that courier is not an active shipping provider. And a screen your role cannot open is never listed. See [Store settings](/admin/settings/store-settings#what-the-admin-shows) and [Welcome](/admin/).
+
+### Where did Email Templates, Cache and Translations go?
+
+They used to sit in the menu under the store name at the top of the sidebar. All three are in the **Settings** section now; the help link is in the footer of every page. See [Welcome](/admin/).
 
 ### Does the admin have two-factor authentication?
 
@@ -37,7 +49,7 @@ No. The admin login is email and password only. Your storefront customers do get
 
 ### I edited a product but the storefront still shows the old price
 
-Saving a product does not purge its cache: catalogue pages are rebuilt at most every five minutes, and your browser may cache them too. Reload with Ctrl+Shift+R first; then purge **Products** on the Cache page. See [Cache](/admin/system/cache).
+Saving a product purges its cache on its own about ten seconds later, but your browser may still hold the old page. Reload with Ctrl+Shift+R first; if it still looks old, purge **Products** on the Cache page. See [Cache](/admin/system/cache).
 
 ### I changed a setting and nothing happened
 
@@ -49,7 +61,7 @@ Check, in order: the plan flag on the store profile, the `PROMOTIONS_ENABLED` se
 
 ### My navigation menu edit is not visible
 
-Menus and page layouts are cached as rendered pages. Purge **Pages & navigation** on the Cache page. See [Navigation](/admin/storefront/navigation) and [Cache](/admin/system/cache).
+Menus and page layouts are cached as rendered pages. Saving a menu, column or link purges them on its own about ten seconds later; if the change still does not show, purge **Pages & navigation** on the Cache page. See [Navigation](/admin/storefront/navigation) and [Cache](/admin/system/cache).
 
 ### A product image does not appear
 
@@ -115,17 +127,17 @@ They request it from their account; the file is ready for seven days. Platform o
 
 ### Newsletter subscriptions are gone from the account page
 
-`NEWSLETTER_ENABLED` is off, or the topic is inactive. Existing unsubscribe links keep working either way. See [Countries & regions](/admin/localization/countries-and-regions) for topics and [Store settings](/admin/settings/store-settings).
+`NEWSLETTER_ENABLED` is off, or the topic is inactive. With the setting off, the **Newsletter** menu also leaves the admin sidebar. Existing unsubscribe links keep working either way. See [Countries & regions](/admin/localization/countries-and-regions) for topics and [Store settings](/admin/settings/store-settings).
 
 ## Admin itself
 
 ### The dashboard numbers look a few minutes old
 
-They are cached for five minutes and refreshed whenever an order, invoice, product, review, customer or contact message is saved. See [Dashboard](/admin/getting-started/dashboard).
+Each block is kept for one to fifteen minutes and refreshed at once when an order, product, review, blog comment, contact message or business account it counts is saved. New customers, open carts and search figures wait for their time to run out. See [Dashboard](/admin/getting-started/dashboard).
 
-### The Contact Messages badge never goes down
+### The Messages number does not go down when I read messages
 
-It counts every enquiry you have, not the unread ones: there is no read flag. It only falls when messages are deleted. See [Welcome](/admin/).
+It counts the contact-form messages of the last 7 days, not the unread ones: there is no read flag. It falls as messages turn a week old. See [Welcome](/admin/).
 
 ### How do I find an order by voucher number or an email quickly?
 

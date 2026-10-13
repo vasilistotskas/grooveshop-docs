@@ -7,7 +7,7 @@ description: The shared reference data behind checkout addresses (countries, reg
 
 Countries, regions and store domain records are **platform-wide reference data**. They are shared by every store and live on the platform console, not in a store's admin: one store editing them would change them for all. A store role never gets permission on them, and they are not in your sidebar. This page explains what they control so you know what to ask for.
 
-Subscription topics, in contrast, are yours: they sit under <span class="sidebar-path">Newsletter → Subscription Topics</span> in your own admin.
+Subscription topics, in contrast, are yours: they sit under <span class="sidebar-path">Customers → Newsletter → Subscription Topics</span> in your own admin.
 
 ## Countries and regions (platform)
 
@@ -30,7 +30,7 @@ The platform creates one record per store domain when the domain is set up. Its 
 
 ## Subscription Topics (yours)
 
-<span class="sidebar-path">Newsletter → Subscription Topics</span>
+<span class="sidebar-path">Customers → Newsletter → Subscription Topics</span>
 
 The topics a customer can subscribe to from their account, and the lists you send to. Staff, Admin and Owner can all open this screen.
 
@@ -49,7 +49,7 @@ The form (name and description are translatable and have language tabs):
 
 #### Create a topic
 
-1. Open <span class="sidebar-path">Newsletter → Subscription Topics</span> and click **Add**.
+1. Open <span class="sidebar-path">Customers → Newsletter → Subscription Topics</span> and click **Add**.
 2. Fill the Greek name and description; add English and German on their tabs if you show those languages.
 3. Choose the category and the three switches, then **Save**.
 
@@ -60,7 +60,7 @@ Untick **Is active** rather than deleting, so the subscriber history stays. Indi
 ## Things to know
 
 - The **Subscribers** column is counted fresh every time you load the list. It reads "active/total", and the total counts every subscription row on the topic, including the pending ones that were never confirmed and the ones that unsubscribed.
-- The whole newsletter feature can be switched off with the `NEWSLETTER_ENABLED` setting; unsubscribe links in already-sent emails keep working regardless. See [Store settings](/admin/settings/store-settings).
+- The whole newsletter feature can be switched off with the `NEWSLETTER_ENABLED` setting; unsubscribe links in already-sent emails keep working regardless. With it off, the **Newsletter** menu, and this screen with it, leaves your sidebar. See [Store settings](/admin/settings/store-settings).
 - The confirmation link points at your storefront's own address; there is nothing to configure.
 
 ## Related

@@ -18,9 +18,11 @@ page templates and the list of facts to verify.
    appear on screen (the admin UI is translated through `locale/el/…/django.po`
    in the Django repo — use the `msgstr` there for the on-screen label when one
    exists, otherwise the English label).
-4. **Name sidebar locations exactly** as `UNFOLD["SIDEBAR"]["navigation"]` in
-   `grooveshop-django-api/settings.py` renders them, wrapped as
-   `<span class="sidebar-path">Sales → Orders</span>`.
+4. **Name sidebar locations exactly** as the store sidebar
+   (`grooveshop-django-api/admin/navigation.py: store_sidebar`) renders
+   them, every level of a sub-menu included, wrapped as
+   `<span class="sidebar-path">Sales → Orders</span>` or
+   `<span class="sidebar-path">Customers → Wholesale → Business Customers</span>`.
 5. **Links** between pages are root-absolute (`/admin/sales/orders`,
    `/el/admin/sales/orders`, `/dev/flows/order-lifecycle`). Only link to pages
    that exist in the sidebar files under `.vitepress/sidebars/`. A dead link
@@ -57,7 +59,7 @@ preference.
 
 - on-screen labels, exactly as the admin renders them, in bold
 - sidebar paths in the `sidebar-path` span
-- keys shown in **Settings → Extra Settings**, because that screen lists the key
+- keys shown in **Settings → Store Settings**, because that screen lists the key
   name itself, so the owner reads and edits them by that name
 - admin URLs they may need to paste, for screens absent from the sidebar
 - storefront-visible names: order statuses, payment statuses, courier names
