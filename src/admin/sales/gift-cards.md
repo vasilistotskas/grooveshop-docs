@@ -11,7 +11,7 @@ A gift card is stored value: a secret code with a balance that the shopper spend
 
 Gift cards ship dark. They work only when the platform has enabled them for the store and `GIFT_CARDS_ENABLED` is on under [Store settings](/admin/settings/store-settings). The sidebar follows the same two switches: without gift cards on your plan the **Gift Cards** menu is not shown at all; with them on the plan but the setting off, the menu stays and carries an **Off** badge, so you can issue cards before shoppers can redeem them.
 
-While the setting is off, shoppers cannot check a balance, buy a card or see their cards, and nothing moves on its own: no card expires, no expiry reminder goes out and no scheduled card is delivered. Each catches up with the first daily run after you switch it back on. A shopper who has just paid for a card still sees the purchase complete.
+While the setting is off, shoppers cannot check a balance, buy a card or see their cards, and nothing moves on its own: no card expires, no expiry reminder goes out and no scheduled card is delivered. The time gift cards are off does not count against a card: when you switch them back on, every active card's **Expires At** moves forward by that time, and scheduled cards go out with the next daily run. A shopper who has just paid for a card still sees the purchase complete.
 
 ## What you see
 

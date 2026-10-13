@@ -189,6 +189,16 @@ original earn amount when it was partly spent would drive the balance
 negative. A zero-amount `EXPIRE` marker is still written so the earn is not
 reconsidered on the next run.
 
+Nothing expires while the programme is off, and that time does not count
+towards a point's age. `loyalty.models.LoyaltyPause` (on
+`core/models.py: FeaturePauseModel`, at most one open span) records each span
+the store had loyalty off; `LoyaltyService.sync_pause` opens and closes them,
+queued by `tenant/switches.py: on_switch_change` whenever `LOYALTY_ENABLED` or
+`Tenant.loyalty_enabled` really changes and run first by the sweep itself.
+The cutoff is `FeaturePauseModel.active_cutoff(now, days)`: the moment from
+which `LOYALTY_POINTS_EXPIRATION_DAYS` of time **with the programme on** has
+passed, so an `EARN` older than it has been live for longer than the window.
+
 ### Scheduling
 
 The expiry sweep is a per-tenant fanout, because beat runs in the public
@@ -216,13 +226,16 @@ against whatever schema the worker happens to be in.
 
 | Tier | Where | Effect |
 |---|---|---|
-| Plan | `Tenant.loyalty_enabled` | `tenant/permissions.py: IsLoyaltyEnabled` answers **404** on every loyalty endpoint |
-| Runtime | `LOYALTY_ENABLED` extra-setting, ships `False` | `LoyaltyService.is_enabled()` |
+| Plan | `Tenant.loyalty_enabled` | `tenant/permissions.py: IsLoyaltyEnabled` answers **404** on every loyalty endpoint, `agent/me/loyalty` included |
+| Runtime | `LOYALTY_ENABLED` extra-setting, ships `False` | `tenant/permissions.py: IsLoyaltyRuntimeEnabled` answers **404** on the same endpoints; `LoyaltyService.is_enabled()` in the service |
 
 `LoyaltyService.is_enabled()` checks **both** — `tenant_plan_allows("loyalty_enabled")`
 and the setting — and it is called from `award_order_points`,
-`reverse_order_points`, `_validate_and_price_redemption` (which raises) and
-`get_product_potential_points`. One gate, every path.
+`_validate_and_price_redemption` (which raises), `get_product_potential_points`
+and the expiry sweep. `reverse_order_points` deliberately does **not** check
+it: an order cancelled or refunded while the programme is off must still
+give back what it redeemed and take back what it earned, or the balances are
+wrong when loyalty comes back.
 
 The docstring says why the plan half is checked in the service rather than
 only at the endpoints: points are earned and redeemed through order signals
@@ -292,8 +305,10 @@ storefront never advertises a reward the backend will not grant.
 - **Reversal restores the redemption before reversing the earn**, or the
   lowered balance clamps the reversal short.
 - **Expiry never exceeds the held balance.**
-- **`is_enabled()` gates award, reverse and redeem together.** A feature that
-  is off cannot leak points in either direction.
+- **`is_enabled()` gates award and redeem together.** A programme that is off
+  hands out and takes in no points; reversal runs regardless, so the ledger
+  stays right.
+- **The time the programme is off does not count towards expiry.**
 - **`B2B_LOYALTY_ENABLED` gates earning and redeeming together.**
 - **Every loyalty task carries its tenant schema** through `MonitoredTask`,
   which extends `TenantTask`.
@@ -303,11 +318,6 @@ storefront never advertises a reward the backend will not grant.
 - **Points never arrive.** The award runs on `order_completed`, not on order
   creation, and skips guest orders. Then check both gate tiers, then the
   wholesale marker in `order.metadata`.
-- **Turning loyalty off strands awarded points.** `reverse_order_points`
-  returns 0 immediately when `is_enabled()` is false, so an order cancelled
-  while the program is off keeps its `EARN` rows and its XP. Re-enabling and
-  re-running the reversal task is the recovery; the `ADJUST` idempotency guard
-  makes that safe.
 - **A partial refund left the points alone.** Expected: the points go with
   the refund that makes the payment REFUNDED, or with the REFUNDED order
   status.
@@ -343,6 +353,9 @@ storefront never advertises a reward the backend will not grant.
 |---|---|
 | `grooveshop-django-api/loyalty/models/transaction.py` | `PointsTransaction`, the ledger |
 | `grooveshop-django-api/loyalty/models/tier.py` | `LoyaltyTier`, `required_level`, multiplier |
+| `grooveshop-django-api/loyalty/models/pause.py` | `LoyaltyPause`, the spans the programme was off |
+| `grooveshop-django-api/core/models.py` | `FeaturePauseModel`: `open_at`, `close_at`, `active_cutoff` |
+| `grooveshop-django-api/tenant/switches.py` | `on_switch_change`, the hook that queues `sync_loyalty_pause` |
 | `grooveshop-django-api/loyalty/enum.py` | `TransactionType`, `PriceBasis` |
 | `grooveshop-django-api/loyalty/services.py` | `is_enabled`, award, reverse, redeem, tiers, expiry, bonus |
 | `grooveshop-django-api/loyalty/signals.py` | Order hooks (reversal on cancel, full refund and the REFUNDED status), tier-change detection, tier-up notification |

@@ -445,13 +445,16 @@ What each signal records:
   refreshes once.
 
 Switching promotions off or on moves every promoted price at once, so it
-does not mark products: `promotion/signals.py` queues the store's whole
+does not mark products: `promotion/signals.py` registers
+`tenant/switches.py: on_switch_change` to queue the store's whole
 `product.tasks.reevaluate_price_episodes` sweep (through
 `tenant/celery.py: dispatch_on_commit`, schema pinned) when a save in a
 tenant schema changes the merchant's stored `PROMOTIONS_ENABLED`, or when a
 `Tenant` save changes `promotions_enabled`. `pre_save` snapshots of the
-stored values tell a real change from an unrelated or unchanged save, and a
-partial `Tenant` save whose `update_fields` leaves the flag out never counts.
+stored values tell a real change from an unrelated or unchanged save
+(extra-settings seeding a new schema writes the default the store already
+had), and a partial `Tenant` save whose `update_fields` leaves the flag out
+never counts.
 
 One change is **not** covered: the reverse side of the M2M
 (`product.promotions.add`). The nightly full sync (`sync-meilisearch-indexes`
@@ -611,8 +614,19 @@ and `expire_gift_cards` per schema. Expiry runs at 03:00 Athens, the other
 two at 06:00. All three do nothing while `GiftCardService.is_enabled()` is
 false (the delivery and reminder tasks return `skipped`,
 `GiftCardService.expire_cards` returns 0): no card can be spent then, so
-nothing expires or is announced, and each catches up on the first sweep
-after the store turns gift cards back on.
+nothing expires or is announced.
+
+The time gift cards are off does not count against a card either.
+`giftcard.models.GiftCardPause` (on `core/models.py: FeaturePauseModel`, at
+most one open span, a partial unique constraint) records each span the
+store had them off. `GiftCardService.sync_pause` opens a span while they are
+off and, when they are back on, closes it and moves `expires_at` forward by
+its length for every `ACTIVE` card whose expiry is after the span began.
+`tenant/switches.py: on_switch_change` queues `sync_gift_card_pause` in the
+store's schema whenever `GIFT_CARDS_ENABLED` or `Tenant.gift_cards_enabled`
+really changes, and `expire_cards` syncs first too, which opens a span for a
+store that was already off before spans were recorded. Scheduled cards then
+go out with the next delivery sweep.
 
 ### The gates
 
@@ -761,8 +775,8 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
 | `grooveshop-django-api/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
 | `grooveshop-django-api/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
-| `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` (`refunded_amount`) |
-| `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, `credit_refund`, `handle_purchase_reversal`, expiry |
+| `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` (`refunded_amount`), `GiftCardPause` |
+| `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, `credit_refund`, `handle_purchase_reversal`, expiry, `sync_pause` |
 | `grooveshop-django-api/giftcard/signals.py` | Cancel credit-back, and refund credit-back only on REFUNDED |
 | `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED |
 | `grooveshop-django-api/order/views/viva_webhook.py` | `_process_gift_card_purchase_event`: purchase refunds accumulated, card voided at the purchase amount |
@@ -771,6 +785,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/giftcard/views.py` | `check`, `purchase`, `purchase_status`, `mine` |
 | `grooveshop-django-api/core/cache/surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
 | `grooveshop-django-api/tenant/permissions.py` | The plan and runtime permission classes |
+| `grooveshop-django-api/tenant/switches.py` | `on_switch_change`: reprice on the promotions switch, pause sync on the gift-cards switch |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/offers/index.vue` | The offers page |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Offers/Card.vue` | One offer card |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/usePromotionOffer.ts` | Headline, conditions, expiry, rejection copy — shared by all three surfaces |
