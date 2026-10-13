@@ -82,10 +82,10 @@ Defaults are what a fresh store starts with. Money is in euro.
 | `STICKY_ADD_TO_CART_ENABLED` | Sticky add-to-cart bar on product pages. | on | yes |
 | `RECENTLY_VIEWED_ENABLED` | "Recently viewed" rail on the home page. | on | yes |
 | `CHAT_WIDGET_ENABLED` | AI shopping-assistant launcher. Hides for every visitor shortly after switching off. | on | yes |
-| `ACCOUNT_REVIEWS_ENABLED` | "My reviews" page in the customer account. Product-page reviews are unaffected. | on | yes |
-| `PRODUCT_REVIEWS_ENABLED` | Review list and write-review flow on product pages. | on | yes |
+| `ACCOUNT_REVIEWS_ENABLED` | "My reviews" page in the customer account. It needs `PRODUCT_REVIEWS_ENABLED` on as well; this switch hides just the page. | on | yes |
+| `PRODUCT_REVIEWS_ENABLED` | Reviews everywhere: the review list and write-review flow on product pages, the customers' "My reviews" page, and the reviews AI assistants can read. | on | yes |
 | `BLOG_COMMENTS_ENABLED` | Comments and likes under blog posts. | on | yes |
-| `FAVOURITES_ENABLED` | Wishlist hearts, favourites page, price-drop and back-in-stock emails driven by favourites. | on | yes |
+| `FAVOURITES_ENABLED` | Wishlist hearts, favourites page, price-drop and back-in-stock emails driven by favourites, and the favourites AI assistants can read from a customer's account. | on | yes |
 | `NEWSLETTER_ENABLED` | Topic subscriptions in the account, the storefront's newsletter form and the subscription endpoints. Existing unsubscribe links keep working. | on | yes |
 | `FEEDBACK_ENABLED` | The feedback page and its submission endpoint. | on | yes |
 | `PRODUCT_ALERTS_ENABLED` | Explicit back-in-stock and price-drop alerts and their emails. | on | yes |

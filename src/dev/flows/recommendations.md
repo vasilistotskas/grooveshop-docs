@@ -221,7 +221,7 @@ rows without a manual step.
 | Tier | Where | Effect |
 |---|---|---|
 | Plan | `Tenant.recommendations_enabled` (default `False`) | `tenant/permissions.py: IsRecommendationsEnabled` answers **404** on both recommendation endpoints |
-| Runtime | `PRODUCT_SUGGESTIONS_ENABLED` extra-setting (ships `False`) | Storefront only — the pages that mount a strip check it |
+| Runtime | `PRODUCT_SUGGESTIONS_ENABLED` extra-setting (ships `False`) | `tenant/permissions.py: IsRecommendationsRuntimeEnabled` answers **404** on both endpoints too; the pages that mount a strip check it before asking |
 
 Note what the plan tier does **not** cover. It guards the two routes in
 `recommendation/urls.py` and nothing else. The cart's own suggestions come

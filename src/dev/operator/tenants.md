@@ -173,12 +173,12 @@ sold this store.
 
 | Plan flag | Default | Runtime twin (a store's own **Store Settings**) | Enforced by |
 |---|---|---|---|
-| `loyalty_enabled` | `False` | `LOYALTY_ENABLED` | `IsLoyaltyEnabled` |
+| `loyalty_enabled` | `False` | `LOYALTY_ENABLED` | `IsLoyaltyEnabled` + `IsLoyaltyRuntimeEnabled` |
 | `blog_enabled` | `True` | *(none — plan tier only)* | `IsBlogEnabled` |
 | `promotions_enabled` | `False` | `PROMOTIONS_ENABLED` | `IsPromotionsEnabled` + `IsPromotionsRuntimeEnabled` |
-| `gift_cards_enabled` | `False` | `GIFT_CARDS_ENABLED` | `IsGiftCardsEnabled` |
+| `gift_cards_enabled` | `False` | `GIFT_CARDS_ENABLED` | `IsGiftCardsEnabled` + `IsGiftCardsRuntimeEnabled` |
 | `agent_commerce_enabled` | `True` | `AGENT_COMMERCE_ENABLED` | `IsAgentCommerceEnabled` + `IsAgentCommerceRuntimeEnabled` |
-| `recommendations_enabled` | `False` | `PRODUCT_SUGGESTIONS_ENABLED` | `IsRecommendationsEnabled` (plan); the runtime half gates the storefront strip |
+| `recommendations_enabled` | `False` | `PRODUCT_SUGGESTIONS_ENABLED` | `IsRecommendationsEnabled` + `IsRecommendationsRuntimeEnabled` |
 | `b2b_enabled` | `False` | `B2B_WHOLESALE_ENABLED` | `IsB2BEnabled` + `IsB2BWholesaleEnabled` |
 
 Two more booleans belong to agentic commerce:

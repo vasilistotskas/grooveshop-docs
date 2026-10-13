@@ -444,12 +444,17 @@ What each signal records:
   the first mark and drains them all. An admin save that fires a dozen signals
   refreshes once.
 
-Two changes are **not** covered:
-- the reverse side of the M2M (`product.promotions.add`);
-- the merchant's `PROMOTIONS_ENABLED` toggle.
+Switching promotions off or on moves every promoted price at once, so it
+does not mark products: `promotion/signals.py` queues the store's whole
+`product.tasks.reevaluate_price_episodes` sweep (through
+`tenant/celery.py: dispatch_on_commit`, schema pinned) when the merchant's
+`PROMOTIONS_ENABLED` row is saved in a tenant schema, or when a `Tenant`
+save moves `promotions_enabled` (a `pre_save` snapshot tells a real change
+from an unrelated save).
 
-The nightly full sync (`sync-meilisearch-indexes` →
-`tenant.tasks.fanout_sync_meilisearch_indexes`) repairs both, and the nightly
+One change is **not** covered: the reverse side of the M2M
+(`product.promotions.add`). The nightly full sync (`sync-meilisearch-indexes`
+→ `tenant.tasks.fanout_sync_meilisearch_indexes`) repairs it, and the nightly
 `reevaluate-price-episodes` beat entry does the same for the price records.
 
 A deploy that changes the indexed fields needs a one-time
@@ -602,7 +607,11 @@ which dispatch `giftcard.tasks.deliver_scheduled_gift_cards`,
 `send_gift_card_expiry_reminders` (each card warned exactly once via
 `expiry_reminder_sent_at`; `GIFT_CARD_EXPIRY_REMINDER_DAYS` of 0 disables)
 and `expire_gift_cards` per schema. Expiry runs at 03:00 Athens, the other
-two at 06:00.
+two at 06:00. All three do nothing while `GiftCardService.is_enabled()` is
+false (the delivery and reminder tasks return `skipped`,
+`GiftCardService.expire_cards` returns 0): no card can be spent then, so
+nothing expires or is announced, and each catches up on the first sweep
+after the store turns gift cards back on.
 
 ### The gates
 
@@ -619,9 +628,15 @@ that matters.
 
 Endpoints answer **404**, never 403: `PublicPromotionListView` chains
 `IsPromotionsEnabled` and `IsPromotionsRuntimeEnabled`, and `GiftCardViewSet`
-chains `IsGiftCardsEnabled`, adding `IsAuthenticated` on exactly one action,
-`mine`. Everything else, including `purchase_status`, is `AllowAny` and
-relies on a tight throttle instead.
+chains `IsGiftCardsEnabled` and `IsGiftCardsRuntimeEnabled`, adding
+`IsAuthenticated` on exactly one action, `mine`. `purchase_status` keeps only
+the plan tier, because the shopper polling it has already paid. Everything
+but `mine` is `AllowAny` and relies on a tight throttle instead.
+
+While promotions are off, `cart/serializers/cart.py` lists no applied coupon
+(`applied_coupon_codes` and `applied_coupons` are empty): no code applies, and
+one listed with no discount could not be removed. The `CartPromotionCode`
+rows stay for when the store turns promotions back on.
 
 On the storefront, `app/middleware/promotions-enabled.ts` and
 `app/middleware/gift-cards-enabled.ts` apply the same two tiers. Both ship

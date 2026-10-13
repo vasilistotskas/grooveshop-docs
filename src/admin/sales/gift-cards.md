@@ -11,6 +11,8 @@ A gift card is stored value: a secret code with a balance that the shopper spend
 
 Gift cards ship dark. They work only when the platform has enabled them for the store and `GIFT_CARDS_ENABLED` is on under [Store settings](/admin/settings/store-settings). The sidebar follows the same two switches: without gift cards on your plan the **Gift Cards** menu is not shown at all; with them on the plan but the setting off, the menu stays and carries an **Off** badge, so you can issue cards before shoppers can redeem them.
 
+While the setting is off, shoppers cannot check a balance, buy a card or see their cards, and nothing moves on its own: no card expires, no expiry reminder goes out and no scheduled card is delivered. Each catches up with the first daily run after you switch it back on. A shopper who has just paid for a card still sees the purchase complete.
+
 ## What you see
 
 ### The list
@@ -86,6 +88,7 @@ A refund of a **gift card purchase** made in the Viva Wallet dashboard is added 
 - Every night at 03:00 active cards past **Expires At** with a positive balance get an **Expire** row that zeroes them.
 - `GIFT_CARD_EXPIRY_REMINDER_DAYS` (30) before expiry, a reminder email goes to the recipient, once per card, from the daily 06:00 sweep; 0 disables reminders.
 - Empty **Expires At** means the card never expires.
+- Neither run happens while `GIFT_CARDS_ENABLED` is off (see above).
 
 ## Things to know
 
