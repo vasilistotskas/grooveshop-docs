@@ -17,7 +17,7 @@ Press **Ctrl+K** (Windows, Linux) or **⌘K** (macOS) anywhere in the admin and 
 
 After its name, each result shows where it sits in the sidebar (a page), the area it belongs to (another screen) or what kind of record it is. Pick one with the arrow keys and **Enter**, or click it.
 
-- Screens and records of a feature your store does not have are not offered, just as the sidebar leaves them out. That means a feature off your plan, or a courier that is not active. A feature on your plan but switched off in **Store Settings** is still found. So are the pages that leave the sidebar while their setting is off (Reviews, Feedback, Favourites, Newsletter, Blog Comments): type their name.
+- What your store does not have, or has switched off, is not offered, exactly as in the sidebar: no screen and no records. That covers a feature off your plan, a courier that is not active, and the pages that leave the sidebar while their setting is off (Reviews, Feedback, Favourites, Newsletter, Blog Comments). A feature on your plan that you switched off in **Store Settings** keeps its sidebar menu, marked **Off**, so it is still found. A page the sidebar does list is always searchable.
 - The palette keeps a **history** of what you recently opened from it, shown before you type.
 - Pressing **Enter** with no result highlighted does nothing.
 

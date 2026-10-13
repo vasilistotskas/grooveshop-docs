@@ -266,8 +266,9 @@ every store-admin page. Every entry is decided there:
   that enforces it for shoppers (the service's `is_enabled()`, the
   permission classes' flag and setting names). The blog follows its plan
   flag only; reviews, feedback, favourites, newsletter and blog comments
-  follow their setting; a carrier's pages follow its active
-  `ShippingProvider`;
+  follow their setting (`StoreFeatures.absent_models`, which `page()`
+  drops and the ⌘K palette also reads); a carrier's pages follow its
+  active `ShippingProvider`;
 - a sub-menu (`_menu`) left with one child is replaced by that child;
 - badges count waiting work only, from `queries.attention_counts`.
 
@@ -315,13 +316,23 @@ In order:
    `get_search_results` and ordering, the sidebar's models first, plus a
    "View all" result linking the changelist with `?q=` when there are more.
 
-`command_hidden_apps(request)` names the app labels to leave out of 2 and 3;
-on the store site it is `StoreFeatures.absent_apps()` (`admin/features.py`):
-the apps of plan features that are not configurable and of inactive
-carriers. `UNFOLD["COMMAND"]` and `UNFOLD_PLATFORM["COMMAND"]` keep only
-`show_history`. `tests/integration/admin/test_command_search.py` covers the
-ranking, accent folding, section and sub-menu matches, the hidden apps, the
-record cap and order, and the two-character minimum.
+`sidebar_icons(sidebar)` maps every page the sidebar lists (its address
+without a query, in sidebar order) to its icon; it orders the records and
+marks which screens the sidebar lists. `command_hidden(request)` names the
+app labels (`"blog"`) and model labels (`"blog.BlogComment"`) to leave out
+of 2 and 3, except a screen the sidebar lists, which stays searchable (a
+platform superuser's System section keeps the ACS logs while ACS is
+inactive). The platform site hides nothing; the store site returns
+`StoreFeatures.absent_apps() | StoreFeatures.absent_models()`
+(`admin/features.py`): the apps of plan features that are not
+configurable and of inactive carriers, and the shopper-input pages whose
+setting is off. `absent_models` is the same list `store_sidebar` drops, so
+the sidebar and the palette cannot disagree. `UNFOLD["COMMAND"]` and
+`UNFOLD_PLATFORM["COMMAND"]` keep only `show_history`.
+`tests/integration/admin/test_command_search.py` covers the ranking,
+accent folding, section and sub-menu matches, the hidden apps and
+switched-off pages, what the sidebar lists staying searchable, the record
+cap and order, and the two-character minimum.
 
 ## Header and footer
 
@@ -436,9 +447,9 @@ holds lazy strings evaluated after the request has reset the language.
 | `grooveshop-django-api/admin/displays.py`, `admin/filters.py`, `admin/datasets.py` | Shared displays, filters, datasets |
 | `grooveshop-django-api/admin/dashboard/` | Dashboard widgets and the cached queries |
 | `grooveshop-django-api/admin/navigation.py` | Per-request store sidebar, `changelist_link`, site menu, storefront link |
-| `grooveshop-django-api/admin/features.py` | `StoreFeatures`, `Availability`: plan flag and store setting per optional feature; `absent_apps` |
+| `grooveshop-django-api/admin/features.py` | `StoreFeatures`, `Availability`: plan flag and store setting per optional feature; `absent_apps`, `absent_models` |
 | `grooveshop-django-api/admin/search.py` | `CommandSearchMixin`: the ⌘K palette on both sites |
-| `grooveshop-django-api/tests/integration/admin/test_command_search.py` | The palette's ordering, folding, hidden apps and record cap |
+| `grooveshop-django-api/tests/integration/admin/test_command_search.py` | The palette's ordering, folding, hidden screens and record cap |
 | `grooveshop-django-api/admin/environment.py` | Environment label and tab-title prefix |
 | `grooveshop-django-api/core/templates/admin/base_site.html`, `core/templates/admin/footer.html` | Header link, footer |
 | `grooveshop-django-api/admin/branding.py` | Logo, icon and favicons per store |
