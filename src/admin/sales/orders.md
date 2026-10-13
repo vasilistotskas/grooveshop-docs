@@ -206,9 +206,19 @@ Use this for returns (including the customer's 14-day right of withdrawal), good
    - "Order N was not refunded; see the order history.": nothing went back. The provider's reason is in the order's history.
 4. After a partial refund the payment status is **Partially Refunded** and the button is still there: refund the rest, in one go or in several steps. Once nothing is left the payment status becomes **Refunded**.
 
-You cannot refund more than is left: the platform refuses and tells you how much can still be refunded. An order paid by cash on delivery, bank transfer or entirely by gift card has nothing a provider can send back, and the platform says so. Each refund is listed on the order's **Payment Transactions** tab with its amount and reason, and the platform records which team member ran it.
+You cannot refund more than is left: the platform refuses and tells you how much can still be refunded. An order paid by bank transfer or entirely by gift card has nothing a provider can send back, and the platform says so. Cash on delivery is covered in the next section. Each refund is listed on the order's **Payment Transactions** tab with its amount and reason, and the platform records which team member ran it.
 
 The button changes neither the order status nor the stock. When the goods are back, run **Mark selected orders as returned**, and if you want the order closed as refunded, **Mark selected orders as refunded** after it.
+
+### Refund a cash-on-delivery order
+Cash the courier collected is refunded with the same **Refund (amount, reason)** button, but no provider can send it back: you pay the customer back yourself, by bank transfer or in cash, and the platform records it.
+1. Pay the customer back first (or at the same time), and note how: the bank transfer's reference, for instance.
+2. Open the order and press **Refund (amount, reason)**. When the order has collected cash left to refund, the form also asks **How it was paid back**. Enter the transfer reference or a short note on how you paid. It is required whenever the amount reaches that cash, and it is not asked for when the refund is covered by a card payment on the same order.
+3. Confirm. The refund is recorded on the **Payment Transactions** tab like any other, the payment status becomes **Partially Refunded** or **Refunded**, the customer gets the refund email, and the credit document is issued for the amount (see [Receipts and credit documents](/admin/sales/receipts)).
+
+Each refund needs its own reference: the platform refuses a reference you have already used on the order, which also stops a double click from recording the same refund twice. The platform sends no money in this case, so check that you really paid before you confirm.
+
+Until the courier's payout has been recorded on the order (the payment status is still **Pending**), no cash has been collected and there is nothing to refund: the platform says so. Come back once the payment status is **Completed**.
 
 ### Cancel before shipping
 Cancelling a **Pending** or **Processing** order that was paid online refunds it in full as part of the cancellation. See [Cancel an order](#cancel-an-order).
