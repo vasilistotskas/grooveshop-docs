@@ -109,7 +109,7 @@ else for them:
 | `productReviews` | `get_product_reviews` is not served; `search_products` and `get_product` carry no rating or review count; the chatbot's prompt does not offer reviews |
 | `loyalty` | `my_loyalty_points` is not served |
 | `favourites` | `my_favourites` is not served |
-| `promotions` | `checkout.ApplyDiscountCodes` refuses every code as `discount_code_invalid` without calling Django, whose coupon routes answer 404 with the plan flag off and would fail the request; ACP sessions do not declare the discount extension |
+| `promotions` | `checkout.ApplyDiscountCodes` refuses every code as `discount_code_invalid` without applying it (Django's coupon routes answer 404 with the plan flag off and would fail the request) and clears the cart's old coupon best effort; ACP sessions do not declare the discount extension |
 
 A switch reaches the gateway within twice `TENANT_CACHE_TTL` (five minutes by
 default). Django drops its own resolve cache at once, but the Redis tier and
