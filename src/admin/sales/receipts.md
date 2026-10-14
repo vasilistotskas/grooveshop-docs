@@ -9,6 +9,8 @@ description: Who issues your retail receipts (your own fiscal device or provider
 
 **Who issues your receipts.** By law, retail receipts are issued through a fiscal device (ΦΗΜ) or a licensed e-invoicing provider. That is the default here too: you issue your receipts and credit documents in your own fiscal device or provider, and the platform issues none. The platform issues them itself, over AADE's myDATA, only for a business exempt from the fiscal device: switch on **MYDATA_ENABLED** and record the legal ground of the exemption in **MYDATA_FHM_EXEMPTION_GROUND** (your accountant confirms it). Selling online does not exempt a business on its own.
 
+**Testing against AADE's sandbox.** With **MYDATA_ENVIRONMENT** set to `dev`, documents go to AADE's test system, where they are test registrations and not tax documents. A demo store, or a store on the staging environment, takes no real orders, so it may issue there without a recorded ground. A store that takes real orders needs the ground in the sandbox too: `dev` is the default, and its customers would otherwise be emailed receipts that only look real. Any value other than `dev` or `prod` is refused and nothing is issued.
+
 For a store the platform issues for, two tax documents are issued, both for retail customers, both registered with AADE through myDATA:
 
 - the **receipt** (Απόδειξη Λιανικής Πώλησης), issued when an order **ships**;
