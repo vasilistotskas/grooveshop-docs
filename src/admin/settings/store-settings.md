@@ -134,7 +134,8 @@ Fill the seller identity **before the first receipt**: the values are printed on
 | `B2B_WHOLESALE_ENABLED` | Your half of the wholesale switch (business profiles, customer groups, price lists). | off | yes |
 | `B2B_ALLOW_PROMOTIONS` | Let promotions and coupons stack on top of wholesale prices. | off | no |
 | `B2B_LOYALTY_ENABLED` | Let wholesale orders take part in loyalty. One switch for both earning and redeeming. | off | no |
-| `MYDATA_ENABLED` | Master switch of the AADE myDATA integration (receipts and credit documents; invoices are issued in timologio). | off | no |
+| `MYDATA_ENABLED` | Whether the platform issues your retail receipts and credit documents itself, over AADE's myDATA. Off: you issue them in your own fiscal device or e-invoicing provider. Takes effect only with `MYDATA_FHM_EXEMPTION_GROUND` filled in. Invoices are issued in timologio. | off | no |
+| `MYDATA_FHM_EXEMPTION_GROUND` | The legal ground on which your business is exempt from issuing receipts through a fiscal device (ΦΗΜ): the ΠΟΛ.1002/2014 provision, the accountant who confirmed it, and the date. Selling online is not an exemption on its own. While it is empty the platform issues nothing. | empty | no |
 | `MYDATA_AUTO_SUBMIT` | Issue the retail documents by itself: the receipt when an order ships, a credit document when money goes back. Otherwise only through the order's Invoicing & myDATA actions. | off | no |
 | `MYDATA_ENVIRONMENT` | `dev` (sandbox) or `prod`. Separate credentials for each; the credentials themselves are on your store profile, not here. | dev | no |
 | `MYDATA_INVOICE_SERIES_PREFIX` | Prefix of the AADE series code of the receipts, combined with year. | GRVP | no |
