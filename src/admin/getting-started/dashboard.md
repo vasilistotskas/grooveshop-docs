@@ -28,7 +28,7 @@ Messages that need someone's attention appear below the header, and only when th
 - **Your legal pages need an update**: the platform added text to its legal documents, and these pages were not changed for you because their text is yours. Each page is listed with a link; open it to see the text to add. Shown to anyone who may edit content pages.
 - **Your business's legal details are missing**: the law requires your website to show who is selling, and some of those details are still empty (company name, legal form, GEMI number, VAT ID, address, contact email). The missing ones are listed, with a **Fill in details** link. A reminder, not an error: nothing stops working. Shown to Owners and Admins, who can change the store settings.
 - **Details needed to issue receipts are missing**: shown only while myDATA is on, when the company name, **VAT ID (ΑΦΜ)** or **Tax office (ΔΟΥ)** is empty. Receipts cannot be submitted to AADE without them, so this one is red. It has a **Fill in details** link and is shown to the same people.
-- **myDATA** (platform operators): credentials missing while myDATA is on, or a reminder that submissions still go to the AADE sandbox. Receipts that myDATA rejected are not a warning here; they are a line under **Needs attention**, below.
+- **myDATA** (platform operators): myDATA is on but `MYDATA_FHM_EXEMPTION_GROUND` is empty, so no receipt is issued; credentials missing while myDATA is on, or a reminder that submissions still go to the AADE sandbox. Receipts that myDATA rejected are not a warning here; they are a line under **Needs attention**, below.
 
 These are checked on every page load, so fixing a setting clears its warning at once.
 

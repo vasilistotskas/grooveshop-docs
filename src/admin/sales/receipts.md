@@ -1,13 +1,17 @@
 ---
 title: Receipts and credit documents
-description: The retail receipt the platform registers with myDATA when an order ships, the credit document it issues for every refund, the gapless numbering, and how to issue an invoice for a business customer by hand in AADE's timologio app.
+description: Who issues your retail receipts (your own fiscal device or provider, or the platform for a business exempt from it), the receipt the platform registers with myDATA when an order ships, the credit document it issues for every refund, the gapless numbering, and how to issue an invoice for a business customer by hand in AADE's timologio app.
 ---
 
 # Receipts and credit documents
 
 <span class="sidebar-path">Sales → Receipts</span> · <span class="sidebar-path">Sales → Credit Documents</span>
 
-Two tax documents are issued by the platform itself, both for retail customers, both registered with AADE through myDATA:
+**Who issues your receipts.** By law, retail receipts are issued through a fiscal device (ΦΗΜ) or a licensed e-invoicing provider. That is the default here too: you issue your receipts and credit documents in your own fiscal device or provider, and the platform issues none. The platform issues them itself, over AADE's myDATA, only for a business exempt from the fiscal device: switch on **MYDATA_ENABLED** and record the legal ground of the exemption in **MYDATA_FHM_EXEMPTION_GROUND** (your accountant confirms it). Selling online does not exempt a business on its own.
+
+**Testing against AADE's sandbox.** With **MYDATA_ENVIRONMENT** set to `dev`, documents go to AADE's test system, where they are test registrations and not tax documents. A demo store, or a store on the staging environment, takes no real orders, so it may issue there without a recorded ground. A store that takes real orders needs the ground in the sandbox too: `dev` is the default, and its customers would otherwise be emailed receipts that only look real. Any value other than `dev` or `prod` is refused and nothing is issued.
+
+For a store the platform issues for, two tax documents are issued, both for retail customers, both registered with AADE through myDATA:
 
 - the **receipt** (Απόδειξη Λιανικής Πώλησης), issued when an order **ships**;
 - the **credit document** (Πιστωτικό Στοιχείο Λιανικής), issued for **every refund** of an order whose receipt was registered, for exactly the amount refunded.
@@ -58,7 +62,7 @@ A receipt or credit document that AADE has not registered is **never emailed to 
 - **Settlement credit**: when an order closes without a sale after its receipt was issued, one more credit document covers what is still uncredited: the full receipt of a returned cash-on-delivery parcel, or the gift-card share of an order refunded in full.
 - **By hand**, from the order page, <span class="sidebar-path">Invoicing & myDATA</span> menu: **Issue receipt (myDATA)** and **Issue credit documents (myDATA)**. These are the way to issue when automatic issuing is off, and **Issue credit documents (myDATA)** also resends a credit AADE refused. Both are safe to press again: nothing is issued twice.
 
-With **MYDATA_ENABLED** off nothing is issued at all. With **MYDATA_AUTO_SUBMIT** off nothing happens by itself and you use the two actions above.
+With **MYDATA_ENABLED** off, or **MYDATA_FHM_EXEMPTION_GROUND** empty, nothing is issued at all: the order page has no **Invoicing & myDATA** menu, and its **Receipt** card says the store issues the receipt outside the platform. With **MYDATA_AUTO_SUBMIT** off nothing happens by itself and you use the two actions above.
 
 ## Issue an invoice for a business customer
 
@@ -76,12 +80,12 @@ The platform submits nothing for such an order and sends no invoice document; th
 1. Find it here by number, order ID or customer, or open the order: its **Receipts** and **Retail Credit Documents** tabs list them.
 2. Click **Download** (list) or **Download PDF** (order page). The file streams through the admin login; there is no public link.
 
-Customers get their copy by email once it is registered, and download the receipt from their account.
+Customers get their copy by email once it is registered, and can download the receipt from their account only once AADE has registered it.
 
 ### Fix a wrong receipt PDF
 1. Correct the source: the seller details under Store settings (every key whose name starts with `INVOICE_SELLER_`) or the VAT rate of one of the order's lines (next task). Changing a product's VAT rate does not change an order that was already placed.
-2. On the order page choose **Invoicing & myDATA → Regenerate receipt (same number)**. The number and issue date are kept and the PDF is rendered again.
-3. If the receipt is already registered, the PDF cannot change what AADE holds and its figures stay the registered ones. A wrong registered receipt is corrected by the credit documents that follow refunds; **Cancel receipt in myDATA (issued in error)** is only for a receipt that should never have been issued, and your accountant tells you how long that stays possible.
+2. On the order page choose **Invoicing & myDATA → Regenerate receipt (same number)**. The number and issue date are kept and the PDF is rendered again. It re-renders a receipt that exists and never issues one: for an order without a receipt use **Issue receipt (myDATA)**.
+3. If the receipt is already registered, the PDF cannot change what AADE holds and its figures stay the registered ones. A wrong registered receipt is corrected by the credit documents that follow refunds; **Cancel receipt in myDATA (issued in error)** is only for a receipt that never reached the customer (see [Cancel a document issued in error](#cancel-a-document-issued-in-error)).
 
 ### Correct the VAT rate of an order line
 1. Open the order and, in its order items, open the line from its row.
@@ -95,7 +99,7 @@ Once the receipt has a myDATA MARK, **VAT Rate** is shown read-only: the registe
 2. **Send receipt to myDATA** queues the submission of a receipt that was refused or never answered (the receipt must already be rendered; the button tells you if myDATA is not configured). **Issue credit documents (myDATA)** does the same for credit documents. Refresh the list to see the status change and the MARK.
 
 ### Cancel a document issued in error
-**Cancel receipt in myDATA (issued in error)** on the order page, or **Cancel in myDATA (issued in error)** on the Credit Documents list. This is for a document that should never have existed; a sale that did not happen is undone by a credit document, not by cancelling the receipt.
+**Cancel receipt in myDATA (issued in error)** on the order page, or **Cancel in myDATA (issued in error)** on the Credit Documents list. AADE allows a cancellation only for a document that never reached the customer: not handed over, emailed or made available to download. Once it has, the correction is a credit document. The law sets no time limit, but the platform emails each document as soon as AADE registers it, so in practice a credit document is almost always the right tool.
 
 ### Reserve numbers
 Superusers only. Under <span class="sidebar-path">System → Reconciliation → Receipt Counter</span> or <span class="sidebar-path">System → Reconciliation → Credit Counter</span> there is one row per year with **Year** and **Next Number**. Raising Next Number reserves the numbers below it. Lowering it produces duplicates and is never right. See [Reconciliation](/admin/system/reconciliation).
@@ -107,12 +111,12 @@ Superusers only. Under <span class="sidebar-path">System → Reconciliation → 
 - **Shipping and the payment fee take the products' VAT rate.** When all the products carry one rate, shipping and the fee are taxed at that rate; when the order mixes rates, each charge is split over the rates in proportion to the value of the products at each. The PDF and the myDATA submission always show the same figures, to the cent.
 - **An order with shipping or a fee but no products left cannot get a receipt**: there is no rate for the charge to follow. Add the products back or correct the order first.
 - **Seller details come from Store settings**: legal name, legal form, VAT ID, tax office, address and so on, under the keys whose names start with `INVOICE_SELLER_`. Fill them before the first receipt.
-- **myDATA settings** live under Store settings too: `MYDATA_ENABLED`, `MYDATA_AUTO_SUBMIT`, `MYDATA_ENVIRONMENT` (dev or prod), `MYDATA_INVOICE_SERIES_PREFIX`, `MYDATA_CREDIT_SERIES_PREFIX`, `MYDATA_ISSUER_BRANCH`. The credentials from the myDATA developer portal (user ID and subscription key) are not settings: you enter them on your store profile, on the **Invoicing & myDATA** tab (see [Roles & team](/admin/getting-started/roles-and-team)). The subscription key is stored encrypted.
+- **myDATA settings** live under Store settings too: `MYDATA_ENABLED`, `MYDATA_FHM_EXEMPTION_GROUND`, `MYDATA_AUTO_SUBMIT`, `MYDATA_ENVIRONMENT` (dev or prod), `MYDATA_INVOICE_SERIES_PREFIX`, `MYDATA_CREDIT_SERIES_PREFIX`, `MYDATA_ISSUER_BRANCH`. The credentials from the myDATA developer portal (user ID and subscription key) are not settings: you enter them on your store profile, on the **Invoicing & myDATA** tab (see [Roles & team](/admin/getting-started/roles-and-team)). The subscription key is stored encrypted.
 - **Only VAT rates AADE recognises are accepted** on [VAT rates](/admin/sales/vat-rates); a document with an unrecognised rate would be rejected by myDATA.
 - **Gift-card amounts are payment, not a discount.** They never reduce the documented value. The sale of a gift card itself is never submitted to myDATA.
 - **Order-level discounts** (promotions, loyalty points) are spread across the lines before VAT is computed, so the documents show VAT on what the customer actually paid.
 - The PDFs are stored in the store's private file area and are never served from a public URL.
-- **Open questions for your accountant**: whether an online shop also needs a fiscal cash register for receipts issued this way, the deadline for issuing a credit document, and how long a registered document can be cancelled. The platform does not decide these for you.
+- **What the law settles** (and why the platform asks what it asks): an online shop issues its receipts through a fiscal device or a licensed provider unless it is exempt from the fiscal device, hence **MYDATA_FHM_EXEMPTION_GROUND**; the law sets no deadline for a retail credit document (the 15th of the following month is the rule for credit invoices, so ask your accountant whether to keep to it); a cancellation has no time limit, only the condition that the document never reached the customer.
 
 ## Related
 

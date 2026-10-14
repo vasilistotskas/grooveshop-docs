@@ -43,7 +43,7 @@ Select rows and pick one of **Mark selected orders as processing / shipped / del
 
 ### The order page
 
-A row of cards at the top gives the order at a glance: **Status** (and how long ago it last changed), **Payment** (and the method), **Total** (and the number of items), **Customer** (linking to the account), **Shipment** (and the tracking number) and **Receipt** (its number and myDATA state; **Invoice** for an invoice order, with the number you recorded from timologio).
+A row of cards at the top gives the order at a glance: **Status** (and how long ago it last changed), **Payment** (and the method), **Total** (and the number of items), **Customer** (linking to the account), **Shipment** (and the tracking number) and **Receipt** (its number and myDATA state, or that the store issues the receipt outside the platform; **Invoice** for an invoice order, with the number you recorded from timologio).
 
 Below them the page is split into tabs:
 
@@ -57,7 +57,7 @@ Below them the page is split into tabs:
 
 Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), **Payment Transactions** (read-only: every charge, cash-on-delivery collection and refund recorded for the order, with **Created At**, **Kind**, **Amount**, **Provider**, **Provider reference** and, for a refund, the reason in **Description**), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
 
-The header carries **Refund (amount, reason)** on a delivered, completed or returned order (see [Refunds](#refunds)), **Download shipping voucher (PDF)** and an **Invoicing & myDATA** menu with **Issue receipt (myDATA)**, **Regenerate receipt (same number)**, **Send receipt to myDATA**, **Issue credit documents (myDATA)** and **Cancel receipt in myDATA (issued in error)**. See [Receipts and credit documents](/admin/sales/receipts).
+The header carries **Refund (amount, reason)** on a delivered, completed or returned order (see [Refunds](#refunds)), **Download shipping voucher (PDF)** and, when the platform issues your receipts, an **Invoicing & myDATA** menu with **Issue receipt (myDATA)**, **Regenerate receipt (same number)**, **Send receipt to myDATA**, **Issue credit documents (myDATA)** and **Cancel receipt in myDATA (issued in error)**. See [Receipts and credit documents](/admin/sales/receipts).
 
 ## Order statuses
 
@@ -156,9 +156,9 @@ There is no other way: **Status** is read-only on the order page.
 2. Set **Payment status** to **Completed** and save.
 3. Move the order to **Processing** with the bulk action so fulfilment starts.
 
-### Print the voucher or the invoice
+### Print the voucher or the receipt
 - **Download shipping voucher (PDF)** on the row or in the page header fetches the label from the carrier. It tells you if no shipment exists yet or the carrier has not assigned a voucher.
-- The invoice PDF is the **Download PDF** link in the invoice row, or the **Invoicing & myDATA** menu to generate one first.
+- The receipt PDF is the **Download PDF** link in the receipt row. When the platform issues your receipts and the order has none yet, **Invoicing & myDATA → Issue receipt (myDATA)** issues it first.
 
 ### Add a tracking number manually
 1. Open the order, tab **Shipping & Tracking**.
