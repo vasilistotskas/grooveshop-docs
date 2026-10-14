@@ -58,7 +58,7 @@ The **Props** form of a saved section lists every setting its type accepts, so t
 | Offers Preview | The running promotions, on a page other than the offers page, always on a dark band whatever surface the section is set to. Its link counts the running offers unless you give it your own text. Renders nothing when promotions are off or none is running. |
 | Spacer, Divider | Layout helpers. |
 | Loyalty Program Hero, Search Bar, Business Hours | A visitor who is not signed in sees the programme: points per euro, what points are worth, the first-order bonus and the tiers, with a link to sign up. A signed-in member sees their own points and tier instead. Business Hours reads its opening times from the **BUSINESS_HOURS** setting. |
-| Location Map | |
+| Location Map | With coordinates the map loads only when a visitor asks for it. Under it, two buttons open the place in Google Maps and in Apple Maps; they show with an address alone too. |
 | Features Grid, Media + Text, Image Gallery, Story Timeline, FAQ Accordion | Generic marketing blocks. The FAQ opens on its first answer, and the line under its heading points to your contact page unless you write your own. |
 | Partner Strip, Pull Quote, Reference Cards, Page Hero, Feature Lists, Option Selector, Comparison Table, Flow Steps, Project Register, Vendor Cards, Contact Panel, About Content, Vision Content, What Is Microlearning, Why Microlearning | **Built for specific storefront designs only** — see the warning below. |
 
