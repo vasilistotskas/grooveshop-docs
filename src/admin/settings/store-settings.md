@@ -182,7 +182,8 @@ Fill the seller identity **before the first receipt**: the values are printed on
 |---|---|---|---|
 | `BUSINESS_HOURS` | Weekly opening hours as JSON (time zone plus one entry per day, `null` for closed). Drives the hours section, the footer open/closed badge and structured data. Empty disables. | empty | yes |
 | `STORE_OFFICES` | Public office addresses as JSON, with optional translations. Distinct from the registered seller address. Empty disables. | empty | yes |
-| `STORE_GEO_LAT`, `STORE_GEO_LNG` | Your shop's location: the pin on the Location Map and the coordinates search engines read. | empty | yes |
+| `STORE_GEO_LAT`, `STORE_GEO_LNG` | Your shop's location in decimal degrees (for example `40.565129` and `22.119096`): the pin on the Location Map and the coordinates search engines read. Any other format is refused. | empty | yes |
+| `FUNDING_BANNER` | The EU/ESPA co-funding strip at the very top of every page, as JSON: the official logo artwork with its width and height in pixels, its description for screen readers, the page it links to (the short description of the funded operation) and an optional line of text. Under `i18n`, each other language gets its own artwork, size and description, such as the programme's English strip on the English pages. While a visitor scrolls, a copy of the logos stays on screen. | off | yes |
 
 ### Contact form attachments
 
