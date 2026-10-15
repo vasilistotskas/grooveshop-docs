@@ -167,7 +167,13 @@ manage.py clear_cache --prefixes <raw prefix>    # raw Redis prefixes
 `cache: { varies: ['host', 'x-device-class'] }`: the brand pages at
 `swr: 3600`, the homepage at 300 seconds, and the blog and catalogue
 families at 600 and 300. Server handlers use `defineCachedEventHandler`,
-the sitemap and RSS feeds `defineCachedFunction`. All of it lives in the
+the sitemap source and RSS feeds `defineCachedFunction`. `/sitemap.xml`
+itself is a route-rule cache too (`swr` for a day, `varies: ['host']`);
+@nuxtjs/sitemap's own cache is off (`sitemap.cacheMaxAgeSeconds: false`)
+because it kept the sitemap under a storage base nothing mounts, in each
+pod's memory, keyed by a hash of the host, where no purge reached it. On
+2026-10-15 a store's sitemap kept listing `/products` after the store
+switched its catalogue off. All of it lives in the
 `cache:` mount in shared Redis, namespaced by build as
 `cache:<buildId>:nitro:...` (`server/plugins/storage.ts`). A deploy
 therefore starts from an empty cache — there is no post-deploy purge

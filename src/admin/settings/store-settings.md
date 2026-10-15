@@ -182,7 +182,7 @@ Fill the seller identity **before the first receipt**: the values are printed on
 |---|---|---|---|
 | `BUSINESS_HOURS` | Weekly opening hours as JSON (time zone plus one entry per day, `null` for closed). Drives the hours section, the footer open/closed badge and structured data. Empty disables. | empty | yes |
 | `STORE_OFFICES` | Public office addresses as JSON, with optional translations. Distinct from the registered seller address. Empty disables. | empty | yes |
-| `STORE_GEO_LAT`, `STORE_GEO_LNG` | Coordinates for the structured data. | empty | yes |
+| `STORE_GEO_LAT`, `STORE_GEO_LNG` | Your shop's location: the pin on the Location Map and the coordinates search engines read. | empty | yes |
 
 ### Contact form attachments
 
