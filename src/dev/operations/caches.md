@@ -256,28 +256,43 @@ kubectl -n grooveshop exec deploy/backend -- .venv/bin/python manage.py shell -c
 
 The flush reaches **every replica**. Memory and disk are private to a pod,
 and the request lands on one pod through the Service, so the pod that
-takes it flushes itself (memory, Redis, disk) and publishes the tenant on
-the Redis channel `mediastream:tenant-flush:{REDIS_DB}`; every other pod
-flushes itself the same way (`Cache/services/tenant-flush.service.ts`). The
-response carries `broadcastReceivers`, the number of pods that got the
-message: the replica count when healthy, `0` when Redis was unreachable
-and the other pods were not flushed. Pub/sub is fire-and-forget, so a pod
-that is down or reconnecting at that moment misses it.
+takes it flushes itself and publishes the tenant on the Redis channel
+`mediastream:tenant-flush:{REDIS_DB}`; every other pod flushes itself the
+same way (`Cache/services/tenant-flush.service.ts`). The response carries
+`broadcastReceivers`, the number of pods that got the message: the replica
+count when healthy. Pub/sub is fire-and-forget, so a pod that is down or
+reconnecting at that moment misses it.
 
-A request already running when the flush lands cannot undo it. Each flush
-advances a per-tenant epoch in the pod before it clears anything
-(`TenantCacheEpochs`); a request records the epoch when it starts, and its
-cache write is skipped, or removed again if the flush lands mid-write,
-when the epoch has moved. That request still answers with its own result,
+Each pod clears its tiers **bottom-up**: disk, then Redis, then memory. A
+tier can only be refilled from the tiers below it (memory from Redis, both
+from disk), so a request arriving mid-flush cannot copy a stale entry into
+a tier that is already done. Before each tier the pod advances a
+per-tenant epoch (`TenantCacheEpochs`); a request records the epoch when
+it starts, and every write that could put an entry back (the processed
+result, a disk-hit backfill, the Redis-to-memory backfill, cache warming)
+is skipped when the epoch has moved and removed again when it moves during
+the write. A request already running still answers with its own result,
 and a request that starts after the flush never joins work that began
 before it (the epoch is part of the deduplication key). The 5-minute
 negative cache is not covered.
 
+A tier that could not be cleared (Redis unreachable, or a pair of the
+tenant that could not be removed from disk) answers **503
+`TENANT_FLUSH_INCOMPLETE`**, after the remaining tiers and the broadcast,
+so the Celery task retries. A sidecar the sweep cannot read does not
+count: its tenant is unknown and a pair without a valid sidecar is never
+served.
+
+The flush drops **cached copies only**. The originals stay on `static-svc`,
+whose nginx serves `/media` without a tenant check, so after a suspension
+a request for a known image URL is fetched, processed and cached again.
+Destroying a tenant removes the originals too (`purge_tenant_files`).
+
 ### The Cloudflare edge copy
 
 Cloudflare keeps each processed image for a year (`s-maxage` 360 days, no
-`Cache-Tag`), so flushing media-stream alone does not stop a suspended or
-destroyed tenant's images from being served. The same Celery task purges
+`Cache-Tag`), so flushing media-stream alone leaves the edge copies of a
+suspended or destroyed tenant's images in place. The same Celery task purges
 the edge **after** the flush, never before, because a purge that ran
 first would let the edge refetch images media-stream still holds. It
 purges by URL prefix, `{assets-host}/media_stream-image/media/{schema}/`
