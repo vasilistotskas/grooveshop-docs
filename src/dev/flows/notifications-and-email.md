@@ -255,6 +255,28 @@ only. Migration `notification.0017_notification_link_storefront_path`
 rewrote the absolute links stored before this change to neutral paths.
 It cleared links that pointed at a host outside the tenant's domains.
 
+### What the order-received email says
+
+`send_order_confirmation_email` (`order/tasks.py`) sends
+`order_payment_confirmed` for an online payment that has completed, and
+`order_received` otherwise. The second states only what is true when it
+is sent:
+
+| Context value | Set when | Renders |
+|---|---|---|
+| `order.is_paid` | the store has the money, including a transfer already marked received | the "payment is confirmed" opening and the **Paid** status; an unpaid order shows no status line |
+| `collected_on_delivery` | the pay-way is collected on delivery (`COURIER_CASH`, `CARRIER_TERMINAL`) | the opening without "waiting for payment" |
+| `payment_instructions` | not paid, and the settlement is `OFFLINE_TRANSFER` or `CARRIER_TERMINAL` | "How to complete your payment" with `PayWay.instructions` |
+| `payment_reference_needed` | not paid, and the settlement is `OFFLINE_TRANSFER` | the "include your order number in the payment reference" line |
+| `expects_payment_confirmation` | not paid, and the pay-way is not collected on delivery | the promise of a second email; COD stays Pending until the carrier pays out, so it gets none |
+
+Cash or card to the courier needs nothing from the shopper and gets no
+instructions. Every order-received email ends with the line saying the
+store will email as the order progresses. The subject is
+`Order Received - #{order_id}` («Λάβαμε την Παραγγελία σας! — #…» in
+Greek). `tests/integration/order/test_received_email_wording.py` pins each
+row.
+
 ### Escaping admin-authored HTML
 
 `PayWay.instructions` is authored in the admin WYSIWYG editor, so it is
@@ -483,7 +505,14 @@ so a staging refresh cannot email real customers. See
   a fresh `manage.py shell` does not apply the overlay, so it will insist
   the catalogue is fine. The rendered subject is in the worker log line
   and in the order's history note. `manage.py translation_overlay_audit -l el`
-  lists every override side by side.
+  lists every override side by side with the text served without it.
+  A fuzzy entry, makemessages' guess, never becomes an override:
+  `import_po_to_translations` skips it, and saving one in Rosetta stores
+  an empty row, which also withdraws an earlier override of the key. In
+  April 2026 imported guesses retitled the English "Order Received" email
+  "Order Delivered". Each pod logs `Translation overlay applied for <lang>:
+  N rows, M change …` once it has applied the overlay, and the M rows are
+  the ones changing what customers read.
 - **Plain-text mail shows raw markup.** An admin-authored HTML field was
   rendered into a `.txt` template without the strip-and-unescape step.
 - **A notification task retries forever on the same error.** Only

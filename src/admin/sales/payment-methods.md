@@ -30,7 +30,7 @@ Bulk actions: **Activate selected payment methods** and **Deactivate selected pa
 
 The page has tabs:
 
-- **General**: **Active**, sort order, **Name** (one of the keys above, translated per language), **Icon**, **Description** and **Payment Instructions**, a rich-text field. The instructions are rendered in the order-received email, which is where bank-transfer details or "have the exact amount ready for the courier" belong.
+- **General**: **Active**, sort order, **Name** (one of the keys above, translated per language), **Icon**, **Description** and **Payment Instructions**, a rich-text field. The order-received email shows the instructions only while the shopper still has to act to pay, which means two settlement types (table below). **Settled off-platform** gets them together with a line asking for the order number in the payment reference. **Paid to the carrier before pickup** gets them without that line. The email leaves them out for online payments, for cash or card to the courier, and for a transfer you have already marked as paid. Bank-transfer details belong here; a reminder for the courier would never reach the shopper.
 - **Payment**: **Provider Code**, **Settlement**, **Cost**, **Free Threshold** and the computed effective cost.
 - **System**: id and timestamps.
 - **Payment-method exclusions**: rows that block this method for a given shipping provider and shipping kind, with a private note. An empty table means the method is offered with every carrier that supports its settlement.

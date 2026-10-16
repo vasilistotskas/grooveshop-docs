@@ -251,15 +251,34 @@ with backoff.
 ### Analytics
 
 `search/middleware.py: SearchAnalyticsMiddleware` records a `SearchQuery`
-row for every request that answers exactly 200 and whose path contains
-`/search/`, minus the two non-query endpoints (`/trending`, `/analytics`)
-it excludes explicitly.
-It parses the response body for `results`, `estimatedTotalHits` and the
-`queryId` the view minted, then fires
-`search/tasks.py: save_search_query` with `.delay()` — fire and forget, off
-the response path. Client IP comes from the **rightmost** `X-Forwarded-For`
-entry when `REMOTE_ADDR` is a private address, because that is the one the
-trusted proxy appended.
+row for every response that answers exactly 200 from one of the three
+query routes of `search/urls.py` (`search-product`, `search-blog-post`,
+`search-federated`, mapped to a content type in `_QUERY_ROUTES`). The
+route is read from `request.resolver_match` once the view has answered.
+It used to be a `/search/` substring in the path, which also matched the
+admin's command palette (`/admin/search/`). That recorded every keystroke
+as an empty storefront search, and on the platform host it sent the task
+to a schema with no `search_query` table.
+
+The middleware parses the response body for `results`,
+`estimatedTotalHits` and the `queryId` the view minted, and mints a uuid
+itself when the body carried none. It then fires
+`search/tasks.py: save_search_query` with `.delay()`: fire and forget, off
+the response path. The task retries only on a lost connection
+(`OperationalError`, `InterfaceError`), because a `DataError` fails the
+same way every time. Such a retry can follow a write that was already
+committed, so the task writes with `get_or_create` keyed on the uuid and
+the second attempt finds the row instead of inserting another.
+
+`session_key` is `core/sessions.py: persisted_session_key`, which gives
+the key of a session that is actually stored, else `""`. Until a session
+loads, Django's `session_key` is the raw `sessionid` cookie: a
+227-character one failed the insert on the column's 40 characters. The
+recommendation events use the same helper. Client IP is
+`trusted_client_ip` (the visitor Cloudflare vouched for) when present.
+Otherwise it is the **rightmost** `X-Forwarded-For` entry when
+`REMOTE_ADDR` is a private address, because that is the one the trusted
+proxy appended.
 
 Clicks are attributed by the `query_id` the search response carried.
 `search_click` validates and dispatches `save_search_click`, which retries
@@ -282,10 +301,11 @@ null. The empty string is how "already scrubbed" is spelled, and it is
 what the task's own exclusion clause keys on, so do not relax either
 column back to null.
 
-`SearchQuery.processing_time_ms` is worth one warning. The middleware
-parses a processing-time field out of the response, but no search view
-emits one, so the column is always null and the average that
-`search_analytics` reports over it always aggregates an empty set.
+`SearchQuery.processing_time_ms` is Meilisearch's own processing time,
+which `search/views.py: _record_engine_time` adds up on the request over
+every engine call (a relaxed retry included). It travels on the request,
+never in the response body, so that it stays out of the public OpenAPI
+contract.
 
 ### Management commands and the deploy hook
 
@@ -402,9 +422,11 @@ every failure — tracking must never affect the shopper. It no-ops without a
 - **Attribute counts shrink to the picked values.** The facet request
   left out `attributeValues`, or asked without
   `facets=attribute_values`, so no facet groups were registered.
-- **Search analytics full of non-searches.** The middleware's exclusion list
-  is a suffix match on `/trending` and `/analytics`; a new non-query
-  endpoint under `/search/` must be added to `_NON_QUERY_SEARCH_SUFFIXES`.
+- **A new search endpoint records nothing.** Analytics follow the route,
+  not the path. Add a new query route's `name` to
+  `SearchAnalyticsMiddleware._QUERY_ROUTES` with the content type it
+  records. A route left out of it (`search-click`, `search-trending`,
+  `search-analytics`) is never recorded.
 
 ## Related
 
@@ -431,6 +453,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 | `grooveshop-django-api/search/views.py` | Product, blog, federated, click, analytics, trending |
 | `grooveshop-django-api/search/middleware.py` | `SearchAnalyticsMiddleware` |
 | `grooveshop-django-api/search/tasks.py` | Query and click persistence, `update_click_scores`, anonymisation |
+| `grooveshop-django-api/core/sessions.py` | `persisted_session_key`, the session key of a stored session only |
 | `grooveshop-django-api/search/models.py` | `SearchQuery`, `SearchClick` |
 | `grooveshop-django-api/product/models/product.py` | `ProductTranslation.MeiliMeta`, Greeklish fields, ranking rules |
 | `grooveshop-django-api/blog/models/post.py` | `BlogPostTranslation.MeiliMeta`, `meili_filter` |

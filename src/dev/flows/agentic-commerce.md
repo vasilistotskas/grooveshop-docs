@@ -341,7 +341,7 @@ The handler writes named events (`internal/chat/handler.go`). Each event is
 | `tool` | `{name, status}` | `running` before each tool call and `done` after it, so the widget can show progress instead of silence. |
 | `products` | `{tool, query?, total?, products: [{id}]}` | After the `done` of a catalog tool (`search_products`, `get_product`). |
 | `error` | `{message}` | The turn failed (for example, the provider rate-limited it). The message is localized. No `done` follows. |
-| `done` | `{conversationId, cartId?, cartMutated}` | The turn is saved. `cartMutated` tells the widget to refresh its cart. |
+| `done` | `{conversationId, cartId?, cartMutated}` | The turn is saved. `cartMutated` tells the widget to refresh its cart. A browser that had no cart adopts `cartId`, the cart the assistant created, as its guest cart (`POST /api/cart/claim` in the storefront). |
 
 The `products` event (`internal/chat/products.go`) carries **ids only**:
 - **Pricing.** The storefront loads each product with the shopper's own
@@ -403,7 +403,7 @@ so an agent finds the server, its name and its tools from one owner
 |---|---|---|
 | `GET /mcp/server-card` | `application/mcp-server-card+json` | The MCP Server Card at the reserved `<streamable-http-url>/server-card`: identity and remotes only, no tools, which clients read from `tools/list`. Its name, title and version are the ones `initialize` reports (`mcpsrv.IdentityFor`) |
 | `GET /.well-known/ard.json` | `application/json` | The Agentic Resource Discovery manifest, the document ARD consumers must fetch. One entry: `identifier`, `type`, `url`, plus `displayName`, `description`, `capabilities` and `representativeQueries` |
-| `GET /.well-known/ai-catalog.json` | `application/ai-catalog+json` | The AI Catalog, through which MCP Server Card discovery (SEP-2127) goes. The same entry cut to `identifier`, `type` and `url`, because the catalog spec makes the card authoritative for its name and description |
+| `GET /.well-known/ai-catalog.json` | `application/ai-catalog+json` | The AI Catalog, through which MCP Server Card discovery (SEP-2127) goes. The same entry as `ard.json` (`mcpsrv.storeEntry`), `displayName` included: Lighthouse finds the manifest here and validates it against the ARD schema, which requires that key. The catalog allows the extra keys, and every value is the Server Card's own |
 
 Both well-known documents are built from one entry, `storeEntry`, so they
 cannot disagree about what they describe. `displayName` and `description`
@@ -532,6 +532,15 @@ yourself, then bumping the pin in the infrastructure repo.
   anonymous and forwards no bearer, so B2B prices never reach an MCP tool, a
   UCP/ACP checkout or a feed, and totals stay self-consistent end to end. Only
   `/api/v1/agent/*` forwards a bearer, and those endpoints carry no pricing.
+- **A cart call acts on the cart it named, or fails.** Django never
+  refuses a cart an anonymous caller cannot reach, whether a signed-in
+  shopper's or a guest cart since deleted. It answers 200/201 with a new
+  guest cart and acts on that one. Every cart call in
+  `internal/django/client_cart.go` that names a cart compares the cart that
+  answered (`servedNamed`) and returns `ErrCartUnreachable` for another.
+  `add_to_cart` then tells the model the product is not in the shopper's
+  cart. The other MCP tools (`upstreamErr`) and ACP (`upstreamError`)
+  report it as not found.
 - **No fallback or backward-compatibility code paths.** Environment
   differences are config values, not conditionals.
 
@@ -554,6 +563,11 @@ yourself, then bumping the pin in the infrastructure repo.
   secrets middleware for exactly that reason.
 - **Every ACP bearer gets 401.** The tenant has no `acpBearerToken`, which is
   how ACP is disabled. It is not a credential mismatch.
+- **The assistant says it cannot update a signed-in shopper's cart.**
+  Expected until the cart-scoped token (gateway issue #24, part 2). The
+  gateway calls Django anonymously, so the shopper's own cart is
+  unreachable (`ErrCartUnreachable`), and `add_to_cart` says so instead of
+  adding to a guest cart nobody sees.
 - **A feed publishes broken image URLs.** Check `ASSETS_HOST` and the tenant's
   `assetsDomain`; an empty media host yields an empty URL by design, dropping
   the image rather than publishing an unreachable one, and a product with no
