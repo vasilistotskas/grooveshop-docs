@@ -245,13 +245,60 @@ every cache layer and sweeps the on-disk `.rsm` / `.rsc` pairs, because
 the disk tier is read directly and would otherwise resurrect the entry.
 Django calls it from `tenant/media_flush.py` through
 `tenant.tasks.flush_tenant_media_task`, using `MEDIA_STREAM_INTERNAL_URL`
-and `MEDIA_STREAM_INTERNAL_SECRET`; tenant offboarding (`tenant/lifecycle.py`)
-queues it. Do it by hand from a backend pod:
+and `MEDIA_STREAM_INTERNAL_SECRET`; suspending a tenant
+(`tenant/lifecycle.py: suspend_tenant`) and destroying one (`destroy_tenant`)
+queue it. Do it by hand from a backend pod:
 
 ```bash
 kubectl -n grooveshop exec deploy/backend -- .venv/bin/python manage.py shell -c \
   "from tenant.media_flush import flush_tenant_media; print(flush_tenant_media('<schema>'))"
 ```
+
+The flush reaches **every replica**. Memory and disk are private to a pod,
+and the request lands on one pod through the Service, so the pod that
+takes it flushes itself (memory, Redis, disk) and publishes the tenant on
+the Redis channel `mediastream:tenant-flush:{REDIS_DB}`; every other pod
+flushes itself the same way (`Cache/services/tenant-flush.service.ts`). The
+response carries `broadcastReceivers`, the number of pods that got the
+message: the replica count when healthy, `0` when Redis was unreachable
+and the other pods were not flushed. Pub/sub is fire-and-forget, so a pod
+that is down or reconnecting at that moment misses it.
+
+A request already running when the flush lands cannot undo it. Each flush
+advances a per-tenant epoch in the pod before it clears anything
+(`TenantCacheEpochs`); a request records the epoch when it starts, and its
+cache write is skipped, or removed again if the flush lands mid-write,
+when the epoch has moved. That request still answers with its own result,
+and a request that starts after the flush never joins work that began
+before it (the epoch is part of the deduplication key). The 5-minute
+negative cache is not covered.
+
+### The Cloudflare edge copy
+
+Cloudflare keeps each processed image for a year (`s-maxage` 360 days, no
+`Cache-Tag`), so flushing media-stream alone does not stop a suspended or
+destroyed tenant's images from being served. The same Celery task purges
+the edge **after** the flush, never before, because a purge that ran
+first would let the edge refetch images media-stream still holds. It
+purges by URL prefix, `{assets-host}/media_stream-image/media/{schema}/`
+(`core/cache/edge.py: tenant_media_purges`, `purge_media`): the platform
+zone for the shared assets host and any white-label host on a platform
+hostname, the tenant's own zone for an own-domain assets host. A prefix
+purge reaches images cached before the purge existed. The plan (zone ids
+and prefixes, never tokens) is read while the tenant row exists, so
+`destroy_tenant` builds it before the row is deleted. A zone whose
+credentials are gone, such as a destroyed tenant's own Cloudflare account,
+is logged with the prefixes for a manual purge and skipped; any other
+failure retries with the task. From a backend pod, for a tenant that still
+exists:
+
+```bash
+kubectl -n grooveshop exec deploy/backend -- .venv/bin/python manage.py shell -c \
+  "from core.cache import edge; from tenant.models import Tenant; t = Tenant.objects.get(schema_name='<schema>'); edge.purge_media(t.schema_name, edge.tenant_media_purges(t))"
+```
+
+Cloudflare's Free plan allows five prefix purges a minute per account;
+one suspend or destroy sends one request per zone.
 
 ## Layer 5: agent gateway feeds
 

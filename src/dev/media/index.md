@@ -26,9 +26,11 @@ through Nuxt.
   deduplication and a per-pipeline timeout; overload answers 503 with
   `Retry-After` rather than the default image (`Processing/`).
 - Cache under the `image:{schema}:…` namespace in memory and Redis, with
-  `.rsc`/`.rsm` pairs on disk, and flush one tenant on request
-  (`POST /admin/cache/flush-tenant` with `x-internal-secret`) (`Cache/`,
-  `Storage/`).
+  `.rsc`/`.rsm` pairs on disk, and flush one tenant on every replica on
+  request (`POST /admin/cache/flush-tenant` with `x-internal-secret`; the
+  pod that takes it broadcasts over Redis pub/sub) (`Cache/`, `Storage/`).
+  Cloudflare's copy of a tenant's images is purged separately, by Django,
+  see [caches](../operations/caches.md#the-cloudflare-edge-copy).
 - Report health, Prometheus metrics and a Redis-persisted circuit breaker
   (`Health/`, `Metrics/`, `HTTP/`).
 
