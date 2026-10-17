@@ -89,8 +89,12 @@ something:
 3. Otherwise: `is_active = False`, `suspended_reason = <reason>`, and
    `suspended_at = now` **only if it was empty** — the first suspension
    sets the anchor and later ones leave it alone.
-4. The store's originals are parked out of the served path, and a media
-   flush is queued for after the commit, best-effort (see
+4. The store's originals are parked out of the served path, best-effort: a
+   failed park is logged and the suspension goes ahead, the originals then
+   stay reachable at the static host until they are parked by hand
+   (`tenant.media_parking.park_tenant_media` from a backend shell; see
+   [the caches page](../operations/caches.md#layer-4-media-stream-image-cache)).
+   A media flush is queued for after the commit, also best-effort (see
    [What the media flush touches](#what-the-media-flush-touches)).
 
 `suspended_reason` is `SuspendedReason.MANUAL` (operator: abuse, legal,
@@ -428,8 +432,8 @@ of anything.
 | `grooveshop-django-api/tenant/middleware_ws.py` | WebSocket 4004 for an inactive tenant |
 | `grooveshop-django-api/tenant/internal.py` | Internal tenant feed: active stores' domains and `suspendedSchemas` |
 | `grooveshop-django-api/tenant/celery.py` | `run_for_all_tenants`, `include_suspended`, `dispatch_on_commit` |
-| `grooveshop-django-api/tenant/lifecycle.py`, `tenant/admin.py` | `suspend_tenant` / `activate_tenant` and the media flush they queue; `is_active` read-only in the admin |
-| `grooveshop-media-stream/src/MediaStream/Validation/services/tenant-domains.service.ts`, `API/controllers/media-stream-image.controller.ts` | The feed poll and the 503 for a suspended store |
+| `grooveshop-django-api/tenant/lifecycle.py`, `grooveshop-django-api/tenant/admin.py` | `suspend_tenant` / `activate_tenant` and the media flush they queue; `is_active` read-only in the admin |
+| `grooveshop-media-stream/src/MediaStream/Validation/services/tenant-domains.service.ts`, `grooveshop-media-stream/src/MediaStream/API/controllers/media-stream-image.controller.ts` | The feed poll and the 503 for a suspended store |
 | `grooveshop-django-api/tenant/tasks.py` | `flush_tenant_media_task`, `purge_expired_tenant_archives` |
 | `grooveshop-django-api/tenant/media_flush.py` | The media-stream flush call and its fail-open behaviour |
 | `grooveshop-django-api/tenant/storage.py` | `private_media_root`, why private files have no URL |
