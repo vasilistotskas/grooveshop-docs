@@ -22,6 +22,10 @@ through Nuxt.
   Service names, plus the tenant domains polled from Django's
   `GET /api/v1/tenant/internal/domains`
   (`Validation/services/tenant-domains.service.ts`).
+- Refuse a suspended store's images, 503 before any cache tier is read,
+  by the `suspendedSchemas` list in the same feed
+  (`API/controllers/media-stream-image.controller.ts`; see
+  [caches](../operations/caches.md#layer-4-media-stream-image-cache)).
 - Process synchronously with admission control, per-resource
   deduplication and a per-pipeline timeout; overload answers 503 with
   `Retry-After` rather than the default image (`Processing/`).

@@ -118,9 +118,9 @@ tops the cached public config up with the secret fields.
 **Media stream.** Tenancy is in the path (`media/:tenantSchema/uploads/…`),
 so the service needs no host lookup; it validates the schema segment and
 namespaces its cache as `image:{schema}:…`. Its host allowlist for
-upstream fetches is refreshed from
-`GET /api/v1/tenant/internal/domains`, gated by the same internal token
-(`tenant/internal.py`).
+upstream fetches, and the list of suspended stores whose images it
+refuses, are refreshed from `GET /api/v1/tenant/internal/domains`, gated
+by the same internal token (`tenant/internal.py`).
 
 ### Per-tenant credentials
 
