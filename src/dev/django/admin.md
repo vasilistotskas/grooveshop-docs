@@ -40,6 +40,24 @@ models onto the platform site after autodiscovery. The store site is not
 mounted on the public host at all
 (`tests/unit/tenant/test_platform_host_serves_only_the_platform_admin.py`).
 
+The copy reuses the store admin's own class. `PLATFORM_ADMIN_CLASSES`
+lists the exceptions, models the two sites describe differently. Today it
+has one: `user.UserAccount` → `user/admin.py: PlatformUserAdmin`. A
+`UserAccount` is a shopper on a store host but a platform identity in
+public, and the store's `UserAdmin` reads store-only tables (loyalty,
+orders), which answered 500 on the platform. `PlatformUserAdmin` shows:
+
+- the account itself;
+- its stores and roles, as a **Stores** column and `TenantMembershipInline`. The inline's form offers only the roles still issued and starts a new one at STAFF, because the model's default, MEMBER, is reserved and grants no admin access;
+- a **Kind** filter: platform superusers, store staff, dormant.
+
+It shows no shopper data. Deleting an identity goes through
+`tenant/deletion.py: PublicSchemaDeletionMixin`, which collects nothing
+from tenant-only apps in the public schema, for the delete and for its
+confirmation page. `tests_mt/test_platform_admin_pages_open.py` walks
+every model on the platform site (list, add, change) on the real public
+schema, and deletes an identity.
+
 Branding comes from `admin/branding.py`: a store shows its own logo and
 favicon, and only the platform's own storefront falls back to the platform
 assets; any other store without a logo shows Unfold's symbol and its name.
@@ -441,7 +459,9 @@ holds lazy strings evaluated after the request has reset the language.
 | File | Role |
 |---|---|
 | `grooveshop-django-api/admin/admin.py` | `MyAdminSite`, cache page |
-| `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite`, `register_platform_models` |
+| `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite`, `register_platform_models`, `PLATFORM_ADMIN_CLASSES` |
+| `grooveshop-django-api/user/admin.py` | `UserAdmin` (store) and `PlatformUserAdmin` (platform identities) |
+| `grooveshop-django-api/tenant/deletion.py` | `PublicSchemaDeletionMixin`, deletes that skip tenant-only tables |
 | `grooveshop-django-api/admin/base.py` | `BaseModelAdmin`, action permissions, filter mapping, JSON Schema editor |
 | `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `AdminSiteLoginNextMixin`, `AdminFooterMixin` |
 | `grooveshop-django-api/admin/displays.py`, `admin/filters.py`, `admin/datasets.py` | Shared displays, filters, datasets |

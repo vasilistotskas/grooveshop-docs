@@ -289,7 +289,20 @@ are the bugs it exists to catch.
   `/llms-full.txt` and direct `.md` mirrors on every other host, because
   the module's index is a single per-pod store with no host column. The
   platform storefront is the `Tenant` row with `is_platform_storefront`,
-  never a hostname comparison.
+  never a hostname comparison (`server/utils/aiSurfaces.ts:
+  servesAiSurfaces`).
+- **A store's site config is its own on every response, and a store
+  advertises only the surfaces it serves.** nuxt-ai-ready builds the
+  `Link` header (a page's `.md` twin and `/llms.txt`) in a handler it
+  places ahead of every server middleware, and serves `/llms.txt` on paths
+  `0.tenant.ts` bypasses. A middleware therefore ran too late, and every
+  store advertised the platform's URLs. `server/plugins/tenant-site-config.ts`
+  pushes the store's `url`, name and per-locale description from
+  nuxt-site-config's `site-config:init` hook, which runs whenever a
+  request's site config is first built. It resolves the store itself when
+  `0.tenant.ts` has not run. On a store that does not serve the surfaces,
+  it removes those links from the `Link` header as the response ends,
+  which is the one point a 200 and a 304 both pass through.
 - **No tenant hostname in code, env or manifests.** `NUXT_PUBLIC_*` values
   are serialised into every tenant's HTML, so none may carry a store's
   hostname, title, logo or token; per-store values come from the resolve
@@ -348,6 +361,8 @@ are the bugs it exists to catch.
 | `grooveshop-django-api/tests_mt/conftest.py` | The multi-tenant test lane |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | Host resolution and bypass list |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.ai-ready-gate.ts` | Platform-only AI surfaces |
+| `grooveshop-storefront-ui-node-nuxt/server/plugins/tenant-site-config.ts` | The store's site config on `site-config:init`; drops AI-surface links a store does not serve |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/aiSurfaces.ts` | `servesAiSurfaces`, `withoutAiSurfaceLinks` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | Per-tenant locale gate |
