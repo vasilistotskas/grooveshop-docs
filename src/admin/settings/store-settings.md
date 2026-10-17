@@ -180,7 +180,7 @@ Fill the seller identity **before the first receipt**: the values are printed on
 
 ### Operational alert emails
 
-The platform emails the store when something in shipping or payments needs a person. These emails go to the contact and owner email addresses on your store profile, and their subject is always in English. Each kind has its own switch, all on by default; switching one off stops that email and nothing else. Every kind that involves money or a parcel nobody is moving keeps its line under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard) whether the email is on or off, so the work stays visible. In the list these keys sit under the **Operational Alerts** category.
+The platform emails the store when something in shipping or payments needs a person, or a customer review waits for approval. These emails go to the contact and owner email addresses on your store profile. Their subject is in English, except the review email, which is written entirely in the store's default language. Each kind has its own switch, all on by default; switching one off stops that email and nothing else. Every kind that involves money or a parcel nobody is moving keeps its line under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard) whether the email is on or off, so the work stays visible. In the list these keys sit under the **Operational Alerts** category.
 
 | Setting | The email | With the email off | Default | Public |
 |---|---|---|---|---|
@@ -190,6 +190,7 @@ The platform emails the store when something in shipping or payments needs a per
 | `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` | "ACS: shipment creation failed for order N" (or BoxNow), at once: the courier permanently refused to create the shipment, for example because of a bad address or a destination it does not serve. | No dashboard line of its own. The order's history still gets a note with the courier's reason. | on | no |
 | `OPS_ALERT_WEBHOOK_FAILED_ENABLED` | "BoxNow: webhook processing failed (message …)": BoxNow sent a parcel update the platform could not apply, so a parcel movement may be missing. | No dashboard line. Compare the parcel with the BoxNow portal from time to time. | on | no |
 | `OPS_ALERT_PAYMENT_AFTER_CANCEL_ENABLED` | "Payment received for canceled order N": a payment arrived for an order that was already cancelled, so the customer must be refunded. | The order stays on the dashboard as **Canceled orders to refund** until it is refunded. | on | no |
+| `OPS_ALERT_REVIEW_PENDING_ENABLED` | "Review waiting for approval: *product*", at once: a customer submitted a review, or changed the rating or comment of an approved or rejected one, which sends it back for approval. One email each time, with the stars, the customer's first name and last initial, the start of the comment and a link to the review. | The reviews stay on the dashboard as **Reviews to approve** and in the number beside **Reviews** in the sidebar. See [Reviews](/admin/catalog/reviews#the-email-about-reviews-to-approve). | on | no |
 
 ### Store presence
 

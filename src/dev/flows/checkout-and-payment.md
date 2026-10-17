@@ -324,7 +324,7 @@ endpoint, so django-tenants selects the schema and dj-stripe verifies
 against that schema's `WebhookEndpoint` secret. Handlers live in
 `order/signals/handlers.py`: `payment_intent.succeeded`,
 `payment_intent.payment_failed`, `payment_intent.requires_action`,
-`charge.refunded`, `charge.dispute.created`, `checkout.session.completed`
+`charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `checkout.session.completed`
 and `checkout.session.expired`. Each except `charge.refunded` marks
 `metadata["webhook_processed_<event_id>"]` under a row lock before doing
 any work; `charge.refunded` is guarded by the payment ledger instead,
@@ -599,7 +599,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id` |
 | `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
-| `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798, `_verify_viva_refund` |
+| `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_refund` |
 | `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
 | `grooveshop-django-api/order/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |

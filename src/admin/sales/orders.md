@@ -56,7 +56,7 @@ Below them the page is split into tabs:
 - **Shipping & Tracking**: shipping provider, shipping kind, shipping price, tracking number, carrier name.
 - **Additional Information**: the customer's notes from checkout, then the read-only order source fields: **Source type**, **Order source**, **Traffic medium**, **Campaign name**, **Referrer host** and **Landing page**. All show "-" on an order placed before the store started recording them.
 
-Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), **Payment Transactions** (read-only: every charge, cash-on-delivery collection and refund recorded for the order, with **Created At**, **Kind**, **Amount**, **Provider**, **Provider reference** and, for a refund, the reason in **Description**), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
+Below the tabs: the **order items** (product, quantity, unit price, line total, refund status), **Payment Transactions** (read-only: every charge, cash-on-delivery collection, refund and chargeback recorded for the order, with **Created At**, **Kind**, **Amount**, **Provider**, **Provider reference** and, for a refund, the reason in **Description**), the **invoice** row if one exists (number, issue date, total, **Download PDF**), the **history** (the whole history, newest first, fifteen rows per page: change type, description, who changed it or "System", when) and, when a carrier is attached, an **ACS** or **BoxNow** shipment tab with the voucher details.
 
 The header carries **Refund (amount, reason)** on a delivered, completed or returned order (see [Refunds](#refunds)), **Download shipping voucher (PDF)** and, when the platform issues your receipts, an **Invoicing & myDATA** menu with **Issue receipt (myDATA)**, **Regenerate receipt (same number)**, **Send receipt to myDATA**, **Issue credit documents (myDATA)** and **Cancel receipt in myDATA (issued in error)**. See [Receipts and credit documents](/admin/sales/receipts).
 
@@ -201,7 +201,7 @@ There is no other way: **Status** is read-only on the order page.
 - **Receipts** are issued when a receipt order ships, and a **credit document** for every refund. Invoice orders get no document from the platform: you issue the invoice in timologio. See [Receipts and credit documents](/admin/sales/receipts).
 - **Emails** to the customer: order received (immediately for cash on delivery, after payment for online orders), payment failed, shipped (when genuinely in transit), delivered, canceled, completed, refunded, returned, receipt, refund confirmation. **Pending** and **Processing** never email the customer, and neither does the automatic step to **Completed**: the customer has just had the delivered message, so only a Completed you trigger yourself emails them. The store also gets a new-order email. Templates are under [Email templates](/admin/storefront/email-templates).
 - **In-app notifications** mirror the same milestones for customers with an account; guests only get email. See [Notifications](/admin/sales/notifications).
-- **History** logs every status change, payment update, shipping update, note and refund, with the user who did it or "System".
+- **History** logs every status change, payment update, shipping update, note, refund and chargeback, with the user who did it or "System".
 
 ## Cancellations by the customer
 
@@ -251,13 +251,30 @@ Cancelling a **Pending** or **Processing** order that was paid online refunds it
 ### Refunds made in the provider's dashboard
 A refund made in the Viva Wallet or Stripe dashboard reaches the order on its own: it is recorded on the order, the payment status becomes **Partially Refunded** or **Refunded**, and the customer gets a refund email for it, a partial refund included. A refund you made from the admin is never counted twice when the provider reports it back. If a Viva Wallet refund does not show up on the order, ask the platform team to check that the store's Viva account sends refund notifications.
 
+### Card disputes and chargebacks
+A customer can dispute a card payment with their bank instead of asking you for a refund. Viva Wallet and Stripe report the dispute, and the order follows it on its own:
+
+- **The dispute opens.** The order's history gets a note, and the contact email on your store profile receives "[Store] Viva Wallet dispute opened — Order #N" (or Stripe). Answer the dispute in the provider's dashboard: the platform does not answer it for you.
+- **While it is open, the order cannot be refunded.** The provider does not accept a refund of a disputed payment, so **Refund (amount, reason)** stops with "A dispute is open on this payment and the payment provider does not accept a refund until it is decided. Refund once it has closed." Cancelling such an order still cancels it, but its refund fails the same way and the order is listed under [Orders cancelled but still paid](#orders-cancelled-but-still-paid). A Stripe inquiry, where the bank only asks a question and no dispute has been opened, does not block a refund.
+- **You win.** The history gets a note and the order can be refunded again. No email.
+- **You lose.** The money has been taken back. The history gets a red **Chargeback** entry, "Chargeback €X", and the contact email receives "[Store] Viva Wallet dispute lost — Order #N". The amount is listed on **Payment Transactions** with the kind **Chargeback**, and what you can still refund goes down by it.
+
+When earlier refunds had already returned part of the payment, the chargeback is recorded only up to what was left, and the entry says so: "Chargeback €70.00 (disputed €100.00, €30.00 already returned)". When nothing was left, the entry reads "Chargeback of €100.00 not recorded: nothing is left on the payment (€100.00 already returned)", and the email still goes out. Each dispute is recorded once, however many times the provider reports it.
+
+A chargeback is not a refund:
+- **The payment status does not change**, and neither does the order status. A Completed payment stays Completed and a Partially Refunded one stays Partially Refunded; the red entry and the **Payment Transactions** row are what show the money left.
+- **Nothing goes to the customer**: no refund email, no credit document, and gift cards used on the order do not get their amount back.
+- **Loyalty points**: once refunds and chargebacks together cover the whole payment, the points earned on the order are taken back. Unlike a refund or a cancellation, the points the customer spent on the order are **not** given back, because the customer took the money back through their bank. To give them back anyway, a platform operator can add them by hand; see [Tiers & points](/admin/loyalty/tiers-and-points#add-or-remove-points-for-a-customer).
+
+If a Viva Wallet dispute never shows up on the order, ask the platform team to check that the store's Viva account sends account transaction notifications. Without them the platform hears of a Viva dispute only if Viva reports the lost money as a refund claim, and you learn of it from Viva's own email.
+
 ### Orders cancelled but still paid
 When a provider refuses the refund of a cancelled order, the order stays **Canceled** and the money stays with you. The same happens when a payment arrives after the order was cancelled, for instance a card payment that completed after the unpaid order had been cancelled automatically: the order stays **Canceled**, nothing ships, the payment is recorded as **Completed**, the order's history gets a note asking you to refund the customer, and the store is emailed "Payment received for canceled order N" (unless you switched that email off, see [Store settings](/admin/settings/store-settings#operational-alert-emails)). Choose **Refund → Cancelled but still paid** in the filters to list every such order, including ones refunded only in part; the dashboard counts them as **Canceled orders to refund** under **Needs attention** and that line opens the same list. The **Refund (amount, reason)** button is not offered on a cancelled order, so refund what is left in the Viva Wallet or Stripe dashboard; the refund then reaches the order on its own.
 
 ### What the customer receives
 One refund email for each refund: a partial refund and the later refund of the rest send one each. Customers with an account also get an in-app notification for each refund.
 
-Gift cards and loyalty points come back only when **all** the money has been refunded, or when the order is canceled. Each card then gets back exactly what it paid; the points spent on the order are given back and the points earned on it are taken back. A partial refund leaves both alone; they come back, in full, with the refund that returns the rest. See [Gift cards](/admin/sales/gift-cards) and [Tiers & points](/admin/loyalty/tiers-and-points).
+Gift cards and loyalty points come back only when **all** the money has been refunded, or when the order is canceled. Each card then gets back exactly what it paid; the points spent on the order are given back and the points earned on it are taken back. A partial refund leaves both alone; they come back, in full, with the refund that returns the rest. A chargeback is different, see [Card disputes and chargebacks](#card-disputes-and-chargebacks). See [Gift cards](/admin/sales/gift-cards) and [Tiers & points](/admin/loyalty/tiers-and-points).
 
 ## Guest orders
 

@@ -356,7 +356,7 @@ together.
 | Refund recorded | `send_refund_confirmation_email` | `notify_order_refunded_live` |
 | Retail receipt registered with myDATA | `send_invoice_email`, chained from `send_invoice_to_mydata` once the MARK is on the PDF (never for an unregistered receipt) | — |
 | Retail credit document registered with myDATA | `send_credit_email` (`credit_email_sent_<id>` flag) | — |
-| Stripe dispute opened | `send_dispute_notification_email` to staff | — |
+| Stripe or Viva dispute opened; dispute lost (chargeback) | `send_dispute_notification_email` to the store contact address (`lost=True` for a loss) | — |
 | Pending order, 24h+, online only | `check_pending_orders` reminder, up to 3 with widening intervals | — |
 | Reservation expired without an order | `send_checkout_abandonment_emails` | — |
 | ACS parcel out for delivery | `acs_out_for_delivery` | `ACS_OUT_FOR_DELIVERY` |

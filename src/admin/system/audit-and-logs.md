@@ -61,6 +61,7 @@ Every payment notification Viva Wallet sent. Columns: **Transaction ID**, **Even
 | 1796 | Transaction Payment Created (a payment succeeded) |
 | 1797 | Transaction Reversal Created (a refund or reversal) |
 | 1798 | Transaction Failed |
+| 2054 | Account Transaction Created (money moved on the Viva account; a row appears only when it concerns one of your payments, which is how disputes reach the order, see [Card disputes and chargebacks](/admin/sales/orders#card-disputes-and-chargebacks)) |
 
 | Outcome | Meaning |
 |---|---|
