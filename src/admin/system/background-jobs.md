@@ -38,6 +38,8 @@ Times are store local time (Athens). Each job runs once per store.
 | Poll BoxNow tracking | every 15 minutes | Fetches parcel state for open BoxNow shipments, alongside BoxNow's own notifications. |
 | Sync BoxNow lockers | daily 02:00 | Refreshes the locker list used by the checkout map. |
 
+The two emailing jobs keep running when you switch their email off with `OPS_ALERT_STALE_SHIPMENTS_ENABLED` or `OPS_ALERT_UNREMITTED_COD_ENABLED`; they simply send nothing, and the dashboard keeps counting the same parcels. See [Store settings](/admin/settings/store-settings#operational-alert-emails).
+
 ### Loyalty, gift cards, promotions
 
 | Job | When | What it does | Your knobs |
@@ -56,6 +58,7 @@ Times are store local time (Athens). Each job runs once per store.
 | Clean expired data exports | daily 03:00 | Deletes data-export files older than seven days. | |
 | Reap unclaimed contact attachments | hourly | Deletes uploads whose enquiry was never submitted. | |
 | Purge expired attachment files | daily 04:00 | Deletes attachment bytes past the retention window; the enquiry stays. | `CONTACT_ATTACHMENTS_RETENTION_DAYS` |
+| Delete old messages and feedback | daily 04:00 | Deletes contact messages, with their attached files, and feedback entries older than the retention period. | `CONTACT_RETENTION_DAYS` (0 keeps everything) |
 | Rebuild search indexes | daily 02:00 | Re-syncs products and posts to the search engine. | |
 | Update search click scores | daily 03:00 | Feeds click data back into ranking. | |
 | Anonymise old search queries | Sunday 03:00 | Strips identifying data from searches older than 90 days. | |

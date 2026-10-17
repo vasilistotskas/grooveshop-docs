@@ -47,7 +47,7 @@ Columns of the list:
 | **Label printed at** | When the label was **first** downloaded through the platform. Later downloads do not change it. Empty means the label has not been printed here yet, and while any voucher is unprinted ACS refuses the day's pickup list. |
 | **Last polled at** | When tracking was last refreshed. |
 
-Filters: **Shipment state**, **Delivery kind**, **Label printed at** (empty or not), **Created at** range. The search box matches the voucher number, the order number and the customer email.
+Filters: **Shipment state**, **Delivery kind**, **Label printed at** (empty or not), **Needs attention** (**Stale: no tracking movement or never created**, or **Delivered COD never paid out by ACS**: the same parcels the alert emails and the dashboard count), **Created at** range. The search box matches the voucher number, the order number and the customer email.
 
 Shipment states:
 
@@ -140,9 +140,11 @@ Issued lists are visible to superusers at <span class="sidebar-path">System → 
 
 ### Deal with a shipment that stopped moving
 
-A daily check at 09:00 emails the store's own admins about shipments with no tracking movement for three days, and about rows stuck in Pending creation for more than a day. Each shipment is reported once; a new tracking event re-arms the alert. The alert does not stop the polling: only marking the row final does that.
+A daily check at 09:00 emails the store's own admins about shipments with no tracking movement for three days, and about rows stuck in Pending creation for more than a day (an online order not paid yet is left out: its voucher is created once the payment arrives). Each shipment is reported once; a new tracking event re-arms the alert. The alert does not stop the polling: only marking the row final does that.
 
-This email is also the only place a voucher ACS never collected is reported. Until you retire it, it stays on the list of vouchers offered to ACS every working day — and on a day with no other parcels it is why the pickup list comes back empty.
+The same shipments are counted on the [Dashboard](/admin/getting-started/dashboard) as **Stale ACS shipments**, and the **Needs attention → Stale: no tracking movement or never created** filter lists them, whether or not they were emailed already. You can switch the email off with `OPS_ALERT_STALE_SHIPMENTS_ENABLED` in [Store settings](/admin/settings/store-settings#operational-alert-emails); the dashboard line and the filter stay, and when you switch it back on the next digest lists every shipment still stale.
+
+The email and that dashboard line are the only places a voucher ACS never collected is reported. Until you retire it, it stays on the list of vouchers offered to ACS every working day — and on a day with no other parcels it is why the pickup list comes back empty.
 
 1. Search the voucher on the ACS portal or call ACS.
 2. If the parcel was never handed over and never will be, select the row and run **Retire selected shipments**. The order is not changed; cancel it separately if needed.
@@ -159,14 +161,16 @@ How a COD order gets paid:
 3. Every night at 02:30 the platform pulls yesterday's payouts from ACS and stores one row per voucher and payout date in <span class="sidebar-path">System → Reconciliation → ACS COD Payouts</span>.
 4. Each payout matched to a shipment flips the order's payment status to Completed and the order to Completed. Customers are not emailed for this step; they were already notified at delivery.
 
-The payouts screen (superusers) shows **Voucher number**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment** and **Customer reference 1** (the order number sent to ACS). Filters: **COD payment date** and **Parcel delivery date** ranges. Search matches the voucher, both customer references and the receiver name. Rows are read-only. The row button **Run COD reconciliation now** re-runs the nightly pull for yesterday's date; it is safe to press twice, as a payout already recorded is simply updated in place.
+The payouts screen (superusers) shows **Voucher number**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment** and **Customer reference 1** (the order number sent to ACS). Filters: **Shipment** (**Matches no shipment, not reconciled**), **Reconciliation** (**Reconciled** or **Not reconciled**), and **COD payment date** and **Parcel delivery date** ranges. Search matches the voucher, both customer references and the receiver name. The payout data is read-only; the one thing staff can add is a reconciliation, with **Mark as reconciled** (see [Reconciliation](/admin/system/reconciliation#acs-cod-payouts)). **Run COD reconciliation now**, at the top of the list, re-runs the nightly pull for yesterday's date; it is safe to press twice, as a payout already recorded is simply updated in place.
 
 Alerts you may receive:
 
 | Email subject | Meaning | What to do |
 |---|---|---|
-| "ACS COD reconcile: N unattributable payout row(s)" | ACS paid out money for a voucher the platform does not know, typically one created by hand in the ACS portal. The row is stored; it is not attributed. | Reconcile it as an off-platform sale against ACS's beneficiary report. |
-| "ACS COD: N delivered parcel(s) never remitted" | Delivered COD parcels older than ten days with no payout row. | Give ACS the voucher numbers and ask for the remittance status. If ACS paid on a date the nightly pull never queried, the platform team can replay that date. |
+| "ACS COD reconcile: N unattributable payout row(s)" | ACS paid out money that none of your shipments explains: a voucher the platform does not know, typically one created by hand in the ACS portal, or a payout line with no readable voucher at all. The row is stored; it is not attributed. | Reconcile it against ACS's beneficiary report as an off-platform sale, then mark the payout as reconciled. Until then it is counted on the dashboard as **ACS payouts matching no shipment**. |
+| "ACS COD: N delivered parcel(s) never remitted" | Delivered COD parcels older than ten days with no payout row. Also counted on the dashboard as **COD cash ACS has not paid out**. | Give ACS the voucher numbers and ask for the remittance status. If ACS paid on a date the nightly pull never queried, the platform team can replay that date. If you were paid for the parcel outside ACS, open the shipment and use **Record COD received outside ACS** to clear it. |
+
+Each of these emails has its own switch in [Store settings](/admin/settings/store-settings#operational-alert-emails) (`OPS_ALERT_UNATTRIBUTABLE_COD_PAYOUTS_ENABLED` and `OPS_ALERT_UNREMITTED_COD_ENABLED`). Switching one off stops the email only; the dashboard line keeps counting until the money is accounted for.
 
 See [Reconciliation](/admin/system/reconciliation) for the finance view.
 
@@ -189,7 +193,7 @@ Notes:
 ## Things to know
 
 - **Transient 403 and 406 errors.** ACS sporadically answers a tracking poll or a voucher request with HTTP 403 or 406 and then succeeds on the next attempt. The platform retries those automatically with backoff. Only a persistent rejection means a wrong API key or an IP address ACS has not allow-listed; in that case raise it with the platform team.
-- **Business errors do not retry.** A rejected address or station is reported by email at once and stored on the shipment. Fix the data and click **Issue ACS voucher now**.
+- **Business errors do not retry.** A rejected address or station is reported by email at once ("ACS: shipment creation failed for order N"), noted in the order's history and stored on the shipment. Fix the data and click **Issue ACS voucher now**. The email can be switched off with `OPS_ALERT_SHIPMENT_REJECTED_ENABLED`; the history note is written either way.
 - **Parcels per voucher.** ACS's item quantity is the number of physical parcels, not cart lines. The platform sends one. Smartpoint pickup requires exactly one.
 - **Weight** is stored in grams and sent in kilograms with a minimum of 0.5 kg. Bounds come from the provider metadata.
 - **The customer's checkout note** is printed on the voucher's remarks line, trimmed to one paragraph.

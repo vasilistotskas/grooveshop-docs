@@ -37,17 +37,29 @@ Issuing is single-flight: a lock is taken for five minutes, so if the scheduled 
 
 A read-only ledger of the cash-on-delivery money ACS has paid out, one row per voucher and payout date.
 
-Columns: **Voucher no**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment**, **Customer ref no 1** (the order id sent with the voucher). Filters: payment date, delivery date. Search: voucher, both reference numbers, receiver name. Every field is read-only; the detail page splits the amount into cash and card and keeps the raw ACS record.
+Columns: **Voucher no**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment**, **Customer ref no 1** (the order id sent with the voucher). Filters: **Shipment** (**Matches no shipment, not reconciled**), **Reconciliation** (**Reconciled** or **Not reconciled**), payment date, delivery date. Search: voucher, both reference numbers, receiver name. Every field is read-only; the detail page splits the amount into cash and card, keeps the raw ACS record and shows **Reconciled at**, **Reconciled by** and **Reconciliation note** once someone has reconciled the payout.
 
 ### The routine
 
 1. **Daily 02:30** the job asks ACS for the previous day's payouts and writes them here. Re-running is harmless: a row is identified by voucher plus payment date, so a repeat updates rather than duplicates.
 2. Each row is linked to its **Shipment** by voucher number; failing that, by the order id, and failing that by the order's reference. When the shipment is found, its voucher number is taken as the truthful one for the row.
 3. For a linked order still in payment status Pending, the order flips to **Completed**. No email goes to the customer for this flip; they already paid the courier in person. Internally the order history gets a row and the order may auto-advance from Delivered to Completed, also silently.
-4. Rows that match no shipment and no order reference are counted as skipped and an alert email goes to the store's operators: unattributed money must be investigated.
+4. Rows that match no shipment and no order reference are stored all the same, with an empty voucher number when ACS sent none, and an alert email goes to the store's operators: unattributed money must be investigated. They stay counted on the dashboard as **ACS payouts matching no shipment** until someone marks them as reconciled (below).
 5. **Daily 03:00** a second job emails a list of delivered COD parcels that ACS has not paid out yet.
 
-To run the import outside the schedule, open a payout row and click **Run COD reconciliation now**; the message "COD reconciliation task dispatched" confirms it was queued. This button is on this screen, so only a platform operator can press it.
+To run the import outside the schedule, click **Run COD reconciliation now** at the top of the list; the message "COD reconciliation task dispatched" confirms it was queued. This button is on this screen, so only a platform operator can press it.
+
+Both emails can be switched off per store with `OPS_ALERT_UNATTRIBUTABLE_COD_PAYOUTS_ENABLED` and `OPS_ALERT_UNREMITTED_COD_ENABLED` in [Store settings](/admin/settings/store-settings#operational-alert-emails). The dashboard lines **ACS payouts matching no shipment** and **COD cash ACS has not paid out** keep counting either way.
+
+### Reconcile a payout that matches no shipment
+
+Money ACS paid for a voucher the store never created, or for a line with no readable voucher, can never be linked to an order, so only a person can close it.
+
+1. Set the **Shipment** filter to **Matches no shipment, not reconciled**. Each row shows its voucher, amount, receiver and delivery date.
+2. Account for the payout against ACS's COD beneficiary report: usually a sale made outside the store, with a voucher created by hand in the ACS portal.
+3. Click **Mark as reconciled** on the row (or on the payout's page), write in **Note** how it was accounted for (the off-system sale, the invoice, the line of the ACS report) and confirm. The message "Payout marked as reconciled." confirms it.
+
+The payout itself is not changed; the note, who reconciled it and when are kept on it, and it stops counting on the dashboard. A payout that is already tied to a shipment, or already reconciled, is refused with the reason.
 
 ### Reading the numbers
 
