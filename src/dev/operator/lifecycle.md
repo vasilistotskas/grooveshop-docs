@@ -91,8 +91,8 @@ something:
    sets the anchor and later ones leave it alone.
 4. A media flush is queued for after the commit, best-effort (see
    [What the media flush touches](#what-the-media-flush-touches)). No file
-   moves: the originals are not public, and media-stream refuses the store's
-   images by its state (see
+   moves: the static host serves no original as uploaded (it redirects to
+   media-stream), and media-stream refuses the store's images by its state (see
    [the caches page](../operations/caches.md#layer-4-media-stream-image-cache)).
 
 `suspended_reason` is `SuspendedReason.MANUAL` (operator: abuse, legal,

@@ -296,8 +296,8 @@ refusal applies at once. Between flushes the feed is polled every
 a failed one retries from 1 s, doubling up to the poll interval. It is a
 deny list, so a feed media-stream cannot read refuses nothing.
 
-**The originals are not public.** They live in `MEDIA_ROOT/{schema}`, and
-only media-stream reads them, in-cluster from `static-svc` with
+**No original is served as uploaded.** They live in `MEDIA_ROOT/{schema}`,
+and only media-stream reads them, in-cluster from `static-svc` with
 `Host: static-svc`. A public request for one reaches the static nginx
 through a static host (`static.grooveshop.space`, `static.webside.gr`, a
 `static-staging.` twin or a store's own `static.<domain>`) and is answered
