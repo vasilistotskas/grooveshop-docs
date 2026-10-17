@@ -283,28 +283,42 @@ so the Celery task retries. A sidecar the sweep cannot read does not
 count: its tenant is unknown and a pair without a valid sidecar is never
 served.
 
-The flush drops **cached copies only**. The originals stay on `static-svc`,
-whose nginx serves `/media` without a tenant check, so after a suspension
-a request for a known image URL is fetched, processed and cached again.
-Destroying a tenant removes the originals too (`purge_tenant_files`).
+The flush itself drops **cached copies only**: the originals live in
+`MEDIA_ROOT/{schema}`, which `static-svc` publishes at `/media/{schema}/…`
+(no tenant check) and media-stream fetches from. Suspending a tenant
+therefore first **parks** that directory at `MEDIA_ROOT/.suspended/{schema}`
+(`tenant/media_parking.py`), one rename on the same volume: the static
+nginx denies every dot-segment path (`location ~ /\. { deny all; }`, 403),
+and `.suspended` is not a valid schema for media-stream. The park runs
+before the flush is dispatched, so a request that refills a cache afterwards
+finds no original and gets media-stream's placeholder. Reactivating moves
+the directory back and, only when something was restored, flushes and
+purges again so the placeholders go. Neither direction merges two trees: if
+the destination already exists (files uploaded while suspended), nothing
+moves and the conflict is logged. Destroying a tenant erases both the live
+and the parked tree (`purge_tenant_files`).
 
 ### The Cloudflare edge copy
 
 Cloudflare keeps each processed image for a year (`s-maxage` 360 days, no
-`Cache-Tag`), so flushing media-stream alone leaves the edge copies of a
-suspended or destroyed tenant's images in place. The same Celery task purges
+`Cache-Tag`) and each original for 30 days, so flushing media-stream alone
+leaves the edge copies of a suspended or destroyed tenant's images in place. The same Celery task purges
 the edge **after** the flush, never before, because a purge that ran
 first would let the edge refetch images media-stream still holds. It
-purges by URL prefix, `{assets-host}/media_stream-image/media/{schema}/`
-(`core/cache/edge.py: tenant_media_purges`, `purge_media`): the platform
-zone for the shared assets host and any white-label host on a platform
-hostname, the tenant's own zone for an own-domain assets host. A prefix
-purge reaches images cached before the purge existed. The plan (zone ids
-and prefixes, never tokens) is read while the tenant row exists, so
-`destroy_tenant` builds it before the row is deleted. A zone whose
-credentials are gone, such as a destroyed tenant's own Cloudflare account,
-is logged with the prefixes for a manual purge and skipped; any other
-failure retries with the task. From a backend pod, for a tenant that still
+purges by URL prefix (`core/cache/edge.py: tenant_media_purges`,
+`purge_media`): the processed images at
+`{assets-host}/media_stream-image/media/{schema}/` and the originals at
+`{static-host}{MEDIA_URL path}{schema}/`. The shared hosts
+(`MEDIA_STREAM_BASE_URL`, `MEDIA_URL`) and any white-label host on a
+platform hostname go to the platform zone; a tenant's own assets or static
+host goes to its own zone. A prefix purge reaches images cached before the
+purge existed. The plan is read while the tenant row exists, so
+`destroy_tenant` builds it before the row is deleted; an own-zone entry
+carries the zone's token as the Fernet ciphertext the database stores
+(`token_ciphertext`, `FIELD_ENCRYPTION_KEYS`), never in clear, so the
+purge still runs after the row is gone. A token that no longer decrypts is
+logged with the prefixes for a manual purge and skipped; any other failure
+retries with the task. From a backend pod, for a tenant that still
 exists:
 
 ```bash
