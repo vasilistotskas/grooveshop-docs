@@ -67,14 +67,13 @@ Django's stock `delete_selected` bulk action is removed from the Tenants
 changelist so nobody can bypass the rails through the standard delete
 path.
 
-::: danger Do not use the **Active** checkbox on the change form
-`is_active` is still an editable field in the platform admin's tenant
-form (`tenant/admin.py` fieldsets; it is read-only for merchants and
-read-only in `TenantAdminSerializer`). Unticking it takes the store
-offline **without** stamping `suspended_at`, without flushing the media
-cache and without the protected-tenant refusal — and a store in that
-state can never be destroyed, because `destroy_refusal` reads a missing
-`suspended_at` as `not_suspended`. Use the Suspend action.
+::: info The **Active** field is read-only
+`is_active` changes only through the Suspend and Activate actions
+(`tenant/lifecycle.py`): it is in `TenantAdmin.readonly_fields`
+(`tenant/admin.py`) as it is in `TenantAdminSerializer`. Ticking it in
+the form used to take a store offline without stamping `suspended_at`,
+without the media flush or the protected-tenant refusal, and left a store
+active by one rule and suspended by another.
 :::
 
 ## Suspend
@@ -90,7 +89,9 @@ something:
 3. Otherwise: `is_active = False`, `suspended_reason = <reason>`, and
    `suspended_at = now` **only if it was empty** — the first suspension
    sets the anchor and later ones leave it alone.
-4. A media flush is dispatched, best-effort.
+4. The store's originals are parked out of the served path, and a media
+   flush is queued for after the commit, best-effort (see
+   [What the media flush touches](#what-the-media-flush-touches)).
 
 `suspended_reason` is `SuspendedReason.MANUAL` (operator: abuse, legal,
 judgement) or `SuspendedReason.BILLING` (the dunning task acting on a
@@ -112,9 +113,9 @@ save (`tenant/signals.py: invalidate_tenant_caches`).
 | A WebSocket client | Closed **4004**; `tenant/middleware_ws.py` filters on `tenant__is_active=True` |
 | The store's own staff | The store admin lives on the tenant host, so it is behind the same 503. Staff cannot reach their own panel while suspended |
 | Platform operators | Unaffected — the control plane runs on the public schema at `platform.grooveshop.space` |
-| In-cluster services | The internal domains feed (`tenant/internal.py`) filters on `is_active=True` **and** `suspended_at__isnull=True`, so the gateway and other internal callers stop treating the host as a store |
+| In-cluster services | The internal tenant feed (`tenant/internal.py: build_domains_payload`) drops the store's domains and lists its schema in `suspendedSchemas`; both follow `SuspendedTenantMiddleware`'s rule, `is_active` |
 | Scheduled work | Skipped. `run_for_all_tenants` selects `is_active=True`, so no beat-driven task fans into a suspended schema — no carrier polling, no payout reconciliation, no locker sync burning the merchant's API budget on a frozen store |
-| Processed images | Flushed from the media cache, so assets stop serving promptly instead of living out their cache TTL |
+| Processed images | Refused by media-stream, **503** `TENANT_SUSPENDED` with `Cache-Control: no-store`, before any cache tier is read; its cached copies are flushed and Cloudflare's purged |
 
 The `SuspendedTenantMiddleware` docstring records why it exists: before
 it, `django_tenants` resolved the host with a bare `domain=hostname`
@@ -144,16 +145,24 @@ layer — memory and Redis — and sweeps the on-disk tier for matching
 `.rsm`/`.rsc` pairs, which the serve path reads directly and which would
 otherwise resurrect a flushed resource on the next request.
 
-What it does **not** touch: the original uploads under
-`MEDIA_ROOT/{schema}`. Those are files, not cache, and only a destroy
-removes them.
+Every replica first re-reads Django's tenant feed
+(`TenantDomainsService.refresh`), so from that moment it refuses the
+suspended store's images, and serves them again after a reactivation. The
+original uploads under `MEDIA_ROOT/{schema}` are files, not cache: the
+suspension parks them out of the served path, and only a destroy removes
+them (see [the caches page](../operations/caches.md#layer-4-media-stream-image-cache)).
 
 Two properties to rely on:
 
-- **It cannot block a suspension.** The dispatch is wrapped in a
-  `try/except` that only logs, and the task retries on its own. A
-  broker or media-stream outage delays the flush; it never prevents the
-  store going offline.
+- **It runs after the commit and cannot block a suspension.** The
+  task is queued with `dispatch_on_commit(..., robust=True)`
+  (`tenant/celery.py`): media-stream re-reads the feed when the flush
+  reaches it, so it must never run before the new state is visible, and a
+  broker failure is logged rather than raised. The task retries on its
+  own; a media-stream outage delays the flush, never the suspension.
+- **Reactivation always sends it.** `activate_tenant` queues the same
+  flush and purge whether or not media was restored: it is what makes
+  media-stream serve the store again at once rather than at its next poll.
 - **It fails open by configuration.** With no
   `MEDIA_STREAM_INTERNAL_URL`/`SECRET` set, the flush is skipped and the
   cache expires by TTL — up to 180 days private, 360 days public, per the
@@ -417,8 +426,10 @@ of anything.
 | `grooveshop-django-api/tenant/signals.py` | `reactivate_on_renewal`, resolve-cache invalidation |
 | `grooveshop-django-api/tenant/middleware.py` | `SuspendedTenantMiddleware` (503) |
 | `grooveshop-django-api/tenant/middleware_ws.py` | WebSocket 4004 for an inactive tenant |
-| `grooveshop-django-api/tenant/internal.py` | Internal domains feed skips suspended stores |
-| `grooveshop-django-api/tenant/celery.py` | `run_for_all_tenants`, `include_suspended` |
+| `grooveshop-django-api/tenant/internal.py` | Internal tenant feed: active stores' domains and `suspendedSchemas` |
+| `grooveshop-django-api/tenant/celery.py` | `run_for_all_tenants`, `include_suspended`, `dispatch_on_commit` |
+| `grooveshop-django-api/tenant/lifecycle.py`, `tenant/admin.py` | `suspend_tenant` / `activate_tenant` and the media flush they queue; `is_active` read-only in the admin |
+| `grooveshop-media-stream/src/MediaStream/Validation/services/tenant-domains.service.ts`, `API/controllers/media-stream-image.controller.ts` | The feed poll and the 503 for a suspended store |
 | `grooveshop-django-api/tenant/tasks.py` | `flush_tenant_media_task`, `purge_expired_tenant_archives` |
 | `grooveshop-django-api/tenant/media_flush.py` | The media-stream flush call and its fail-open behaviour |
 | `grooveshop-django-api/tenant/storage.py` | `private_media_root`, why private files have no URL |

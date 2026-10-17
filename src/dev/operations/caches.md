@@ -283,6 +283,19 @@ so the Celery task retries. A sidecar the sweep cannot read does not
 count: its tenant is unknown and a pair without a valid sidecar is never
 served.
 
+**media-stream refuses a suspended store.** Django's internal tenant feed
+(`tenant/internal.py: build_domains_payload`) lists the suspended stores in
+`suspendedSchemas`, by `SuspendedTenantMiddleware`'s rule (`is_active`).
+media-stream refuses an image of one before reading any cache tier: **503**
+`TENANT_SUSPENDED` with `Cache-Control: no-store`, logged at WARN,
+`outcome=suspended` (`TenantSuspendedError`). Django queues the flush after
+the suspension commits (`dispatch_on_commit`), and every replica re-reads
+the feed when the flush reaches it, before clearing its tiers, so the
+refusal applies at once. Between flushes the feed is polled every
+`TENANT_DOMAINS_REFRESH_INTERVAL_MS` (5 minutes); refreshes run in order and
+a failed one retries from 1 s, doubling up to the poll interval. It is a
+deny list, so a feed media-stream cannot read refuses nothing.
+
 The flush itself drops **cached copies only**: the originals live in
 `MEDIA_ROOT/{schema}`, which `static-svc` publishes at `/media/{schema}/…`
 (no tenant check) and media-stream fetches from. Suspending a tenant
@@ -292,8 +305,9 @@ nginx denies every dot-segment path (`location ~ /\. { deny all; }`, 403),
 and `.suspended` is not a valid schema for media-stream. The park runs
 before the flush is dispatched, so a request that refills a cache afterwards
 finds no original and gets media-stream's placeholder. Reactivating moves
-the directory back **before** the tenant is saved active and, only when
-something was restored, flushes and purges again so the placeholders go.
+the directory back **before** the tenant is saved active, then always
+flushes and purges again: that makes media-stream serve the store at once
+and drops the placeholders cached while it was away.
 Neither direction merges two trees: if the destination already exists
 (files written while suspended), nothing moves and the move raises
 `FileExistsError`. A failed park is logged and the suspension goes ahead;
