@@ -61,7 +61,7 @@ Work that is waiting, each line opening the list it counts, already filtered to 
 | **Stale ACS shipments** | ACS parcels with no tracking movement for three days, and vouchers still not created a day after the order (an online order not paid yet is left out, since its voucher waits for the payment). It reads **No tracking movement, or the voucher was never created** and opens ACS Shipments with **Needs attention → Stale: no tracking movement or never created**. See [ACS Courier](/admin/shipping/acs#deal-with-a-shipment-that-stopped-moving). | you can open ACS Shipments |
 | **Running low on stock** | Active products with fewer than 10 left in stock (and at least one). | always |
 | **Receipts rejected by myDATA** | Every receipt still marked Rejected, however old. A rejection does not go away on its own: the line stays until someone corrects the details and sends the receipt again, or cancels it. It reads **Correct the details and send them again** and opens the receipts list filtered to the rejected ones. See [Receipts and credit documents](/admin/sales/receipts). | myDATA is on |
-| **Reviews to approve** | Product reviews in status New, hidden from shoppers until approved. | product reviews are on |
+| **Reviews to approve** | Product reviews in status Waiting for approval, hidden from shoppers until approved. | product reviews are on |
 | **Blog comments to approve** | Comments not approved yet, hidden from readers until approved. | the blog is on your plan and blog comments are on |
 | **New messages** | Contact-form messages received in the last 7 days. | always |
 | **Business accounts to verify** | Wholesale applications waiting for review. | wholesale is on your plan and switched on |
