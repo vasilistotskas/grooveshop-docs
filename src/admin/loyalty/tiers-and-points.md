@@ -59,6 +59,8 @@ When an order is cancelled, fully refunded, or moved to **Refunded**, a job reve
 
 A partial refund reverses nothing. Because the reversal happens only once and takes everything, the points stay until the refund that returns the rest of the money, so a small goodwill refund does not wipe the points of an order the customer keeps.
 
+A lost card dispute (a chargeback) counts towards that total too: once refunds and chargebacks together cover the whole payment, the order is reversed the same way, with one difference. The points the customer spent on an order that was charged back are **not** given back, because the customer took the money back through their bank rather than the store undoing the order; only the points earned on it are taken back. To give the spent points back anyway, add them as described in [Add or remove points for a customer](#add-or-remove-points-for-a-customer). See [Card disputes and chargebacks](/admin/sales/orders#card-disputes-and-chargebacks).
+
 ## Expiry
 
 A nightly job at 03:00 expires points older than **LOYALTY_POINTS_EXPIRATION_DAYS**. The default is 0, which means points never expire. Each expired earning is recorded as an **Expire** transaction, capped at what the customer still holds, so an already-spent earning does not push the balance negative. An earning that was fully spent still gets a zero **Expire** row, which is how it is not considered again.

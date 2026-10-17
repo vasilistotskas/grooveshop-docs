@@ -69,6 +69,7 @@ Only the online settlement needs the payment provider's credentials, which belon
 ## Things to know
 
 - **Viva Wallet is the primary online provider and Stripe the secondary.** Both are per-store accounts. If the store profile holds no keys for one, the method is not shown to shoppers even if it is Active here, and checkout refuses to start a session for it.
+- **Card disputes follow the order for both providers.** When a customer disputes a Viva Wallet or Stripe payment with their bank, the order's history and the store's contact email tell you, refunds are refused until the dispute is decided, and a lost dispute is recorded on the order as a chargeback without changing its payment status. See [Card disputes and chargebacks](/admin/sales/orders#card-disputes-and-chargebacks).
 - **Cash on delivery and BoxNow pay-on-pickup are different products** even though both are collected on delivery: one is cash to a courier, the other a payment link from the carrier. Keep both rows; do not point a courier method at a locker.
 - **The name is a key, not free text.** Pick the key that matches the product; the Greek and English labels come with it. The storefront uses the same key to translate the label.
 - **Fees are VAT-inclusive amounts** in the store currency and appear on the invoice as a separate line.

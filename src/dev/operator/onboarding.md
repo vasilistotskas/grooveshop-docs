@@ -300,11 +300,23 @@ Viva Wallet is registered by hand in the Viva portal, at
 `https://api.example.com/viva-wallet/webhook/`. Because the URL is on the
 store's own host, the GET verification challenge is answered with that
 store's own `viva_wallet_webhook_verification_key`. Subscribe the URL to
-the three events the handler processes (`order/views/viva_webhook.py`):
+the four events the handler processes (`order/views/viva_webhook.py`),
+one subscription per event type under Settings > API Access > Webhooks:
 *Transaction Payment Created* (1796), *Transaction Reversal Created*
-(1797) and *Transaction Failed* (1798). Without 1797 a refund made in
-Viva's dashboard never reaches the order; a refund the platform makes
-itself is booked without it. BoxNow needs no
+(1797), *Transaction Failed* (1798) and *Account Transaction Created*
+(2054). Without 1797 a refund made in Viva's dashboard never reaches the
+order; a refund the platform makes itself is booked without it. 2054 is
+what follows a card dispute, because Viva has no dispute webhook: the
+handler (`_handle_account_transaction_event`) reads the event's
+`SaleTransactionId`, retrieves that sale and acts on its `StatusId`
+(`M`/`MA`/`MI` open, `ML` lost, `MW` won). Without 2054 the store never
+learns that a dispute opened or was won, so a refund is not refused
+while one is open, and a lost one is booked only if Viva reports it as a
+1797 refund-claim type (13, 46, 83, 90), which Viva does not document;
+otherwise the dispute reaches the merchant only through Viva's own
+email. The full lifecycle is in the Django reference,
+[Dispute lifecycle per provider](/dev/django/reference/order-system#dispute-lifecycle-per-provider).
+BoxNow needs no
 per-tenant URL: the handler resolves the tenant from the signed parcel id
 before verifying the HMAC with that store's `box_now_webhook_secret`.
 
@@ -396,7 +408,7 @@ kubectl -n grooveshop get certificate | grep "<store-slug>"
 |---|---|---|
 | Social OAuth providers | The allauth callback on the store's **API** host, `https://api.example.com/accounts/<provider>/login/callback/` (allauth is mounted at `accounts/`, `core/urls.py`). The browser flow POSTs to the tenant's own API origin — `app/composables/useAllAuthAuthentication.ts` — precisely so the OAuth flow runs in that store's schema | No, if the store offers social login |
 | Stripe | Nothing by hand; step 4 creates the endpoint on the merchant's own account | — |
-| Viva Wallet | The webhook URL on the store's API host, subscribed to events 1796, 1797 and 1798 (step 4) | No, if Viva is enabled |
+| Viva Wallet | The webhook URL on the store's API host, subscribed to events 1796, 1797, 1798 and 2054 (step 4); without 2054 card disputes are not followed | No, if Viva is enabled |
 | Google Analytics / Meta / TikTok | The merchant's own property or pixel, then the id on the tenant row | Yes |
 
 Two related facts, because the infrastructure runbook still says
@@ -521,7 +533,7 @@ Applications.
 | `grooveshop-django-api/page_config/management/commands/legal_text_status.py` | Which tenants have legal pages behind the platform text |
 | `grooveshop-django-api/recommendation/presets.py` | `seed_recommendation_slots`, `reset_slot_to_preset` |
 | `grooveshop-django-api/core/utils/tenant_urls.py` | `resolve_tenant_api_domain`, tenant-scoped link building |
-| `grooveshop-django-api/order/views/viva_webhook.py` | The Viva events the webhook processes: 1796, 1797, 1798 |
+| `grooveshop-django-api/order/views/viva_webhook.py` | The Viva events the webhook processes: 1796, 1797, 1798, and 2054 for disputes (`_handle_account_transaction_event`) |
 | `grooveshop-django-api/core/urls.py` | allauth mounted at `accounts/` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useAllAuthAuthentication.ts` | Social login posts to the tenant's own API origin |
 | `grooveshop-agent-gateway/internal/chat/handler.go` | Chat is off, not broken, when the tenant has no chat key |
