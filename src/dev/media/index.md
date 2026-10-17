@@ -33,8 +33,9 @@ through Nuxt.
   `.rsc`/`.rsm` pairs on disk, and flush one tenant on every replica on
   request (`POST /admin/cache/flush-tenant` with `x-internal-secret`; the
   pod that takes it broadcasts over Redis pub/sub) (`Cache/`, `Storage/`).
-  A suspended tenant's originals are parked out of the served path and
-  Cloudflare's copies are purged, both by Django; see
+  Originals are read only here: the static host redirects every public
+  request for one to the media-stream URL of the same image. Cloudflare's
+  copies of a suspended tenant's images are purged by Django; see
   [caches](../operations/caches.md#layer-4-media-stream-image-cache).
 - Report health, Prometheus metrics and a Redis-persisted circuit breaker
   (`Health/`, `Metrics/`, `HTTP/`).

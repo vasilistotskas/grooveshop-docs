@@ -89,13 +89,11 @@ something:
 3. Otherwise: `is_active = False`, `suspended_reason = <reason>`, and
    `suspended_at = now` **only if it was empty** — the first suspension
    sets the anchor and later ones leave it alone.
-4. The store's originals are parked out of the served path, best-effort: a
-   failed park is logged and the suspension goes ahead, the originals then
-   stay reachable at the static host until they are parked by hand
-   (`tenant.media_parking.park_tenant_media` from a backend shell; see
+4. A media flush is queued for after the commit, best-effort (see
+   [What the media flush touches](#what-the-media-flush-touches)). No file
+   moves: the static host serves no original as uploaded (it redirects to
+   media-stream), and media-stream refuses the store's images by its state (see
    [the caches page](../operations/caches.md#layer-4-media-stream-image-cache)).
-   A media flush is queued for after the commit, also best-effort (see
-   [What the media flush touches](#what-the-media-flush-touches)).
 
 `suspended_reason` is `SuspendedReason.MANUAL` (operator: abuse, legal,
 judgement) or `SuspendedReason.BILLING` (the dunning task acting on a
@@ -152,8 +150,8 @@ otherwise resurrect a flushed resource on the next request.
 Every replica first re-reads Django's tenant feed
 (`TenantDomainsService.refresh`), so from that moment it refuses the
 suspended store's images, and serves them again after a reactivation. The
-original uploads under `MEDIA_ROOT/{schema}` are files, not cache: the
-suspension parks them out of the served path, and only a destroy removes
+original uploads under `MEDIA_ROOT/{schema}` are files, not cache: they stay
+where they are, only media-stream reads them, and only a destroy removes
 them (see [the caches page](../operations/caches.md#layer-4-media-stream-image-cache)).
 
 Two properties to rely on:

@@ -296,41 +296,36 @@ refusal applies at once. Between flushes the feed is polled every
 a failed one retries from 1 s, doubling up to the poll interval. It is a
 deny list, so a feed media-stream cannot read refuses nothing.
 
-The flush itself drops **cached copies only**: the originals live in
-`MEDIA_ROOT/{schema}`, which `static-svc` publishes at `/media/{schema}/…`
-(no tenant check) and media-stream fetches from. Suspending a tenant
-therefore first **parks** that directory at `MEDIA_ROOT/.suspended/{schema}`
-(`tenant/media_parking.py`), one rename on the same volume: the static
-nginx denies every dot-segment path (`location ~ /\. { deny all; }`, 403),
-and `.suspended` is not a valid schema for media-stream. The park runs
-before the flush is dispatched, so a request that refills a cache afterwards
-finds no original and gets media-stream's placeholder. Reactivating moves
-the directory back **before** the tenant is saved active, then always
-flushes and purges again: that makes media-stream serve the store at once
-and drops the placeholders cached while it was away.
-Neither direction merges two trees: if the destination already exists
-(files written while suspended), nothing moves and the move raises
-`FileExistsError`. A failed park is logged and the suspension goes ahead;
-a failed restore (that conflict, or any other `OSError`) fails the
-activation, so the tenant stays suspended rather than going live with its
-images parked, and an operator resolves the two trees and activates
-again. Destroying a tenant erases both the live and the parked tree
-(`purge_tenant_files`).
+**No original is served as uploaded.** They live in `MEDIA_ROOT/{schema}`,
+and only media-stream reads them, in-cluster from `static-svc` with
+`Host: static-svc`. A public request for one reaches the static nginx
+through a static host (`static.grooveshop.space`, `static.webside.gr`, a
+`static-staging.` twin or a store's own `static.<domain>`) and is answered
+**301** to the media-stream URL of the same image on the matching assets
+host, full size (`…/0/0/inside/center/transparent/0/90.{format}`), so an
+old link (a pin, an image search result, rich text) keeps working and a
+suspended store's images are refused there; anything under `/media` that
+media-stream does not serve as an image is 404 in public
+(grooveshop-infrastructure `base/static.yaml`). A suspension therefore
+moves no file: refusing the store is media-stream's job, and the flush only
+drops cached copies. Reactivating flushes and purges again, which makes
+media-stream serve the store at once and drops what was cached while it
+was away. Destroying a tenant erases its uploads (`purge_tenant_files`).
 
 ### The Cloudflare edge copy
 
 Cloudflare keeps each processed image for a year (`s-maxage` 360 days, no
-`Cache-Tag`) and each original for 30 days, so flushing media-stream alone
+`Cache-Tag`), so flushing media-stream alone
 leaves the edge copies of a suspended or destroyed tenant's images in place. The same Celery task purges
 the edge **after** the flush, never before, because a purge that ran
 first would let the edge refetch images media-stream still holds. It
 purges by URL prefix (`core/cache/edge.py: tenant_media_purges`,
 `purge_media`): the processed images at
-`{assets-host}/media_stream-image/media/{schema}/` and the originals at
-`{static-host}{MEDIA_URL path}{schema}/`. The shared hosts
-(`MEDIA_STREAM_BASE_URL`, `MEDIA_URL`) and any white-label host on a
-platform hostname go to the platform zone; a tenant's own assets or static
-host goes to its own zone. A prefix purge reaches images cached before the
+`{assets-host}/media_stream-image/media/{schema}/`. A static host is not
+purged: it serves no original in public, so the edge holds only redirects
+there. The shared assets host (`MEDIA_STREAM_BASE_URL`) and any white-label
+assets host on a platform hostname go to the platform zone; a tenant's own
+assets host goes to its own zone. A prefix purge reaches images cached before the
 purge existed. The plan is read while the tenant row exists, so
 `destroy_tenant` builds it before the row is deleted; an own-zone entry
 carries the zone's token encrypted under the database's key ring
@@ -465,7 +460,8 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook |
 | `grooveshop-django-api/tenant/media_flush.py`, `tenant/tasks.py` | Media flush |
-| `grooveshop-django-api/tenant/media_parking.py`, `tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `tenant/offboarding.py` (`purge_tenant_files`) | Parking and restoring a suspended tenant's originals; erasing both trees on destroy |
+| `grooveshop-django-api/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml` | Originals served only to media-stream; public requests redirected to it |
 | `grooveshop-django-api/core/urls.py` | Dev/CI media route, which refuses dot-segment paths like the static nginx |
 | `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
 | `grooveshop-django-api/tenant/switches.py`, `tenant/features.py`, `core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
