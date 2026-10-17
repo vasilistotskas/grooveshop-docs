@@ -292,11 +292,16 @@ nginx denies every dot-segment path (`location ~ /\. { deny all; }`, 403),
 and `.suspended` is not a valid schema for media-stream. The park runs
 before the flush is dispatched, so a request that refills a cache afterwards
 finds no original and gets media-stream's placeholder. Reactivating moves
-the directory back and, only when something was restored, flushes and
-purges again so the placeholders go. Neither direction merges two trees: if
-the destination already exists (files uploaded while suspended), nothing
-moves and the conflict is logged. Destroying a tenant erases both the live
-and the parked tree (`purge_tenant_files`).
+the directory back **before** the tenant is saved active and, only when
+something was restored, flushes and purges again so the placeholders go.
+Neither direction merges two trees: if the destination already exists
+(files written while suspended), nothing moves and the move raises
+`FileExistsError`. A failed park is logged and the suspension goes ahead;
+a failed restore (that conflict, or any other `OSError`) fails the
+activation, so the tenant stays suspended rather than going live with its
+images parked, and an operator resolves the two trees and activates
+again. Destroying a tenant erases both the live and the parked tree
+(`purge_tenant_files`).
 
 ### The Cloudflare edge copy
 
@@ -314,9 +319,11 @@ platform hostname go to the platform zone; a tenant's own assets or static
 host goes to its own zone. A prefix purge reaches images cached before the
 purge existed. The plan is read while the tenant row exists, so
 `destroy_tenant` builds it before the row is deleted; an own-zone entry
-carries the zone's token as the Fernet ciphertext the database stores
-(`token_ciphertext`, `FIELD_ENCRYPTION_KEYS`), never in clear, so the
-purge still runs after the row is gone. A token that no longer decrypts is
+carries the zone's token encrypted under the database's key ring
+(`token_ciphertext`, `FIELD_ENCRYPTION_KEYS`), never in clear. When the
+purge runs it uses the tenant's current token while the row exists (so a
+token rotated after planning still works) and the planned ciphertext only
+once a destroy has removed the row. A token that no longer decrypts is
 logged with the prefixes for a manual purge and skipped; any other failure
 retries with the task. From a backend pod, for a tenant that still
 exists:
