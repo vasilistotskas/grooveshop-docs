@@ -97,6 +97,7 @@ Defaults are what a fresh store starts with. Money is in euro.
 | `STOCK_RESERVATION_TTL_MINUTES` | How long stock stays reserved for a checkout in progress. | 30 | no |
 | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` | Minutes after a failed online payment before the order is cancelled and its stock released. | 30 | no |
 | `ORDER_AUTO_CANCEL_PENDING_HOURS` | Hours an unpaid online order may stay pending before it is cancelled. | 24 | no |
+| `ORDER_FOLLOW_UP_DAYS` | Calendar days, in the store's time zone and counted from the day the order was placed, after which a Pending, Processing or Shipped order is flagged for follow-up. Online orders not paid yet are never flagged. 0 turns the flag off. See [Orders to follow up](/admin/sales/orders#orders-to-follow-up). | 7 | no |
 | `PENDING_ORDER_REMINDER_MAX_COUNT` | Maximum reminder emails for a pending order. | 3 | no |
 | `PENDING_ORDER_REMINDER_INTERVAL_DAYS_1/_2/_3` | Days after placement for the first, second and third reminder. | 1, 3, 7 | no |
 | `CHECKOUT_ABANDONMENT_HOURS` | Hours of inactivity before a checkout counts as abandoned for the reminder email. | 2 | no |
@@ -176,6 +177,20 @@ Fill the seller identity **before the first receipt**: the values are printed on
 | `REENGAGEMENT_EMAIL_MAX_COUNT`, `REENGAGEMENT_EMAIL_COOLDOWN_DAYS` | Limits of the "we miss you" emails. | 3, 90 | no |
 | `INACTIVE_USER_THRESHOLD_DAYS` | Days without activity before a customer counts as inactive. | 60 | no |
 | `NOTIFICATION_EXPIRATION_DAYS` | Days after which in-app notifications are deleted. | 180 | no |
+
+### Operational alert emails
+
+The platform emails the store when something in shipping or payments needs a person. These emails go to the contact and owner email addresses on your store profile, and their subject is always in English. Each kind has its own switch, all on by default; switching one off stops that email and nothing else. Every kind that involves money or a parcel nobody is moving keeps its line under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard) whether the email is on or off, so the work stays visible. In the list these keys sit under the **Operational Alerts** category.
+
+| Setting | The email | With the email off | Default | Public |
+|---|---|---|---|---|
+| `OPS_ALERT_STALE_SHIPMENTS_ENABLED` | "Stale ACS shipment alert — N shipment(s)", daily at 09:00: ACS parcels with no tracking movement for three days, and vouchers still not created a day after the order. Each parcel is reported once. | The parcels stay on the dashboard as **Stale ACS shipments**. When you switch the email back on, the next digest lists every parcel still stale. | on | no |
+| `OPS_ALERT_UNREMITTED_COD_ENABLED` | "ACS COD: N delivered parcel(s) never remitted", daily at 03:00: cash-on-delivery parcels delivered more than ten days ago that ACS has not paid out. | The parcels stay on the dashboard as **COD cash ACS has not paid out**. | on | no |
+| `OPS_ALERT_UNATTRIBUTABLE_COD_PAYOUTS_ENABLED` | "ACS COD reconcile: N unattributable payout row(s)", after the nightly payout import: ACS paid out money that none of your shipments explains. | The payouts stay on the dashboard as **ACS payouts matching no shipment** until they are marked as reconciled. Only platform operators see that line, because only they can open the payouts list. | on | no |
+| `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` | "ACS: shipment creation failed for order N" (or BoxNow), at once: the courier permanently refused to create the shipment, for example because of a bad address or a destination it does not serve. | No dashboard line of its own. The order's history still gets a note with the courier's reason. | on | no |
+| `OPS_ALERT_WEBHOOK_FAILED_ENABLED` | "BoxNow: webhook processing failed (message …)": BoxNow sent a parcel update the platform could not apply, so a parcel movement may be missing. | No dashboard line. Compare the parcel with the BoxNow portal from time to time. | on | no |
+| `OPS_ALERT_PAYMENT_AFTER_CANCEL_ENABLED` | "Payment received for canceled order N": a payment arrived for an order that was already cancelled, so the customer must be refunded. | The order stays on the dashboard as **Canceled orders to refund** until it is refunded. | on | no |
+
 ### Store presence
 
 | Setting | Meaning | Default | Public |
@@ -185,10 +200,11 @@ Fill the seller identity **before the first receipt**: the values are printed on
 | `STORE_GEO_LAT`, `STORE_GEO_LNG` | Your shop's location in decimal degrees (for example `40.565129` and `22.119096`): the pin on the Location Map and the coordinates search engines read. Any other format is refused. | empty | yes |
 | `FUNDING_BANNER` | The EU/ESPA co-funding strip at the very top of every page, as JSON: the official logo artwork with its width and height in pixels, its description for screen readers, the page it links to (the short description of the funded operation) and an optional line of text. Under `i18n`, each other language gets its own artwork, size and description, such as the programme's English strip on the English pages. While a visitor scrolls, a copy of the logos stays on screen. | off | yes |
 
-### Contact form attachments
+### Contact form and feedback
 
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
+| `CONTACT_RETENTION_DAYS` | Days after which a contact message or a feedback entry is deleted, together with the files attached to the message. One period for both. Entries already older than this go on the next nightly run after you set it. Copies of the notification emails in your own mailbox are not touched. 0 keeps everything. Listed under the **Emails & Engagement** category. See [Contact messages & feedback](/admin/sales/contact-and-feedback#how-long-entries-are-kept). | 365 | no |
 | `CONTACT_ATTACHMENTS_ENABLED` | Let visitors attach files to the contact form. Off by default because it is the only place an anonymous visitor can upload anything. | off | yes |
 | `CONTACT_ATTACHMENTS_MAX_COUNT` | Files per enquiry. | 3 | yes |
 | `CONTACT_ATTACHMENTS_MAX_MB` | Per-file size limit. Values above 25 are ignored; 25 MB is the hard ceiling. | 10 | yes |

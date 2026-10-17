@@ -54,6 +54,11 @@ Work that is waiting, each line opening the list it counts, already filtered to 
 | Line | What it counts | Shown when |
 |---|---|---|
 | **Orders to process** | Orders in status Pending. | always |
+| **Orders to follow up** | Orders whose shopper has waited `ORDER_FOLLOW_UP_DAYS` days (7 by default) and is still waiting for the parcel: Pending, Processing or Shipped, leaving out online orders not paid yet. It reads **Shoppers still waiting for their parcel** and opens the order list with **Needs follow-up** set to **Yes**. See [Orders to follow up](/admin/sales/orders#orders-to-follow-up). | `ORDER_FOLLOW_UP_DAYS` is not 0 |
+| **Canceled orders to refund** | Cancelled orders whose payment is still Completed or only Partially Refunded: a refund the provider refused, or a payment that arrived after the cancellation. It reads **Paid, then canceled: the customer is owed money** and opens the order list with **Refund → Cancelled but still paid**. See [Orders cancelled but still paid](/admin/sales/orders#orders-cancelled-but-still-paid). | always |
+| **COD cash ACS has not paid out** | ACS cash-on-delivery parcels delivered more than ten days ago for which ACS has reported no payout, unless you recorded the cash as received outside ACS. It reads **Delivered, and ACS reports no payout** and opens ACS Shipments with **Needs attention → Delivered COD never paid out by ACS**. | you can open ACS Shipments |
+| **ACS payouts matching no shipment** | Payouts ACS made that tie to none of the store's shipments and that nobody has marked as reconciled, however old. It reads **Money ACS paid out that no shipment explains** and opens ACS COD Payouts filtered to them. See [Reconciliation](/admin/system/reconciliation#acs-cod-payouts). | you can open ACS COD Payouts, which only platform operators can |
+| **Stale ACS shipments** | ACS parcels with no tracking movement for three days, and vouchers still not created a day after the order (an online order not paid yet is left out, since its voucher waits for the payment). It reads **No tracking movement, or the voucher was never created** and opens ACS Shipments with **Needs attention → Stale: no tracking movement or never created**. See [ACS Courier](/admin/shipping/acs#deal-with-a-shipment-that-stopped-moving). | you can open ACS Shipments |
 | **Running low on stock** | Active products with fewer than 10 left in stock (and at least one). | always |
 | **Receipts rejected by myDATA** | Every receipt still marked Rejected, however old. A rejection does not go away on its own: the line stays until someone corrects the details and sends the receipt again, or cancels it. It reads **Correct the details and send them again** and opens the receipts list filtered to the rejected ones. See [Receipts and credit documents](/admin/sales/receipts). | myDATA is on |
 | **Reviews to approve** | Product reviews in status New, hidden from shoppers until approved. | product reviews are on |
@@ -61,7 +66,9 @@ Work that is waiting, each line opening the list it counts, already filtered to 
 | **New messages** | Contact-form messages received in the last 7 days. | always |
 | **Business accounts to verify** | Wholesale applications waiting for review. | wholesale is on your plan and switched on |
 
-A line appears only when its count is above zero and you may open the list it leads to. With nothing waiting, the card says **All caught up: nothing is waiting for you.** Apart from rejected receipts, the same numbers appear beside the matching sidebar entries; see [Welcome](/admin/).
+A line appears only when its count is above zero and you may open the list it leads to. With nothing waiting, the card says **All caught up: nothing is waiting for you.** Orders to process, low stock, reviews, blog comments, new messages and business accounts also show their number beside the matching sidebar entry; see [Welcome](/admin/). The other lines are on the dashboard only.
+
+**Canceled orders to refund** and the three ACS lines are the work behind the store's operational alert emails. Each email can be switched off in [Store settings](/admin/settings/store-settings#operational-alert-emails), but its line stays here either way, so muting an email never hides money owed or a parcel nobody is moving.
 
 ### Latest orders
 
@@ -113,7 +120,7 @@ Click a line under **Needs attention**. It opens the list filtered to exactly th
 ## Things to know
 
 - Revenue counts **paid** orders only, on the day each order was placed. A cash-on-delivery order is added to the day it was placed once the courier's payout is reconciled, days after delivery, so recent days can grow after the fact. See [Reconciliation](/admin/system/reconciliation).
-- Each figure is kept for a short while: **Needs attention** for one minute; the headline figures, the sales chart and the latest orders for five minutes; best sellers, the funnel, order sources and search for fifteen. A figure is cleared at once when a record it counts is saved or deleted — an order, a receipt, a product, a review, a blog comment, a contact message, a business account — so an edit shows on the next load. Counts that nothing clears, such as new customers, open carts and the search log, can lag by up to that time.
+- Each figure is kept for a short while: **Needs attention** for one minute; the headline figures, the sales chart and the latest orders for five minutes; best sellers, the funnel, order sources and search for fifteen. A figure is cleared at once when a record it counts is saved or deleted — an order, a receipt, a product, a review, a blog comment, a contact message, a business account, an ACS shipment or payout, a store setting — so an edit shows on the next load. **Orders to follow up** also moves at midnight, when another day's orders reach the follow-up period, so it can lag by up to a minute after that. Counts that nothing clears, such as new customers, open carts and the search log, can lag by up to that time.
 - A widget for a feature your plan does not include, or that you have switched off in [Store settings](/admin/settings/store-settings), is not drawn at all.
 - There is no failed-job counter here. Failed background jobs are listed on the platform console, because one list covers every store. See [Background jobs](/admin/system/background-jobs).
 

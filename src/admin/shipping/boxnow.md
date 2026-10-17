@@ -114,7 +114,7 @@ For the general steps of adding a country, see [Shipping providers](/admin/shipp
 
 ### Fix a delivery request that failed
 
-The row stays in **Pending creation** and the store's admins receive an email naming the order and BoxNow's error code. The **Diagnostics** section on the shipment also holds the last error.
+The row stays in **Pending creation** and the store's admins receive an email naming the order and BoxNow's error code ("BoxNow: shipment creation failed for order N"); the order's history gets the same note. The **Diagnostics** section on the shipment also holds the last error. The email can be switched off with `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` in [Store settings](/admin/settings/store-settings#operational-alert-emails); the history note and the diagnostics stay.
 
 - **P402 invalid locker**: the locker is unknown to the store's BoxNow account. Run **Sync lockers from BoxNow API** and check the locker is active; a catalogue synced under different credentials produces this for every order.
 - **Missing credentials**: an Owner or Admin must add the store's BoxNow client ID, secret and partner ID on <span class="sidebar-path">Settings → Store Profile</span>; nothing retries until then.
@@ -145,7 +145,7 @@ Open the shipment and read the events tab, or go to <span class="sidebar-path">S
 - **Amount to be collected** is filled in when the delivery request is sent and equals the order's paid amount, so a loyalty discount is reflected.
 - **Weight** is sent in kilograms with three decimals, and is capped at BoxNow's own maximum. A zero weight is accepted by BoxNow.
 - **Out-of-order webhooks** cannot move a parcel backwards: the state only changes when the event is newer than the last one applied. Duplicate deliveries are ignored.
-- **"BoxNow: webhook processing failed"** is an email you may receive when BoxNow sent something the platform could not apply. BoxNow has already been told the message arrived and will not send it again, so a parcel movement may be missing. Compare the parcel against the BoxNow portal and reconcile it by hand.
+- **"BoxNow: webhook processing failed"** is an email you may receive when BoxNow sent something the platform could not apply. BoxNow has already been told the message arrived and will not send it again, so a parcel movement may be missing. Compare the parcel against the BoxNow portal and reconcile it by hand. This email has its own switch, `OPS_ALERT_WEBHOOK_FAILED_ENABLED`, and no dashboard line: with it off, nothing else tells you a parcel update was lost.
 - The **Locker External ID** field on the form is editable and its help text refers to BoxNow's test environment. Leave it alone on a live store; the voucher is already at BoxNow.
 - The locker map in the storefront is a hosted widget. If it stops rendering after a platform change, the content security policy is the usual cause; that is a platform-team fix.
 

@@ -16,6 +16,7 @@ Every purchase, whether it came from the storefront, a guest checkout or an AI a
 | Column | Meaning |
 |---|---|
 | **Status** | The fulfilment state (see the table below). |
+| **Follow-up** | A blue **Follow up** badge when the shopper has been waiting too long for the parcel; empty otherwise. See [Orders to follow up](#orders-to-follow-up). Click the column header to bring the flagged orders together. |
 | **Customer** | Name on the order and the email it was placed with. Guest orders show the same, just without a linked account. |
 | **Order** | Line count, total quantity and the amount the customer actually owes after discounts, loyalty points and gift cards. |
 | **Order source** | Where the customer came from before placing the order, as a coloured badge: the channel's name (Instagram, Google, a referring website, "AI agent (UCP)") coloured by its kind (see [Order source](#order-source) below). Empty for orders placed before the store started recording it. |
@@ -31,7 +32,7 @@ A tab strip above the list links **Orders**, **Order Items**, **Receipts** and *
 
 ### Filters
 
-The **Filters** panel offers, top to bottom: **Status** and **Payment Status**, where you may pick several at once (Pending and Processing together are the orders still to handle; Failed and Pending together are the payments needing attention), **Document Type**, **Wholesale** (orders priced with a B2B customer group, or retail), **Refund** (**Cancelled but still paid**: cancelled orders whose money has not all gone back, see [Orders cancelled but still paid](#orders-cancelled-but-still-paid)), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), **Source type** and **Order source** (see [Order source](#order-source)), created and status-updated date ranges, **Country** and **Region** (type to search), the pay way, the gateway that processed the charge, shipping provider, **Shipping Kind** and, for BoxNow orders, the parcel state. Choose any number of them and press **Apply Filters** once. A date drill-down by creation date sits above the table.
+The **Filters** panel offers, top to bottom: **Status** and **Payment Status**, where you may pick several at once (Pending and Processing together are the orders still to handle; Failed and Pending together are the payments needing attention), **Document Type**, **Wholesale** (orders priced with a B2B customer group, or retail), **Refund** (**Cancelled but still paid**: cancelled orders whose money has not all gone back, see [Orders cancelled but still paid](#orders-cancelled-but-still-paid)), **Needs follow-up** (**Yes** or **No**, see [Orders to follow up](#orders-to-follow-up)), **Recent Orders** (Today, This Week, This Month, "Urgent" meaning Pending for more than 24 hours), **Source type** and **Order source** (see [Order source](#order-source)), created and status-updated date ranges, **Country** and **Region** (type to search), the pay way, the gateway that processed the charge, shipping provider, **Shipping Kind** and, for BoxNow orders, the parcel state. Choose any number of them and press **Apply Filters** once. A date drill-down by creation date sits above the table.
 
 ### Search
 
@@ -47,7 +48,7 @@ A row of cards at the top gives the order at a glance: **Status** (and how long 
 
 Below them the page is split into tabs:
 
-- **Order Information**: UUID, the **Status** (read-only here; change it with the actions above), created, updated and status-updated timestamps.
+- **Order Information**: UUID, the **Status** (read-only here; change it with the actions above), **Follow-up** (why and since when the order needs follow-up, or "—"; see [Orders to follow up](#orders-to-follow-up)), created, updated and status-updated timestamps.
 - **Billing / Invoice**: **Document type** (Receipt or Invoice), and for invoice orders the buyer's company name, VAT ID (ΑΦΜ), tax office (ΔΟΥ), business activity and registered billing address, a **To issue in timologio** summary, and the fields where you record the number and MARK of the invoice (and credit invoice) you issued in timologio. **Wholesale pricing** shows which B2B group priced the order, or "Retail (no group pricing)".
 - **Customer Information**: linked account (empty for guests), name, email, phone.
 - **Shipping Address**: country, region, city, street, number, postcode, floor, location type and **Place**, a legacy field that new checkouts leave empty. Saving a change to the country, region, street, number or postcode checks the address the way checkout does: the postcode must match the country's format, a region is required for a country that has regions and must belong to it, the street must contain a letter, and the number must not be a postcode. An old order with an address that fails is not blocked from other edits; the check runs only when you change the address.
@@ -129,6 +130,30 @@ The dashboard's **Where orders come from** card shows each source's share of the
 1. Open **Sales → Orders**.
 2. Pick the channel in **Order source**, or a whole kind in **Source type** (for example every **Social** order).
 3. Direct orders have no source name, so reach them through **Source type → Direct**.
+
+## Orders to follow up
+
+A shopper who ordered a week ago and still has no parcel is about to write to you. The platform flags those orders so you can get in touch first, whether nobody has shipped the order yet or the parcel is stuck on its way.
+
+An order is flagged when all of these are true:
+
+- it was placed at least `ORDER_FOLLOW_UP_DAYS` days ago (7 by default). The days are whole calendar days in the store's time zone, counted from the day the order was placed: with 7, an order placed on the 3rd is flagged from midnight at the start of the 10th, whatever the hour it was placed;
+- its status is **Pending**, **Processing** or **Shipped**;
+- it is not an online order still waiting for its payment. An unpaid card order is an abandoned checkout, not a parcel to chase, and the automatic cancellation takes care of it (see [What happens automatically](#what-happens-automatically)). Cash on delivery and bank transfer orders are flagged like any other.
+
+Where the flag shows:
+
+- the **Follow-up** column of the list, as a blue **Follow up** badge;
+- the **Needs follow-up** filter: **Yes** lists the flagged orders, **No** the rest;
+- the **Follow-up** line on the order's **Order Information** tab, which reads **Needs follow-up since**, the date the order was flagged, the reason, and **Last carrier event**. The reason is **Not shipped yet** for a Pending or Processing order and **In transit** for a Shipped one. **Last carrier event** is the last time ACS or BoxNow reported anything about the parcel, or **none yet**;
+- **Orders to follow up** under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard), which opens the list with the filter set to **Yes**.
+
+The flag is not stored and there is nothing to tick off. It disappears by itself once the order is Delivered, Completed, Returned, Canceled or Refunded. Getting in touch with the customer does not clear it; only the order moving on does.
+
+### Change the follow-up period
+1. Open <span class="sidebar-path">Settings → Store Settings</span> and search for `ORDER_FOLLOW_UP_DAYS`.
+2. Enter the number of days you want shoppers to wait before you hear about it, and save. The list, the filter and the dashboard all follow the new value at once.
+3. To switch the flag off entirely, enter `0`: no order is flagged and the dashboard line disappears.
 
 ## Tasks
 
@@ -227,7 +252,7 @@ Cancelling a **Pending** or **Processing** order that was paid online refunds it
 A refund made in the Viva Wallet or Stripe dashboard reaches the order on its own: it is recorded on the order, the payment status becomes **Partially Refunded** or **Refunded**, and the customer gets a refund email for it, a partial refund included. A refund you made from the admin is never counted twice when the provider reports it back. If a Viva Wallet refund does not show up on the order, ask the platform team to check that the store's Viva account sends refund notifications.
 
 ### Orders cancelled but still paid
-When a provider refuses the refund of a cancelled order, the order stays **Canceled** and the money stays with you. Choose **Refund → Cancelled but still paid** in the filters to list every such order, including ones refunded only in part. The **Refund (amount, reason)** button is not offered on a cancelled order, so refund what is left in the Viva Wallet or Stripe dashboard; the refund then reaches the order on its own.
+When a provider refuses the refund of a cancelled order, the order stays **Canceled** and the money stays with you. The same happens when a payment arrives after the order was cancelled, for instance a card payment that completed after the unpaid order had been cancelled automatically: the order stays **Canceled**, nothing ships, the payment is recorded as **Completed**, the order's history gets a note asking you to refund the customer, and the store is emailed "Payment received for canceled order N" (unless you switched that email off, see [Store settings](/admin/settings/store-settings#operational-alert-emails)). Choose **Refund → Cancelled but still paid** in the filters to list every such order, including ones refunded only in part; the dashboard counts them as **Canceled orders to refund** under **Needs attention** and that line opens the same list. The **Refund (amount, reason)** button is not offered on a cancelled order, so refund what is left in the Viva Wallet or Stripe dashboard; the refund then reaches the order on its own.
 
 ### What the customer receives
 One refund email for each refund: a partial refund and the later refund of the rest send one each. Customers with an account also get an in-app notification for each refund.
@@ -257,3 +282,4 @@ A guest order has no account in **Customer Information**. Everything else works 
 - [ACS Courier](/admin/shipping/acs)
 - [BoxNow](/admin/shipping/boxnow)
 - [Notifications](/admin/sales/notifications)
+- [Dashboard](/admin/getting-started/dashboard)
