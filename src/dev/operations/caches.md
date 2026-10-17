@@ -447,10 +447,12 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/core/cache/registry.py`, `surfaces.py`, `service.py`, `invalidation.py`, `protected.py`, `nuxt.py`, `gateway.py`, `models.py` | Surface registry, purge service, signal wiring, Nuxt and gateway clients, `CachePurgeLog` |
 | `grooveshop-django-api/admin/admin.py`, `core/admin.py` | Cache tool and purge log admin |
 | `grooveshop-django-api/core/management/commands/clear_cache.py` | Command |
-| `grooveshop-django-api/core/cache/edge.py`, `core/tasks.py` (`purge_edge_cache_task`), `core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy |
+| `grooveshop-django-api/core/cache/edge.py`, `core/tasks.py` (`purge_edge_cache_task`), `core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy; by prefix for a tenant's media (`tenant_media_purges`, `purge_media`) |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook |
 | `grooveshop-django-api/tenant/media_flush.py`, `tenant/tasks.py` | Media flush |
+| `grooveshop-django-api/tenant/media_parking.py`, `tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `tenant/offboarding.py` (`purge_tenant_files`) | Parking and restoring a suspended tenant's originals; erasing both trees on destroy |
+| `grooveshop-django-api/core/urls.py` | Dev/CI media route, which refuses dot-segment paths like the static nginx |
 | `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
 | `grooveshop-django-api/tenant/switches.py`, `tenant/features.py`, `core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The storefront's in-memory copy of the resolve payload |
