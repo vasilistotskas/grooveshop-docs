@@ -54,7 +54,7 @@ The platform emails signed-in customers about an abandoned checkout on its own; 
 ## Things to know
 
 - **Prices in a cart are live.** A cart line stores the product and quantity, not a price. The unit price you see is the product's current price, so a price change on the product shows here immediately. The only stored price is the one at the moment the item was added, kept to warn the shopper if it changed.
-- **Wholesale carts show retail prices here.** B2B group prices are applied when the storefront loads the cart for an approved business customer; the admin does not apply them, so the totals on this screen are retail for those customers. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
+- **Wholesale carts show retail prices here.** B2B group prices are applied when the storefront loads the cart for an approved business customer; the admin does not apply them, so the totals on this screen are retail for those customers. See [Customer groups & price lists](/admin/customers/groups-and-price-lists).
 - **Do not edit carts to "help" a customer.** The shopper's next click overwrites your change, and nothing tells them you touched it. Removing a line that references a discontinued product is the only edit that makes sense.
 - **Guest carts are deleted automatically.** Every day at 04:00 empty guest carts idle for more than `ABANDONED_CART_CLEANUP_DAYS` (7) are deleted; every day at 06:00 all guest carts idle for more than `OLD_GUEST_CART_CLEANUP_DAYS` (30), empty or not, are deleted. Customer carts are never deleted.
 - **Abandoned-checkout emails** go out daily at 06:00 to signed-in customers who started checkout (which reserves stock) but never placed the order, once the reservation has been expired for `CHECKOUT_ABANDONMENT_HOURS` (2). Each customer is emailed once per abandoned session. Guests never receive it.
@@ -67,4 +67,4 @@ The platform emails signed-in customers about an abandoned checkout on its own; 
 
 - [Orders](/admin/sales/orders)
 - [Products](/admin/catalog/products)
-- [Customer groups & price lists](/admin/b2b/groups-and-price-lists)
+- [Customer groups & price lists](/admin/customers/groups-and-price-lists)

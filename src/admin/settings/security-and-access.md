@@ -26,7 +26,7 @@ Safe actions:
 
 Columns: **User**, **Type** (authenticator app, recovery codes, passkey), **Created at**, **Last used at**. Filters: type, created date, last-used date. There is no search box.
 
-One row per second factor a customer has enrolled. See [Signing in & MFA](/admin/getting-started/login-and-mfa) for what each type is.
+One row per second factor a customer has enrolled. See [Signing in & MFA](/admin/getting-started/sign-in) for what each type is.
 
 Safe actions:
 
@@ -86,6 +86,6 @@ A store role cannot open OAuth Clients or OAuth Tokens at all, whatever address 
 
 ## Related
 
-- [Signing in & MFA](/admin/getting-started/login-and-mfa)
+- [Signing in & MFA](/admin/getting-started/sign-in)
 - [Users & addresses](/admin/customers/users-and-addresses)
 - [Audit & logs](/admin/system/audit-and-logs)

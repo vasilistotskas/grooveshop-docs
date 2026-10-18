@@ -122,7 +122,7 @@ Click a line under **Needs attention**. It opens the list filtered to exactly th
 - Revenue counts **paid** orders only, on the day each order was placed. A cash-on-delivery order is added to the day it was placed once the courier's payout is reconciled, days after delivery, so recent days can grow after the fact. See [Reconciliation](/admin/system/reconciliation).
 - Each figure is kept for a short while: **Needs attention** for one minute; the headline figures, the sales chart and the latest orders for five minutes; best sellers, the funnel, order sources and search for fifteen. A figure is cleared at once when a record it counts is saved or deleted — an order, a receipt, a product, a review, a blog comment, a contact message, a business account, an ACS shipment or payout, a store setting — so an edit shows on the next load. **Orders to follow up** also moves at midnight, when another day's orders reach the follow-up period, so it can lag by up to a minute after that. Counts that nothing clears, such as new customers, open carts and the search log, can lag by up to that time.
 - A widget for a feature your plan does not include, or that you have switched off in [Store settings](/admin/settings/store-settings), is not drawn at all.
-- There is no failed-job counter here. Failed background jobs are listed on the platform console, because one list covers every store. See [Background jobs](/admin/system/background-jobs).
+- There is no failed-job counter here. Failed background jobs are listed on the platform console, because one list covers every store. See [Background jobs](/admin/help/automatic-tasks).
 
 ## Related
 
@@ -130,5 +130,5 @@ Click a line under **Needs attention**. It opens the list filtered to exactly th
 - [Orders](/admin/sales/orders)
 - [Products](/admin/catalog/products)
 - [Reviews](/admin/catalog/reviews)
-- [Contact messages & feedback](/admin/sales/contact-and-feedback)
+- [Contact messages & feedback](/admin/customers/messages-and-feedback)
 - [Search & command palette](/admin/getting-started/search-and-command-palette)

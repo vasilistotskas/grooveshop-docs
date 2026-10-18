@@ -36,7 +36,7 @@ The account page has these sections:
 - **Social Media & Website**.
 - **Account Permissions**: Active, Staff, Superuser, groups, user permissions. Only a superuser can change the last four; for everyone else they are read-only.
 - **Subscriptions & Engagement** (collapsed): the engagement summary.
-- **Loyalty & Rewards**: **Points Balance**, **Total XP**, **Level**, **Tier**, all read-only. See [Tiers & points](/admin/loyalty/tiers-and-points).
+- **Loyalty & Rewards**: **Points Balance**, **Total XP**, **Level**, **Tier**, all read-only. See [Tiers & points](/admin/customers/loyalty).
 - **System Information** (collapsed): ID and timestamps.
 
 Tabs on the same page list the customer's saved addresses (Title, First Name, Last Name, City, Country, Is Main, Phone), newsletter subscriptions (Topic, Status, Subscribed At, Unsubscribed At) and **Orders**: every order of the customer, newest first and 20 per page, with its status, payment and paid amount, each linking to the order.
@@ -86,7 +86,7 @@ Use this for abuse or on the customer's request. It is not the deletion route: c
 This is a platform operator's task; the button is not shown to store roles.
 
 1. Open the account and click **Adjust loyalty points**.
-2. Enter the **Points** (positive adds, negative removes; between minus and plus ten thousand) and a **Reason**, then submit. The adjustment is written to the points ledger with your name and the reason, and cannot be undone except by another adjustment. See [Tiers & points](/admin/loyalty/tiers-and-points).
+2. Enter the **Points** (positive adds, negative removes; between minus and plus ten thousand) and a **Reason**, then submit. The adjustment is written to the points ledger with your name and the reason, and cannot be undone except by another adjustment. See [Tiers & points](/admin/customers/loyalty).
 
 ## Things to know
 
@@ -102,6 +102,6 @@ This is a platform operator's task; the button is not shown to store roles.
 
 - [Subscriptions](/admin/customers/subscriptions)
 - [Data exports (GDPR)](/admin/customers/data-exports)
-- [Tiers & points](/admin/loyalty/tiers-and-points)
+- [Tiers & points](/admin/customers/loyalty)
 - [Roles & team](/admin/getting-started/roles-and-team)
 - [Orders](/admin/sales/orders)

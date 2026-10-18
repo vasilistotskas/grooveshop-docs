@@ -66,7 +66,7 @@ With **MYDATA_ENABLED** off, or **MYDATA_FHM_EXEMPTION_GROUND** empty, nothing i
 
 ## Issue an invoice for a business customer
 
-At checkout the shopper chooses **Receipt** or **Invoice**. Choosing Invoice requires a Greek ΑΦΜ of nine digits that passes its check digit, an EL or GR prefix being stripped for you, plus company name, tax office and business activity. The registered address is optional: left blank it is copied from the delivery address, and a half-filled one is refused. The option is controlled by `B2B_INVOICING_ENABLED` (on by default) under [Store settings](/admin/settings/store-settings); approved business customers have these details on their profile (see [Business customers](/admin/b2b/business-customers)).
+At checkout the shopper chooses **Receipt** or **Invoice**. Choosing Invoice requires a Greek ΑΦΜ of nine digits that passes its check digit, an EL or GR prefix being stripped for you, plus company name, tax office and business activity. The registered address is optional: left blank it is copied from the delivery address, and a half-filled one is refused. The option is controlled by `B2B_INVOICING_ENABLED` (on by default) under [Store settings](/admin/settings/store-settings); approved business customers have these details on their profile (see [Business customers](/admin/customers/business-customers)).
 
 The platform submits nothing for such an order and sends no invoice document; the order confirmation says an invoice was requested. To issue it:
 
@@ -107,12 +107,12 @@ Superusers only. Under <span class="sidebar-path">System → Reconciliation → 
 ## Things to know
 
 - **Numbering is allocated under a lock**, so two documents issued at the same moment can never share a number. The counter is the only source of truth.
-- **Each order line keeps the VAT rate it was sold at.** Editing or deleting a rate under [VAT rates](/admin/sales/vat-rates), or moving a product to another rate, never changes an existing order or its documents.
+- **Each order line keeps the VAT rate it was sold at.** Editing or deleting a rate under [VAT rates](/admin/settings/vat-rates), or moving a product to another rate, never changes an existing order or its documents.
 - **Shipping and the payment fee take the products' VAT rate.** When all the products carry one rate, shipping and the fee are taxed at that rate; when the order mixes rates, each charge is split over the rates in proportion to the value of the products at each. The PDF and the myDATA submission always show the same figures, to the cent.
 - **An order with shipping or a fee but no products left cannot get a receipt**: there is no rate for the charge to follow. Add the products back or correct the order first.
 - **Seller details come from Store settings**: legal name, legal form, VAT ID, tax office, address and so on, under the keys whose names start with `INVOICE_SELLER_`. Fill them before the first receipt.
 - **myDATA settings** live under Store settings too: `MYDATA_ENABLED`, `MYDATA_FHM_EXEMPTION_GROUND`, `MYDATA_AUTO_SUBMIT`, `MYDATA_ENVIRONMENT` (dev or prod), `MYDATA_INVOICE_SERIES_PREFIX`, `MYDATA_CREDIT_SERIES_PREFIX`, `MYDATA_ISSUER_BRANCH`. The credentials from the myDATA developer portal (user ID and subscription key) are not settings: you enter them on your store profile, on the **Invoicing & myDATA** tab (see [Roles & team](/admin/getting-started/roles-and-team)). The subscription key is stored encrypted.
-- **Only VAT rates AADE recognises are accepted** on [VAT rates](/admin/sales/vat-rates); a document with an unrecognised rate would be rejected by myDATA.
+- **Only VAT rates AADE recognises are accepted** on [VAT rates](/admin/settings/vat-rates); a document with an unrecognised rate would be rejected by myDATA.
 - **Gift-card amounts are payment, not a discount.** They never reduce the documented value. The sale of a gift card itself is never submitted to myDATA.
 - **Order-level discounts** (promotions, loyalty points) are spread across the lines before VAT is computed, so the documents show VAT on what the customer actually paid.
 - The PDFs are stored in the store's private file area and are never served from a public URL.
@@ -121,7 +121,7 @@ Superusers only. Under <span class="sidebar-path">System → Reconciliation → 
 ## Related
 
 - [Orders](/admin/sales/orders)
-- [VAT rates](/admin/sales/vat-rates)
-- [Business customers](/admin/b2b/business-customers)
+- [VAT rates](/admin/settings/vat-rates)
+- [Business customers](/admin/customers/business-customers)
 - [Store settings](/admin/settings/store-settings)
 - [Reconciliation](/admin/system/reconciliation)

@@ -73,6 +73,6 @@ description: Προσθέστε και αφαιρέστε μέλη της ομά
 
 ## Σχετικά
 
-- [Σύνδεση & MFA](/el/admin/getting-started/login-and-mfa)
+- [Σύνδεση & MFA](/el/admin/getting-started/sign-in)
 - [Ρυθμίσεις καταστήματος](/el/admin/settings/store-settings)
 - [Καλώς ήρθατε](/el/admin/)

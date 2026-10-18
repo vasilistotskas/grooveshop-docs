@@ -52,7 +52,7 @@ The form is split into tabs. Above the tabs, language tabs switch between **Gree
 | **Brand** | Autocomplete. Brand names are not translated. |
 | **Active** | Off keeps the product out of the storefront and the search index. |
 | **Name** | Per language. The slug is pre-filled from the name on a new product. |
-| **Description** | Per language, rich text editor; what it accepts is described under [Blog posts](/admin/blog/posts). |
+| **Description** | Per language, rich text editor; what it accepts is described under [Blog posts](/admin/content/blog/posts). |
 
 ### Pricing & Inventory
 
@@ -60,7 +60,7 @@ The form is split into tabs. Above the tabs, language tabs switch between **Gree
 |---|---|
 | **Price** | Net price in EUR. |
 | **Discount Percent** | 0 to 100. Rejected when the price is 0. |
-| **Vat** | The VAT rate applied on top of the price; see [VAT rates](/admin/sales/vat-rates). |
+| **Vat** | The VAT rate applied on top of the price; see [VAT rates](/admin/settings/vat-rates). |
 | **Stock** | Units on hand. Cannot be negative. |
 | **Weight** | Value and unit. |
 | **Low Stock Threshold** | Alert level for this product; 0 disables the alert. Default 10. |
@@ -69,7 +69,7 @@ The storefront price is `price + VAT − discount`, where the discount is a perc
 
 ### Loyalty Points
 
-**Points Coefficient** multiplies the store-wide points factor for this product (0 means no calculated points). **Bonus Points** is a fixed amount added on purchase. See [Tiers & points](/admin/loyalty/tiers-and-points).
+**Points Coefficient** multiplies the store-wide points factor for this product (0 means no calculated points). **Bonus Points** is a fixed amount added on purchase. See [Tiers & points](/admin/customers/loyalty).
 
 ### Customer Alerts
 
@@ -140,7 +140,7 @@ Customers who set a price-drop alert on the product receive their email when the
 
 - **What makes a product invisible on the storefront**: only two things. **Active** is off, or the product has been deleted. Nothing else hides it. A product with no name in any language still appears, with an empty name where the title should be. An out-of-stock product also still appears. Listings prefer in-stock items when ranking, but that is a tie-breaker applied after how well a product matches what the shopper typed, so an out-of-stock product can still come first on a close match.
 - **Search**: only active, non-deleted products are indexed. Saving a product re-indexes it in the background once the save goes through, and so does adding or removing one of its attribute values. Renaming an attribute value does not re-index the products carrying it; a full re-sync runs nightly at 02:00 and catches those. The two bulk activate/deactivate actions re-index explicitly, because a bulk change never runs the per-product save that normally triggers it.
-- **Storefront cache**: the product listing and each product page are held for 5 minutes on the storefront; category data is held for 1 hour there and 2 hours behind it. Saving a product (its text, images, attributes, brand or variant group) purges the **Products** surface on its own about ten seconds later; a change to stock alone does not. If a change still does not show, purge **Products** from the [Cache](/admin/system/cache) tool.
+- **Storefront cache**: the product listing and each product page are held for 5 minutes on the storefront; category data is held for 1 hour there and 2 hours behind it. Saving a product (its text, images, attributes, brand or variant group) purges the **Products** surface on its own about ten seconds later; a change to stock alone does not. If a change still does not show, purge **Products** from the [Cache](/admin/settings/cache) tool.
 - **Stock reservations** hold units while a customer checks out. Their lifetime is the store setting **STOCK_RESERVATION_TTL_MINUTES** under <span class="sidebar-path">Settings → Store Settings</span>, seeded at 30 minutes; if it is removed or set to anything other than a positive whole number, 15 minutes is used instead. Expired reservations are cleaned up hourly.
 - **Low-stock alert**: once an hour the store contact address receives a single email listing every **active** product that has just reached or fallen below its **Low Stock Threshold**. A product is listed once and becomes eligible again only after its stock rises back above the threshold. Products that are inactive, or whose threshold is 0, are never alerted. The number beside **Products** in the sidebar is a different measure: a fixed band of 1 to 9 units, whatever the per-product threshold says.
 - **A deleted product is not marked as deleted in the list**: one you deleted from its own page keeps appearing here, looking like any other row, because the list neither hides nor flags them. Deactivate instead if you want the state to be obvious at a glance.
@@ -155,5 +155,5 @@ Customers who set a price-drop alert on the product receive their email when the
 - [Variant groups](/admin/catalog/variant-groups)
 - [Reviews](/admin/catalog/reviews)
 - [Tags](/admin/catalog/tags)
-- [VAT rates](/admin/sales/vat-rates)
-- [Cache](/admin/system/cache)
+- [VAT rates](/admin/settings/vat-rates)
+- [Cache](/admin/settings/cache)

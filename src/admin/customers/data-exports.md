@@ -86,4 +86,4 @@ Other people's data is never included, for example the author of a comment the c
 - [Users & addresses](/admin/customers/users-and-addresses)
 - [Subscriptions](/admin/customers/subscriptions)
 - [Audit & logs](/admin/system/audit-and-logs)
-- [Background jobs](/admin/system/background-jobs)
+- [Background jobs](/admin/help/automatic-tasks)

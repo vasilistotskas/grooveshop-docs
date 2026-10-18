@@ -73,6 +73,6 @@ Either untick **Is active** (reversible) or delete the row. Owner rows can only 
 
 ## Related
 
-- [Signing in & MFA](/admin/getting-started/login-and-mfa)
+- [Signing in & MFA](/admin/getting-started/sign-in)
 - [Store settings](/admin/settings/store-settings)
 - [Welcome](/admin/)

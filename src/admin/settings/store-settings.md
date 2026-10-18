@@ -64,7 +64,7 @@ The admin follows the same two switches, so its sidebar and dashboard only offer
 | <span class="sidebar-path">Customers → Newsletter</span> | `NEWSLETTER_ENABLED` is off |
 | <span class="sidebar-path">Content → Blog → Blog Comments</span> | `BLOG_COMMENTS_ENABLED` is off |
 
-**Couriers.** ACS Shipments and ACS Stations are listed only while ACS is active under [Shipping providers](/admin/shipping/providers); BoxNow Shipments and BoxNow Lockers only while BoxNow is.
+**Couriers.** ACS Shipments and ACS Stations are listed only while ACS is active under [Shipping providers](/admin/settings/shipping-providers); BoxNow Shipments and BoxNow Lockers only while BoxNow is.
 
 None of this changes what a role may do: an entry a role cannot open stays hidden from that role whatever the switches say. See [Welcome](/admin/).
 
@@ -108,7 +108,7 @@ Defaults are what a fresh store starts with. Money is in euro.
 
 ### Shipping
 
-Shipping prices, free-shipping thresholds and the countries you deliver to are not settings: they are the **Rates** on each courier's row, see [Shipping providers](/admin/shipping/providers#rates). What remains here are the courier switches.
+Shipping prices, free-shipping thresholds and the countries you deliver to are not settings: they are the **Rates** on each courier's row, see [Shipping providers](/admin/settings/shipping-providers#rates). What remains here are the courier switches.
 
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
@@ -205,7 +205,7 @@ The platform emails the store when something in shipping or payments needs a per
 
 | Setting | Meaning | Default | Public |
 |---|---|---|---|
-| `CONTACT_RETENTION_DAYS` | Days after which a contact message or a feedback entry is deleted, together with the files attached to the message. One period for both. Entries already older than this go on the next nightly run after you set it. Copies of the notification emails in your own mailbox are not touched. 0 keeps everything. Listed under the **Emails & Engagement** category. See [Contact messages & feedback](/admin/sales/contact-and-feedback#how-long-entries-are-kept). | 365 | no |
+| `CONTACT_RETENTION_DAYS` | Days after which a contact message or a feedback entry is deleted, together with the files attached to the message. One period for both. Entries already older than this go on the next nightly run after you set it. Copies of the notification emails in your own mailbox are not touched. 0 keeps everything. Listed under the **Emails & Engagement** category. See [Contact messages & feedback](/admin/customers/messages-and-feedback#how-long-entries-are-kept). | 365 | no |
 | `CONTACT_ATTACHMENTS_ENABLED` | Let visitors attach files to the contact form. Off by default because it is the only place an anonymous visitor can upload anything. | off | yes |
 | `CONTACT_ATTACHMENTS_MAX_COUNT` | Files per enquiry. | 3 | yes |
 | `CONTACT_ATTACHMENTS_MAX_MB` | Per-file size limit. Values above 25 are ignored; 25 MB is the hard ceiling. | 10 | yes |
@@ -232,7 +232,7 @@ The platform emails the store when something in shipping or payments needs a per
 2. Search the name, open the row.
 3. Edit the input that matches the **Type** and **Save**.
 
-The storefront reads every public setting in one request and keeps the answer for a minute, so a change shows within about a minute. To force it, purge **Site settings** on the [Cache](/admin/system/cache) page.
+The storefront reads every public setting in one request and keeps the answer for a minute, so a change shows within about a minute. To force it, purge **Site settings** on the [Cache](/admin/settings/cache) page.
 
 ### Turn a commercial feature on
 
@@ -249,8 +249,8 @@ The storefront reads every public setting in one request and keeps the answer fo
 
 ## Related
 
-- [Cache](/admin/system/cache)
-- [Promotions](/admin/sales/promotions)
-- [Gift cards](/admin/sales/gift-cards)
-- [Tiers & points](/admin/loyalty/tiers-and-points)
+- [Cache](/admin/settings/cache)
+- [Promotions](/admin/marketing/promotions)
+- [Gift cards](/admin/marketing/gift-cards)
+- [Tiers & points](/admin/customers/loyalty)
 - [Receipts and credit documents](/admin/sales/receipts)

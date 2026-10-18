@@ -84,4 +84,4 @@ Unlike the two ledgers above, this row **is** editable, and only a platform oper
 - [ACS Courier](/admin/shipping/acs)
 - [Orders](/admin/sales/orders)
 - [Receipts and credit documents](/admin/sales/receipts)
-- [Background jobs](/admin/system/background-jobs)
+- [Background jobs](/admin/help/automatic-tasks)

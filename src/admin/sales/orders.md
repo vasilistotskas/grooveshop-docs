@@ -199,8 +199,8 @@ There is no other way: **Status** is read-only on the order page.
 - **Carrier tracking** moves the order through Shipped and Delivered, and a delivered, paid order to Completed.
 - **Cash on delivery stays payment-Pending until the courier pays out.** ACS remits collected cash days later; a nightly reconciliation matches the payout report to orders and marks them Completed, silently for the customer. That is by design, not a stuck order.
 - **Receipts** are issued when a receipt order ships, and a **credit document** for every refund. Invoice orders get no document from the platform: you issue the invoice in timologio. See [Receipts and credit documents](/admin/sales/receipts).
-- **Emails** to the customer: order received (immediately for cash on delivery, after payment for online orders), payment failed, shipped (when genuinely in transit), delivered, canceled, completed, refunded, returned, receipt, refund confirmation. **Pending** and **Processing** never email the customer, and neither does the automatic step to **Completed**: the customer has just had the delivered message, so only a Completed you trigger yourself emails them. The store also gets a new-order email. Templates are under [Email templates](/admin/storefront/email-templates).
-- **In-app notifications** mirror the same milestones for customers with an account; guests only get email. See [Notifications](/admin/sales/notifications).
+- **Emails** to the customer: order received (immediately for cash on delivery, after payment for online orders), payment failed, shipped (when genuinely in transit), delivered, canceled, completed, refunded, returned, receipt, refund confirmation. **Pending** and **Processing** never email the customer, and neither does the automatic step to **Completed**: the customer has just had the delivered message, so only a Completed you trigger yourself emails them. The store also gets a new-order email. Templates are under [Email templates](/admin/settings/email-templates).
+- **In-app notifications** mirror the same milestones for customers with an account; guests only get email. See [Notifications](/admin/customers/notifications).
 - **History** logs every status change, payment update, shipping update, note, refund and chargeback, with the user who did it or "System".
 
 ## Cancellations by the customer
@@ -264,7 +264,7 @@ When earlier refunds had already returned part of the payment, the chargeback is
 A chargeback is not a refund:
 - **The payment status does not change**, and neither does the order status. A Completed payment stays Completed and a Partially Refunded one stays Partially Refunded; the red entry and the **Payment Transactions** row are what show the money left.
 - **Nothing goes to the customer**: no refund email, no credit document, and gift cards used on the order do not get their amount back.
-- **Loyalty points**: once refunds and chargebacks together cover the whole payment, the points earned on the order are taken back. Unlike a refund or a cancellation, the points the customer spent on the order are **not** given back, because the customer took the money back through their bank. To give them back anyway, a platform operator can add them by hand; see [Tiers & points](/admin/loyalty/tiers-and-points#add-or-remove-points-for-a-customer).
+- **Loyalty points**: once refunds and chargebacks together cover the whole payment, the points earned on the order are taken back. Unlike a refund or a cancellation, the points the customer spent on the order are **not** given back, because the customer took the money back through their bank. To give them back anyway, a platform operator can add them by hand; see [Tiers & points](/admin/customers/loyalty#add-or-remove-points-for-a-customer).
 
 If a Viva Wallet dispute never shows up on the order, ask the platform team to check that the store's Viva account sends account transaction notifications. Without them the platform hears of a Viva dispute only if Viva reports the lost money as a refund claim, and you learn of it from Viva's own email.
 
@@ -274,7 +274,7 @@ When a provider refuses the refund of a cancelled order, the order stays **Cance
 ### What the customer receives
 One refund email for each refund: a partial refund and the later refund of the rest send one each. Customers with an account also get an in-app notification for each refund.
 
-Gift cards and loyalty points come back only when **all** the money has been refunded, or when the order is canceled. Each card then gets back exactly what it paid; the points spent on the order are given back and the points earned on it are taken back. A partial refund leaves both alone; they come back, in full, with the refund that returns the rest. A chargeback is different, see [Card disputes and chargebacks](#card-disputes-and-chargebacks). See [Gift cards](/admin/sales/gift-cards) and [Tiers & points](/admin/loyalty/tiers-and-points).
+Gift cards and loyalty points come back only when **all** the money has been refunded, or when the order is canceled. Each card then gets back exactly what it paid; the points spent on the order are given back and the points earned on it are taken back. A partial refund leaves both alone; they come back, in full, with the refund that returns the rest. A chargeback is different, see [Card disputes and chargebacks](#card-disputes-and-chargebacks). See [Gift cards](/admin/marketing/gift-cards) and [Tiers & points](/admin/customers/loyalty).
 
 ## Guest orders
 
@@ -286,7 +286,7 @@ A guest order has no account in **Customer Information**. Everything else works 
 - **Editing money fields does not move money.** Changing the paid amount only changes what the screen shows; nothing is charged or refunded. Setting **Payment status** to Refunded or Partially Refunded by hand sends nothing back either, and adds nothing to **Payment Transactions**: to give money back, use **Refund (amount, reason)**. **Promotion Discount**, **Loyalty Discount** and **Gift Card Amount** are read-only for that reason: they are stamped at checkout and the matching coupon, points and gift-card records already exist.
 - **Payment status Completed by hand** is right for bank transfers and cash collected in person. Do not use it for card payments still awaited from a provider.
 - **Payment Method and Payment Gateway are different fields.** **Payment Method** is the dropdown, and it holds what the customer chose at checkout. **Payment Gateway** next to it is written by the platform and records which gateway took the money (`stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`); it is used to match incoming provider messages, so leave it alone.
-- **Wholesale orders** keep the group name and discount percent they were priced with; changing the customer's group later does not touch old orders. See [Customer groups & price lists](/admin/b2b/groups-and-price-lists).
+- **Wholesale orders** keep the group name and discount percent they were priced with; changing the customer's group later does not touch old orders. See [Customer groups & price lists](/admin/customers/groups-and-price-lists).
 - **A Shipment column without a value** means no voucher has been asked for yet, or the order is older than the current carrier setup. The voucher button will say so.
 - **The order source is a guide, not proof.** Anyone can type the tags into a link, and some apps hide where a visit came from, so a real Instagram visit can show as **Direct**. It is counted for the browser tab the customer ordered in: the first page they opened in that tab sets it, and only a later tagged or ad link replaces it. Returning from the card payment page never changes it.
 - Superusers also see the raw **Order History** and **Stock Logs** under [Audit & logs](/admin/system/audit-and-logs).
@@ -294,9 +294,9 @@ A guest order has no account in **Customer Information**. Everything else works 
 ## Related
 
 - [Receipts and credit documents](/admin/sales/receipts)
-- [Payment methods](/admin/sales/payment-methods)
+- [Payment methods](/admin/settings/payment-methods)
 - [Carts](/admin/sales/carts)
 - [ACS Courier](/admin/shipping/acs)
 - [BoxNow](/admin/shipping/boxnow)
-- [Notifications](/admin/sales/notifications)
+- [Notifications](/admin/customers/notifications)
 - [Dashboard](/admin/getting-started/dashboard)

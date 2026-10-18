@@ -84,4 +84,4 @@ description: "Λίστες παραλαβής ACS, αποδόσεις αντικ
 - [ACS Courier](/el/admin/shipping/acs)
 - [Παραγγελίες](/el/admin/sales/orders)
 - [Αποδείξεις και πιστωτικά παραστατικά](/el/admin/sales/receipts)
-- [Εργασίες παρασκηνίου](/el/admin/system/background-jobs)
+- [Εργασίες παρασκηνίου](/el/admin/help/automatic-tasks)

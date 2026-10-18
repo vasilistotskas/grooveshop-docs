@@ -33,8 +33,8 @@ The sidebar is put together for you on every page: it lists only the screens you
 - **Sales**. Orders, Receipts, Credit Documents, Carts. Order line items open from the **Order Items** tab at the top of the order screens. See [Orders](/admin/sales/orders).
 - **Catalog**. Products, Categories, Brands, Attributes (Attributes, Attribute Values, Variant Groups), Images (Product Images, Category Images), Tags, Reviews. See [Products](/admin/catalog/products).
 - **Customers**. Customers, Addresses, Messages, Feedback, Favourites, Notifications (Notifications, Recipients), Wholesale (Business Customers, Customer Groups, B2B Price Lists), Loyalty (Loyalty Tiers, Points Transactions), Newsletter (Subscriptions, Subscription Topics). See [Users & addresses](/admin/customers/users-and-addresses).
-- **Marketing**. Promotions (Promotions, Coupon Codes, Redemptions), Gift Cards (Gift Cards, Purchases, Transactions), Recommendations (Slots, Events, Candidates). See [Promotions](/admin/sales/promotions).
-- **Content**. Pages, Menus (Menus, Menu Columns), Page Layouts, Blog (Blog Posts, Blog Categories, Blog Authors, Blog Comments, Blog Tags). See [Content pages](/admin/storefront/content-pages).
+- **Marketing**. Promotions (Promotions, Coupon Codes, Redemptions), Gift Cards (Gift Cards, Purchases, Transactions), Recommendations (Slots, Events, Candidates). See [Promotions](/admin/marketing/promotions).
+- **Content**. Pages, Menus (Menus, Menu Columns), Page Layouts, Blog (Blog Posts, Blog Categories, Blog Authors, Blog Comments, Blog Tags). See [Content pages](/admin/content/pages).
 - **Shipping**. ACS Shipments, BoxNow Shipments, Pickup Points (BoxNow Lockers, ACS Stations). See [ACS Courier](/admin/shipping/acs) and [BoxNow](/admin/shipping/boxnow).
 - **Settings**. Your store's own configuration, listed below.
 - **System**. Platform operators only, collapsed until opened: Security & Access, Audit & Logs, Reconciliation, Stripe. See [Security & access](/admin/settings/security-and-access), [Audit & logs](/admin/system/audit-and-logs) and [Reconciliation](/admin/system/reconciliation).
@@ -48,12 +48,12 @@ The **Settings** section:
 | **Store Profile** | Your store's own record: name, description, branding and colours, social links, pixels, payment and courier credentials. Opens straight on its form. See [Roles & team](/admin/getting-started/roles-and-team). | Admin, Owner |
 | **Team** | The memberships that give people access to this store. See [Roles & team](/admin/getting-started/roles-and-team). | Admin, Owner |
 | **Store Settings** | The runtime settings: feature switches, thresholds, legal identity, integrations. See [Store settings](/admin/settings/store-settings). | Admin, Owner |
-| **Payment Methods** | See [Payment methods](/admin/sales/payment-methods). | everyone |
-| **Shipping Providers** | See [Shipping providers](/admin/shipping/providers). | everyone |
-| **VAT Rates** | See [VAT rates](/admin/sales/vat-rates). | everyone |
-| **Email Templates** | Preview the transactional emails with your real orders. See [Email templates](/admin/storefront/email-templates). | anyone who may view orders |
-| **Translations** | The editor for the admin's own wording. It changes text shared by every store, so it is listed only where the platform has opened it; normally it is not. See [Languages & translations](/admin/localization/languages-and-translations). | as opened by the platform |
-| **Cache** | Purge what the storefront has cached so an edit shows at once. See [Cache](/admin/system/cache). | Admin, Owner |
+| **Payment Methods** | See [Payment methods](/admin/settings/payment-methods). | everyone |
+| **Shipping Providers** | See [Shipping providers](/admin/settings/shipping-providers). | everyone |
+| **VAT Rates** | See [VAT rates](/admin/settings/vat-rates). | everyone |
+| **Email Templates** | Preview the transactional emails with your real orders. See [Email templates](/admin/settings/email-templates). | anyone who may view orders |
+| **Translations** | The editor for the admin's own wording. It changes text shared by every store, so it is listed only where the platform has opened it; normally it is not. See [Languages & translations](/admin/settings/languages-and-translations). | as opened by the platform |
+| **Cache** | Purge what the storefront has cached so an edit shows at once. See [Cache](/admin/settings/cache). | Admin, Owner |
 
 ### What decides which entries you see
 
@@ -95,7 +95,7 @@ Five of the six are a single list shared by the whole platform: one merchant's c
 | **Regions** | Same group | Ask the platform. Regions are the list your customers pick from at checkout. |
 | **Sites** | Same group | Nothing to maintain: these are the store addresses the platform keeps. Ask the platform if one of yours looks wrong. |
 | **Background Jobs** — the schedule of recurring work, and its results | The System section | Ask the platform. One schedule drives the recurring work of every store, so it was never a per-store setting. |
-| **Cache Purge Log** | System → Audit & Logs | Purging itself stays yours, under <span class="sidebar-path">Settings → Cache</span>; see [Cache](/admin/system/cache). For the record of who purged what, see [Audit & logs](/admin/system/audit-and-logs). |
+| **Cache Purge Log** | System → Audit & Logs | Purging itself stays yours, under <span class="sidebar-path">Settings → Cache</span>; see [Cache](/admin/settings/cache). For the record of who purged what, see [Audit & logs](/admin/system/audit-and-logs). |
 | **Groups** — permission groups | System → Configuration | Nothing to do. Store access comes from the three roles above, never from a group. See [Roles & team](/admin/getting-started/roles-and-team). |
 
 Only the first three were ever open to an Owner or an Admin. The other three were already reserved for platform operators, so nothing a store role could previously reach has been taken away.
@@ -122,7 +122,7 @@ Every admin page ends with a footer showing:
 
 ## Related
 
-- [Signing in & MFA](/admin/getting-started/login-and-mfa)
+- [Signing in & MFA](/admin/getting-started/sign-in)
 - [Roles & team](/admin/getting-started/roles-and-team)
 - [Dashboard](/admin/getting-started/dashboard)
 - [FAQ & troubleshooting](/admin/faq)

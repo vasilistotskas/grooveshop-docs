@@ -11,7 +11,7 @@ Each answer is short on purpose; follow the link for the details.
 
 ### I cannot sign in to the admin with my customer account
 
-The admin accepts platform staff accounts with a membership in your store, never storefront customer accounts, even with the same email. Ask an Owner to add you, and ask the platform for a staff account if you have none. See [Signing in & MFA](/admin/getting-started/login-and-mfa).
+The admin accepts platform staff accounts with a membership in your store, never storefront customer accounts, even with the same email. Ask an Owner to add you, and ask the platform for a staff account if you have none. See [Signing in & MFA](/admin/getting-started/sign-in).
 
 ### A colleague cannot find Store Settings, Cache or Team
 
@@ -43,13 +43,13 @@ They used to sit in the menu under the store name at the top of the sidebar. All
 
 ### Does the admin have two-factor authentication?
 
-No. The admin login is email and password only. Your storefront customers do get authenticator apps, passkeys and login-by-code, but staff sign-in does not. Use strong, unique passwords and one membership per person. See [Signing in & MFA](/admin/getting-started/login-and-mfa).
+No. The admin login is email and password only. Your storefront customers do get authenticator apps, passkeys and login-by-code, but staff sign-in does not. Use strong, unique passwords and one membership per person. See [Signing in & MFA](/admin/getting-started/sign-in).
 
 ## Storefront not reflecting changes
 
 ### I edited a product but the storefront still shows the old price
 
-Saving a product purges its cache on its own about ten seconds later, but your browser may still hold the old page. Reload with Ctrl+Shift+R first; if it still looks old, purge **Products** on the Cache page. See [Cache](/admin/system/cache).
+Saving a product purges its cache on its own about ten seconds later, but your browser may still hold the old page. Reload with Ctrl+Shift+R first; if it still looks old, purge **Products** on the Cache page. See [Cache](/admin/settings/cache).
 
 ### I changed a setting and nothing happened
 
@@ -57,11 +57,11 @@ Public settings reach the storefront within about a minute. If the setting is on
 
 ### Promotions or coupons are not applied at checkout
 
-Check, in order: the plan flag on the store profile, the `PROMOTIONS_ENABLED` setting, the promotion's dates and conditions, and whether the order is a wholesale order with `B2B_ALLOW_PROMOTIONS` off. See [Promotions](/admin/sales/promotions) and [Store settings](/admin/settings/store-settings).
+Check, in order: the plan flag on the store profile, the `PROMOTIONS_ENABLED` setting, the promotion's dates and conditions, and whether the order is a wholesale order with `B2B_ALLOW_PROMOTIONS` off. See [Promotions](/admin/marketing/promotions) and [Store settings](/admin/settings/store-settings).
 
 ### My navigation menu edit is not visible
 
-Menus and page layouts are cached as rendered pages. Saving a menu, column or link purges them on its own about ten seconds later; if the change still does not show, purge **Pages & navigation** on the Cache page. See [Navigation](/admin/storefront/navigation) and [Cache](/admin/system/cache).
+Menus and page layouts are cached as rendered pages. Saving a menu, column or link purges them on its own about ten seconds later; if the change still does not show, purge **Pages & navigation** on the Cache page. See [Navigation](/admin/content/menus) and [Cache](/admin/settings/cache).
 
 ### A product image does not appear
 
@@ -69,7 +69,7 @@ Check that the image is attached to the product and that one image is marked as 
 
 ### The English version of a product shows Greek text
 
-There is no English translation of that record, so the fallback is shown. Open the product, click the English tab and fill it in. See [Languages & translations](/admin/localization/languages-and-translations).
+There is no English translation of that record, so the fallback is shown. Open the product, click the English tab and fill it in. See [Languages & translations](/admin/settings/languages-and-translations).
 
 ## Orders and payments
 
@@ -87,7 +87,7 @@ Platform operators can check the Viva Webhook Events ledger for the order id: no
 
 ### Stock looks wrong after a failed payment
 
-Stock reserved for an order is released by the stuck-order cleanup that runs every fifteen minutes, not at the moment the payment fails. Wait for the next run or cancel the order. See [Background jobs](/admin/system/background-jobs).
+Stock reserved for an order is released by the stuck-order cleanup that runs every fifteen minutes, not at the moment the payment fails. Wait for the next run or cancel the order. See [Background jobs](/admin/help/automatic-tasks).
 
 ### Why is the receipt number not the next one I expected?
 
@@ -145,4 +145,4 @@ Press Ctrl+K (⌘K on a Mac) and type it. See [Search & command palette](/admin/
 
 ### An admin label is wrong or in English
 
-The admin's wording is edited on the platform console and is shared by every store, so a store cannot change it. Tell the platform the screen and the text. See [Languages & translations](/admin/localization/languages-and-translations).
+The admin's wording is edited on the platform console and is shared by every store, so a store cannot change it. Tell the platform the screen and the text. See [Languages & translations](/admin/settings/languages-and-translations).

@@ -7,7 +7,7 @@ description: Free-form labels attached to products - creating, ordering, activat
 
 <span class="sidebar-path">Catalog → Tags</span>
 
-Tags are short translatable labels that can be attached to products from the product page. They are a lightweight way to mark items for internal grouping or campaigns. Blog posts use their own separate tags; see [Categories, authors & tags](/admin/blog/categories-authors-tags).
+Tags are short translatable labels that can be attached to products from the product page. They are a lightweight way to mark items for internal grouping or campaigns. Blog posts use their own separate tags; see [Categories, authors & tags](/admin/content/blog/categories-authors-tags).
 
 ## What you see
 
@@ -58,4 +58,4 @@ Switch **Active** off. The assignments stay in place, so you can re-enable later
 ## Related
 
 - [Products](/admin/catalog/products)
-- [Categories, authors & tags](/admin/blog/categories-authors-tags)
+- [Categories, authors & tags](/admin/content/blog/categories-authors-tags)

@@ -7,7 +7,7 @@ description: Operating ACS shipments end to end, from voucher creation and therm
 
 <span class="sidebar-path">Shipping → ACS Shipments</span>
 
-Every order shipped with ACS has one ACS shipment record. The record is created at checkout, receives its voucher from ACS a few seconds later, is printed and collected, and is then tracked by polling ACS every fifteen minutes until it reaches a final state. Store staff work mostly from this list and from the order page. The ACS entries are in the sidebar only while the ACS row under [Shipping providers](/admin/shipping/providers) is active. Superusers also see the pickup lists, the cash-on-delivery payouts and the raw tracking events under <span class="sidebar-path">System</span>.
+Every order shipped with ACS has one ACS shipment record. The record is created at checkout, receives its voucher from ACS a few seconds later, is printed and collected, and is then tracked by polling ACS every fifteen minutes until it reaches a final state. Store staff work mostly from this list and from the order page. The ACS entries are in the sidebar only while the ACS row under [Shipping providers](/admin/settings/shipping-providers) is active. Superusers also see the pickup lists, the cash-on-delivery payouts and the raw tracking events under <span class="sidebar-path">System</span>.
 
 ## The lifecycle at a glance
 
@@ -96,7 +96,7 @@ A missing ACS credential is a different failure. Nothing is retried, because cre
 One parcel at a time, the voucher is printed from the **order**:
 
 1. In <span class="sidebar-path">Sales → Orders</span>, click **Download shipping voucher (PDF)** on the order row or at the top of the order page.
-2. Print the PDF on the thermal roll printer. The layout is the thermal one (one voucher per page) unless the ACS provider's metadata sets `print_type` to `2` for laser, four per A4. See [Shipping providers](/admin/shipping/providers).
+2. Print the PDF on the thermal roll printer. The layout is the thermal one (one voucher per page) unless the ACS provider's metadata sets `print_type` to `2` for laser, four per A4. See [Shipping providers](/admin/settings/shipping-providers).
 3. **Label printed at** is now set. Printing the label is what lets ACS collect the parcel. ACS also refuses the whole day's pickup list while even one voucher on it is unprinted; that refusal needs no action (see "Issue the pickup list" below).
 
 **Printing everything outstanding at once.** On <span class="sidebar-path">Shipping → ACS Shipments</span>, filter by **Label printed at: empty**, tick the rows and choose the bulk action **Print labels for selected shipments**. ACS has no bulk print of its own, so the platform fetches each label and merges them into a single PDF ordered by order number: one file, one job on the thermal roll, instead of opening one order page per parcel. A label you miss is a parcel ACS cannot collect, so prefer this over working through them by hand.
@@ -183,7 +183,7 @@ Notes:
 - A locker's identity is the pair of **External ID** and branch code. Many lockers share one area code.
 - Only kinds **Smartpoint (no locker)** and **Smartpoint locker** are offered to customers as pickup points. Kind **Shop** rows are kept fresh but not shown.
 - Smartpoint lockers cap at 6 kg per parcel.
-- The picker appears in checkout only when the ACS row has **Supports Pickup Point** on and the setting **ACS_SMARTPOINT_ENABLED** is on. See [Shipping providers](/admin/shipping/providers).
+- The picker appears in checkout only when the ACS row has **Supports Pickup Point** on and the setting **ACS_SMARTPOINT_ENABLED** is on. See [Shipping providers](/admin/settings/shipping-providers).
 - A station that disappears from ACS's list is marked inactive, not deleted. Shipments keep the station code they were created with.
 
 ### Tracking events
@@ -203,8 +203,8 @@ Notes:
 
 ## Related
 
-- [Shipping providers](/admin/shipping/providers)
+- [Shipping providers](/admin/settings/shipping-providers)
 - [Orders](/admin/sales/orders)
 - [Reconciliation](/admin/system/reconciliation)
 - [Audit & logs](/admin/system/audit-and-logs)
-- [Background jobs](/admin/system/background-jobs)
+- [Background jobs](/admin/help/automatic-tasks)

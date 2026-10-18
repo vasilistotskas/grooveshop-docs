@@ -64,7 +64,7 @@ Bulk actions: **Resend confirmation** and **Deactivate selected subscriptions**.
 ### Put a newsletter form on the storefront
 
 1. A new store already has one: a **Newsletter** topic with **Active**, **Default Subscription** and **Requires Confirmation** on. Rename it if you like. To use a topic of your own instead, turn **Default Subscription** off on that one first: only one Newsletter topic can be the default, and saving a second one is refused.
-2. Add a **Newsletter Signup** section to a page layout, see [Page layouts](/admin/storefront/page-layouts).
+2. Add a **Newsletter Signup** section to a page layout, see [Page layouts](/admin/content/page-layouts).
 3. Keep the `NEWSLETTER_ENABLED` setting on. With it off, or with no default Newsletter topic, the section shows nothing.
 
 A visitor enters an email and ticks the consent box, which is never ticked in advance. The storefront always answers "check your inbox", whether or not the address was already subscribed, so the form cannot be used to find out who your subscribers are. The confirmation email links to a page on your storefront with a **Confirm subscription** button. The subscription becomes Active only when that button is pressed, and the link stops working after 7 days. If the visitor later creates an account and verifies the same address, the subscription moves onto the account.
@@ -102,5 +102,5 @@ A Bounced subscription is set when the mail system reported the address as undel
 
 - [Users & addresses](/admin/customers/users-and-addresses)
 - [Data exports (GDPR)](/admin/customers/data-exports)
-- [Page layouts](/admin/storefront/page-layouts)
-- [Email templates](/admin/storefront/email-templates)
+- [Page layouts](/admin/content/page-layouts)
+- [Email templates](/admin/settings/email-templates)

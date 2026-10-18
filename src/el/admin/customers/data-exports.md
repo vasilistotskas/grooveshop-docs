@@ -86,4 +86,4 @@ description: Πώς ένας πελάτης παίρνει αντίγραφο τ
 - [Χρήστες & διευθύνσεις](/el/admin/customers/users-and-addresses)
 - [Συνδρομές](/el/admin/customers/subscriptions)
 - [Έλεγχος & αρχεία καταγραφής](/el/admin/system/audit-and-logs)
-- [Εργασίες παρασκηνίου](/el/admin/system/background-jobs)
+- [Εργασίες παρασκηνίου](/el/admin/help/automatic-tasks)

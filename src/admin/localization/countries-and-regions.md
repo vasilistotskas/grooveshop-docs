@@ -18,9 +18,9 @@ Subscription topics, in contrast, are yours: they sit under <span class="sidebar
 
 Effects on your store:
 
-- A customer can only ship to a country that one of your shipping providers has an active rate for. Every country is already in the list, so offering a new one is up to you: add a rate, see [Shipping providers](/admin/shipping/providers#offer-a-new-country). Checkout lists only those countries; the account profile still offers the whole list.
-- VAT rates are attached to products, not to countries; see [VAT rates](/admin/sales/vat-rates).
-- The pickers are cached under the **Regions & Countries** surface; a change made by the platform may need a purge, see [Cache](/admin/system/cache).
+- A customer can only ship to a country that one of your shipping providers has an active rate for. Every country is already in the list, so offering a new one is up to you: add a rate, see [Shipping providers](/admin/settings/shipping-providers#offer-a-new-country). Checkout lists only those countries; the account profile still offers the whole list.
+- VAT rates are attached to products, not to countries; see [VAT rates](/admin/settings/vat-rates).
+- The pickers are cached under the **Regions & Countries** surface; a change made by the platform may need a purge, see [Cache](/admin/settings/cache).
 
 To fix a country or region name, or to add regions for a country, ask the platform.
 
@@ -67,5 +67,5 @@ Untick **Is active** rather than deleting, so the subscriber history stays. Indi
 
 - [Subscriptions](/admin/customers/subscriptions)
 - [Users & addresses](/admin/customers/users-and-addresses)
-- [Languages & translations](/admin/localization/languages-and-translations)
+- [Languages & translations](/admin/settings/languages-and-translations)
 - [Store settings](/admin/settings/store-settings)

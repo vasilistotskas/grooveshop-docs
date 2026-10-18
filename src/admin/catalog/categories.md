@@ -63,8 +63,8 @@ Categories do not list their products for editing. Open each product from [Produ
 
 - **Deleting a category deletes its whole subtree.** Children are removed with the parent. Products in a deleted category keep existing with no category.
 - **Active does not hide a category from shoppers.** Every category is served to the storefront whatever the flag says, so switching it off changes nothing a customer sees. To make a category disappear, move its products elsewhere and delete it.
-- **Where categories show on the storefront**: the category navigation and the sidebar category filter on the products listing page, category pages at `/products/category/<id>/<slug>`, and the **Product Categories** section when a page layout includes it (see [Page layouts](/admin/storefront/page-layouts)). The header menu does not list categories unless you put them in a navigation menu yourself (see [Navigation](/admin/storefront/navigation)).
-- **Cache**: category data is cached for 1 hour on the storefront and 2 hours in the API by default. Saving a category or its image purges the **Categories** surface on its own about ten seconds later; if a change still does not show, purge it from the [Cache](/admin/system/cache) tool.
+- **Where categories show on the storefront**: the category navigation and the sidebar category filter on the products listing page, category pages at `/products/category/<id>/<slug>`, and the **Product Categories** section when a page layout includes it (see [Page layouts](/admin/content/page-layouts)). The header menu does not list categories unless you put them in a navigation menu yourself (see [Navigation](/admin/content/menus)).
+- **Cache**: category data is cached for 1 hour on the storefront and 2 hours in the API by default. Saving a category or its image purges the **Categories** surface on its own about ten seconds later; if a change still does not show, purge it from the [Cache](/admin/settings/cache) tool.
 - The slug is unique across all categories. A blank slug is generated from the name on save.
 - **A missing name does not fall back to another language.** Where the visitor's language has no name, the category renders with an empty one rather than borrowing the Greek or English text. Name every category in every language your store serves.
 - The search page has no category filter, so a shopper who searches cannot narrow the results by category.
@@ -72,6 +72,6 @@ Categories do not list their products for editing. Open each product from [Produ
 ## Related
 
 - [Products](/admin/catalog/products)
-- [Navigation](/admin/storefront/navigation)
-- [Page layouts](/admin/storefront/page-layouts)
-- [Cache](/admin/system/cache)
+- [Navigation](/admin/content/menus)
+- [Page layouts](/admin/content/page-layouts)
+- [Cache](/admin/settings/cache)

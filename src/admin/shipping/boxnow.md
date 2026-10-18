@@ -9,7 +9,7 @@ description: BoxNow locker deliveries in Greece and Cyprus, the synced locker li
 
 BoxNow delivers to automated lockers. A customer picks a locker on the checkout map, the platform sends BoxNow a delivery request, and BoxNow reports every parcel movement back through a signed webhook. A check with BoxNow every fifteen minutes runs as a safety net in case a webhook is lost.
 
-Both entries are in the sidebar only while the BoxNow row under [Shipping providers](/admin/shipping/providers) is active. When ACS is not active, **Pickup Points** holds nothing but the lockers, so **BoxNow Lockers** sits directly under **Shipping** instead.
+Both entries are in the sidebar only while the BoxNow row under [Shipping providers](/admin/settings/shipping-providers) is active. When ACS is not active, **Pickup Points** holds nothing but the lockers, so **BoxNow Lockers** sits directly under **Shipping** instead.
 
 ## Lockers
 
@@ -87,7 +87,7 @@ BoxNow also delivers from Greek shops to its locker network in Cyprus. It uses t
 4. Check that the Cypriot lockers are in <span class="sidebar-path">Shipping → Pickup Points → BoxNow Lockers</span>: filter **Country Code** by `CY`. They arrive with the nightly sync; if none are there yet, run **Sync lockers from BoxNow API**.
 5. Place a test order to a Cypriot locker, print its voucher and send it to BoxNow so they can confirm the setup. BoxNow asks for this before you start shipping to Cyprus.
 
-For the general steps of adding a country, see [Shipping providers](/admin/shipping/providers).
+For the general steps of adding a country, see [Shipping providers](/admin/settings/shipping-providers).
 
 ### What the customer sees
 
@@ -151,7 +151,7 @@ Open the shipment and read the events tab, or go to <span class="sidebar-path">S
 
 ## Related
 
-- [Shipping providers](/admin/shipping/providers)
+- [Shipping providers](/admin/settings/shipping-providers)
 - [Countries & regions](/admin/localization/countries-and-regions)
 - [ACS Courier](/admin/shipping/acs)
 - [Orders](/admin/sales/orders)
