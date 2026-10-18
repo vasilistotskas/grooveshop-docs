@@ -235,10 +235,11 @@ Plus a third, finer gate: which **strategies** run depends on
 `Tenant.recommendations_enabled` puts it exactly — the flag is "the feature
 exists for this store", the plan rank is "how smart it is allowed to be".
 
-On the storefront the two tiers are combined where a strip is mounted, not in
-route middleware: `app/pages/products/[id]/[slug].vue` and
-`app/pages/cart/index.vue` each compute
-`tenantStore.recommendationsEnabled && useSettingFlag('PRODUCT_SUGGESTIONS_ENABLED')`.
+On the storefront a strip is gated where it is mounted, not in route
+middleware, on the one `productSuggestions` store feature Django folds from
+both tiers: `app/components/Storefront/ProductDetail.vue`,
+`app/components/Storefront/Cart.vue` and `app/components/Cart/Drawer.vue`
+each read `useStoreFeature('productSuggestions')`.
 
 ### Impressions are client-reported
 

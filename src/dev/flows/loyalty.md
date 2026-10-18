@@ -334,10 +334,13 @@ storefront never advertises a reward the backend will not grant.
 - **Points expire that should not have.** `LOYALTY_POINTS_EXPIRATION_DAYS`
   defaults to 0, which disables expiry entirely; a non-zero value is a
   merchant decision.
-- **The loyalty page 404s for a store that has it on.** The route gate fails
-  open on a settings error but hard-404s on the plan flag, and reads the flag
-  synchronously from the tenant store — so a tenant config that did not load
-  takes the page with it.
+- **The loyalty page 404s for a store that has it on.** The route gate
+  (`app/middleware/loyalty-enabled.ts: createFeatureGate('loyalty')`) reads
+  the `loyalty` store feature synchronously from the tenant config, with no
+  settings request and no fallback, so a tenant config that did not load
+  takes the page with it. Right after the merchant switches loyalty on, a
+  pod can serve its old tenant config until the `store_pages` purge moves
+  the store's epoch (see [Caches & purging](/dev/operations/caches#the-tenant-config-epoch)).
 
 ## Related
 

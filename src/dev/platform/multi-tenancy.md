@@ -153,7 +153,7 @@ Every commercial feature has a **plan** tier the operator controls and a
 | Tier | Where | Enforced by |
 |---|---|---|
 | Plan | Boolean fields on `Tenant` (`loyalty_enabled`, `blog_enabled`, `promotions_enabled`, `gift_cards_enabled`, `b2b_enabled`, `recommendations_enabled`, `agent_commerce_enabled`, …) | `tenant/permissions.py: IsTenantFeatureEnabled` subclasses on the viewsets; `tenant/membership.py: tenant_plan_allows(flag)` inside services that the public order-create path reaches without passing a viewset permission |
-| Runtime | `extra_settings` rows in the tenant schema (`LOYALTY_ENABLED`, `PROMOTIONS_ENABLED`, `GIFT_CARDS_ENABLED`, `B2B_WHOLESALE_ENABLED`, `PRODUCT_SUGGESTIONS_ENABLED`, `AGENT_COMMERCE_ENABLED`, `PRODUCT_REVIEWS_ENABLED`, …) | `tenant/permissions.py: IsSettingEnabled` subclasses; the storefront reads the keys listed in `core/api/views.py: PUBLIC_SETTING_KEYS` through `GET /api/v1/settings/public` and gates UI with `app/composables/useSettingFlag.ts` and the `app/middleware/*-enabled.ts` route middlewares |
+| Runtime | `extra_settings` rows in the tenant schema (`LOYALTY_ENABLED`, `PROMOTIONS_ENABLED`, `GIFT_CARDS_ENABLED`, `B2B_WHOLESALE_ENABLED`, `PRODUCT_SUGGESTIONS_ENABLED`, `AGENT_COMMERCE_ENABLED`, `PRODUCT_REVIEWS_ENABLED`, …) | `tenant/permissions.py: IsSettingEnabled` subclasses; the storefront reads the keys listed in `core/api/views.py: PUBLIC_SETTING_KEYS` through `GET /api/v1/settings/public`, but gates a feature only on the effective state Django folds into `TenantConfig.features` (see below) |
 
 Rules the code encodes:
 
@@ -171,8 +171,19 @@ Rules the code encodes:
 - Chrome toggles fail open (`default=True`); commercial gates fail closed
   (`IsB2BWholesaleEnabled`, `IsPromotionsRuntimeEnabled`,
   `IsContactAttachmentsEnabled` set `default=False`).
-- The plan flags travel raw on `TenantConfig`; the storefront combines
-  them with the runtime setting itself. The gateway-consumed values are
+- The storefront decides every store feature from `TenantConfig.features`
+  alone: `app/composables/useStoreFeature.ts` in the app, the route gates
+  `app/utils/routeGate.ts: createFeatureGate` behind the
+  `app/middleware/*-enabled.ts` middlewares, and
+  `server/utils/storeFeature.ts: eventStoreFeature` in Nitro, all over
+  `shared/utils/storeFeature.ts: storeFeatureOn`. It never combines a plan
+  flag with a setting or keeps a fallback of its own; the plan flags still
+  travel raw on `TenantConfig`, but no storefront gate reads them. The
+  boolean settings that are not store features (presentation preferences,
+  and `CART_ENABLED` / `CATALOGUE_ENABLED` until the API gates them) are
+  read through `app/composables/useStorePreference.ts` over
+  `shared/utils/storePreference.ts: STORE_PREFERENCES`, which states what a
+  missing row means. The gateway-consumed values are
   **folded** in the serializer (`get_agent_commerce_enabled`,
   `get_product_feeds_enabled`, `agent_hosted_payment_enabled`) so the
   gateway reads one authoritative boolean per surface, and a payload
@@ -247,7 +258,8 @@ OrderCreateErrorType`).
 Caches key on it in one place per layer: Django's `cache_page` suffixes
 its key with `request.LANGUAGE_CODE` (`django/utils/cache.py`), and every
 Nitro handler key goes through `tenantCacheKey`, which carries
-`host__locale__key`.
+`host__locale__key__e<epoch>`; the last segment is the store's
+tenant-config epoch (see [Caches & purging](/dev/operations/caches#the-tenant-config-epoch)).
 
 ### Asset origins
 
@@ -363,7 +375,7 @@ are the bugs it exists to catch.
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.ai-ready-gate.ts` | Platform-only AI surfaces |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/tenant-site-config.ts` | The store's site config on `site-config:init`; drops AI-surface links a store does not serve |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/aiSurfaces.ts` | `servesAiSurfaces`, `withoutAiSurfaceLinks` |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig`, `tenantConfigEpoch`, `invalidateTenantConfigs` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | Per-tenant locale gate |
 | `grooveshop-storefront-ui-node-nuxt/shared/i18n/tenantLocales.ts` | `tenantAllowedLocales`, `servedLocale` |
@@ -371,7 +383,8 @@ are the bugs it exists to catch.
 | `grooveshop-storefront-ui-node-nuxt/app/utils/api.ts`, `app/plugins/api.ts`, `app/composables/useApi.ts` | The page-locale fetchers |
 | `grooveshop-django-api/core/middleware/locale.py` | `RequestLanguageMiddleware` |
 | `grooveshop-django-api/core/utils/i18n.py` | `resolve_request_language` |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useSettingFlag.ts` | Runtime flag reader |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/storeFeature.ts`, `app/composables/useStoreFeature.ts`, `server/utils/storeFeature.ts`, `app/utils/routeGate.ts` | `storeFeatureOn`, `useStoreFeature`, `eventStoreFeature`, `createFeatureGate`: every store feature from `TenantConfig.features` |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/storePreference.ts`, `app/composables/useStorePreference.ts` | `STORE_PREFERENCES`: the boolean settings that are not store features |
 | `grooveshop-storefront-ui-node-nuxt/.claude/rules/multi-tenant.md` | The `event.context.tenant` contract |
 | `grooveshop-agent-gateway/internal/tenant/` | Resolver and middleware |
 | `grooveshop-media-stream/src/MediaStream/Validation/` | `TenantDomainsService`, schema validation |

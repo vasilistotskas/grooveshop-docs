@@ -161,9 +161,9 @@ admission control and per-resource deduplication.
 |---|---|---|---|
 | Django cache | Redis via `core/caches.py: CustomCache` | `{schema}:{prefix}:{version}:{key}` from `tenant/cache.py: make_tenant_key` (registered as `KEY_FUNCTION`) | A `global:` key prefix opts out of schema scoping for families like `tenant_resolve`, which any schema reads |
 | Tenant resolve | Django cache, 1 hour | `global:tenant_resolve:{shape}:{tenant pk}.{generation}:{domain}` | The shape fingerprint of `TenantConfigSerializer` is part of the key, so adding a field never serves a stale shape; `Tenant.cache_generation` is bumped by every write the payload depends on, so invalidation never relies on a Redis delete |
-| Nuxt tenant config | Process memory, 5 minutes | host | `server/utils/tenant.ts`; negative results are never cached |
-| Nuxt route cache | Nitro cache in Redis | `tenantCacheKey(event, ...)` from `server/utils/cacheKey.ts`: `host__locale__key` | Every tenant-specific `defineCachedEventHandler` must use it; the locale keeps an English entry from being served to a Greek page, and the key carries a hash because Nitro strips punctuation |
-| Nuxt SWR pages | Nitro cache | `varies: ['host', 'x-device-class']` | Homepage, brand pages, blog and catalogue families (`nuxt.config.ts: routeRules`, `shared/constants/prerender.ts`); cached HTML is rendered anonymously by contract |
+| Nuxt tenant config | Process memory, 5 minutes, dropped early when the store's epoch moves | host | `server/utils/tenant.ts`; negative results are never cached. Each pod re-reads the store's tenant-config epoch from the shared cache storage at most every 5 s (`EPOCH_CHECK_MS`); a purge sent with `tenantConfig: true` moves it (`invalidateTenantConfigs`) |
+| Nuxt route cache | Nitro cache in Redis | `tenantCacheKey(event, ...)` from `server/utils/cacheKey.ts`: `host__locale__key__e<epoch>` | Every tenant-specific `defineCachedEventHandler` must use it; the locale keeps an English entry from being served to a Greek page, the epoch keeps an entry rendered from an old tenant config from being read after a purge, and the key carries a hash because Nitro strips punctuation |
+| Nuxt SWR pages | Nitro cache | `varies: ['host', 'x-device-class', 'x-tenant-epoch']` (`CACHED_PAGE_VARIES`) | Homepage, brand pages, blog and catalogue families (`nuxt.config.ts: routeRules`, `shared/constants/prerender.ts`); cached HTML is rendered anonymously by contract |
 | Gateway tenant config | Process memory 5 min, then Redis `ag:tenant:{host}`, then Django | host | Singleflight, negative cache, stale-if-error (`internal/tenant`) |
 | Gateway feeds and sessions | Redis | `ag:{schema}:...` | Feeds have fresh and stale TTLs; checkout sessions expire after a day |
 | Media stream | Memory, then Redis, then disk `.rsc`/`.rsm` pairs | `image:{schema}:…` from `Cache/utils/cache-namespace.util.ts: imageNamespace` | Per-tenant flush via `POST /admin/cache/flush-tenant` with the internal secret |
@@ -214,9 +214,10 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 |---|---|
 | `grooveshop-storefront-ui-node-nuxt/server/utils/auth.ts` | `createHeaders` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/backendFetch.ts` | `useBackendFetch`, `backendFetchFor` |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig`, in-memory tenant cache |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig`, in-memory tenant cache, tenant-config epochs (`tenantConfigEpoch`, `invalidateTenantConfigs`) |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey`, `hashedCacheKey` |
-| `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | `routeRules`, `runtimeConfig`, Nitro Redis storage |
+| `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | `routeRules` (`CACHED_PAGE_VARIES`), `runtimeConfig`, Nitro Redis storage |
+| `grooveshop-storefront-ui-node-nuxt/server/middleware/1.tenant-epoch.ts` | The `x-tenant-epoch` request header the page cache varies on |
 | `grooveshop-storefront-ui-node-nuxt/app/providers/media-stream.ts` | Image URL builder |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | Type and Zod generation |
 | `grooveshop-django-api/settings.py` | `USE_X_FORWARDED_HOST`, `SECURE_PROXY_SSL_HEADER`, `SPECTACULAR_SETTINGS`, `CACHES` |
