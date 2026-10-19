@@ -20,7 +20,7 @@ The list shows the newest products first. Each row has the name with a thumbnail
 | **Low** | 6 to 10 |
 | **In stock** | more than 10 |
 
-The number next to **Products** in the sidebar counts active products with 1 to 9 units. The Dashboard shows the same number as **Low stock**.
+The number next to **Products** in the sidebar counts active products with 1 to 9 units. The Dashboard shows the same number as **Running low on stock**.
 
 Search finds products by SKU, name, description, category or brand. The filters (stock, price, discount, category, brand and more) open in a side panel.
 
