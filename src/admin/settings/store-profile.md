@@ -60,7 +60,7 @@ The switch must always match the credentials you entered.
 
 ## Things to know
 
-- **Language.** The **Default Locale** is the language of the emails the platform sends to you, for example about a new review. It must be one of the store's languages. Which languages the store has is set by the platform team.
+- **Language.** The **Default Locale** is the language of the emails the platform sends to you, for example about a new review. It must be one of the store's languages. Those are listed under **Available Locales** on the same tab; only the platform team can change them.
 - **Description in other languages.** The **Store Description** is in the default language. For another language fill in **Store Description (other languages)**, for example `{"en": "Handmade jewellery from Thessaloniki"}`.
 - **Sender email.** The **From Email** (e.g. orders@your-domain.com) takes effect only after the platform team confirms it. Until then emails go out from the platform's address with your store's name.
 - **TOTP Issuer.** The name your customers see in the code app on their phone. Empty means the store name.
