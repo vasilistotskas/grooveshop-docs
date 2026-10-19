@@ -1,109 +1,56 @@
 ---
 title: Categories, authors & tags
-description: The three supporting lists of the blog - the category tree, the author profiles tied to user accounts, and the blog's own tags.
+description: The blog's categories, authors and tags - what each one does and how to create them.
 ---
 
 # Categories, authors & tags
 
-<span class="sidebar-path">Content → Blog → Blog Categories</span>, <span class="sidebar-path">Content → Blog → Blog Authors</span>, <span class="sidebar-path">Content → Blog → Blog Tags</span>
+Every blog post has one category, one author and as many tags as you like. This is where you build those three lists.
 
-Posts reference these three lists. All blog pages share a tab strip at the top (Blog Posts, Categories, Authors, Comments, Tags), so you can move between them without the sidebar.
+<span class="sidebar-path">Content → Blog → Blog Categories</span>, <span class="sidebar-path">Content → Blog → Blog Authors</span> and <span class="sidebar-path">Content → Blog → Blog Tags</span>
 
-## Blog Categories
+## What you see
 
-Blog categories form a tree, separate from the product categories.
-
-### What you see
-
-15 categories per page, drag-ordered. **The list itself is flat**, however deep the tree goes: a subcategory sits in the ordinary run of rows and the **Parent** column is the only thing that tells you where it belongs. Dragging reorders siblings, so read the **Parent** column before you move anything.
-
-| Column | Meaning |
+| List | What it shows |
 |---|---|
-| **Name** | Translated name. |
-| **Parent** | Parent category, or a dash for a top-level one. |
-| **Direct Posts** | Posts in exactly this category. |
-| **Total Posts (Tree)** | Posts in this category and its descendants. |
+| **Blog Categories** | Name, **Parent**, **Direct Posts** and **Total Posts (Tree)**, which counts the subcategories too. |
+| **Blog Authors** | The user, the start of the bio, **Posts**, **Total likes received** and **Website**. |
+| **Blog Tags** | Name, **Active**, how many **Posts** carry it. |
 
-**Search** matches name and description. There are no filters on this list.
+Blog categories are separate from product categories, and blog tags are separate from product [Tags](/admin/catalog/tags).
 
-The form: **Category Information** (**Name**, **Description** per language, **Parent**), **URL** (**Slug**, pre-filled from the name), **Media** (**Image**, usual formats plus SVG), collapsed **Organization** (**Sort Order**) and collapsed **Statistics**.
+## Tasks
 
-### Tasks
+### Add a category
+1. Open <span class="sidebar-path">Content → Blog → Blog Categories</span> and click **Add**.
+2. Write the **Name** and, if you like, a **Description** in every language. For a subcategory, pick a **Parent**.
+3. Upload an **Image** if it should show in the blog's category list.
+4. Save. To change the order, drag the rows in the list.
 
-**Add a category**: click **Add**, type the Greek **Name**, choose a **Parent** if it is a subcategory, upload an **Image** if the category rail on the home page should show one, save.
+### Add an author
+1. The author needs a user account. If they have none, create it first; see [Customers & addresses](/admin/customers/users-and-addresses).
+2. Open <span class="sidebar-path">Content → Blog → Blog Authors</span> and click **Add**.
+3. Pick the **User**, fill in a **Website** and a **Bio** in every language if you like, and save.
 
-**Reorder**: drag rows in the list.
+### Add a tag
+1. Open <span class="sidebar-path">Content → Blog → Blog Tags</span> and click **Add**.
+2. Write the **Name** in every language and save.
+3. Pick the tag in the **Tags** field of every post it fits.
 
-### Things to know
+## Things to know
 
-- Deleting a category deletes its subcategories. Posts in them keep existing with no category.
-- Storefront pages: the category list at `/blog/categories` and each category at `/blog/category/<id>/<slug>`. The **Blog Categories Rail** section of a page layout also lists them; see [Page layouts](/admin/content/page-layouts).
-- Post counts shown on the storefront include published posts only; the admin columns count drafts too.
-- Blog categories have no Active flag; a category exists or it does not.
-
-## Blog Authors
-
-An author is a profile attached to exactly one user account. A post's **Author** must be one of these profiles, so create the profile before the first post.
-
-### What you see
-
-| Column | Meaning |
-|---|---|
-| **User** | Full name (or username) and email. |
-| **Bio** | The biography's first 50 characters, as plain text. |
-| **Posts** | Number of posts. |
-| **Total likes received** | Likes across the author's published posts. |
-| **Website** | Link, if set. |
-
-**Search** matches the user's email, username, first and last name, and the bio. No filters.
-
-The form: **Basic Information** (**User**, **Website**), **Biography** (**Bio** per language), collapsed **Statistics**. **Bio** uses the same rich-text editor as a post body: paragraphs, bold, links and lists show on the author page as written (see [Posts](/admin/content/blog/posts#things-to-know)).
-
-### Tasks
-
-**Create an author**: click **Add**, pick the **User** (the person needs an account first; see [Users & addresses](/admin/customers/users-and-addresses)), write the **Bio**, save.
-
-### Things to know
-
-- One profile per user, and a user with an author profile cannot be deleted while the profile exists. Delete the profile first.
-- **Only Bio and Website come from this form.** The author's name and picture on the storefront are taken from the user account, so correct those on the person's account, not here.
-- The public author page is `/blog/author/<id>`, and the count it shows covers published posts only.
-- **The two count columns here disagree on purpose.** **Posts** counts everything the author has written, drafts included, while **Total likes received** only adds up likes on their published posts.
-
-## Blog Tags
-
-Blog tags are separate from the product [Tags](/admin/catalog/tags).
-
-### What you see
-
-| Column | Meaning |
-|---|---|
-| **Name** | Translated name. |
-| **Active** | Editable in the list; tick and press **Save**. |
-| **Posts** | Number of posts carrying the tag. |
-| **Sort Order** | Drag rows to reorder. |
-
-**Filters**: Active, and a **Posts** count range. **Search** matches the name.
-
-The form: **Tag Information** (**Name** per language, **Active**), **Organization** (**Sort Order**).
-
-### Tasks
-
-**Create a tag**: click **Add**, type the Greek **Name** and other languages, save. Then pick it in the **Tags** field of each post.
-
-**Retire a tag**: switch **Active** off. It stays on every post that carries it, and, as the note below explains, readers will not notice the change. Remove it from the posts, or delete it, if it must really go.
-
-### Things to know
-
-- **The tags shown on the blog are not clickable.** The blog landing page has a **Tags** panel, visible on wide screens only, but its entries are plain labels with a text box to search them. A reader cannot click one to narrow the article list, and nothing anywhere links to a tag.
-- **That panel ignores Active.** It shows whatever tags it is given, inactive ones included, and only the first page of them. Switching **Active** off changes nothing a reader sees, so treat the flag as an internal marker until tag browsing exists.
+- **Related posts**: under each post the store suggests other published posts from the same category or with tags in common. That is the tags' main job.
+- **Readers see no tag list**, and a tag's **Active** does not change the related posts. To stop a tag linking posts, remove it from them or delete it.
+- **The category list shows no indentation.** Dragging changes the order only among categories with the same parent; check the **Parent** column before you drag.
+- **Deleting a category also deletes its subcategories.** Their posts are left without a category, not deleted.
+- **The author's name** comes from their user account; correct it there. Only the **Bio** and **Website** come from this form.
+- A user has at most one author profile, and cannot be deleted while they have it. Delete the profile first.
+- The **Posts** columns count drafts and scheduled posts too. The store counts published posts only.
 - Deleting a tag removes it from every post.
-- The **Posts** column counts drafts and scheduled posts along with published ones, so it can be higher than the number of articles a reader can actually reach.
-- The post form's **SEO Score** counts a post with at least one tag as better optimised, which is the one place a tag has a visible effect today.
 
 ## Related
 
 - [Posts](/admin/content/blog/posts)
 - [Comments](/admin/content/blog/comments)
 - [Tags](/admin/catalog/tags)
-- [Users & addresses](/admin/customers/users-and-addresses)
+- [Customers & addresses](/admin/customers/users-and-addresses)

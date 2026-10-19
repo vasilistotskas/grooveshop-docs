@@ -1,63 +1,57 @@
 ---
 title: Languages & translations
-description: How product, category and blog translations work in the edit forms, which language the storefront serves, and who can change the admin's own interface wording.
+description: How to write products, categories and pages in more than one language, which languages your storefront shows, and how to change the admin's own language.
 ---
 
 # Languages & translations
 
-The platform speaks three languages: Greek (the default), English and German. Content you enter is stored per language; the admin and the storefront have their own separate interface wording.
+Your store's texts (product names and descriptions, categories, blog posts, pages) are written separately for each language. The store's default language is set in its profile.
 
-## Content translations
+<span class="sidebar-path">Settings → Store Profile</span>
 
-Translatable records (products, categories, blog posts and categories, tags, subscription topics, payment methods, content pages and others) show **language tabs** at the top of their edit form, one per language, with a flag. Each tab holds that language's copy of the translatable fields, typically name, description, slug and SEO text. Non-translatable fields (price, stock, dates) are shared and appear once.
+## What you see
 
-Rules that apply everywhere:
+- **Language tabs on the forms.** At the top of every form with translatable texts there are three tabs: **Greek**, **English**, **German**. Each tab holds that language's texts, usually name, description, slug (the last part of the page's address) and SEO texts. The other fields, such as price and stock, are shared by all languages.
+- **Default Locale**, on the **Branding** tab of the Store Profile. It can be **Greek** or **English**. Owners and Admins can change it.
 
-- **Greek is the default.** It is what the list views and search show when it exists, and the storefront's own interface is built around it.
-- **English is the fallback.** If a language has no translation, the English one is shown; if that is missing too, whatever language exists is shown. Untranslated records are never hidden from customers.
-- Deleting a translation is a separate action on the tab; deleting the record deletes all its translations.
+## Tasks
 
-### Tasks
+### Translate a product
 
-#### Translate a product
+1. Open the product from <span class="sidebar-path">Catalog → Products</span>.
+2. Click the **English** tab.
+3. Fill in the name, description and the other texts.
+4. Click **Save**.
 
-1. Open the product in <span class="sidebar-path">Catalog → Products</span>.
-2. Click the **English** (or **German**) tab.
-3. Fill in name, description and the other text fields, then **Save**.
+You do the same on categories, blog posts, pages and every other form with language tabs. Saving one tab does not fill in the other languages.
 
-Saving on one tab does not create the other languages. Repeat per language.
+### Find texts without a translation
 
-#### Find untranslated records
+There is no "missing translation" filter. Open the record and look at the language's tab: if it is empty, the translation is missing.
 
-None of your store's screens has a "missing translation" filter. Search the list for the record in Greek, open it, and an empty tab means no translation.
+### Add an English version of the storefront
 
-## Which languages the storefront shows
+The platform team decides which languages your storefront shows.
 
-Two things decide it:
+1. First translate the pages "Όροι Χρήσης" (terms of use), "Πολιτική Απορρήτου" (privacy policy) and "Πολιτική Cookies" (cookie policy) into English, from <span class="sidebar-path">Content → Pages</span>. Without these translations the platform cannot switch the language on.
+2. Translate the products and categories you want to look right.
+3. Ask [support](/admin/help/contact-support) to switch English on.
 
-- The **available locales** and the **default locale** on your store profile. The default is editable by Admin and Owner; the list of available locales is set by the platform and, when non-empty, limits the storefront to those languages and removes the others from the language switcher, the sitemap and the alternate-language tags.
-- The storefront application itself has to ship the language. Ask the platform before promising one to customers.
+### Change the admin's language
 
-Translations you enter in a language the storefront does not show are still stored and still served to anything reading your store's data, so they are not lost.
-
-## Admin interface language
-
-The admin has a language switcher in the account menu at the bottom of the sidebar (Greek, English, German) once you are signed in. It changes only your own view, never your storefront. The address carries the language: `/admin/` is Greek, `/en/admin/` English, `/de/admin/` German. The login page itself has no switcher, so open the language-prefixed address directly if you want the form in English or German.
-
-## Translations: the interface wording
-
-<span class="sidebar-path">Settings → Translations</span> is the editor for the wording of the admin itself and of the emails it sends — labels, messages, subjects. It edits one platform-wide catalogue shared by every store, so it is reserved for the platform: the entry is listed only where the platform has opened the editor for your store, and a store's sidebar normally does not show it. If a label is wrong or untranslated, tell the platform which screen and which text.
-
-The storefront's own wording (buttons, menus, checkout text) is not in this editor either; it lives in the storefront application and changes with a release.
+Click your name at the bottom of the side menu and choose a language. It changes only your own screen, not the storefront. You can also open the admin at `/en/admin/` for English or `/de/admin/` for German.
 
 ## Things to know
 
-- The search engine indexes every language and also understands Greek typed in Latin letters, so a Greek-only product is still found by a visitor typing its name phonetically.
-- The **Translations (parler)** surface on the [Cache](/admin/settings/cache) page clears the per-row translation cache. It is marked **Heavy** and you do not need it after ordinary edits.
+- If a translation is missing, the customer sees the Greek text. A product is never hidden because it has no translation.
+- If no language list has been set for your store, the storefront shows only the default language.
+- German is on the forms, but the storefront shows only Greek and English. Whatever you write in German stays saved.
+- The storefront search also finds Greek names when a customer types them in Latin letters (greeklish).
+- The storefront's own texts (buttons, menus, checkout) and the admin's texts are not changed here. If you see a wrong or untranslated word, send [support](/admin/help/contact-support) the screen and the word.
 
 ## Related
 
+- [Store profile](/admin/settings/store-profile)
 - [Products](/admin/catalog/products)
-- [Categories](/admin/catalog/categories)
-- [Posts](/admin/content/blog/posts)
-- [Countries & regions](/admin/localization/countries-and-regions)
+- [Pages](/admin/content/pages)
+- [When to contact support](/admin/help/contact-support)

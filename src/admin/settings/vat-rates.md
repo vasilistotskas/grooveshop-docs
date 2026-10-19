@@ -1,86 +1,62 @@
 ---
 title: VAT rates
-description: The VAT rates products can carry, which rates are accepted, how VAT flows from product to cart, order and invoice, and what changing a rate does.
+description: "The VAT rates your products can have, which ones are allowed, how to move many products to another rate, and what happens to orders already placed."
 ---
 
 # VAT rates
 
 <span class="sidebar-path">Settings → VAT Rates</span>
 
-A VAT rate is a single percentage. Each product points at one rate; the rate is what turns the product's net price into the price the shopper sees and what the invoice reports per band. Most stores need two or three rows: the standard rate, a reduced rate for books or food, and zero.
+Every product has one VAT rate. The rate turns the product's net price into the price the shopper pays. Most stores need two or three rates, for example 24%, 13% and 6%.
 
 ## What you see
 
-### The list
-
-| Column | Meaning |
+| Column | What it shows |
 |---|---|
 | **VAT Rate** | The percentage. |
-| **Category** | A colour band by size: **Tax Free** (0), **Reduced Rate** (up to 5), **Low Rate** (up to 15), **Standard Rate** (up to 25), **High Rate**, **Premium Rate**. Cosmetic only. |
-| **Usage** | How many products use it. |
-| **Price Examples** | What 10, 50 and 100 € net become with this rate. |
-| **Created** / **Updated** | Timestamps. |
+| **Category** | A coloured label by size, such as **Tax Free** (0%) or **Standard Rate**. Only a reading aid. |
+| **Usage** | How many products have this rate. |
+| **Price Examples** | What €10, €50 and €100 net become with the VAT. |
+| **Created At** / **Updated At** | Date and time. |
 
-Filters: **Usage Status** (Currently in Use, Not in Use, Popular with 5+ products, Rarely Used with 1 or 2), value range, dates. Search by value or ID.
+The **Usage Status** filter shows rates that are **Currently in Use**, **Not in Use**, **Popular (5+ products)** or **Rarely Used (1-2 products)**. A rate's page has one field, **Value**.
 
-### The rate page
-
-**VAT Configuration** with the single **Value** field; a collapsed **Usage** block that says how many products use the rate; system information.
-
-## Accepted values
-
-The field accepts one decimal between 0 and 100, but saving is refused for any rate the Greek tax authority's myDATA platform does not recognise. The accepted rates are 24, 17, 13, 9, 6, 4, 3 and 0: the mainland rates, the island-reduced rates and the special 3 % rate. A product carrying any other rate would produce an invoice that myDATA rejects, so the check happens here, when you save, rather than weeks later on a submission.
-
-## How VAT is applied
-
-```mermaid
-flowchart LR
-  P[Product net price] -->|+ product's VAT rate| F[Final price shown to shopper]
-  F --> C[Cart line, VAT-inclusive]
-  C --> O[Order line, VAT-inclusive, keeps its rate]
-  O -->|backed out at the line's rate| I[Invoice and myDATA VAT table]
-  S[Shipping and payment fee] -->|at the products' rates| I
-```
-
-- The product stores a **net** price and a link to a VAT rate. The storefront, the cart and the order work with the VAT-inclusive final price.
-- A product with no VAT rate is treated as 0 %.
-- **Each order line records the rate it was sold at.** The receipt and myDATA use that rate, never the product's current one.
-- The receipt groups lines by rate and backs the VAT out of each line. Order-level discounts are spread across lines first, so VAT is computed on what was actually paid. Gift-card amounts are payment and do not touch VAT. See [Receipts and credit documents](/admin/sales/receipts).
-- Shipping and payment-method fees are entered as VAT-inclusive amounts and taxed at the rate of the products they come with. When an order mixes rates, each charge is split across the rates in proportion to the value of the products at each rate.
-- Wholesale prices for business customers are net prices too; the product's own rate is applied on top. See [Customer groups & price lists](/admin/customers/groups-and-price-lists).
-
-There is no per-country VAT. One rate per product applies whatever the destination. The buyer's country only affects how the document is reported to myDATA: an invoice for a business in your own country is reported as a business sale, and everything else as a retail receipt. Cross-border business invoicing, with its reverse-charge handling, is not built yet.
-
-There is no "default rate" setting. A new product has no rate until you pick one on the product page.
+**Only the rates myDATA accepts are allowed:** 24, 17, 13, 9, 6, 4, 3 and 0. Any other value is refused when you save, so no receipt is issued that AADE would reject.
 
 ## Tasks
 
 ### Add a rate
-1. **Add VAT rate**, enter the **Value** (for example 13), save.
-2. Assign it to products under [Products](/admin/catalog/products).
 
-### Change the rate of many products
-1. Do not edit the value of a rate in use unless the law changed: every product pointing at it changes price immediately, everywhere.
-2. Instead, create the new rate and re-point the products to it.
-3. When the old rate has **Not in Use**, delete it.
+1. Click **Add**, enter the **Value** (for example 13) and save.
+2. Give it to the products that need it, on each product's page under [Products](/admin/catalog/products).
 
-### Move to a new legal rate
-1. Add the new rate. Re-point the products.
-2. Delete the old row once unused. Existing orders keep their line prices and the rate each line was sold at, so their invoices do not change.
+### Move many products to another rate
 
-### Correct the rate of one order line
-If an order was placed with the wrong rate on a line, correct it on the line itself, not here. See [Receipts and credit documents](/admin/sales/receipts), "Correct the VAT rate of an order line".
+1. Create the new rate, if it does not exist.
+2. Change the rate on the products, one by one.
+3. When the old rate shows **Not in Use** under **Usage**, delete it.
+
+Do not change the **Value** of a rate in use unless the law changed: all its products change their final price at once.
+
+### The law changed (say 13% became 14%)
+
+1. Change the rate's **Value** and save. Prices and search update by themselves.
+2. Clear the **Products** cache on the [Cache](/admin/settings/cache) page, so the storefront pages show the new prices.
+
+If the new rate is not one myDATA accepts, saving is refused. Get in touch with [support](/admin/help/contact-support).
 
 ## Things to know
 
-- **Editing a value changes prices, not just labels.** Final prices are computed live from the net price and the rate, so a rate change is a price change for every product using it, and the storefront cache should be purged afterwards under [Cache](/admin/settings/cache).
-- **Deleting a rate in use** does not delete products; they are left with no rate, which means 0 % VAT and a lower final price on new sales. Orders already placed keep their rate. Check **Usage** before deleting.
-- **Orders keep their prices and their rates.** An order line stores the VAT-inclusive price and the VAT rate at purchase time; later rate changes never rewrite either, and regenerating an invoice uses the line's own rate.
-- **Shipping and payment fees have no rate of their own.** They follow the rates of the products in the order, as described above.
+- **Orders do not change.** Each order line keeps the price and the rate it was sold at. Changing or deleting a rate does not touch orders and receipts already made.
+- **Deleting a rate in use.** Its products are left without a rate, which means 0% VAT and a lower final price. Check **Usage** first.
+- **A new product** has no rate until you pick one. Without a rate it sells at 0%.
+- **One rate per product**, whatever the destination country.
+- **Shipping and the payment fee** have no rate of their own. They are taxed at the rate of the order's products. If the order mixes rates, they are split by value. For example, with €60 of products at 24% and €40 at 13%, €5 shipping splits into €3 at 24% and €2 at 13%.
+- **Discounts and gift cards.** A promotion's discount lowers the value of the products it covers, and so their VAT. A gift card is a payment and does not change the VAT.
+- If an order line was entered with the wrong rate, it is corrected on the order itself. See [Receipts](/admin/sales/receipts).
 
 ## Related
 
 - [Products](/admin/catalog/products)
-- [Receipts and credit documents](/admin/sales/receipts)
-- [Customer groups & price lists](/admin/customers/groups-and-price-lists)
+- [Receipts](/admin/sales/receipts)
 - [Cache](/admin/settings/cache)

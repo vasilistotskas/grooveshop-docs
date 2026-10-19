@@ -1,13 +1,13 @@
 ---
 title: Customer groups & price lists
-description: Wholesale tiers, percentage discounts and per-product net prices, how group pricing binds to a cart on every load, and how it interacts with promotions and loyalty points.
+description: Wholesale customer groups, their discount, fixed prices per product, the minimum order, and how they combine with promotions and loyalty points.
 ---
 
 # Customer groups & price lists
 
-<span class="sidebar-path">Customers → Wholesale → Customer Groups</span> and <span class="sidebar-path">Customers → Wholesale → B2B Price Lists</span>
+A customer group sets wholesale prices: a discount percentage, optionally a minimum order, and, if you want, a fixed price for specific products. Every approved [business customer](/admin/customers/business-customers) belongs to one group.
 
-A customer group is a wholesale tier: a name, a percentage off the retail net price, an optional minimum order value, and, per product, an optional fixed net price that overrides the percentage. Approved business customers are assigned to one group and their cart is priced with it. See [Business customers](/admin/customers/business-customers) for the approval side.
+<span class="sidebar-path">Customers → Wholesale → Customer Groups</span> and <span class="sidebar-path">Customers → Wholesale → B2B Price Lists</span>
 
 ## What you see
 
@@ -15,67 +15,52 @@ A customer group is a wholesale tier: a name, a percentage off the retail net pr
 
 | Column | Meaning |
 |---|---|
-| **Name** | Internal label. Customers only ever see it as a badge on their own account. |
-| **Discount percent** | Percent off the retail net (VAT-exclusive) price. |
-| **Minimum order value** | Cart items total (VAT-inclusive) required to check out at this group's prices; 0 disables the check. |
-| **Active** | An inactive group prices its members at retail. |
-| **Businesses** | How many profiles are in the group. |
-| **Created** | Timestamp. |
+| **Name** | The group's name. Customers only see it in their own account. |
+| **Discount percent** | Discount on the retail price without VAT. |
+| **Minimum order value** | The smallest product total (with VAT) for an order at wholesale prices. 0 means no minimum. |
+| **Active** | An inactive group gives its members retail prices. |
+| **Businesses** | How many business customers are in the group. |
+| **Created At** | When the group was made. |
 
-Filter by active; search by name. The group page has the same fields, a **Price list** panel listing the group's fixed prices, and an **Import prices** header action.
+Each row opens a **Price list** panel with the group's fixed prices. On the group's page, top right, is the **Import prices** button.
 
 ### B2B Price Lists
 
-One row per group and product: **Group**, **Product**, **Net price override**, **Updated**. Filters: group, updated date. Search by product name or SKU. Bulk actions export the selection as CSV or XML.
-
-## How a wholesale price is computed
-
-For each product in an approved customer's cart:
-
-1. If the group has a **Net price override** for the product, that net price is used. Otherwise the retail net price is reduced by the group's **Discount percent**.
-2. The product's own VAT rate is applied on top to get the final price. See [VAT rates](/admin/settings/vat-rates).
-3. The product's retail markdown, if any, is never stacked on top of the wholesale price.
-4. The result is capped at the retail final price: a wholesale tier can never charge more than a retail sale would.
-
-A price-list row whose net price cannot be honoured is ignored and the percentage applies instead. That means a row in another currency, or a negative amount, both of which would otherwise be charged wrongly rather than not at all.
-
-## When pricing applies
-
-Group pricing is not stored on the cart. It is resolved and attached every time the cart is read (the storefront cart page, checkout, payment start) and again inside order creation, from the customer's profile as it is at that moment. Consequences:
-
-- Approving, changing or suspending a customer, or editing a group or a price row, takes effect on the customer's next request. Nothing has to be resynchronised.
-- An order stamps the group name and discount percent it was priced with; later changes never touch it. The order page shows this under **Wholesale pricing**, and the orders list has a **Wholesale** filter.
-- The admin cart screen does not apply group pricing, so wholesale carts show retail figures there. See [Carts](/admin/sales/carts).
+One row per group and product: **Customer group**, **Product**, **Net price override**, **Updated At**. Filters: group and date updated. Search finds a product name or SKU (product code). The bulk actions **Export selected to CSV** and **Export selected to XML** download the selected rows.
 
 ## Tasks
 
-### Create a tier
-1. **Add customer group**: **Name**, **Discount percent**, optionally **Minimum order value**, **Active** on. Save.
-2. Assign customers to it from their business profile (**Approve** with this group, or edit **Customer group**).
+### Create a group
 
-### Load a per-product price list
+1. In **Customer Groups**, click add.
+2. Fill in **Name**, **Discount percent** and, if you want, **Minimum order value**. Leave **Active** ticked. Save.
+3. Put customers in the group from their page in [Business customers](/admin/customers/business-customers): with **Approve**, or by changing **Customer group**.
+
+### Import fixed prices
+
 1. Open the group and click **Import prices**.
-2. Paste one product per line as `SKU;net price` (VAT-exclusive). A comma works as separator and as decimal mark, so `SKU-001,12,50` is read as `12.50`. Existing rows for this group are updated in place; unknown SKUs are reported as warnings.
-3. Confirm. The message tells you how many rows were created and updated.
+2. In **Price lines**, paste one product per line, with the product code and the price without VAT: `SKU-001;12,50`. A comma works instead of the semicolon, and as the decimal mark.
+3. Confirm. The message says how many prices were added and how many updated. Lines with an unknown code or a wrong price are shown as warnings and skipped.
 
-Single rows can also be added under **B2B Price Lists** by picking the group and product.
+A price the group already has is updated. A single price can also be added under **B2B Price Lists**, by picking the group and the product.
 
-### Enforce a minimum order
-1. Set **Minimum order value** on the group. Below it, the cart shows a "below minimum" state, the payment step refuses to start and order creation is rejected, all against the same figure.
+### Set a minimum order
 
-## Promotions and loyalty
-
-- **Promotions and coupons do not apply to wholesale carts** unless `B2B_ALLOW_PROMOTIONS` is on under [Store settings](/admin/settings/store-settings). Wholesale is already a negotiated price; stacking retail promotions on it double-discounts silently. Off by default.
-- **Loyalty points**: `B2B_LOYALTY_ENABLED` is one switch for both earning and redeeming on wholesale orders. Off by default, because points are calculated on the retail price and would otherwise let a wholesale buyer earn full points and spend them on already-discounted prices. When off, a wholesale cart silently drops any points redemption. See [Tiers & points](/admin/customers/loyalty).
-- Gift cards work as normal; they are a payment, not a discount.
+Fill in **Minimum order value** on the group. Below that amount the customer's cart says so, and payment and the order do not go ahead.
 
 ## Things to know
 
-- **Percent and override are both net figures.** Enter prices without VAT everywhere on these screens; the shopper sees VAT-inclusive prices.
-- **An inactive group is the same as no group.** Members are priced at retail with no message. Use it to pause a tier without unassigning anyone.
-- **Deleting a group** removes its price-list rows and leaves its members with no group, hence retail pricing. Prefer deactivating.
-- **A price-list row overrides the percent, never adds to it.**
-- **Wholesale needs the feature on** at both tiers (platform and `B2B_WHOLESALE_ENABLED`); with it off, groups can still be prepared but nobody is priced with them. While only the setting is off, the **Wholesale** menu stays in the sidebar marked **Off**; without B2B on your plan it is not shown at all.
+- **How the wholesale price comes out.** Example: a product at €10.00 without VAT and 24% VAT, so €12.40 retail. With **Discount percent** 20%, the price without VAT becomes €8.00 and the customer pays €9.92. If the group has a fixed price of €7.50 for the product, that applies instead of the percentage, and the customer pays €9.30.
+- **Prices here are always without VAT.** The product's VAT is added at the end.
+- **A fixed price replaces the percentage**; it is never added to it.
+- **The product's retail discount is not added** on top of the wholesale price.
+- **A wholesale price never exceeds the retail price.** If it would, the customer pays the retail price.
+- **The price is worked out every time** the customer looks at the cart or checkout. A change to the group or its prices applies at once. Every order keeps the group and discount it was placed with.
+- **Promotions and coupons** do not apply to a wholesale cart, unless you turn on the `B2B_ALLOW_PROMOTIONS` setting under <span class="sidebar-path">Settings → Store Settings</span>. It is off by default, because the wholesale price is already reduced.
+- **Loyalty points:** the `B2B_LOYALTY_ENABLED` setting turns on both earning and redeeming points on wholesale orders. It is off by default, because points are counted on the retail price. While it is off, a wholesale cart does not redeem points. See [Loyalty](/admin/customers/loyalty).
+- **Gift cards** work as normal: they are a way to pay, not a discount.
+- **An inactive group** means retail prices for its members, with no message. Use it to pause a group without moving any customer.
+- **Do not delete a group.** Its fixed prices are lost and its members are left with no group, so retail prices. Make it inactive instead.
 
 ## Related
 
@@ -83,5 +68,5 @@ Single rows can also be added under **B2B Price Lists** by picking the group and
 - [Products](/admin/catalog/products)
 - [VAT rates](/admin/settings/vat-rates)
 - [Promotions](/admin/marketing/promotions)
-- [Tiers & points](/admin/customers/loyalty)
+- [Loyalty](/admin/customers/loyalty)
 - [Orders](/admin/sales/orders)

@@ -1,77 +1,79 @@
 ---
-title: Navigation
-description: Replace the storefront's built-in header, footer and mobile menus with your own links, per language, and get the change to show.
+title: Menus
+description: Replace the menu at the top of your store and the footer columns with your own links, in every language.
 ---
 
-# Navigation
+# Menus
+
+The store comes with a ready-made top menu and a ready-made footer. Here you replace them with your own links. If you build nothing, the store keeps the ready-made ones.
 
 <span class="sidebar-path">Content → Menus → Menus</span> and <span class="sidebar-path">Content → Menus → Menu Columns</span>
 
-The storefront ships with a built-in header, a built-in burger menu on phones and a built-in footer. A **Navigation Menu** row replaces one of those slots with links you choose. Store staff, admins and owners can edit them.
-
-The built-in header is up to four links: **Shop** always, then **Blog**, **Offers** and **Gift cards**, each appearing only while that feature is switched on for your store.
-
 ## What you see
 
-### Menus
+### The ready-made menus
 
-A list with one row per configured **Slot**, the number of **Entries** in it and its last update. There are at most three rows, because the slot is unique: **Header**, **Footer**, **Mobile**.
-
-The menu form holds the **Slot** and, below it, what the slot contains:
-
-- **Header** and **Mobile** take a flat list of **Links**, in the order you drag them into.
-- **Footer** takes **Navigation Columns**: a heading per column (**Label**, one per language, and an optional **Icon**), also in drag order. The links inside a column are edited on the column itself: follow **Change** on the column's row.
-
-### Menu Columns
-
-The footer columns of every menu, with their **Menu**, the number of **Links** and the sort order, filterable by slot. A column's page has **Menu**, **Label** (per language, up to 100 characters), **Icon** and the column's own **Links**.
-
-An **Icon** must start with `i-` and be all lower case, for example `i-heroicons-light-bulb`; a capital letter is rejected. Links themselves carry no icon.
-
-### Links
-
-Every link points at exactly one destination. Fill in one of these four fields and leave the other three empty; saving with none, or with two, is refused.
-
-| Field | Points at |
+| Place | What it shows when you have not built your own |
 |---|---|
-| **Content page** | One of your [content pages](/admin/content/pages). The link follows the page if you change its slug. |
-| **Custom page** | One of your [page layouts](/admin/content/page-layouts). |
-| **Built-in page** | A storefront page every store has: Home, Products, Blog, Contact, Offers, Gift cards, Loyalty program, Feedback. |
-| **External link** | A full address on another site. |
+| Top (and the three-line menu on phones) | **Shop**, then **Offers**, **Blog**, **Gift Cards** and **Rewards**, each only while its feature is on. |
+| Footer | A column with products, offers, gift cards and rewards, a help column with contact and feedback, and below them a row with the blog and the legal pages. |
 
-**Label** is per language and up to 100 characters. Leave it empty on a content-page or custom-page link and the menu shows the page's own title, already translated. A built-in page or an external link has no title to borrow, so write its label; a label written in one language only is shown in every language.
+### The Menus list
+
+One row for each **Slot** you have built, with its **Entries**. There are three slots:
+
+- **Header**: the menu at the top, which is also the phone menu.
+- **Footer**: the columns at the bottom of the page.
+- **Mobile**: it saves, but the store does not show it anywhere. Do not use it.
+
+### The links
+
+Each link points to **one** of the following. You fill in one field and leave the others empty.
+
+| Field | Leads to |
+|---|---|
+| **Content page** | One of your [Pages](/admin/content/pages). |
+| **Custom page** | One of your [Page layouts](/admin/content/page-layouts). |
+| **Built-in page** | A page every store has: **Home**, **Products**, **Blog**, **Contact**, **Offers**, **Gift cards**, **Loyalty program**, **Feedback**. |
+| **External link** | An address on another website, starting with `https://`. |
+
+The **Label** is the link's text, in each language. On a link to a **Content page** you can leave it empty: the page's title shows in the visitor's language. On every other link, write it.
 
 ## Tasks
 
-### Publish a custom header
-1. Open <span class="sidebar-path">Content → Menus → Menus</span> and click **Add** (or open the existing Header row).
-2. Set **Slot** to Header.
-3. Under **Links** add one link per entry, pick its destination and, where needed, a label in every language your store serves. Drag the rows into order.
-4. Save.
+### Build your own top menu
 
-### Build the footer
-1. Add the menu with **Slot** Footer and save it before adding anything else: until the row is saved the form offers plain links, which a footer does not show. Once saved it offers **Navigation Columns** instead.
-2. Add a column per heading: its **Label** and, if you like, an **Icon**. Save.
-3. Follow **Change** on a column, add its links, save. Repeat for each column. All columns of all menus are also listed under <span class="sidebar-path">Content → Menus → Menu Columns</span>.
+1. Open <span class="sidebar-path">Content → Menus → Menus</span> and click **Add**.
+2. Choose **Slot**: **Header**. Save.
+3. Under **Links**, add one link for each item of the menu. Choose where it leads and write a **Label** in every language of the store.
+4. Drag the links into the order you want and save.
 
-### Link to a content page
-Add a link and pick the page under **Content page**. Leave **Label** empty to use the page's title. While the page is unpublished the link is left out of the menu rather than leading to a 404, and it comes back when you publish the page.
+Within about ten seconds the new menu shows on the store.
 
-### Go back to the built-in menu
-Delete the row for that slot. A menu with nothing visible in it has the same effect: the storefront treats a slot with no entries as unconfigured.
+### Build your own footer
+
+1. Add a menu with **Slot**: **Footer** and save it before adding anything else. Once it is saved, the form offers columns instead of links.
+2. Add one column per heading, with its **Label**. Save.
+3. Click **Change** on a column, add its links and save. Do the same for each column.
+
+The first two columns show as the footer's main columns. The links of any further columns go into the row at the bottom.
+
+### Go back to the ready-made menu
+
+Delete the slot's row from the **Menus** list.
 
 ## Things to know
 
-- **A saved row replaces the built-in menu completely.** The moment a Header row exists with even one visible link, the storefront stops adding Shop, Blog, Offers and Gift cards. It is all or nothing, not a merge, so add every link you still want, for example as **Built-in page** links. This is the usual reason a shop "loses" its Offers link after a menu edit.
-- **Hidden links.** A link to an unpublished content page or page layout is left out, and a footer column with no visible link is left out with it, so the menu never advertises a page that answers "not found".
-- **Cache.** The storefront keeps each language's menu for 5 minutes and goes on serving the old copy for up to an hour while it fetches a new one, and the rendered pages are cached on top of that. Saving a menu, a column or a link purges both on its own about ten seconds later. If a change still does not show, purge **Pages & navigation** on the [Cache](/admin/settings/cache) page.
-- On the standard footer one column is automatic: **Pages**, listing every published content page. It sits next to your configured columns, and it leaves out a legal page that one of your columns already links so the same document is not listed twice. Some storefront themes drop this column entirely.
-- Labels are your content, not translation keys. Write them exactly as they should appear.
-- The Header slot feeds both the desktop header and the burger menu on phones. The **Mobile** slot is accepted and stored, but the storefront does not read it yet; configuring it changes nothing on screen today.
+- **Your own menu replaces the whole ready-made one.** It is not added to it. If you want **Offers** to stay, add it as a **Built-in page**.
+- **The "Products" link at the top** always opens the catalogue with your categories, under the label you gave it.
+- **Links that hide themselves:** a link to a page that is not published, or to a feature that is off (e.g. Gift cards), is not shown. It comes back as soon as you publish the page or switch the feature on. A column left with no links is hidden too.
+- **Your pages in the footer:** every published [Page](/admin/content/pages) not already in your columns is added to the row at the bottom automatically.
+- **Labels are your own text.** Write them exactly as they should appear, in every language.
+- **A column's icon** (the **Icon** field) is optional and is written in lowercase Latin letters starting with `i-`, e.g. `i-heroicons-light-bulb`.
+- **If a change does not show** after a minute, clear the **Pages & navigation** cache on the [Cache](/admin/settings/cache) page.
 
 ## Related
 
-- [Content pages](/admin/content/pages)
+- [Pages](/admin/content/pages)
 - [Page layouts](/admin/content/page-layouts)
 - [Cache](/admin/settings/cache)
-- [Search & command palette](/admin/getting-started/search-and-command-palette)

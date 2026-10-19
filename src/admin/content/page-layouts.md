@@ -1,110 +1,121 @@
 ---
 title: Page layouts
-description: Compose the home page and the branded bands of other storefront pages from sections, set per-page SEO text, and publish.
+description: Build the home page and other store pages from ready-made sections, in the order you want, and publish them.
 ---
 
 # Page layouts
 
-<span class="sidebar-path">Content → Page Layouts</span>
+A layout is a row of sections (a banner, a product strip, an FAQ and so on) that make up a page of the store. With layouts you change the home page, add a band above other pages or build new pages.
 
-A page layout is a list of **sections** the storefront renders in order for one page type. The home page is built entirely from its layout; other page types only get an optional branded band above their own content.
+<span class="sidebar-path">Content → Page Layouts</span>
 
 ## What you see
 
-| Column | Meaning |
+The list shows each layout's **Page Type**, **Title**, whether it **Is Published** and when it was **Updated At**.
+
+The **Page Type** says which page the layout belongs to:
+
+| Page Type | What the layout does |
 |---|---|
-| **Page Type** | Which page the layout belongs to. The storefront asks for nine by name: `home`, `products`, `blog`, `about`, `contact`, `feedback`, `vision`, `what-is-microlearning` and `why-microlearning`. Any other value you type becomes a page of its own at `/<that value>`. |
-| **Title** | Admin display name. |
-| **Is Published** | Editable in the list; tick and press **Save**. |
-| **Updated at** | Last change. |
+| `home` | It is the whole home page. |
+| `products`, `blog`, `contact`, `feedback` | It adds a band above that page's normal content. |
+| `about` | It is the whole `/about` page. Without a published layout, the page does not exist. |
+| Anything else, e.g. `our-shops` | A new page at the address `/our-shops`. Use lowercase Latin letters, numbers and hyphens. |
 
-**Search** matches page type and title. **Filters**: Is Published, Page Type.
+The form has:
 
-The layout form:
+- **Page**: the **Page Type** and the **Title**. The title is only for you, in the list; visitors do not see it.
+- **Publishing**: **Is Published**. Only published layouts show on the store.
+- **SEO**: the page's **Seo Title** and **Seo Description** for search engines. Left empty, the page keeps its own title and the store's description.
+- The **Page Sections** tab, with the sections in the order they appear.
 
-| Section | Fields |
+Each section has:
+
+| Field | What it is |
 |---|---|
-| **Page** | **Page Type** (unique), **Title**. |
-| **Publishing** | **Is Published**. |
-| **SEO** | **Seo Title**, **Seo Description**, **Seo Keywords**. Left empty, the page keeps its built-in title and the store description. |
-| **Metadata** (collapsed) | Free JSON, not used by the storefront. |
-| **System** (collapsed) | ids and timestamps. |
+| **Component Type** | What kind of section it is (see the table below). |
+| **Title** | An optional heading for the section. |
+| **Is Visible** | Untick to hide the section without deleting it. |
+| **Props** | The section's settings, e.g. how many products it shows. They become a form once you save the section. |
+| **Locale Overrides** | The section's texts for the store's other languages. |
+| **Sort Order** | The section's position. It cannot be changed here. |
 
-The **Page Sections** tab lists the sections in render order, each in its own collapsible panel with:
+### The home page you start with
 
-| Field | Meaning |
-|---|---|
-| **Component Type** | Which block to render (list below). |
-| **Title** | Optional heading, shown by blocks that have one. |
-| **Is Visible** | Untick to hide a section without deleting it. |
-| **Props** | The block's settings. On a saved section this is a form listing exactly the settings that block accepts, with their limits; on a new one it is plain JSON until you save it with its type. |
-| **Locale Overrides** | Per-language copy: for another language, a title and any of the block's settings, filled only where that language differs; the default language is the fields themselves. A form too, once the section is saved. |
-| **Sort Order** | Read-only here; new sections go to the end. |
+Every new store has a published `home` layout with eleven sections: **Hero Carousel**, **Trust Badges**, **Product Categories**, **Products Grid** (the newest), **Offers Preview**, **Featured Products** (the most popular), **Loyalty Program Hero**, **Stats Strip**, **Blog Posts Grid**, **Testimonials** and **FAQ Accordion**.
+
+A section with no content does not show. For example, the carousel shows once you give it slides, and the offers only while an offer is running.
 
 ### Section types
 
-The **Props** form of a saved section lists every setting its type accepts, so this table only says what the form cannot.
-
-| Type | Good to know |
+| Sections | What they show |
 |---|---|
-| Hero Banner, Hero Carousel | The carousel takes slides, or a list of images with an optional list for phones. When the first slide has a heading, that heading is the page's main title. |
-| Products Slider, Products Grid, Featured Products, Product Categories | Product rails pick by ordering and an optional category. Products Grid and Featured Products both draw a grid of four across; Products Slider is the one that scrolls sideways. Product Categories draws square photo tiles, up to six in a row. |
-| Blog Categories Rail, Blog Posts Carousel, Blog Posts Grid, Blog Posts List | |
-| Recently Viewed Rail | Also needs the **RECENTLY_VIEWED_ENABLED** setting on. |
-| Rich Text Block | HTML, up to 20000 characters. |
-| Call to Action Banner | |
-| Newsletter Signup | An email form with a consent box, shown only when a default Newsletter topic exists (see [Subscriptions](/admin/customers/subscriptions)). |
-| Testimonials, Trust Badges, Stats Strip | Trust Badges is a row of reassurance badges (how you pay, who delivers); Stats Strip is a band of key figures. |
-| Offers Preview | The running promotions, on a page other than the offers page, always on a dark band whatever surface the section is set to. Its link counts the running offers unless you give it your own text. Renders nothing when promotions are off or none is running. |
-| Spacer, Divider | Layout helpers. |
-| Loyalty Program Hero, Search Bar, Business Hours | A visitor who is not signed in sees the programme: points per euro, what points are worth, the first-order bonus and the tiers, with a link to sign up. A signed-in member sees their own points and tier instead. Business Hours reads its opening times from the **BUSINESS_HOURS** setting. |
-| Location Map | Pins your shop at the location set in **STORE_GEO_LAT** and **STORE_GEO_LNG**, the same one search engines are given; the map loads only when a visitor asks for it. Under it, two buttons open the place in Google Maps and in Apple Maps; with no location set they search for the address instead. |
-| Features Grid, Media + Text, Image Gallery, Story Timeline, FAQ Accordion | Generic marketing blocks. The FAQ opens on its first answer, and the line under its heading points to your contact page unless you write your own. |
-| Partner Strip, Pull Quote, Reference Cards, Page Hero, Feature Lists, Option Selector, Comparison Table, Flow Steps, Project Register, Vendor Cards, Contact Panel, About Content, Vision Content, What Is Microlearning, Why Microlearning | **Built for specific storefront designs only** — see the warning below. |
+| **Hero Banner**, **Hero Carousel** | A large image or slides at the top, with a heading and a button. |
+| **Products Slider**, **Products Grid**, **Featured Products** | Products in a scrolling row or a grid, e.g. the newest or the most popular, from the whole catalogue or one category. |
+| **Product Categories** | Your categories with their photo. |
+| **Blog Categories Rail**, **Blog Posts Carousel**, **Blog Posts Grid**, **Blog Posts List** | Blog categories and posts. |
+| **Recently Viewed Rail** | The products the visitor viewed recently. Needs the `RECENTLY_VIEWED_ENABLED` setting on. |
+| **Offers Preview** | The offers running now. |
+| **Loyalty Program Hero** | The loyalty programme for visitors, or the customer's own points when signed in. |
+| **Rich Text Block**, **Media + Text**, **Image Gallery**, **Features Grid**, **Story Timeline** | Text, images and your story. |
+| **FAQ Accordion**, **Testimonials**, **Trust Badges**, **Stats Strip** | Questions, customer opinions, assurances (e.g. payment methods) and key figures. |
+| **Call to Action Banner** | A band with text and a button. |
+| **Newsletter Signup** | The newsletter form. See [Newsletter subscriptions](/admin/customers/subscriptions). |
+| **Search Bar** | A product search box. |
+| **Business Hours** | Your opening hours, from the `BUSINESS_HOURS` setting. |
+| **Location Map** | Your shop on a map, from the `STORE_GEO_LAT` and `STORE_GEO_LNG` settings. |
+| **Spacer**, **Divider** | Space or a line between sections. |
 
-### Two warnings about this list
+The settings `RECENTLY_VIEWED_ENABLED`, `BUSINESS_HOURS`, `STORE_GEO_LAT` and `STORE_GEO_LNG` are under <span class="sidebar-path">Settings → Store Settings</span>.
 
-**Fifteen of these blocks render nothing on an ordinary store.** The eleven from **Partner Strip** to **Contact Panel**, plus the four content blocks from **About Content** to **Why Microlearning**, were written for particular storefront designs. Pick one on a store that does not use that design and the section saves, shows as visible, and then simply does not appear on the page: no error, no gap, no warning. Before you build a page around one, add it to a test layout, publish, purge the cache and check it actually shows. The blocks in every other row of the table work on every store.
-
-**A section that saves can still look wrong.** Saving checks every setting against its type: an unknown setting, a number where text belongs, an oversized text, a count outside its range or a link that is neither an internal path starting with `/` nor an `https://` address is refused with the setting named. What it cannot check is how the block looks with your content, so change one section at a time and check the result.
-
-## Seeded layouts
-
-Every store starts with a published `home` layout of four sections: Blog Categories Rail, Hero Carousel (no images), Recently Viewed Rail, Blog Posts List. Other page types are not seeded: `products`, `blog`, `contact` and `feedback` render their normal page and show a layout only as a band above it, while `about`, `vision` and the microlearning pages show nothing until a layout is published.
+**Sections that do not show on your store.** Fifteen types were made for particular stores' designs: **Partner Strip**, **Pull Quote**, **Reference Cards**, **Page Hero**, **Feature Lists**, **Option Selector**, **Comparison Table**, **Flow Steps**, **Project Register**, **Vendor Cards**, **Contact Panel**, **About Content**, **Vision Content**, **What Is Microlearning** and **Why Microlearning**. Unless the platform team has set them up for you, they save normally but show nothing, without any message.
 
 ## Tasks
 
-### Put a banner on the home page
-1. Open the `home` layout and find the **Hero Carousel** section.
-2. In **Props**, set `{"images": ["/img/banner.png"], "mobile_images": ["/img/banner-mobile.png"], "link": "/products/123/my-product"}`. The images must already be reachable on the storefront.
-3. Save. The **Pages & navigation** cache is purged on its own about ten seconds later (see [Cache](/admin/settings/cache)).
+### Add a slide to the home page carousel
+
+1. Open the `home` layout and, under **Page Sections**, the **Hero Carousel** section.
+2. In **Props**, add a slide. Fill in the image address and, if you like, a second image for phones, the heading, the button text and where it leads.
+3. Click **Save**.
+
+Within about ten seconds the slide shows on the home page. A link is either a store path starting with `/`, e.g. `/products`, or a full address starting with `https://`.
 
 ### Add a section
-1. In **Page Sections** click add, pick the **Component Type** and fill **Title**.
-2. Save. The section is appended last, and its **Props** now open as a form for its type: fill them and save again. Sort order is not editable in this table; to reorder, delete and re-add sections in the order you want.
+
+1. Under **Page Sections**, add a new section and choose a **Component Type**.
+2. Save. The section goes to the end of the page and its **Props** become a form.
+3. Fill in the **Props** and save again.
+
+If a setting is not valid (e.g. a text that is too long, or a link without `/` or `https://`), the save does not go through and you see which setting is wrong.
 
 ### Translate a section
-Open the section's **Locale Overrides**, add the other language and fill its title and texts. Leave structural settings (counts, columns, links) empty there, so they stay in **Props** and cannot drift between languages.
 
-### Build an About page
-1. Click **Add**, set **Page Type** to `about`, a **Title**, and tick **Is Published**.
-2. Add sections and fill their props. Stay with blocks that work on every store, such as **Media + Text**, **Image Gallery**, **Story Timeline**, **FAQ Accordion**, **Rich Text Block** and **Call to Action Banner**. Do not reach for **Page Hero** or **About Content** unless you have confirmed your storefront design renders them.
-3. Fill **Seo Title** and **Seo Description**; without them the page uses its built-in title and the store description.
-4. Save, give the cache the ten seconds it takes to clear itself, then open `/about` and check every section you added is actually on the page.
-5. Link the page from a menu: add a link and pick the layout under **Custom page** (see [Navigation](/admin/content/menus)).
+1. Open the section's **Locale Overrides**.
+2. For each other language, write the section's heading and texts.
+3. Leave empty anything that is not text (counts, links), so it applies as in **Props**.
+
+### Build the "About us" page
+
+1. Click **Add**, enter **Page Type** `about` and a **Title**.
+2. Add sections, for example **Media + Text**, **Image Gallery** and **Story Timeline**, and fill them in.
+3. Fill in **Seo Title** and **Seo Description**.
+4. Tick **Is Published** and save.
+5. Open `/about` on the store and check that every section shows.
+6. To put it in the menu, add a **Custom page** link (see [Menus](/admin/content/menus)).
+
+You build a brand-new page the same way: give another **Page Type**, e.g. `our-shops`, and the page will be at `/our-shops`.
 
 ## Things to know
 
-- Only **published** layouts are served, and a section with **Is Visible** off is never sent to the browser at all. Neither is merely hidden with styling.
-- **Cache**: layouts and the rendered home, about, contact, feedback and info pages are cached on the storefront. Saving a layout or a section purges them on its own about ten seconds later; purge **Pages & navigation** by hand only if a change still does not show.
-- **Sitemap**: a published layout whose **Page Type** is not one of the store's own pages is a page of its own at `/<page type>`, and your sitemap lists it automatically. The sitemap is kept for a day; purge **Sitemap & SEO** to list a new page at once. A Page Type that names a page the store already has, such as `home`, is that page's layout and never a page of its own.
-- **Sections cannot be reordered.** New ones always go last and **Sort Order** is read-only, so getting a different order means deleting the sections below the insertion point and adding them back in sequence. Plan the order before you build a long page.
-- The **Recently Viewed Rail** also needs the **RECENTLY_VIEWED_ENABLED** setting on, and **Business Hours** reads its opening times from **BUSINESS_HOURS**, both under <span class="sidebar-path">Settings → Store Settings</span>. Neither block warns you when its setting is missing.
-- Recommendation slots are configured under <span class="sidebar-path">Marketing → Recommendations → Slots</span>, not in page layouts. That menu is there only when your plan includes product suggestions.
+- **Sections do not change order.** A new section always goes to the end. For another order you have to delete the sections below the point you want and add them again. Plan the order before building a long page.
+- **Change one section at a time** and look at the result on the store. Saving checks the settings, not how the section looks with your content.
+- **A new page** (a Page Type not in the table above) is added to the sitemap for search engines automatically.
+- **Product recommendations** are not set up here but under <span class="sidebar-path">Marketing → Recommendations → Slots</span>, when your plan includes them.
+- **If a change does not show** after a minute, clear the **Pages & navigation** cache on the [Cache](/admin/settings/cache) page.
 
 ## Related
 
-- [Navigation](/admin/content/menus)
-- [Content pages](/admin/content/pages)
+- [Menus](/admin/content/menus)
+- [Pages](/admin/content/pages)
 - [Categories](/admin/catalog/categories)
 - [Cache](/admin/settings/cache)

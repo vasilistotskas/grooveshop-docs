@@ -1,90 +1,79 @@
 ---
 title: Notifications
-description: The customer notification centre, which events create notifications automatically, how they reach the browser in real time, how to send a manual announcement, and how this differs from email.
+description: "The messages in the storefront's bell: which are sent automatically, how to send an announcement to customers, how to see whether they read it and how to withdraw it."
 ---
 
 # Notifications
 
 <span class="sidebar-path">Customers → Notifications → Notifications</span>
 
-A notification is the bell in the storefront: a short in-app message a signed-in customer sees the moment it is created, and can find later in their notification centre. The platform creates them for order and account events; you can also create announcements by hand. Notifications are separate from email: a shipped order sends both an email and a notification, but the two are produced by different parts of the system and this screen only concerns the in-app side.
+A notification is a short message in the storefront's bell. A signed-in customer sees it at once as a pop-up message and can find it again later. Notifications are separate from emails.
 
 ## What you see
 
-### The list
-
-| Column | Meaning |
+| Column | What it shows |
 |---|---|
-| **Notification** | Title and the start of the message. |
-| **Kind** | **Info**, **Success**, **Warning**, **Error**, **Danger**: the colour of the toast. |
-| **Category** | Order, Payment, Shipping, Cart, Product, Account, Security, Promotion, System, Review, Wishlist, Support, Newsletter, Recommendation. |
-| **Priority** | **Low Priority**, **Normal Priority**, **High Priority**, **Urgent Priority**, **Critical Priority**. |
-| **Status** | **Active** or **Expired**. |
-| **Engagement** | How many recipients have seen it, out of how many it was delivered to. |
-| **Timing** | Created, relative age, and the expiry date or "no expiry". |
+| **Notification** | The title and the start of the message. |
+| **Kind** | **Info**, **Success**, **Warning**, **Error** or **Danger**: the message's colour. |
+| **Category** | For example **Order**, **Payment**, **Shipping**, **Product**, **Account**, **System**, **Promotion**. |
+| **Priority** | From **Low Priority** to **Critical Priority**. |
+| **Status** | **Active** or **Expired**, depending on the **Expiry Date**. |
+| **Engagement** | How many recipients saw it, for example "3/10". |
+| **Timing** | When it was created and when it expires. |
 
-Filters: **Notification Status** (Active, Expired, Urgent Priority, Recent, Has Link, and the System / Order / Payment / Security / Promotion categories), kind, category, priority, created and expiry date ranges. Search by title, message, notification type or link. A date drill-down by creation date sits above the table.
+The **Notification Status** filter has ready-made choices, such as **Recent (Last 7 days)** or **Order Related**.
 
-### The notification page
+A notification reaches someone only through a **Notification User** row. You find them under <span class="sidebar-path">Customers → Notifications → Recipients</span>: which customer, which notification and whether they read it.
 
-- **Notification Content**: **Title** and **Message** per language, and an optional **Link** the toast opens.
-- **Classification**: **Kind**, **Category**, **Priority**, and **Notification Type**, the event name the platform uses to recognise the messages it sends itself. Leave it blank for an announcement you write.
-- **Scheduling**: **Expiry Date**. New rows are given a date 180 days ahead. See "Things to know" for what it does, and does not, do.
-- **Analytics** and **Timing Information**: read-only counts and timestamps.
+### What the store sends automatically
 
-### Recipients
+Only to customers with an account. Guests get email only.
 
-A notification reaches nobody on its own. Delivery is one **Notification User** row per recipient, which records whether and when that person saw it. Those rows are under <span class="sidebar-path">Customers → Notifications → Recipients</span>, which lists user, notification, seen or unseen, priority and timing, with filters for **User Status** (Seen, Unseen, Seen Today, Urgent & Unseen, Expired Notifications) and search by the user's email or username.
-
-## What the platform sends automatically
-
-Each of these creates a notification for the customer who owns the order or account, in every store language, and pushes it to their open browser tabs immediately:
-
-| Event | When |
+| When | What it says |
 |---|---|
-| Order created | Every order placed by a signed-in customer. |
-| Payment confirmed / Payment failed | Stripe reports the charge. |
-| Order shipped | The order reaches Shipped. |
-| Order delivered / completed / canceled | The order reaches that status. |
-| Refund processed | Each time money goes back on the order: from the order's **Refund (amount, reason)** button, a cancellation or the payment provider's dashboard, a partial refund included. |
-| ACS parcel out for delivery | ACS tracking reports it out for delivery. |
-| BoxNow parcel at locker / delivered | BoxNow reports the parcel. |
-| Price drop / Back in stock | A favourited product changes. |
-| Loyalty tier promotion | The customer reaches a new tier. |
-| Blog comment liked | Someone liked their comment. |
+| The customer places an order | We received your order. |
+| A Stripe payment succeeds or fails | Payment confirmed or failed. Not sent for Viva Wallet or cash on delivery. |
+| The order becomes **Shipped**, **Delivered**, **Completed** or **Canceled** | The new status. |
+| Money is refunded, in full or in part | The refund. |
+| The ACS parcel goes out for delivery | The parcel arrives today. |
+| The BoxNow parcel reaches the locker or is collected | The parcel is at the locker / delivered. |
+| A favourite product drops in price or is back in stock | Price drop / back in stock. |
+| The customer moves up a Loyalty tier | Congratulations on the new tier. |
+| Someone likes their blog comment | Your comment was liked. |
 
-**Pending** and **Processing** never notify; the order-created and payment-confirmed messages already cover "we are preparing your order". Guest orders never get in-app notifications, only email.
+The **Pending** and **Processing** statuses send no notification.
 
 ## Tasks
 
-### Send an announcement to specific customers
-1. **Add notification**. Write **Title** and **Message** in each language, choose **Kind** (Info for news, Warning for something that needs action), **Category** (System or Promotion), **Priority**, and a **Link** if there is a page to open. Leave **Notification Type** blank. Save.
-2. Open <span class="sidebar-path">Customers → Notifications → Recipients</span> and **Add** one row per recipient: pick the user and the notification you just created.
-3. Each row you save is delivered to that customer at once, over the live connection if they are online and in their notification centre otherwise.
+### An announcement to specific customers
 
-There is no "send to everyone" button; a store-wide broadcast means one row per customer.
+1. Click **Add**. Enter a **Title** and **Message** in each of the store's languages.
+2. Pick a **Kind** (for example **Info**), a **Category** (for example **Promotion**) and a **Priority**. Add a **Link** if it should open a page.
+3. Leave **Notification Type** empty. Save.
+4. Open <span class="sidebar-path">Customers → Notifications → Recipients</span> and click **Add**. Pick a customer and the notification you created. Save.
+5. Repeat step 4 for each customer.
 
-### Check whether a customer saw a notification
-1. Open **Recipients**, search by the customer's email.
-2. The **Seen** column and the seen timestamp tell you; the analytics block on the row shows how long they took.
+The customer sees it at once if signed in, otherwise the next time they visit. There is no "send to everyone": you need one recipient row per customer.
+
+### Did the customer read it?
+
+1. Open **Recipients** and search by the customer's email.
+2. The column shows **Seen** or **Unseen**.
 
 ### Withdraw a notification
-1. Delete it. That removes it from every recipient's centre at once.
-2. Setting **Expiry Date** to now does not withdraw anything. The customer keeps seeing the message; only this admin screen starts calling it Expired.
+
+Delete the notification. It disappears from every recipient's bell at once.
 
 ## Things to know
 
-- **Real-time delivery** uses the storefront's live connection, which only signed-in customers have. If the customer is offline, the notification waits in their centre; nothing is lost.
-- **Expiry is a label here, not a rule for the customer.** **Expiry Date** drives the **Status** column and the filters on this screen and nothing else: a customer's notification centre shows a message whether or not its date has passed. Deleting is the only way to take one back.
-- **`NOTIFICATION_EXPIRATION_DAYS` does nothing.** The key is listed under [Store settings](/admin/settings/store-settings), but nothing reads it. New notifications always get a date 180 days out; change the date on the notification itself if you want a different one.
-- **Old notifications are cleared out twice a month.** On the 1st and the 15th, notifications created more than a year ago are deleted, whatever their expiry date says.
-- **Languages**: write every language the store serves. When a translation is missing the customer sees English, then Greek.
-- **Editing a delivered notification** changes what recipients see the next time they open the centre; it does not re-push it.
-- **Emails are configured elsewhere.** Transactional emails (order received, shipped, invoice and so on) are templates under [Email templates](/admin/settings/email-templates) and are not affected by anything on this screen.
+- **Expiry hides nothing from the customer.** The **Expiry Date** (180 days after creation by default) only changes the **Status** in this list. The customer keeps seeing the message. To take it back, delete it.
+- **Old notifications are removed.** On the 1st and 15th of each month, notifications created more than a year ago are deleted.
+- **Languages.** Fill in every language of the store. If one is missing, the customer sees the text in another language you filled in.
+- **Editing does not resend.** If you change a notification already sent, the customer sees the new text when they open the bell, with no new pop-up.
+- **Emails are set elsewhere**, under [Email templates](/admin/settings/email-templates).
 
 ## Related
 
-- [Orders](/admin/sales/orders)
-- [Email templates](/admin/settings/email-templates)
 - [Users & addresses](/admin/customers/users-and-addresses)
-- [Search & command palette](/admin/getting-started/search-and-command-palette)
+- [Favourites](/admin/customers/favourites)
+- [Email templates](/admin/settings/email-templates)

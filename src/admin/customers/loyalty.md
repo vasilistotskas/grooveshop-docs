@@ -1,135 +1,114 @@
 ---
-title: Tiers & points
-description: How the loyalty programme earns, redeems and expires points, how levels and tiers are computed, the single on/off switch, the settings behind it, and the admin screens for tiers, the points ledger and manual adjustments.
+title: Loyalty
+description: "The Loyalty programme: how customers earn and spend points, tiers and levels, what happens on cancellations and refunds, and its settings."
 ---
 
-# Tiers & points
+# Loyalty
 
 <span class="sidebar-path">Customers → Loyalty → Loyalty Tiers</span> and <span class="sidebar-path">Customers → Loyalty → Points Transactions</span>
 
-The loyalty programme rewards signed-in customers with **points** they can spend at checkout, and with **XP** that never decreases through spending and drives a **level** and a **tier**. Everything is recorded in an append-only ledger: a customer's balance is the sum of their transactions.
-
-## Is it on?
-
-Two switches must both be on, and only one of them is yours:
-
-1. The store's plan must include loyalty. That is set by the platform team and you cannot change it here.
-2. **LOYALTY_ENABLED** in <span class="sidebar-path">Settings → Store Settings</span>, off by default.
-
-**LOYALTY_ENABLED** is one switch for the whole programme, covering earning and redeeming together. There is no way to let customers earn but not spend, or the other way round. When it is off, no points are earned on completed orders, customers can neither redeem points nor see their balance and history, and AI assistants get no points either. Balances are kept, and the time the programme is off does not count towards expiry: a point that had a month left when you switched loyalty off still has a month left when you switch it back on. Cancelled and refunded orders still give back the points they used and take back the points they earned, so the balances are right when loyalty resumes where it stopped.
-
-The admin follows the same two switches. Without loyalty on your plan, the **Loyalty** menu is not in the sidebar at all. With loyalty on your plan but **LOYALTY_ENABLED** off, the menu stays, marked **Off**, so you can prepare tiers before customers see them.
-
-Wholesale customers have their own single switch, with the same all-or-nothing shape: **B2B_LOYALTY_ENABLED** decides whether orders priced through a customer group both earn and redeem. It is off by default because points are worked out from retail prices, so a negotiated price would earn full retail points. See [Customer groups & price lists](/admin/customers/groups-and-price-lists).
-
-## How points are earned
-
-When an order reaches the status **Completed**, a background job awards points for each line:
-
-```
-floor( price basis × LOYALTY_POINTS_FACTOR × product Points Coefficient × quantity [× tier multiplier] )
-+ product Bonus Points × quantity
-```
-
-- **Price basis** is chosen by **LOYALTY_PRICE_BASIS**: the final sale price (default), the price without VAT and without discount, the discounted price without VAT, or the price with VAT and without discount.
-- **LOYALTY_POINTS_FACTOR** is a store-wide multiplier, default 1.
-- Each product has a **Points Coefficient** (0 disables calculated points for it) and fixed **Bonus Points**. See [Products](/admin/catalog/products).
-- The **tier multiplier** applies only when **LOYALTY_TIER_MULTIPLIER_ENABLED** is on and the customer's tier has a multiplier above 1.
-
-The points awarded are also added to the customer's **Total XP**. A first order can additionally grant a one-off **new customer bonus** when **LOYALTY_NEW_CUSTOMER_BONUS_ENABLED** is on; the amount is **LOYALTY_NEW_CUSTOMER_BONUS_POINTS**, default 100. The bonus does not add XP, and it rides on the first order that actually earns points: an order that earns nothing (every product on it has a **Points Coefficient** of 0) does not trigger the bonus either.
-
-Guest orders earn nothing. Points are awarded once per order; a repeated job run is ignored.
-
-## Levels and tiers
-
-- **Level** = 1 + floor(Total XP ÷ **LOYALTY_XP_PER_LEVEL**). The default is 1000 XP per level.
-- **Tier** = the tier with the highest **Required Level** that is at or below the customer's level. A customer below the lowest tier has no tier.
-- The tier is recalculated after every award and reversal. A promotion sends the customer an in-app "You're now …" notification; a demotion is silent.
-
-## Redeeming at checkout
-
-- The customer enters how many points to use. **LOYALTY_REDEMPTION_RATIO_EUR** points equal one euro of discount, default 100 points per euro.
-- The discount cannot exceed the products total (shipping and payment fees are never covered) and cannot exceed the balance.
-- One redemption per order. The points are deducted immediately as a **Redeem** transaction, and the discount and points used are stored on the order.
-- Redeeming does not change XP, so it never lowers a level or tier.
-
-## Cancellations and refunds
-
-When an order is cancelled, fully refunded, or moved to **Refunded**, a job reverses it: points spent on the order are given back, and the points earned on it — including the **new customer bonus**, if this was the order that granted it — are taken back as **Adjust** transactions (never below zero). XP is reduced by the earned points only, since the bonus never added any, and the tier is recalculated. Reversal runs once per order. The bonus is not granted again on a later order, and a cancelled or refunded order earns no points even when its earning job runs after the reversal.
-
-A partial refund reverses nothing. Because the reversal happens only once and takes everything, the points stay until the refund that returns the rest of the money, so a small goodwill refund does not wipe the points of an order the customer keeps.
-
-A lost card dispute (a chargeback) counts towards that total too: once refunds and chargebacks together cover the whole payment, the order is reversed the same way, with one difference. The points the customer spent on an order that was charged back are **not** given back, because the customer took the money back through their bank rather than the store undoing the order; only the points earned on it are taken back. To give the spent points back anyway, add them as described in [Add or remove points for a customer](#add-or-remove-points-for-a-customer). See [Card disputes and chargebacks](/admin/sales/orders#card-disputes-and-chargebacks).
-
-## Expiry
-
-A nightly job at 03:00 expires points older than **LOYALTY_POINTS_EXPIRATION_DAYS**. The default is 0, which means points never expire. Each expired earning is recorded as an **Expire** transaction, capped at what the customer still holds, so an already-spent earning does not push the balance negative. An earning that was fully spent still gets a zero **Expire** row, which is how it is not considered again.
+With Loyalty, customers with an account earn **points** from their orders and spend them as a discount at checkout. Alongside, they collect **XP** (experience points), which do not go down when they spend and move them up a **level** and a **tier**.
 
 ## What you see
 
 ### Loyalty Tiers
 
-| Column | Meaning |
+| Column | What it shows |
 |---|---|
-| **Name** | Tier name in the current language. |
-| **Required Level** | Minimum level, unique per tier. The list is sorted by it. |
-| **Points Multiplier** | Applied to earned points when the tier multiplier setting is on. Minimum 1.0. |
-| **Icon** | Thumbnail of the uploaded badge. |
-
-There are no filters on this list; search matches the translated name. The form holds the translatable **Name** and **Description**, **Required Level**, **Points Multiplier** and **Icon** (PNG, JPG or SVG).
+| **Name** | The tier's name, with its icon. |
+| **Required Level** | From which level up a customer enters this tier. |
+| **Points Multiplier** | For example 1.5: customers in the tier earn 50% more points, if `LOYALTY_TIER_MULTIPLIER_ENABLED` is on. |
 
 ### Points Transactions
 
-A read-only ledger. Rows cannot be added, edited or deleted from the admin.
+The movement history of all customers, read-only.
 
-| Column | Meaning |
+| Column | What it shows |
 |---|---|
 | **User** | The customer. |
-| **Points** | Positive for Earn and Bonus, negative for Redeem, Expire and most Adjust rows. |
-| **Transaction Type** | Earn, Redeem, Expire, Adjust, Bonus. |
-| **Reference order** | The order that caused it, when there is one. |
-| **Created at** | Date drill-down above the list. |
+| **Points** | Positive when added, negative when taken off. |
+| **Transaction Type** | **Earn**, **Bonus**, **Redeem**, **Expire** or **Adjust**. |
+| **Reference Order** | The order that caused it. |
+| **Created At** | Date and time. |
 
-Filters: **Transaction Type**, **User**, **Created at** range. Search matches the customer's email and the description. Bulk actions export the selected rows as CSV or XML.
+On the customer's page (<span class="sidebar-path">Customers → Customers</span>) the **Loyalty & Engagement** section shows **Points Balance**, **Total XP**, **Level** and **Tier**.
 
 ## Tasks
 
-### Set up the programme
+### Turn the programme on
 
-1. Ask the platform team to confirm loyalty is included in the store's plan.
-2. In <span class="sidebar-path">Settings → Store Settings</span> review **LOYALTY_POINTS_FACTOR**, **LOYALTY_PRICE_BASIS**, **LOYALTY_XP_PER_LEVEL**, **LOYALTY_REDEMPTION_RATIO_EUR**, **LOYALTY_POINTS_EXPIRATION_DAYS** and the two new-customer bonus settings. See [Store settings](/admin/settings/store-settings).
-3. Create tiers in <span class="sidebar-path">Customers → Loyalty → Loyalty Tiers</span> with rising **Required Level** values. Turn on **LOYALTY_TIER_MULTIPLIER_ENABLED** only if higher tiers should earn faster.
-4. Set **LOYALTY_ENABLED** to on. Earning starts with the next completed order.
-
-### Add or remove points for a customer
-
-1. Open the customer in <span class="sidebar-path">Customers → Customers</span> and click **Adjust loyalty points**. Only platform operators see the button.
-2. Enter the **Points** (positive adds, negative removes; between minus and plus ten thousand) and a **Reason**, then submit. The change appears at once as an **Adjust** row with your account as creator and the reason as its description, and cannot be undone except by a further adjustment.
-
-Adjustments change the balance only, never XP, level or tier.
+1. Ask the platform team to confirm your plan includes Loyalty.
+2. Check the settings in the table below, under <span class="sidebar-path">Settings → Store Settings</span>.
+3. Create tiers, for example "Silver" with **Required Level** 3 and "Gold" with 10.
+4. Turn on `LOYALTY_ENABLED` (off by default). Points start with the next completed order.
 
 ### Explain a balance to a customer
 
-1. Open <span class="sidebar-path">Customers → Loyalty → Points Transactions</span>, filter by **User**.
-2. Read the rows in order: earnings per order line, bonuses, redemptions with the discount in the description, expiries and reversals. The account page in <span class="sidebar-path">Customers → Customers</span> shows the resulting **Points Balance**, **Total XP**, **Level** and **Tier**.
+1. Open **Points Transactions** and filter by **User**.
+2. Read the rows in order: earnings per product, bonus, redemptions, expiries and corrections from cancellations or refunds.
+
+### Add or remove points by hand
+
+Only the platform team can do this. Send them the customer, the points and the reason.
 
 ### Change tier thresholds
 
-1. Edit **Required Level** on the tier. Levels are unique, so reorder by editing values rather than swapping.
-2. Existing customers are re-tiered the next time their XP changes, not immediately.
+Change the tier's **Required Level**. Two tiers cannot share a level. Customers change tier the next time they gain or lose XP, not straight away.
+
+## How it works
+
+**Earning.** When an order becomes **Completed**, the customer earns points for each product. With the defaults, 1 point per euro of the final price, rounded down. Example: a €24.80 product gives 24 points. If you set **Bonus Points** 5 on the product, it gives 29. The same amount is added to XP.
+
+**Redeeming.** At checkout the customer chooses how many points to use. With the default, 100 points = €1 off. The discount covers only the products, not shipping or the payment fee. One redemption per order.
+
+**Level and tier.** With the default, every 1,000 XP is one level: 2,500 XP means level 3. The tier is the highest one the level allows. When a customer moves up a tier they get a notification; when they move down, they do not.
+
+**Cancellation or full refund.** The customer gets back the points they spent on the order, and loses the points and XP they earned from it, plus the new-customer bonus if it came from this order.
+
+**Partial refund.** If the order was partly paid with points, some of them may be given back to the customer. The points they earned are not taken off until all of the order's money has been returned.
+
+**Lost payment dispute (chargeback).** The customer loses the points they earned but does not get back the ones they spent. If you want to give them back, ask the platform team. See [Refunds & disputes](/admin/sales/refunds-and-disputes).
+
+### Negative balance
+
+If the customer already spent the points of an order that was later canceled, the `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` setting decides what happens:
+
+- **On (default):** all the points are taken off and the balance goes negative. Later purchases pay it off, and the customer cannot redeem until it is positive again. That way nobody keeps points from a canceled order.
+- **Off:** the deduction stops at zero and the points already spent stay spent.
+
+Leave it on unless you want to be more lenient with your customers.
+
+## Settings
+
+All under <span class="sidebar-path">Settings → Store Settings</span>.
+
+| Setting | What it does | Default |
+|---|---|---|
+| `LOYALTY_ENABLED` | Turns the whole programme on or off, earning and redeeming together. | Off |
+| `LOYALTY_POINTS_FACTOR` | Points per euro. With 2, each euro gives 2 points. | 1 |
+| `LOYALTY_PRICE_BASIS` | Which price counts for points: the final price, or the price without VAT or without discount. | Final price |
+| `LOYALTY_REDEMPTION_RATIO_EUR` | How many points make €1 off. | 100 |
+| `LOYALTY_XP_PER_LEVEL` | How much XP each level takes. | 1000 |
+| `LOYALTY_TIER_MULTIPLIER_ENABLED` | Higher tiers earn more points, by their **Points Multiplier**. | Off |
+| `LOYALTY_NEW_CUSTOMER_BONUS_ENABLED` / `LOYALTY_NEW_CUSTOMER_BONUS_POINTS` | Bonus points on the first order that earns points. Adds no XP. | Off / 100 |
+| `LOYALTY_POINTS_EXPIRATION_DAYS` | After how many days points expire. 0 = never. | 0 |
+| `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` | See "Negative balance" above. | On |
+| `B2B_LOYALTY_ENABLED` | Whether wholesale-priced orders earn and redeem points. | Off |
+
+On each product's page, the **Points Coefficient** multiplies its points (0 = no points) and **Bonus Points** adds a fixed number. See [Products](/admin/catalog/products).
 
 ## Things to know
 
-- Points are awarded at **Completed**, not at payment or delivery. For cash-on-delivery orders that is when the courier payout is reconciled, which can be days after delivery. See [Orders](/admin/sales/orders).
-- The currency ratio setting exists per currency; the store trades in euro, so **LOYALTY_REDEMPTION_RATIO_EUR** is the one that matters.
-- Points balances live in the store's own data. A customer with accounts on two stores of the platform has two separate balances.
-- The customer's loyalty summary and history are visible to them in their storefront account.
-- Deleting a tier resets affected customers to no tier until their next recalculation. Prefer raising **Required Level** out of reach.
+- **Customers with an account only.** Guest orders earn no points.
+- **Points arrive at Completed**, not at payment. For cash on delivery that happens when the courier pays the money over, a few days after delivery.
+- **While the programme is off**, customers cannot earn, spend or see their balance, but balances stay. That time does not count towards points expiry. The menu shows an **Off** badge, so you can prepare the tiers.
+- **Expiry.** Every night, points older than `LOYALTY_POINTS_EXPIRATION_DAYS` expire, never more than the customer holds.
+- **Deleting a tier** leaves its customers without a tier until their XP next changes. Better to raise its **Required Level** very high.
 
 ## Related
 
 - [Users & addresses](/admin/customers/users-and-addresses)
 - [Products](/admin/catalog/products)
-- [Store settings](/admin/settings/store-settings)
+- [Refunds & disputes](/admin/sales/refunds-and-disputes)
 - [Customer groups & price lists](/admin/customers/groups-and-price-lists)
-- [Orders](/admin/sales/orders)
+- [Store settings](/admin/settings/store-settings)

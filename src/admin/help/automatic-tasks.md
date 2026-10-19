@@ -1,104 +1,113 @@
 ---
-title: Background jobs
-description: Everything that runs automatically for your store on a schedule, which of it you can tune through settings, and what only the platform may change.
+title: Automatic tasks
+description: What your store does on its own every day (cancellations, reminders, alerts, deleting old data) and which setting changes each one.
 ---
 
-# Background jobs
+# Automatic tasks
 
-Scheduled work runs from one platform-wide timetable. The schedule screens (**Periodic Tasks**, **Crontab Schedules**, **Interval Schedules**, **Clocked Schedules**, **Solar Schedules**) and the **Task Results** screens live on the platform console only. A store's admin has no Background Jobs section, by design: one timetable drives every store, so it is not any one store's to edit.
+Some work happens on its own, at fixed times: unpaid orders are cancelled, reminders go out, shipments are updated. Times are Greek time and the platform team sets them. You change the "how much" and the "whether" from your store's settings.
 
-What a store can control is the **behaviour** of those jobs, through [Store settings](/admin/settings/store-settings).
+<span class="sidebar-path">Settings → Store Settings</span>
 
-## What runs for your store
+## What you see
 
-Times are store local time (Athens). Each job runs once per store.
+Automatic tasks have no screen of their own. You see their result on orders, on shipments and in the emails you or your customers receive. The "Setting" column names the key you change in Store Settings and, in brackets, its starting value.
 
 ### Orders and stock
 
-| Job | When | What it does | Your knobs |
-|---|---|---|---|
-| Cancel stuck pending orders | every 15 minutes | Cancels orders whose online payment failed or never completed, and releases their stock. | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`, `ORDER_AUTO_CANCEL_PENDING_HOURS` |
-| Release expired stock reservations | hourly | Frees stock held by checkouts that were never completed. | `STOCK_RESERVATION_TTL_MINUTES` |
-| Pending order reminders | daily 07:00 | Emails customers whose order is still unpaid. | `PENDING_ORDER_REMINDER_*` |
-| Low stock check | hourly | Emails the store when a product falls to its threshold. | the product's own **Low stock threshold** field (0 disables it for that product) |
-| Checkout abandonment emails | daily 06:00 | Reminds customers who left a checkout. | `CHECKOUT_ABANDONMENT_HOURS` |
-| Abandoned cart cleanup | daily 04:00 | Deletes old abandoned carts. | `ABANDONED_CART_CLEANUP_DAYS` |
-| Guest cart cleanup | daily 06:00 | Deletes old guest carts. | `OLD_GUEST_CART_CLEANUP_DAYS` |
+| What happens | When | Setting |
+|---|---|---|
+| An online order whose payment failed is cancelled. Its stock comes back. | every 15 minutes | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` (30 minutes) |
+| An online order that was never paid is cancelled. Its stock comes back. | every 15 minutes | `ORDER_AUTO_CANCEL_PENDING_HOURS` (24 hours) |
+| The customer gets a "Reminder: Complete Your Order" email for an unpaid online order. | every day 07:00 | `PENDING_ORDER_REMINDER_MAX_COUNT` (3 at most), `PENDING_ORDER_REMINDER_INTERVAL_DAYS_2` (3 days after the 1st), `PENDING_ORDER_REMINDER_INTERVAL_DAYS_3` (7 days after the 2nd) |
+| Stock held for a customer at checkout is released if they did not finish the order. | as soon as the time runs out | `STOCK_RESERVATION_TTL_MINUTES` (30 minutes) |
+| A signed-in customer who left checkout halfway gets a "Did you forget something?" email, once. | every day 06:00 | `CHECKOUT_ABANDONMENT_HOURS` (2 hours) |
+| An order that was delivered and is paid moves to "Completed". The customer gets no email. | every hour | — |
+| You get one email, at the **Contact Email**, about active products with low stock. Each product is listed once, until its stock rises above the threshold again. | every hour | the **Low Stock Threshold** field of each product (10; 0 stops it) |
+| Empty guest carts are deleted. | every day 04:00 | `ABANDONED_CART_CLEANUP_DAYS` (7 days) |
+| Guest carts not opened for a long time are deleted. Registered customers' carts stay. | every day 06:00 | `OLD_GUEST_CART_CLEANUP_DAYS` (30 days) |
+
+Cash on delivery and other offline payments are never cancelled automatically and get no reminder.
 
 ### Shipping
 
-| Job | When | What it does |
+| What happens | When | Setting |
 |---|---|---|
-| Poll ACS tracking | every 15 minutes | Fetches checkpoints for every ACS voucher not yet delivered. ACS sends no notifications, so this is the only source. |
-| Issue ACS pickup list | Mon–Fri 16:30 | Records the day's manifest with ACS. ACS collects printed parcels with or without it and refuses it while any voucher is unprinted; a refusal is noted on the orders it held back, not emailed. See [Reconciliation](/admin/system/reconciliation). |
-| Stale ACS shipments digest | daily 09:00 | Emails a list of vouchers with no movement for several days. |
-| Reconcile ACS COD payouts | daily 02:30 | Imports the previous day's cash-on-delivery payouts and marks the matching orders paid. |
-| Alert unremitted COD | daily 03:00 | Emails a list of delivered COD parcels ACS has not paid out yet. |
-| Sync ACS stations | daily 03:00 | Refreshes the Smartpoint list. |
-| Poll BoxNow tracking | every 15 minutes | Fetches parcel state for open BoxNow shipments, alongside BoxNow's own notifications. |
-| Sync BoxNow lockers | daily 02:00 | Refreshes the locker list used by the checkout map. |
+| The progress of ACS and BoxNow parcels is updated. | every 15 minutes | — |
+| The day's ACS pickup list is issued. | Monday–Friday 16:30 | — |
+| You get an email about ACS parcels with no movement for three days. | every day 09:00 | `OPS_ALERT_STALE_SHIPMENTS_ENABLED` (on) |
+| The cash-on-delivery money ACS paid out the day before is recorded. The order becomes paid. | every day 02:30 | — |
+| You get an email about cash-on-delivery parcels delivered more than ten days ago that ACS has not paid out yet. | every day 03:00 | `OPS_ALERT_UNREMITTED_COD_ENABLED` (on) |
+| The lists of BoxNow lockers and ACS stations are refreshed. | every day 02:00 and 03:00 | — |
 
-The two emailing jobs keep running when you switch their email off with `OPS_ALERT_STALE_SHIPMENTS_ENABLED` or `OPS_ALERT_UNREMITTED_COD_ENABLED`; they simply send nothing, and the dashboard keeps counting the same parcels. See [Store settings](/admin/settings/store-settings#operational-alert-emails).
+These emails to the store go to the **Contact Email** and the **Owner Email** of the Store Profile.
 
-### Loyalty, gift cards, promotions
+### Customers, loyalty and gift cards
 
-| Job | When | What it does | Your knobs |
-|---|---|---|---|
-| Expire loyalty points | daily 03:00 | Removes points past their validity. | `LOYALTY_POINTS_EXPIRATION_DAYS` |
-| Expire gift cards | daily 03:00 | Marks cards past their validity as expired. | `GIFT_CARD_VALIDITY_DAYS` |
-| Deliver scheduled gift cards | daily 06:00 | Sends cards bought with a future delivery date. | |
-| Gift card expiry reminders | daily 06:00 | Emails recipients before a card expires. | `GIFT_CARD_EXPIRY_REMINDER_DAYS` |
-
-### Customers, content, housekeeping
-
-| Job | When | What it does | Your knobs |
-|---|---|---|---|
-| Inactive customer emails | 1st of the month 06:00 | "We miss you" emails. | `INACTIVE_USER_THRESHOLD_DAYS`, `REENGAGEMENT_EMAIL_*` |
-| Expire notifications | 1st and 15th 06:00 | Deletes old in-app notifications. | `NOTIFICATION_EXPIRATION_DAYS` |
-| Clean expired data exports | daily 03:00 | Deletes data-export files older than seven days. | |
-| Reap unclaimed contact attachments | hourly | Deletes uploads whose enquiry was never submitted. | |
-| Purge expired attachment files | daily 04:00 | Deletes attachment bytes past the retention window; the enquiry stays. | `CONTACT_ATTACHMENTS_RETENTION_DAYS` |
-| Delete old messages and feedback | daily 04:00 | Deletes contact messages, with their attached files, and feedback entries older than the retention period. | `CONTACT_RETENTION_DAYS` (0 keeps everything) |
-| Rebuild search indexes | daily 02:00 | Re-syncs products and posts to the search engine. | |
-| Update search click scores | daily 03:00 | Feeds click data back into ranking. | |
-| Anonymise old search queries | Sunday 03:00 | Strips identifying data from searches older than 90 days. | |
-| Clear expired customer sessions | Monday 04:00 | Removes expired sessions. | |
-| Clear duplicate / old history | daily 05:00 / Sunday 03:00 | Trims the record change history. | |
-| Clear all cache | 1st of the month 04:00 | A full cache reset. | |
-
-### Platform-wide (not per store)
-
-Health check every 30 minutes, database backup daily 03:00 with a weekly cleanup on Sunday 05:00, tenant billing daily 06:00, archived-store purge daily 03:00.
-
-## Buttons you can press yourself
-
-These run the job now instead of waiting, and all of them sit on screens a store's Staff, Admin and Owner can open.
-
-| Screen | Button | What it does |
+| What happens | When | Setting |
 |---|---|---|
-| ACS Shipments | **Issue ACS pickup list now** | Issues the day's manifest for every waiting voucher without waiting for 16:30. |
-| ACS Shipments | **Issue ACS voucher now** | Creates the voucher for one shipment. |
-| ACS Shipments | **Re-poll ACS tracking** | Re-fetches checkpoints for one shipment. |
-| ACS Shipments | **Re-poll tracking for selected shipments** | The same for several at once. |
-| ACS Shipments | **Retire selected shipments (mark CANCELED, stop polling)** | For vouchers ACS will never advance again. |
-| BoxNow Lockers | **Sync lockers from BoxNow API** | Refreshes the locker list for the checkout map. |
+| Loyalty points past their validity expire. Time when Loyalty was off does not count. | every day 03:00 | `LOYALTY_POINTS_EXPIRATION_DAYS` (0; they never expire) |
+| A gift card's remaining balance expires on its expiry date. | every day 03:00 | `GIFT_CARD_VALIDITY_DAYS` (1825 days, that is 5 years from issue) |
+| A gift card bought for a future date is sent. | every day 06:00 | — |
+| The recipient of a gift card with a balance gets one reminder before it expires. | every day 06:00 | `GIFT_CARD_EXPIRY_REMINDER_DAYS` (30 days; 0 stops it) |
+| A customer who has not signed in for a long time gets a "We miss you!" email. | 1st of the month 06:00 | `INACTIVE_USER_THRESHOLD_DAYS` (60 days), `REENGAGEMENT_EMAIL_MAX_COUNT` (3; 0 stops it), `REENGAGEMENT_EMAIL_COOLDOWN_DAYS` (90 days between two emails) |
 
-**Run COD reconciliation now** is not one of them. It sits on the ACS COD Payouts screen, which only platform operators can open; ask the platform if a payout import must run early. See [Reconciliation](/admin/system/reconciliation).
+While gift cards are off, no card expires and no card or reminder is sent.
 
-## For platform operators
+### Deleting old data
 
-- Do not disable or re-time the fan-out jobs; every store depends on them.
-- The ACS pickup-list time does not decide when parcels are collected: ACS collects printed parcels whether or not a list was issued, so moving it changes only when the day's manifest is recorded.
-- **Task Results lists failures, not runs.** Successful jobs deliberately write nothing, so an empty list means nothing failed, not that nothing ran. Failure rows are kept for thirty days. To answer "did the nightly job run at all?", read the last-run time on **Periodic Tasks** instead.
+| What is deleted | When | Setting |
+|---|---|---|
+| Messages and Feedback (customers' comments about the store), with their attachments. | every day 04:00 | `CONTACT_RETENTION_DAYS` (365 days; 0 keeps them all) |
+| The files a customer attached to a message. The message itself stays. | every day 04:00 | `CONTACT_ATTACHMENTS_RETENTION_DAYS` (90 days) |
+| Files uploaded to a contact form that was never sent. | every hour | — |
+| The file of a customer data export, seven days after it was ready. | every day 03:00 | — |
+| Guest Newsletter sign-ups not confirmed within 30 days. | every day 04:00 | — |
+| Customer notifications older than a year. | 1st and 15th of the month 06:00 | — |
+
+### Search
+
+| What happens | When |
+|---|---|
+| The storefront search is updated again for every product and blog post. | every day 02:00 |
+| When a promotion starts or ends, search shows the new price. | within 5 minutes |
+
+## Tasks
+
+### Change a setting
+
+1. Open <span class="sidebar-path">Settings → Store Settings</span>.
+2. Type the key in the search box, for example `ORDER_AUTO_CANCEL_PENDING_HOURS`.
+3. Open the setting, change the value and click **Save**.
+
+The new value applies from the next time the task runs.
+
+### Stop an email to the store
+
+Switch off `OPS_ALERT_STALE_SHIPMENTS_ENABLED` or `OPS_ALERT_UNREMITTED_COD_ENABLED`. The email stops, but the [Dashboard](/admin/getting-started/dashboard) keeps counting the same parcels.
+
+### Make something happen now
+
+| You want | Where | Button |
+|---|---|---|
+| The ACS pickup list before 16:30 | <span class="sidebar-path">Shipping → ACS Shipments</span> | **Issue ACS pickup list now** |
+| The progress of one ACS parcel | on the shipment's page | **Re-poll ACS tracking** |
+| The progress of several ACS parcels | select them in the list | **Re-poll tracking for selected shipments** |
+| The list of BoxNow lockers | <span class="sidebar-path">Shipping → Pickup Points → BoxNow Lockers</span> | **Sync lockers from BoxNow API** |
+
+If you need ACS's cash-on-delivery payouts recorded sooner, ask [support](/admin/help/contact-support).
 
 ## Things to know
 
-- If a scheduled email did not arrive, check the setting that gates it before assuming the job failed.
-- Issuing the ACS pickup list is single-flight: if the scheduled run and someone's click overlap, the second one is skipped rather than issuing twice.
+- **Reminders and automatic cancellation.** The first reminder goes out once an order has been unpaid for more than a day. With the starting value of 24 hours, though, the order has already been cancelled. If you want reminders, raise `ORDER_AUTO_CANCEL_PENDING_HOURS`, for example to 72 hours.
+- If an automatic email did not arrive, check its setting first. For emails to the store, also check that the **Contact Email** is filled in.
+- You cannot change when the tasks run. If a time does not suit you, talk to [support](/admin/help/contact-support).
 
 ## Related
 
 - [Store settings](/admin/settings/store-settings)
-- [Reconciliation](/admin/system/reconciliation)
+- [Orders](/admin/sales/orders)
+- [Daily shipping routine](/admin/shipping/daily-routine)
 - [ACS Courier](/admin/shipping/acs)
 - [BoxNow](/admin/shipping/boxnow)
+- [When to contact support](/admin/help/contact-support)

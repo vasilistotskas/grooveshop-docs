@@ -1,74 +1,90 @@
 ---
 title: Email templates
-description: Preview every transactional email the store sends, in each language, with sample data or a real order, and know which template fires when.
+description: See how every automatic email of your store looks, in every language, with sample data or a real order, and which email is sent when.
 ---
 
 # Email templates
 
+Here you see exactly what a customer receives in each automatic email of the store: order confirmation, shipping, cancellation and so on. The page is for previewing only. The platform writes the email texts, and from here they are neither changed nor sent.
+
 <span class="sidebar-path">Settings → Email Templates</span>
 
-The Email Template Management page lets staff see exactly what a customer receives. It is a **preview tool and nothing else**: the templates belong to the platform, and there is no way to edit one, reset one, or send a test from this page. The page exists on the store admin only, and it shows real orders of this store, so it is open, and listed in the sidebar, only for roles that may view orders; treat what you see on it as customer data.
+The page shows only for people who can view orders, because it shows real customer orders.
 
 ## What you see
 
-**Left: Templates.** A search box filters the list by name and description as you type. The list is grouped by category; each template shows its name, an **Active** label and a short description. Click a template to preview it.
+The **Email Template Management** page has two parts:
 
-**Right: Preview.** The preview renders as soon as you pick a template, and again whenever you change one of its controls:
+- **Templates**, on the left: the list of all emails, grouped into categories. Each email has its name, an **Active** badge and a short description. **Search templates...** filters the list as you type.
+- **Preview**, on the right: the email you picked, with its subject above it.
 
-| Control | Options |
+Above the preview you choose:
+
+| Option | What it changes |
 |---|---|
-| **Language** | Greek, English, German. |
-| **Data** | **Sample data** (made up on the spot, never saved) or one of the store's 10 most recent orders. A real order fills in the order, cart, courier and gift-card emails; the other templates always use sample data. |
-| **Format** | **HTML** (the email as the customer sees it) or **Text** (the plain-text version). |
+| **Language** | The email's language: Greek, English or German. |
+| **Data** | **Sample data** (a made-up customer and products) or one of your 10 most recent orders. |
+| **Format** | **HTML** (as the customer sees it) or **Text** (the plain version, for email programs without images). |
 
-The subject line is shown above the preview.
+### Which emails exist
 
-## Which templates exist
-
-The list is built from the templates the platform actually ships, so it always matches what your store can send.
-
-| Category | Templates |
+| On screen | What it is |
 |---|---|
-| Order Lifecycle | Order received, Payment confirmed, Order shipped, Order delivered, Order completed, Order canceled, Order refunded, Order returned, Order pending reminder, Order status generic, Payment failed, Invoice issued, Dispute notification, ACS out for delivery, BoxNow parcel at locker, Admin new order |
-| Cart | Checkout abandoned |
-| Product | Low stock alert (to the store), Price drop alert, Restock alert |
-| Giftcard | Gift card delivery, Gift card purchase receipt, Gift card expiry reminder |
-| B2B | Business profile approved, Business profile rejected, Admin new business profile |
-| Billing | Expiring, Expired, Suspended (platform billing notices) |
-| Shipping Acs | Stale shipments alert (to the store) |
-| Subscription | Confirmation |
-| User Management | Data export ready, Inactive user re-engagement |
+| `order_received` | The order was placed. |
+| `order_payment_confirmed` | The payment was confirmed. |
+| `payment_failed` | The payment failed. |
+| `order_pending_reminder` | A reminder for an order still waiting for payment. |
+| `order_shipped` | The order was shipped. |
+| `acs_out_for_delivery` | ACS is out for delivery. |
+| `boxnow_parcel_at_locker` | The parcel is in the BoxNow locker. |
+| `order_delivered`, `order_completed` | The order was delivered / completed. |
+| `order_canceled` | The order was canceled. |
+| `order_refunded`, `order_returned` | Money refunded / products returned. |
+| `order_status_generic` | Any other status change. |
+| `retail_document_issued` | The receipt or credit document was issued. |
+| `dispute_notification` | A payment dispute, to you. |
+| `admin_new_order` | A new order, to you. |
+| `checkout_abandoned` | A reminder for a checkout left half-way. |
+| `restock_alert`, `price_drop_alert` | The [product alerts](/admin/customers/product-alerts). |
+| `low_stock_alert` | Low stock, to you. |
+| `review_pending` | A new review waiting for moderation, to you. |
+| `gift_card_delivery`, `gift_card_purchase_receipt`, `gift_card_expiry_reminder` | Gift card delivery, its purchase receipt, an expiry reminder. |
+| `business_profile_approved`, `business_profile_rejected` | A business customer application approved or rejected. |
+| `admin_new_business_profile` | A new business customer application, to you. |
+| `stale_shipments_alert` | ACS shipments that are stuck, to you. |
+| `confirmation` | Newsletter subscription confirmation. |
+| `data_export_ready` | The customer's data export is ready. |
+| `inactive_user_email_template` | A message to a customer who has not signed in for a long time. |
+| `expiring`, `expired`, `suspended` | Notices from the platform to you about the store's subscription. |
 
-Ten templates carry a written description and a real subject pattern such as `Your Order #<id> Has Shipped`. The other twenty-three show the placeholder description "Email template" and a generic subject in the preview. That says nothing about the email itself: those templates are sent just as often, and the real message carries a proper subject.
+Ten emails have their own description. The rest just say "Email template". That does not mean they are not sent.
 
 ## Tasks
 
-### Check what a customer will get
+### See what a customer will receive
+
 1. Open <span class="sidebar-path">Settings → Email Templates</span>.
-2. Click the template, for example **order_shipped**.
-3. Pick the **Language** the customer uses.
-4. Pick the order under **Data**.
-5. Switch **Format** between **HTML** and **Text** to compare the two versions.
+2. Click the email, e.g. `order_shipped`.
+3. Under **Language**, choose the customer's language.
+4. Under **Data**, choose their order.
+5. Switch the **Format** to see the plain version too.
 
-### Review translations
-Preview the same template in each language in turn and read each. Missing or English-only strings in a Greek preview are something to report to the platform team, not something you can fix here.
+Nothing is sent and nothing changes on the order.
 
-### Find the template for an order status
-Order templates carry the statuses they are sent for. Use the search box with the status name (shipped, delivered, canceled) or open the template and read its description.
+### Check the translations
 
-## Variables and language
-
-- The content comes from the order (customer name, items, totals, tracking number, carrier) or, with sample data, from made-up Greek names, addresses and products. Nothing you do on this page changes any record.
-- Customer emails are sent in the customer's own language. Emails addressed to you instead (new order, low stock, business profile applications, shipping alerts) go to the store contact address, and their subject line is always in English whatever language the body comes out in. That is expected; it is not a translation you can fix.
+Open the same email in every language of the store and read it. If something is missing or wrong, send the platform team the email's name, the language and what you want changed.
 
 ## Things to know
 
-- **No editing, no reset to default, no test send.** Changing what an email says is a request to the platform team, not something this page can do.
-- Only the ten most recent orders are offered, so you cannot preview an older one here.
-- The template list is read once when the store's servers start. A template added by a platform release shows up after the next restart, not immediately.
+- **You do not change the texts here.** A change to an email is a request to the platform team. See [When to contact support](/admin/help/contact-support).
+- **Only the 10 most recent orders** appear under **Data**. You cannot view an older order here.
+- **Customer emails** go out in the customer's language.
+- **Emails to you** go to the store's contact email, which you set under <span class="sidebar-path">Settings → Store Profile</span>. The new-order email has an English subject, e.g. "New order — #123".
 
 ## Related
 
 - [Orders](/admin/sales/orders)
 - [Notifications](/admin/customers/notifications)
-- [Store settings](/admin/settings/store-settings)
+- [Product alerts](/admin/customers/product-alerts)
+- [Store profile](/admin/settings/store-profile)

@@ -1,97 +1,55 @@
 ---
 title: Comments
-description: Moderate blog comments - approve, unapprove, remove spam, understand replies and likes, and the notification a liked comment triggers.
+description: Readers' comments on the blog - hiding or erasing a comment, replying, and closing comments.
 ---
 
 # Comments
 
+Signed-in customers comment on posts and reply to each other. New comments are published at once; here you hide or erase the ones you do not want, afterwards.
+
 <span class="sidebar-path">Content → Blog → Blog Comments</span>
-
-Customers comment on blog posts and reply to each other. This screen is where you approve, hide and remove what they write.
-
-**Read this before you plan a moderation routine.** New comments are normally **approved the moment they are posted** and appear on the blog immediately. Holding them for review first is a platform-level choice, not a store setting, so it is not something you can switch on from the admin. If yours holds them, the number beside the **Blog** menu in the sidebar counts up as comments arrive; if no number appears while comments keep appearing on your posts, yours publishes them straight away and this screen is for taking bad ones down afterwards. Ask the platform team to change which way it works.
-
-Comments can be switched off entirely, store-wide, with the **BLOG_COMMENTS_ENABLED** setting under <span class="sidebar-path">Settings → Store Settings</span>. Your plan's blog feature also has to be on. With the setting off, **Blog Comments** leaves the sidebar and the **Blog** menu counts nothing; without the blog on your plan, the whole **Blog** menu is hidden.
 
 ## What you see
 
-The **Blog** menu in the sidebar shows the number of unapproved comments, and the dashboard lists them under **Needs attention** as **Blog comments to approve**. The list shows 30 comments per page in thread order, with a date drill-down by creation date.
+One row per comment, with the start of the text, the **User**, the **Post**, **Approved** and **Engagement** (likes and replies). Replies sit right below the comment they answer. When the commenter's account has been deleted, it shows **Anonymous**.
 
-| Column | Meaning |
+Search looks in the comment text, the commenter's name and email, and the post title.
+
+| **Approved** | What readers see |
 |---|---|
-| **Content** | First 50 characters. Rows are ordered so that each reply follows its parent, but they are not visually indented, so use the **Post** link and the text itself to work out what answers what. |
-| **User** | Commenter's name and email, or **Anonymous** when the account is gone. |
-| **Post** | Linked post title. |
-| **Approved** | Editable in the list; tick and press **Save**. |
-| **Engagement** | Likes and approved replies. |
-| **Created** | Timestamp. |
-
-**Search** matches the commenter's email, username, first and last name, the post title and subtitle, and the comment text. **Filters**: Approved, creation date range, Post, User.
-
-**Bulk actions**:
-
-| Action | Effect |
-|---|---|
-| **Approve selected comments** | Sets Approved on. |
-| **Unapprove selected comments** | Sets Approved off; the comment and its replies disappear from the storefront. |
-| **Mark as spam and delete** | Deletes the comments **permanently**, together with every reply under them, and repairs the thread structure. Nothing is recorded as spam anywhere; despite the name this is only a delete. |
-
-The form: **Comment Content** (**Content** per language, up to 1000 characters), **Relations** (**Post**, **User**, **Parent**), **Moderation** (**Approved**), collapsed **Engagement**.
-
-## Moderation flow
-
-```mermaid
-stateDiagram-v2
-  [*] --> Approved: customer submits, usual case
-  [*] --> Pending: customer submits, review held
-  Pending --> Approved: Approve
-  Approved --> Pending: Unapprove
-  Pending --> [*]: Mark as spam and delete
-  Approved --> [*]: Mark as spam and delete
-```
-
-- **Pending** (Approved off): gone from the post page for everyone, its own author included. The writer can still find it in their account, under their own comments, so it does not look lost to them. It does not count towards the post's comment count.
-- **Approved**: visible to everyone on the post page, counted, and open to likes and replies.
-- A reply is visible only when it is approved **and** its parent is visible. Unapproving a comment therefore takes its whole thread down with it.
+| ticked | The comment shows under the post and counts in its comments. |
+| not ticked | The comment and its replies do not show. |
 
 ## Tasks
 
-### Work through the queue
-Only useful on a store whose comments are held for review. Where they publish on arrival this filter is normally empty, and the section below is what you want instead.
+### Hide a comment
+1. Find it with search.
+2. Untick **Approved** and click **Save**. For several at once, select them and choose **Unapprove selected comments**.
+3. Its replies are hidden with it. They all come back if you approve it again.
 
-1. Open <span class="sidebar-path">Content → Blog → Blog Comments</span> and filter **Approved** to No.
-2. Read the content; open the **Post** link for context.
-3. Tick **Approved** on the good ones and press **Save**, or select them and run **Approve selected comments**.
-4. Select the spam and run **Mark as spam and delete**.
+The change can take a few minutes to show on the post. To make it immediate, clear **Blog** from [Cache](/admin/settings/cache).
 
-### Take down a comment that is already public
-1. Find it with the search box, which matches the comment text as well as the writer's name, email and the post title.
-2. Untick **Approved** and press **Save**, or select it and run **Unapprove selected comments**. It leaves the post at once, and so do any replies beneath it.
-3. Purge the **Blog** surface in the [Cache](/admin/settings/cache) tool, or a cached copy of the page can keep showing it for a few minutes.
-4. Delete it only once you are sure. **Mark as spam and delete** cannot be undone.
+### Erase spam
+Select the comments and choose **Mark as spam and delete**. They are erased for good, with all their replies. This cannot be undone; if in doubt, just hide the comment.
 
-### Answer a comment as the store
+### Bring a hidden comment back
+Filter **Approved** to "No", select the comment and choose **Approve selected comments**.
+
+### Reply as the store
 1. Click **Add**.
-2. Set **Post** to the same post, **Parent** to the comment you are answering, **User** to your own account, write **Content**, tick **Approved**, save.
-3. The reply shows under the customer's comment with your account name.
+2. In **Post** pick the post and in **Parent Comment** the comment you are answering.
+3. In **User** pick your own account and write the **Content**.
+4. Tick **Approved** in the **Moderation** section and save. The reply shows with your account's name.
 
-### Remove a single comment without deleting the thread
-Untick **Approved**. Its replies are kept but hidden along with it, and they come back if you approve the parent again.
-
-## Likes and notifications
-
-- Any signed-in customer can like another person's comment on the storefront; the admin only shows the count.
-- When a comment receives a like, its author gets an **in-app notification** ("Your comment was liked", in the author's language) that links to the post's comments. Self-likes send nothing. It arrives within moments rather than the same instant, and it is never an email.
-- Notifications are listed under [Notifications](/admin/customers/notifications).
+### Close comments on the whole blog
+Under <span class="sidebar-path">Settings → Store Settings</span>, category **Storefront UI**, turn off `BLOG_COMMENTS_ENABLED` (on to start with). Readers no longer see comments or can write one, and **Blog Comments** leaves the sidebar. Comments are not erased and come back if you turn it on again. They cannot be closed per post.
 
 ## Things to know
 
-- **Deleting a post does not delete its comments.** They stay in this list with an empty **Post** column, which is the usual reason for orphaned-looking rows. Delete the comments first if you want them gone with the post.
-- Deleting a customer account keeps their comments and shows them as **Anonymous**.
-- **Mark as spam and delete** cannot be undone. Use **Unapprove** when in doubt.
-- Editing **Content** rewrites the customer's words under their name; prefer unapproving to editing.
-- The number beside **Blog** is refreshed whenever a comment is saved or deleted, and at least once a minute otherwise. The list itself is always current.
-- Blog pages are cached on the storefront; a newly approved comment may take a few minutes to show unless you purge the **Blog** surface in the [Cache](/admin/settings/cache) tool.
+- **Likes**: when someone likes a comment, its author gets a notification inside the store, not an email. See [Notifications](/admin/customers/notifications).
+- **Do not rewrite a customer's words.** A change to the **Content** shows under their name. Prefer hiding the comment.
+- **Deleting a post does not erase its comments.** They stay here with an empty **Post** column. Erase them first if they should go too.
+- Deleting a customer's account keeps their comments, as **Anonymous**.
 
 ## Related
 

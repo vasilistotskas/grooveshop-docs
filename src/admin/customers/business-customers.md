@@ -1,105 +1,93 @@
 ---
 title: Business customers
-description: Business profiles for the wholesale program, the approval workflow, the VIES VAT check, the invoice details on the profile, and what "wholesale access" actually requires.
+description: Business customers' applications for wholesale prices, approving, rejecting and suspending them, and the VIES check of the VAT number.
 ---
 
 # Business customers
 
+Here you approve the customers who ask for wholesale prices. The customer applies from their account with their company details. You approve the application and give them a customer group, and from then on they see that group's prices.
+
 <span class="sidebar-path">Customers → Wholesale → Business Customers</span>
 
-A business profile is a customer's company identity for the wholesale program: company name, VAT number (ΑΦΜ), tax office (ΔΟΥ), business activity and registered address. Customers apply from their account; you review, approve into a customer group, reject with a reason, or suspend. Approval is what switches that customer's cart to wholesale prices. The number beside the **Wholesale** menu in the sidebar counts applications waiting for review.
-
-The wholesale program ships dark. It works only when the platform has enabled B2B for the store and `B2B_WHOLESALE_ENABLED` is on under [Store settings](/admin/settings/store-settings). Without B2B on your plan the **Wholesale** menu is not in the sidebar at all. With B2B on your plan but the setting off, the menu stays so you can prepare groups and price lists, marked **Off**, and it counts nothing. Invoice-at-checkout is separate and available to every shopper; see [Receipts and credit documents](/admin/sales/receipts).
+Wholesale needs two things: the platform team must have switched it on for your store, and the `B2B_WHOLESALE_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span> must be on. It is off by default. While the setting is off, the **Wholesale** menu shows the **Off** marker, so you can prepare groups and prices. The number next to the menu counts the applications waiting.
 
 ## What you see
 
-### The list
-
 | Column | Meaning |
 |---|---|
-| **Company name** | As entered by the customer. |
-| **VAT number (ΑΦΜ)** | Nine digits, stored without the EL prefix. |
-| **User** | The customer account. One profile per account. |
-| **Status** | See the table below. |
-| **Customer group** | The wholesale tier assigned at approval. |
-| **VIES** | The result of the EU VAT-number check. |
-| **Created** | When the application was made. |
+| **Company name** | As the customer entered it. |
+| **VAT number (ΑΦΜ)** | Nine digits, without the EL prefix. |
+| **User** | The customer's account. One account has one business profile. |
+| **Status** | Where the application stands (table below). |
+| **Customer group** | The group you gave at approval. It sets their prices. |
+| **VIES** | The result of the VAT-number check in the European VIES system. |
+| **Created At** | When the application was made. |
 
-Filters: status, VIES status, customer group, created date. Search by company name, VAT number or the customer's email.
+Filters: **Status**, **VIES status**, **Customer group** and date. Search finds a company name, a VAT number or a customer email.
 
-### The profile page
+A customer's page has three tabs:
 
-- **Company**: the user, company name, VAT number, tax office, activity, and the billing street, number, city and postcode. Editable, but customers maintain these themselves; edit only to fix an obvious typo.
-- **Review**: **Status** (read-only, changed only by the actions), **Customer group**, **Reviewed by**, **Reviewed at**, **Rejection reason**.
-- **VIES**: **VIES status**, **VIES checked at**, the name and address VIES returned, and the last **VIES error**. All read-only.
+- **Company**: company name, VAT number, tax office, business activity and billing address. The customer fills these in; correct only an obvious typo here.
+- **Review**: **Status**, **Customer group**, who reviewed it and when, and the **Rejection reason**.
+- **VIES**: what VIES answered, with the name and address it has on record.
 
-Header actions: **Approve**, **Reject**, **Suspend**, **Re-check VIES**.
+Top right: **Approve**, **Reject**, **Suspend**, **Re-check VIES**.
 
-## Statuses
+The statuses:
 
-| Status | Meaning | How it gets there |
-|---|---|---|
-| **Pending review** | Waiting for you. | A new application, a resubmission after rejection, or an approved customer changing an identity field (company name, VAT, tax office, activity). |
-| **Approved** | Wholesale prices apply. | **Approve**. |
-| **Rejected** | No wholesale; the customer got your reason by email and may resubmit. | **Reject**. |
-| **Suspended** | Wholesale removed; the customer cannot lift it by editing. | **Suspend**. |
-
-| VIES status | Meaning |
+| Status | Meaning |
 |---|---|
-| **Not checked** | No check has run. |
-| **Valid** | The EU VIES service confirmed the VAT number; name and address were captured. |
+| **Pending review** | Waiting for you. A new application, a resubmission after a rejection, or an approved customer who changed the company name, VAT number, tax office or activity. |
+| **Approved** | The customer sees wholesale prices. |
+| **Rejected** | The customer got an email with the reason and may apply again. |
+| **Suspended** | Wholesale prices are cut off. The customer cannot change this themselves. |
+
+The VIES result:
+
+| VIES | Meaning |
+|---|---|
+| **Not checked** | No check has run yet. |
+| **Valid** | VIES confirmed the VAT number. |
 | **Invalid** | VIES says the number is not registered for intra-EU trade. |
-| **Service unavailable** | VIES did not answer (timeout or outage). Not a verdict; try **Re-check VIES** later. |
-
-## The workflow
-
-```mermaid
-flowchart LR
-  A[Customer submits profile] --> B[VIES check]
-  B --> C[Pending review]
-  C -->|Approve + group| D[Approved]
-  C -->|Reject + reason| E[Rejected]
-  E -->|customer resubmits| C
-  D -->|identity field changed| C
-  D -->|Suspend| F[Suspended]
-```
-
-1. The customer fills in the form in their account. The VAT number must pass the Greek ΑΦΜ checksum.
-2. The platform asks the EU VIES service (five-second timeout) and stores the result. On an outage the profile still lands in your queue with **Service unavailable**; the decision is yours either way.
-3. You get an email at the store's contact address for every new application.
-4. **Approve** asks you for the customer group and emails the customer that their account was approved. **Reject** asks for a reason and emails it. **Suspend** is deliberately silent.
-5. Resubmissions: a rejected profile goes back to Pending review on any edit; an approved profile goes back only when an identity field changes (address edits keep wholesale access); a suspended profile stays suspended.
+| **Service unavailable** | VIES did not answer. It is not a verdict; try **Re-check VIES** later. |
 
 ## Tasks
 
 ### Review an application
-1. Filter **Status → Pending review**, or click **Business accounts to verify** under **Needs attention** on the [dashboard](/admin/getting-started/dashboard).
-2. Open the profile. Compare the company details with the **VIES** tab; a **Valid** result with a matching name is strong evidence. **Invalid** or **Service unavailable** means check the number with the customer or re-run the check.
-3. **Approve** and pick the **Customer group**, or **Reject** with a reason the customer will read. The Approve dialog lists active groups only, so create or reactivate the tier first if it is not there.
 
-### Change a customer's tier
-1. Open the profile and set **Customer group** on the **Review** tab, then save. The next time the customer loads their cart it is priced with the new group.
+For every new application you receive an email at the store's contact address.
 
-### Remove wholesale access
-1. **Suspend**. No email is sent. The customer's next cart load is priced at retail.
-2. To restore, **Approve** again with a group.
+1. Filter **Status: Pending review**, or click **Business accounts to verify** on the [Dashboard](/admin/getting-started/dashboard).
+2. Open the application and compare the **Company** tab with the **VIES** tab. **Valid** with the same company name is a good sign.
+3. Click **Approve** and pick a **Customer group**. The customer gets an email that they were approved. The list shows active groups only, so create the group first if it is missing.
+4. Or click **Reject** and write a **Reason**. The customer reads it in the email they receive.
 
-### Re-run the VIES check
-1. **Re-check VIES** in the header. The result and timestamp are updated at once.
+### Change a customer's group
+
+1. Open the customer, change **Customer group** on the **Review** tab and save.
+2. The next time the customer opens the cart or checkout, they see the new group's prices.
+
+### Stop wholesale prices
+
+1. Click **Suspend**. There is no confirmation step and no email to the customer.
+2. From the next time the customer opens the cart, they see retail prices.
+3. To restore them, click **Approve** again with a group. The customer gets the approval email.
+
+### Check VIES again
+
+Click **Re-check VIES**. The result updates straight away.
 
 ## Things to know
 
-- **Wholesale access needs four things at once**: the feature switched on, the profile **Approved**, a **Customer group** assigned, and that group **Active**. Missing any one, the customer is priced at retail without an error. See [Customer groups & price lists](/admin/customers/groups-and-price-lists).
-- **Prices bind on every cart load**, not at approval. Approving, changing the group or suspending takes effect on the customer's next request; orders already placed keep the pricing they were placed with.
-- **The profile's billing details are the customer's invoice identity.** Orders carry their own snapshot of these fields, so a later edit to the profile never rewrites an existing order or invoice.
-- **VIES is advisory.** The platform never approves or rejects on its own; **Valid** does not auto-approve and **Invalid** does not block you.
-- **One profile per account.** A business with several buyers needs one account per buyer, each with its own profile.
-- **Wholesale orders are marked.** The orders list has a **Wholesale** filter and each order shows the group and percent it was priced with. See [Orders](/admin/sales/orders).
+- **Wholesale prices need four things at once:** wholesale switched on, the customer in status **Approved**, a **Customer group**, and that group **Active**. If one is missing, the customer sees retail prices with no message.
+- **Prices are worked out again every time** the customer looks at the cart or checkout. Orders already placed do not change.
+- **An address change** by the customer does not send the application back for review. A change to the company name, VAT number, tax office or activity does.
+- **VIES is a help, not a decision.** The platform never approves or rejects on its own; you decide.
+- **One account, one business profile.** A company with several buyers needs one account for each of them.
+- **Wholesale orders stand out.** In [Orders](/admin/sales/orders), the **Wholesale: Wholesale-priced** filter lists them, and each order shows under **Wholesale pricing** the group and discount it got.
 
 ## Related
 
 - [Customer groups & price lists](/admin/customers/groups-and-price-lists)
-- [Receipts and credit documents](/admin/sales/receipts)
 - [Orders](/admin/sales/orders)
-- [Users & addresses](/admin/customers/users-and-addresses)
 - [Store settings](/admin/settings/store-settings)

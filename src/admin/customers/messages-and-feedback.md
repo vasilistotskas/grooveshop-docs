@@ -1,91 +1,88 @@
 ---
-title: Contact messages & feedback
-description: The contact-form inbox with its attachments and the feedback submissions with ratings; who gets notified, how to reply, how long entries are kept, and the settings that control both forms.
+title: Messages & Feedback
+description: "Messages from the contact form and Feedback ratings: where they arrive, how to reply, attached files and how long they are kept."
 ---
 
-# Contact messages & feedback
+# Messages & Feedback
 
 <span class="sidebar-path">Customers → Messages</span> and <span class="sidebar-path">Customers → Feedback</span>
 
-Two inboxes for what visitors send through the storefront. **Messages** are enquiries from the contact page: a name, an email, a message, and optionally a subject, company, phone and attached files. **Feedback** entries come from the feedback page: a one-to-five star rating with a category and a comment, optionally signed. Both are read-only records of what arrived; replying happens from your own mailbox. Neither is kept forever: both are deleted automatically after the store's retention period, a year by default (see [How long entries are kept](#how-long-entries-are-kept)).
+**Messages** come from the storefront's contact form. **Feedback** (visitor comments) comes from the Feedback page: a rating from one to five stars with a comment. You get an email for each new message or Feedback entry, and you reply from your own email.
 
-## Contact messages
+## What you see
 
-### What you see
+### Messages
 
-| Column | Meaning |
+| Column | What it shows |
 |---|---|
-| **Contact** | Name and email. The email is flagged "(invalid)" when it does not look like an address. |
-| **Subject** | The subject and the company, when the sender gave them; a dash otherwise. |
+| **Contact** | Name and email. An email that does not look right is marked "(invalid)". |
+| **Subject** | The subject and the company, if the sender gave them. |
 | **Message** | The first hundred characters. |
-| **Message Stats** | Characters, words, lines. |
-| **Timing** | Date and relative age. |
-| **Priority** | A triage hint: **Urgent** under two hours old, **High** for long messages, **Medium** under a day, **Low** otherwise. Nothing you set. |
+| **Timing** | When it arrived. |
+| **Priority** | An automatic hint: **Urgent** for the first two hours, **High** for long messages, **Medium** for the first day, then **Low**. |
 
-A note above the list states how long messages are kept (see [How long entries are kept](#how-long-entries-are-kept)).
+The number next to **Messages** in the menu counts those that arrived in the last seven days, not the ones you have not read. The same number shows as **New messages** under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard).
 
-Filters: **Contact Period** (Today, This Week, This Month, This Quarter), **Message Length**, a text filter on **Subject**, created and updated date ranges. Search by name, email, message, company, phone. Bulk actions export the selection as CSV or XML. The number beside the **Messages** entry in the sidebar counts the messages received in the last seven days, the same window as **Contact Period → This Week**; there is no read or unread flag.
+A message's page shows **Contact Information**, the **Message** and a **Contact Attachments** tab with the files that came with it.
 
-The message page shows **Contact Information** (name, email, company, phone), the **Message** (subject and body) and an **Attachments** tab: file name as a download link, content type, size, scan verdict and time. Attachments can be deleted from here, which removes the file as well; they cannot be added by staff.
+### Feedback
 
-### What happens automatically
-
-- Every new message triggers an email to the store's contact address. That is the contact address on the store's own record, which the platform team sets, and `CONTACT_EMAIL` under [Store settings](/admin/settings/store-settings) when that is empty. With neither filled in, no email is sent at all, so set one.
-- Attachments are scanned in the background when a scanner is configured. The verdict decides whether you can download the file: **Clean** and **Not scanned** can be downloaded; **Pending scan** and **Scan failed** are withheld until a verdict exists; **Infected** is never served. A file uploaded but never sent with a message is deleted six hours later; the bytes of files that did arrive are deleted after `CONTACT_ATTACHMENTS_RETENTION_DAYS` (90) while the message and the file's name, size and checksum stay.
-
-### Tasks
-
-**Reply to an enquiry**
-1. Open the message, copy the email, write from your mail client. There is no reply box and no status field in the admin.
-2. If you want a record, keep the thread in your mailbox; the admin only keeps what was received.
-
-**Allow attachments on the contact form**
-1. Under Store settings turn on `CONTACT_ATTACHMENTS_ENABLED` (off by default: this is the store's only anonymous upload).
-2. Set `CONTACT_ATTACHMENTS_MAX_COUNT` (3, capped at 20), `CONTACT_ATTACHMENTS_MAX_MB` (10, capped at 25) and `CONTACT_ATTACHMENTS_TYPES` (file types separated by commas; PDF only by default). The type is read from the file's actual bytes, never from its name or what the browser claims, and a file the platform cannot identify is refused.
-
-**Handle a data-subject request about a message**
-Delete the message; the attachments and their files go with it. Contact messages have no user account behind them, so the customer erasure tools do not touch them.
-
-## Feedback
-
-### What you see
-
-| Column | Meaning |
+| Column | What it shows |
 |---|---|
-| **Submitter** | Name and email, or "Anonymous" and "(no email)". |
-| **Rating** | One to five stars, colour-coded. |
-| **Category** | General, Website & UX, Products, Delivery, Customer support, Other. |
+| **Submitter** | Name and email, or **Anonymous** and **(no email)**. |
+| **Rating** | From 1★ to 5★. |
+| **Category** | **General**, **Website & UX**, **Products**, **Delivery**, **Customer support**, **Other**. |
 | **Message** | The first hundred characters. |
-| **Timing** | Date and relative age. |
 
-The same retention note as on **Messages** sits above the list. Filters: category, rating, created date. Search by name, email, message. Bulk actions export to CSV or XML. The feedback page shows the submitter and the rating, category and message.
+In both lists the bulk actions export the selected rows to CSV or XML.
 
-### What happens automatically
+## Tasks
 
-Every submission emails the store's contact address, like a contact message, and is skipped in the same way when no address is set. The storefront feedback page exists only while `FEEDBACK_ENABLED` is on (it is on by default); turning it off makes the page answer "not found" and rejects submissions. While it is off, **Feedback** is also left out of the sidebar, since nothing new can arrive; the entries already received come back when you turn it on again.
+### Reply to a message
 
-## How long entries are kept
+1. Open the message and copy the sender's email.
+2. Reply from your email program. There is no reply box or "answered" status here.
 
-Messages and feedback are personal data that a visitor typed in, kept only so you can answer them. Every night the platform deletes the messages and feedback entries older than `CONTACT_RETENTION_DAYS` (365 days by default), and each message's attached files with it. One period covers both lists.
+### Set where the emails go
 
-The note above each list says which period is in force, for example: "Entries older than 365 days are deleted automatically every night, together with any attached files. Change the period with the CONTACT_RETENTION_DAYS setting." With the setting at 0 it reads "Entries are kept indefinitely (CONTACT_RETENTION_DAYS is 0)."
+1. Open <span class="sidebar-path">Settings → Store Profile</span>, tab **Email & Security**.
+2. Fill in **Contact Email** and save.
 
-**Change the period**
-1. Open <span class="sidebar-path">Settings → Store Settings</span> (Owners and Admins) and search for `CONTACT_RETENTION_DAYS`.
-2. Enter the number of days and save. `0` keeps everything until you delete it yourself.
-3. If you shorten the period, the entries already older than the new one are deleted on the next nightly run. Export them first if you need them.
+If it is empty, `CONTACT_EMAIL` under <span class="sidebar-path">Settings → Store Settings</span> is used. If both are missing, no email is sent; messages only show here.
 
-The notification emails already in your mailbox are not touched: only the copies in the admin are deleted. `CONTACT_ATTACHMENTS_RETENTION_DAYS` is a different, shorter clock: it removes only the contents of attached files (after 90 days by default) and keeps the message.
+### Allow attachments on the contact form
+
+1. In Store Settings turn on `CONTACT_ATTACHMENTS_ENABLED` (off by default).
+2. If you like, change how many files are allowed (`CONTACT_ATTACHMENTS_MAX_COUNT`, 3), the size per file in MB (`CONTACT_ATTACHMENTS_MAX_MB`, 10, at most 25) and the file types (`CONTACT_ATTACHMENTS_TYPES`, PDF only by default).
+
+### Download an attachment
+
+On the **Contact Attachments** tab click the file name. The **Scan** column shows whether it was checked for viruses:
+
+| Scan | Can you download it? |
+|---|---|
+| **Clean** | Yes. |
+| **Not scanned** | Yes. No virus checker is set up; open it with care. |
+| **Pending scan** | Not yet. |
+| **Scan failed** | No, until there is a result. |
+| **Infected** | Never. |
+
+### A customer asks for their details to be erased
+
+Delete their messages here; the attachments go with them. Deleting a customer account does not remove messages, because they are not linked to an account.
 
 ## Things to know
 
-- **Nothing here is a ticket.** There is no assignment, status or reply workflow. If you need one, forward the notification emails into your helpdesk.
-- **The badge counts the last seven days, not unread.** Because there is no read flag, the sidebar number is the messages of the last seven days: it goes down as messages turn a week old, not when you open them. The same count appears as **New messages** under **Needs attention** on the [Dashboard](/admin/getting-started/dashboard), and that line opens this list filtered to the same seven days.
-- **Attachment downloads are staff-only** and served as plain downloads, never opened in the browser, because the sender is anonymous.
-- **Export before you delete** if you keep records elsewhere; deletion is immediate. The same goes for the nightly retention clean-up: what it deletes cannot be brought back.
+- **How long they are kept.** Every night, messages and Feedback older than `CONTACT_RETENTION_DAYS` (365 days by default) are deleted, together with their attachments. With 0 they are kept forever. A note above each list says which period applies.
+- **If you shorten the period**, anything already older is deleted that same night. Export what you need first. Emails already in your inbox are not affected.
+- **Files go sooner.** After `CONTACT_ATTACHMENTS_RETENTION_DAYS` days (90 by default) the content of attachments is deleted; the message and the file name stay.
+- **Customer data export.** When a customer asks for their data, the export includes the messages they sent from a verified email of their account.
+- **Feedback can be switched off** with `FEEDBACK_ENABLED` (on by default). While it is off, the storefront's Feedback page does not exist and **Feedback** leaves the menu. Entries already received show again when you turn it back on.
+- **It is not a helpdesk.** There is no assignment or ticket status. If you need that, forward the emails to such a system.
 
 ## Related
 
 - [Store settings](/admin/settings/store-settings)
-- [Users & addresses](/admin/customers/users-and-addresses)
+- [Store profile](/admin/settings/store-profile)
+- [Data exports](/admin/customers/data-exports)
 - [Reviews](/admin/catalog/reviews)

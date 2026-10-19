@@ -1,82 +1,80 @@
 ---
 title: Cache
-description: Why an edit may not show on the storefront right away, what the Cache page purges, how to use it safely, and what it cannot fix.
+description: What to do when a change does not show on your storefront, and how to clear the stored copy (cache) of one area.
 ---
 
 # Cache
 
+Your storefront keeps ready-made pages in a cache, a stored copy that makes them open fast. Most of your changes show on their own within about a minute. This page is for the few times a change is slow to appear.
+
 <span class="sidebar-path">Settings → Cache</span>
 
-The storefront keeps rendered pages and data in a cache so it can serve visitors fast. Most edits reach the storefront on their own within minutes; the Cache page is for when you need it now. Owners and Admins can open it; Staff do not see the entry, because purging is a settings-level action.
-
-## Why a change does not show
-
-Two caches sit between the admin and a visitor:
-
-1. **The data cache.** Answers such as product lists and category trees are kept for a while.
-2. **The storefront cache.** Both the data the storefront fetched and the **rendered pages** themselves are kept. Product and catalogue pages are re-rendered at most every five minutes, blog pages every ten, the home page every five, the static brand pages every hour, and the settings payload about once a minute.
-
-Also, your own browser may show a cached page. Reload with the cache bypassed (Ctrl+Shift+R) before assuming the server is stale.
-
-Most edits purge on their own. Saving a product (its text, images, attributes, brand or variant group), a category, a blog post, category, tag or author, a tag, a promotion, a payment method, a shipping provider or rate, a content page, a page layout or a menu marks the matching surface stale, in any language; about ten seconds later one purge clears every surface marked in that window, so a catalogue import costs one purge rather than one per row. A product whose stock alone changed is not purged, because every order changes it and checkout checks stock again anyway. Coupon codes, reviews and comments, loyalty tiers, store settings, the sitemap and the translations are not purged on save either: they wait for their time to expire or for a manual purge.
+Owners and Admins can open this page. Staff cannot.
 
 ## What you see
 
-The page lists **surfaces**, grouped as catalog, commerce, config and content. Each card shows the surface name, a description of what it covers, the live number of entries currently cached, and which other surfaces are related.
+The **Cache Management** page shows one card for each area of the storefront, in four groups: **Catalog**, **Commerce**, **Content** and **Configuration**. Each card shows a name, a short description, how many stored items it holds now and, after the arrow, which other areas it clears along with it.
 
-| Surface | Purge after you change | Also purges |
-|---|---|---|
-| **Products** | a product, its images, attributes, price or stock; also the search endpoint. | Categories, Tags, and the product feeds for Meta, TikTok and AI agents. |
-| **Categories** | a category, its image, the tree, or the category map behind the navbar. | the same product feeds. |
-| **Payment methods** | a payment method's availability, cost, description or instructions. | Shipping options, which embed the eligible methods. |
-| **Shipping options** | a shipping provider, a shipping rate, or a station or locker sync. Saving a provider or a rate purges it, and the country list, on its own. | |
-| **Regions & Countries** | rarely needed; the address pickers at checkout. | |
-| **Loyalty** | tiers or loyalty settings shown on the storefront. Only the storefront half is cached, so this is a light purge. | |
-| **Promotions** | a promotion, its codes or its schedule. The public offers page is covered. | |
-| **Product recommendations** | curated relations or slots. Purges itself on save. | |
-| **Blog** | posts, categories, tags, authors, comments. | |
-| **Pages & navigation** | a page layout, a section's props, a content page, or a menu, and the rendered pages built from them. | |
-| **Tags** | tags, which products and posts share. | |
-| **Sitemap & SEO** | anything that should appear in the sitemap, the RSS feed or the AI-readable index right away. | |
-| **Site settings** | any value under Store Settings, and the seller identity shown in the footer. | Payment methods, Shipping options and Loyalty. |
-| **Translations (parler)** | marked **Heavy**. Forces every translated row to be re-read from the database. Use only when told to. | |
+| Area | Clear it when a change does not show in… |
+|---|---|
+| **Products** | products, images, attributes, brands, search results. It also refreshes the feeds (the product files for Meta, TikTok and Google). |
+| **Categories** | categories, their images and the categories in the menu. |
+| **Tags** | product and blog tags. |
+| **Payment methods** | a payment method's availability, cost or instructions. |
+| **Shipping options** | shipping prices, providers, the lists of lockers and ACS stations. |
+| **Regions & Countries** | the country and region lists of the checkout address. |
+| **Loyalty** | loyalty tiers and rules as the customer sees them. |
+| **Promotions** | promotions, the offers page and the offer badge on products. |
+| **Product recommendations** | the recommended products the storefront shows. |
+| **Blog** | blog posts, categories, tags and authors. |
+| **Pages & navigation** | content pages, page layouts, menus and the home page. |
+| **Storefront pages** | every page of the storefront at once. |
+| **Sitemap & SEO** | the sitemap (the site map for search engines) and RSS. |
+| **Site settings** | values in Store Settings and the seller details at the bottom of the page. |
+| **Translations (parler)** | Marked **Heavy**. Clear it only if the platform team asks you to. |
 
-Below the cards: your store's twenty most recent purges (who, when, which surfaces, how many entries). Only your own appear here — another store's purges are never shown, and yours are never shown to them.
-
-If the storefront purge is not configured for the environment, the page says so and only the data half is purged.
+At the bottom, the **Recent activity** table shows your store's last twenty clears: who, when and which areas.
 
 ## Tasks
 
-### Purge one area
+### My change does not show on the storefront
+
+1. Wait a minute.
+2. Reload the storefront page with **Ctrl+Shift+R** (on a Mac **Cmd+Shift+R**), so your browser does not show its own old stored copy.
+3. If it still does not show, clear the area you changed (see the next task).
+4. If it does not show even after clearing, check the change itself. For example, that the product is active and that you clicked **Save**.
+
+### Clear one area
 
 1. Open <span class="sidebar-path">Settings → Cache</span>.
-2. Tick the surface or surfaces you edited. **Select all** and **Select none** are above the cards.
-3. **Include related surfaces** is ticked by default and also purges everything in the "Also purges" column above. Untick it for a narrower purge.
+2. Tick the card of the area you changed. You can tick more than one.
+3. Leave **Include related surfaces** ticked, so the areas after the arrow are cleared too.
 4. Click **Purge selected**.
 
-A green message reports how many entries were removed on each side. A red message means the data cache did not answer and those entries are still cached; a yellow one means the storefront could not be reached.
+A green message confirms the clear. A red or yellow message means something was not cleared. Try again in a few minutes. If it happens again, send a screenshot to [support](/admin/help/contact-support).
 
-### Preview before purging
+### See what would be cleared, without clearing
 
-Tick the surfaces and click **Dry run**. The message shows how many entries **would** be removed and nothing is deleted. The live counters update as you tick.
+Tick the cards and click **Dry run**. The message says how many items would go. Nothing is deleted.
 
-### Purge everything
+### Clear everything
 
-**Purge all** asks you to confirm, then removes every surface at once except **Translations (parler)**, which is never swept by **Purge all** or by the related cascade and can only be purged by ticking it yourself. Purging everything is safe but makes the next few storefront requests slower while pages are rebuilt. Prefer a targeted purge during business hours.
+Click **Purge all** and confirm. Every area is cleared except **Translations (parler)**. Right after, the storefront is a little slower until its pages are built again, so prefer clearing only the area you need.
 
 ## Things to know
 
-- Purging does not change data. If the edit itself is wrong, purging will simply show the wrong edit faster.
-- Purging does not affect the customer's browser cache or a CDN in front of the site; a customer may still need to reload.
-- Search results come from the search engine's index, not from this cache; a product that does not appear in search is re-indexed on save and by a nightly job.
-- Product feeds for Meta, TikTok and AI agents are refreshed by purging Products or Categories.
-- Every purge, dry runs included, is recorded against the store that made it. Your last twenty appear on this page; the complete record across every store lives on the platform console rather than in your admin. The list only counts purges made since it became per-store, so it may be empty at first.
-- A full cache reset also runs automatically on the first of every month at 04:00.
+- **Updated on their own** as soon as you save: products, categories, tags, payment methods, shipping providers and prices, promotions, blog posts, pages, layouts and menus. The same goes for bulk actions on a list, such as activating many products at once.
+- When you switch a feature on or off in [Store settings](/admin/settings/store-settings), every storefront page is updated on its own.
+- **Need a few minutes or a clear:** the other Store Settings values, coupon codes, loyalty, the sitemap, reviews, blog comments, and a sync of lockers or ACS stations.
+- When an order lowers the stock, the product page is not refreshed right away. Checkout always checks the real stock, though, so you never sell something that ran out.
+- Clearing changes none of your data. If the change itself is wrong, clearing only shows the mistake sooner.
+- If a product is missing from search, save it again. Search is updated on every save and again every night.
+- A visitor who already has the page open may need to reload it.
 
 ## Related
 
 - [Store settings](/admin/settings/store-settings)
 - [Products](/admin/catalog/products)
-- [Navigation](/admin/content/menus)
+- [Menus](/admin/content/menus)
 - [Page layouts](/admin/content/page-layouts)
-- [Audit & logs](/admin/system/audit-and-logs)
+- [When to contact support](/admin/help/contact-support)

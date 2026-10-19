@@ -1,96 +1,95 @@
 ---
 title: Promotions
-description: "Rule-based promotions: benefit types, targeting, conditions and limits, scheduling, stacking and priority, the feature switches, and the cache purge after every change."
+description: "How to set up cart discounts: automatic and coupon-code promotions, benefit types, targeting, limits, stacking, and when the cache needs clearing."
 ---
 
 # Promotions
 
 <span class="sidebar-path">Marketing → Promotions → Promotions</span>
 
-A promotion is a rule the cart evaluates: "10% off the whole order over 50 €", "free shipping", "buy 3 get 1 free in this category", "a free gift with your first order". Automatic promotions apply on their own; code promotions need a coupon code, managed under [Coupon codes](/admin/marketing/coupon-codes).
-
-Promotions ship dark. They work only when both switches are on: the platform has enabled promotions for the store, and `PROMOTIONS_ENABLED` is on under [Store settings](/admin/settings/store-settings). With either off, nothing here applies and the storefront's offers page answers "no offers". Switching promotions off or on updates the prices shown in product lists and search right away, and while they are off a cart lists no coupon code: codes already entered stay on the cart for when you switch promotions back on. The sidebar follows the same switches: without promotions on your plan the **Promotions** menu is not shown at all; with them on the plan but the setting off, the menu stays and carries an **Off** badge, so you can prepare promotions and codes before shoppers see them.
+A promotion is a discount rule for the cart, such as "10% off orders over €50" or "free shipping". An automatic promotion applies by itself. A code promotion needs a coupon, which you create under [Coupon codes](/admin/marketing/coupon-codes).
 
 ## What you see
 
-### The list
-
-| Column | Meaning |
+| Column | What it shows |
 |---|---|
-| **Name** | The promotion name with its target scope beneath. |
+| **Name** | The promotion's name and, below it, which products it covers. |
 | **Trigger** | **Automatic** or **Coupon code**. |
-| **Benefit** | `-10%`, `-5 €`, or the benefit type name for shipping, BXGY and gifts. |
-| **Status** | **Draft** (not active), **Scheduled** (active, starts later), **Live**, **Ended** (past the end date). |
-| **Starts At** / **Ends At** | The schedule window, either side optional. |
+| **Benefit** | For example `-10%`, `-€5.00`, or the kind of benefit (free shipping, gift and so on). |
+| **Status** | **Draft** (inactive), **Scheduled** (starts later), **Live** (running now), **Ended**. |
+| **Starts At** / **Ends At** | When it runs. Empty means no limit. |
 | **Redemptions** | How many orders used it. |
 
-Filters: trigger, benefit type, target scope, active, stackable, start and end date ranges. Search by name or by any of its coupon codes. Each row expands to a **Redemptions** table: the orders that used that promotion, with the customer and the discount.
+Below each row a **Redemptions** table opens with the orders that got the discount. Search finds a promotion by its name or by any of its codes.
 
-Bulk actions: **Activate selected promotions**, **Deactivate selected promotions**.
+The promotion page has four tabs:
 
-### The promotion page
+- **General**: name and description in each language, **Trigger**, **Benefit Type**, **Benefit Value**, **Active**, **Starts At**, **Ends At**.
+- **Benefit Details**: the quantities for "buy X get Y" and the gift product.
+- **Targeting**: which products or categories it covers and which are excluded.
+- **Conditions & Limits**: minimum amount or quantity, first order, stacking, usage limits.
 
-Four tabs:
+### Benefit types
 
-- **General**: name and description per language, **Trigger**, **Benefit Type**, **Benefit Value** (percent for percentage, amount for fixed; ignored for the others), **Active**, **Starts At**, **Ends At**.
-- **Benefit Details**: for **Buy X get Y discounted**: **Buy Quantity**, **Get Quantity**, **Get Discount Percent** (100 means free), and the reward pool (empty means the same products as the buy side). For **Free gift item**: exactly one gift product and the gift quantity.
-- **Targeting**: **Target Scope** (Entire order, Specific products, Specific categories; subcategories are included), the products or categories, **Excluded products**, **Excluded categories**, and **Exclude Already-discounted Products** to skip products that already carry a markdown.
-- **Conditions & Limits**: **Minimum Subtotal** (cart items total including VAT), **Minimum Quantity** (eligible units after scope and exclusions), **First Order Only**, **Stackable**, **Priority**, **Maximum Discount Amount** (ceiling per application), **Total Usage Limit** (orders), **Per-customer Usage Limit**.
-
-Header actions: **Generate codes** (see Coupon codes) and **Duplicate**, which creates an inactive copy named "(copy)" with the same products, categories and limits.
-
-## Benefit types
-
-| Benefit | What it does |
+| Benefit type | What it does |
 |---|---|
-| **Percentage off** | A percent off the eligible lines. |
-| **Fixed amount off** | An amount off, spread across the eligible lines. |
-| **Free shipping** | Removes the shipping cost. Always combines with other promotions; **Stackable** is ignored. It never opens a destination: the delivery country still needs an active shipping rate. |
-| **Buy X get Y discounted** | For every X eligible units, Y units from the reward pool get the given percent off. |
-| **Free gift item** | Adds the gift product to the order at no charge when the conditions hold. |
-
-## How promotions combine
-
-- **Stackable** promotions combine with each other, applied in **Priority** order (lower first).
-- A **non-stackable** promotion applies alone, and only if its discount beats the combined stackable discount. Otherwise the stackables win and the code is refused with "cannot be combined".
-- Free shipping always combines.
-- A coupon is refused with a clear reason: unknown code, not started, ended, minimum not met, usage limit reached, cannot be combined, customer not eligible.
-- Order-level discounts are spread across the lines before VAT, so invoices show VAT on the amount actually paid.
+| **Percentage off** | A percentage off the products the promotion covers. |
+| **Fixed amount off** | An amount off, shared across the products it covers. |
+| **Free shipping** | Sets shipping to zero. Always combines with other promotions. |
+| **Buy X get Y discounted** | For example "buy 2, get 1 free": for every 2 products, the 3rd is discounted. |
+| **Free gift item** | Adds a gift product to the order at no charge. |
 
 ## Tasks
 
-### Create an automatic sale
-1. **Add promotion**. Name it per language, **Trigger → Automatic**, **Benefit Type → Percentage off**, **Benefit Value** 10.
-2. **Targeting**: Entire order, or pick categories.
-3. **Conditions & Limits**: set a **Minimum Subtotal** if you want one. Leave **Stackable** off if it must not add to other offers.
-4. Set **Starts At** / **Ends At** and tick **Active**. Save.
-5. Purge the **Promotions** cache under [Cache](/admin/settings/cache).
+### A store-wide automatic discount
 
-### Run a coupon campaign
-1. Create the promotion with **Trigger → Coupon code** and the benefit you want.
-2. Save, then **Generate codes** in the header: number of codes, optional prefix, random length, usage limit per code (1 for single-use). Or add a single memorable code under [Coupon codes](/admin/marketing/coupon-codes).
-3. Purge the **Promotions** cache.
+1. Click **Add** and enter a name in each language.
+2. Set **Trigger** to **Automatic**, **Benefit Type** to **Percentage off** and **Benefit Value** to, say, 10.
+3. On the **Targeting** tab leave **Entire order**, or pick products or categories.
+4. On the **Conditions & Limits** tab set a **Minimum Subtotal** (for example €50) if you want one.
+5. Set **Starts At** and **Ends At**, tick **Active** and save.
 
-### Stop a promotion now
-1. Tick it and run **Deactivate selected promotions**, or set **Ends At** to now.
-2. Purge the **Promotions** cache. Until then the offers page may still show it for a few minutes; the cart already refuses it.
+The promotion shows on the storefront within about ten seconds.
+
+### A coupon-code campaign
+
+1. Create the promotion as above, but with **Trigger** set to **Coupon code**. Save.
+2. Click **Generate codes** at the top right for many single-use codes, or add one easy code (for example `SUMMER10`) under [Coupon codes](/admin/marketing/coupon-codes).
+3. Clear the **Promotions** cache on the [Cache](/admin/settings/cache) page, so the offers page shows the new code.
+
+### Buy 2, get 1 free
+
+1. **Benefit Type**: **Buy X get Y discounted**.
+2. On the **Benefit Details** tab: **Buy Quantity** 2, **Get Quantity** 1, **Get Discount Percent** 100 (100 means free, 50 means half price).
+3. Leave **Reward Products** empty if the free item comes from the same products; otherwise pick them.
+
+### Stop a promotion right away
+
+1. Tick its row in the list and choose **Deactivate selected promotions**.
+2. The cart refuses it immediately and the storefront updates by itself.
+
+### Duplicate a promotion
+
+Open the promotion and click **Duplicate**. The copy has the same settings and products, "(copy)" in its name, and is inactive. Coupon codes are not copied.
 
 ## Things to know
 
-- **Purge the cache after every change** to a promotion, its codes or its schedule. The storefront's offers page is cached for five minutes and served stale for up to thirty; a stale entry advertises a discount the cart will refuse. The purge is the **Promotions** entry under [Cache](/admin/settings/cache); it is not automatic.
-- **Draft is the safe default.** New promotions are inactive until you tick **Active**; a duplicated promotion is always a draft.
-- **Wholesale carts ignore promotions** unless `B2B_ALLOW_PROMOTIONS` is on. Wholesale is already a negotiated price. See [Customer groups & price lists](/admin/customers/groups-and-price-lists).
-- **Usage limits are counted on orders.** Every order that used a promotion writes a redemption row while the promotion is locked, so a limit of 100 really is 100 orders even under load. Per-customer limits use the account, or the checkout email for guests, which is best-effort.
-- **First Order Only** is checked against the account, or the checkout email for guests, again best-effort.
-- **The offers page** lists every live automatic promotion, and code promotions only when they have at least one code a shopper may be shown (active, not personal, not single-use) and have not reached their total usage limit.
-- **Redemptions are visible but not editable.** <span class="sidebar-path">Marketing → Promotions → Redemptions</span> is a read-only ledger with CSV and XML export.
-- The discount an order received is stamped on the order (**Promotion discount** under Payment Information) and never recalculated.
+- **Two switches.** Promotions work only if your plan includes them and `PROMOTIONS_ENABLED` is on under <span class="sidebar-path">Settings → Store Settings</span> (off by default). While it is off, the menu shows an **Off** badge and you can prepare promotions without shoppers seeing them.
+- **New promotions start inactive.** Nothing applies until you tick **Active**.
+- **When to clear the cache.** Saving, and the bulk activate or deactivate actions, update the storefront by themselves. Clear the **Promotions** cache only when you change coupon codes, or when a promotion starts or ends on its own because of its dates.
+- **How they combine.** Promotions with **Stackable** ticked add up, applied in **Priority** order (lower number first). A promotion that is not stackable applies alone, and only if it gives at least as much as all the stackable ones together.
+- **Free shipping** does not open a new destination: the shipping option must already be available for the order's country and weight.
+- **Gift out of stock.** If the gift product is not available, the order goes through without the gift.
+- **Limits count orders.** **Total Usage Limit** and **Per-customer Usage Limit** count orders that got the discount. A canceled order still counts.
+- **First order and per-customer limits** are checked by account and by checkout email, so a guest who later opens an account does not get the discount twice.
+- **Business customers.** Carts with wholesale prices get no promotions unless you turn on `B2B_ALLOW_PROMOTIONS`. See [Customer groups & price lists](/admin/customers/groups-and-price-lists).
+- **What shoppers see.** The offers page and the offers panel on a product page show automatic promotions and those with a public code. Personal and single-use codes never appear there.
+- The discount an order got is recorded in **Promotion Discount** on the **Payment Information** tab and does not change if you edit the promotion later.
 
 ## Related
 
 - [Coupon codes](/admin/marketing/coupon-codes)
+- [Redemptions](/admin/marketing/redemptions)
 - [Gift cards](/admin/marketing/gift-cards)
-- [Products](/admin/catalog/products)
-- [Categories](/admin/catalog/categories)
 - [Cache](/admin/settings/cache)
 - [Store settings](/admin/settings/store-settings)
