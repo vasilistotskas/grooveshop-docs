@@ -111,10 +111,34 @@ schema and the runtime agree.
 
 ## Error shape
 
-DRF's default exception handler is used; there is no custom
-`EXCEPTION_HANDLER`. Validation errors are a field-to-messages object,
-everything else is `{"detail": "..."}`. The schema documents non-2xx
-responses with `ErrorResponseSerializer` (`core/api/serializers.py`):
+`REST_FRAMEWORK["EXCEPTION_HANDLER"]` is
+`core/api/exception_handler.py: exception_handler`. It keeps the body DRF
+gives an error (`{"detail": "..."}` for a plain error, the field keys for
+a validation error) and adds:
+
+- `code`: a stable snake_case string, never passed through `_()`. A plain
+  error carries its own; a validation error the one code all its messages
+  share, else `invalid`. Left out when the body already has a `code` key
+  (a coupon code field, say).
+- `fields`, on validation errors below 500 only: the same field keys, each
+  a list of `{message, code}`, nested where the serializer nests.
+
+Clients branch on `code` and show `message`; they never compare translated
+text, which is why a `ValidationError` is raised with `code=` (for example
+the review refusal's `must_have_purchased`). Three things bypass it: a
+response a view builds itself (`return Response(..., status=400)`, as
+`OrderViewSet.create` does; most of those set a `code` of their own, but
+not all: the generic invalid-order 400 still has only `error.type`), a
+bare-list body from a `ValidationError`
+raised outside a serializer, and any exception that is not an
+`APIException`, which Django logs as a 500 with no body of ours. The
+OpenAPI schema publishes the shapes as the `ApiError`, `ApiValidationError`,
+`ApiFieldError` and `ApiFieldErrors` components
+(`core/api/schema.py: publish_error_schemas`, a postprocessing hook), and
+the storefront's `describeApiError` reads them.
+
+Per operation, the schema still documents non-2xx responses with
+`ErrorResponseSerializer` (`core/api/serializers.py`):
 
 ```python
 class ErrorResponseSerializer(DetailSerializer):
@@ -199,6 +223,8 @@ not a second prefix.
 | `grooveshop-django-api/core/api/throttling.py` | Scoped throttles |
 | `grooveshop-django-api/core/pagination/` | Envelope |
 | `grooveshop-django-api/core/utils/views.py` | Multipart translation folding |
+| `grooveshop-django-api/core/api/exception_handler.py` | The one DRF exception handler: `code` and `fields` |
+| `grooveshop-django-api/core/api/schema.py` | `ERROR_SCHEMAS`, `publish_error_schemas` |
 | `grooveshop-django-api/core/api/serializers.py` | `ErrorResponseSerializer`, `HealthCheckResponseSerializer` |
 | `grooveshop-django-api/core/api/views.py` | `health_check`, `health_live` |
 | `grooveshop-django-api/notification/views/websocket.py`, `core/middleware/channels.py` | WebSocket ticket and auth |

@@ -144,6 +144,7 @@ Set the myDATA settings together with your accountant. See [Receipts](/admin/sal
 | `GIFT_CARD_MIN_AMOUNT`, `GIFT_CARD_MAX_AMOUNT` | The smallest and largest gift-card amount a customer can buy. | 10.00 and 500.00 |
 | `GIFT_CARD_VALIDITY_DAYS` | How many days a gift card is valid; 0 never expires. Greek law requires at least five years. | 1825 |
 | `GIFT_CARD_EXPIRY_REMINDER_DAYS` | How many days before expiry the holder gets a reminder; 0 none. | 30 |
+| `GIFT_CARD_STAFF_ISSUE_LIMIT` | The most an Admin or Staff member can put on gift cards in one step: issuing a card, or adding to a card's balance. Above it only the Owner can, and the card's movement records that. Lower it if many people issue cards; 0 turns the limit off. See [Gift cards](/admin/marketing/gift-cards). | 500.00 |
 
 ### Loyalty
 
@@ -158,7 +159,7 @@ Set the myDATA settings together with your accountant. See [Receipts](/admin/sal
 | `LOYALTY_TIER_MULTIPLIER_ENABLED` | Tiers multiply the points earned. | off |
 | `LOYALTY_NEW_CUSTOMER_BONUS_ENABLED`, `LOYALTY_NEW_CUSTOMER_BONUS_POINTS` | Welcome points for a new customer, and how many. | off, 100 |
 | `LOYALTY_XP_PER_LEVEL` | Experience points (XP) per level. | 1000 |
-| `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` | What happens to an order's points when it is refunded. See [Loyalty](/admin/customers/loyalty). | on |
+| `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` | When an order is canceled or refunded in full, the points it earned are taken back. If the customer has already spent them: on, all of them are taken back and the balance goes below zero, later purchases pay it off and the customer cannot redeem until it is positive again; off, the take-back stops at zero and the store absorbs the spent points. Switch it off if you would rather never show a customer a negative balance. See [Loyalty](/admin/customers/loyalty). | on |
 
 ### Shipping
 
@@ -175,7 +176,7 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 |---|---|---|
 | `CART_ENABLED` | The cart on the store. Switch it off only if the store does not sell yet. | on |
 | `STOCK_RESERVATION_TTL_MINUTES` | How many minutes stock is held for a customer who is at checkout. | 30 |
-| `ORDER_MAX_UNPAID_ONLINE_ORDERS` | How many unpaid online-payment orders one customer can have at once. Each one holds stock. Past the limit, the customer must pay or cancel one. 0 means no limit. | 5 |
+| `ORDER_MAX_UNPAID_ONLINE_ORDERS` | How many unpaid online-payment orders one customer can have at once. Each one holds stock. Past the limit, the customer must pay or cancel one, or choose cash on delivery or another offline method. Raise it if genuine customers are refused; 0 means no limit. | 5 |
 | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` | Minutes after a failed online payment until the order is canceled and its stock returns. | 30 |
 | `ORDER_FOLLOW_UP_DAYS` | After how many days without delivery an order goes into **Orders to follow up**. 0 turns it off. | 7 |
 | `CHECKOUT_ABANDONMENT_HOURS` | After how many hours an unfinished checkout gets a reminder email. | 2 |

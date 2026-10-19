@@ -271,6 +271,17 @@ the same helper, the bulk discount admin actions in `product/admin.py`
 lock in pk order, and the guest-to-user cart merge (`cart/services.py`)
 no longer locks products through its join.
 
+Before it creates anything, the order-first path refuses an online-settled
+order from a customer who already has `ORDER_MAX_UNPAID_ONLINE_ORDERS`
+unpaid online orders waiting (`OrderService._enforce_unpaid_order_limit`,
+per-store setting, default 5, `0` off; the customer is the account, or the
+guest email). The service raises `InvalidOrderDataError` with a sentence
+naming the limit, but `OrderViewSet.create` answers every
+`InvalidOrderDataError` with the generic 400 `invalid_order_data` and the
+detail "Invalid order data", so the shopper does not see that sentence
+(`order/views/order.py`). The payment-first path (`create_order_from_cart`)
+does not call it, though its own unpaid orders are counted.
+
 The order-first path creates `status=PENDING, payment_status=PENDING`,
 stamps `payment_id = "offline_<uuid>"` for non-online settlements, and
 then branches on coverage: if deductions cover the whole total the order
@@ -345,12 +356,16 @@ endpoint, so django-tenants selects the schema and dj-stripe verifies
 against that schema's `WebhookEndpoint` secret. Handlers live in
 `order/signals/handlers.py`: `payment_intent.succeeded`,
 `payment_intent.payment_failed`, `payment_intent.requires_action`,
-`charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, `checkout.session.completed`
-and `checkout.session.expired`. Each except `charge.refunded` marks
+`charge.refunded`, `refund.failed` / `refund.updated` / `charge.refund.updated`
+(one handler, `handle_stripe_refund_failed`), `charge.dispute.created`,
+`charge.dispute.closed`, `checkout.session.completed` and
+`checkout.session.expired`. Each except the refund handlers marks
 `metadata["webhook_processed_<event_id>"]` under a row lock before doing
 any work; `charge.refunded` is guarded by the payment ledger instead,
 because it carries the charge's cumulative refunded amount and the ledger
-records only what it does not hold yet. `payment_intent.succeeded` and
+records only what it does not hold yet, and a failed refund is one
+`REFUND_REVERSAL` row keyed on the refund id, which the three event types
+and redeliveries book once. `payment_intent.succeeded` and
 `checkout.session.completed` record the charge on the ledger (the
 event's `amount_received`, or the session's `amount_total`, keyed on the
 PaymentIntent id), so the second of the two adds nothing.
@@ -370,8 +385,10 @@ measured lag is around four days. That is by design, not a stuck order.
 The reconcile settles the order through `OrderService.settle_cod_payment`,
 which writes `payment_status=COMPLETED` and a `COD_COLLECTION` ledger row
 in one atomic step under the order lock; see
-[Shipping](/dev/flows/shipping). Cash never counts toward what a refund
-can return.
+[Shipping](/dev/flows/shipping). That collection counts as money
+received: a refund of it has no provider to call, so staff record the
+repayment they made themselves (`refund_order(..., repayment_reference=...)`,
+a `manual` REFUND row; see [Order lifecycle](/dev/flows/order-lifecycle)).
 
 This waiting period is specific to `courier_cash`. It is **not** shared
 by the other collect-on-delivery settlement: `PaySettlement`'s
@@ -606,11 +623,11 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | File | Role |
 |---|---|
 | `grooveshop-django-api/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `threshold_value`, `calculate_payment_method_fee`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `threshold_value`, `calculate_payment_method_fee`, `settle_cod_payment`, `OrderAttributionService` |
 | `grooveshop-django-api/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
 | `grooveshop-django-api/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
 | `grooveshop-django-api/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION and REFUND rows, `refund_status` |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, REFUND and REFUND_REVERSAL rows, `refund_status` |
 | `grooveshop-django-api/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
 | `grooveshop-django-api/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
 | `grooveshop-django-api/shipping/services.py` | `quote`, `assert_available`, `available_options` |

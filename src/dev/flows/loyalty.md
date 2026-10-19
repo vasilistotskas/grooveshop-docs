@@ -25,9 +25,10 @@ stateDiagram-v2
   XP --> Tier: recalculate_tier
   Tier --> Notify: direction up only
   Ledger --> Redeem: checkout or redeem endpoint
-  Ledger --> Reverse: canceled, fully refunded or status REFUNDED
-  Reverse --> Restore: REDEEM restored first
-  Restore --> Clamp: EARN reversed, clamped at zero
+  Ledger --> PartRestore: refund beyond the provider share
+  Ledger --> Reverse: canceled, payment REFUNDED or status REFUNDED
+  Reverse --> Restore: unrestored REDEEM restored first
+  Restore --> TakeBack: EARN reversed, may go negative
   Ledger --> Expire: daily sweep
 ```
 
@@ -99,43 +100,66 @@ welcome bonus either.
 
 ### Reversing
 
-Reversal **is** implemented, on cancellation and on a full refund.
-`loyalty/signals.py` listens on `order_completed` (award) and reverses on
-three signals, skipping guest orders and dispatching through
-`tenant.celery.dispatch_on_commit` so the tenant schema rides the message:
+Two things happen to an order's points when its money goes back, at
+different moments.
+
+**Spent points come back in parts, with the refund.** A refund is in the
+value of what came back, and the provider's money is paid back first
+(`OrderService.refund_order`, see
+[Order lifecycle](/dev/flows/order-lifecycle#refunds)). Only the excess
+goes back onto the order's gift cards and points, split in proportion to
+what each has not got back. The points share is
+`LoyaltyService.restore_spent_points(order, points, refund_attempt=...)`:
+a positive `ADJUST` naming the refund attempt
+(`PointsTransaction.refund_attempt`), never more than is still spent on
+the order, under the user row lock so a racing cancel cannot restore the
+same points twice. XP is not touched. `PaymentLedger.stored_value` reads
+what is still owed from these rows (REDEEM less positive ADJUST), valued
+at the order's loyalty discount in proportion.
+
+**Earned points are reversed once.** `loyalty/signals.py` listens on
+`order_completed` (award) and reverses on these signals, skipping guest
+orders and dispatching through `tenant.celery.dispatch_on_commit` so the
+tenant schema rides the message:
 
 | Receiver | Reverses when |
 |---|---|
 | `handle_order_canceled_loyalty` | `order_canceled` |
-| `handle_order_refunded_loyalty` | `order_refunded`, **only** when the order's `payment_status` is REFUNDED |
-| `handle_order_status_refunded_loyalty` | `order_status_changed` to the REFUNDED order status, the manual RETURNED to REFUNDED step that sends no `order_refunded` |
+| `handle_order_refunded_loyalty` | `order_refunded`, when `payment_status` is REFUNDED, or after a chargeback when refunds and chargebacks cover everything received (`PaymentLedger.fully_returned`) |
+| `handle_order_stored_value_returned_loyalty` | `order_stored_value_returned`, when `payment_status` is REFUNDED: the refund that returned the last of the gift cards and points |
+| `handle_order_charged_back_loyalty` | `order_charged_back`, once refunds and chargebacks cover everything received |
+| `handle_order_status_refunded_loyalty` | `order_status_changed` to the REFUNDED order status, the manual RETURNED to REFUNDED step |
 
-A partial refund reverses nothing. The reversal is all-or-nothing and runs
-once per order, so taking it on the first slice would never take the
-rest, and taking all of it for a small goodwill refund would wipe the
-points of an order the shopper keeps. The refund that leaves nothing to
-refund moves the payment to REFUNDED and reverses everything; when the
-refund came first, the later status step is a no-op through the
-idempotency guard below. Which refund that is comes from the payment
-ledger, not from the path that made it: `PaymentLedger.refund_status`
-(`order/payment_ledger.py`) sets REFUNDED once the refunds recorded for
-the order reach what was captured, whether they came from the admin's
-Refund action, a cancel or a provider's dashboard, in one go or in parts.
+A partial refund reverses no earned points. The reversal is all-or-nothing
+and runs once per order, so taking it on the first slice would never take
+the rest, and taking all of it for a small goodwill refund would wipe the
+points of an order the shopper keeps. REFUNDED comes from the ledgers, not
+from the path that made the refund: `PaymentLedger.refund_status`
+(`order/payment_ledger.py`) sets it once refunds and chargebacks cover what
+was received **and** the gift cards and points are back.
 
 `reverse_order_points(order_id)` is careful about order of operations:
 
 1. Locks the customer row.
-2. Returns 0 if the order has neither `EARN` nor `REDEEM` rows.
-3. Returns 0 if `ADJUST` rows already exist for the order — the idempotency
-   guard.
-4. **Restores the redemption first.** A cancellation means the discount no
-   longer applies, so the spent points are credited back as an `ADJUST`;
-   doing it first also stops a lowered balance from blocking the earn
-   reversal. This does not touch XP, because redemption never affected XP.
-5. Reverses each `EARN` as a negative `ADJUST`, **clamped** so the balance
-   cannot go negative (a clamp is logged as a warning).
-6. Subtracts the reversed total from XP, floored at zero, and recalculates
-   the tier.
+2. Returns 0 if the order has no `EARN`, `REDEEM` or `BONUS` rows.
+3. Returns 0 if `ADJUST` rows that name no refund attempt already exist
+   for the order — the idempotency guard. The part-restores above name
+   their attempt, so they do not count as a reversal.
+4. **Restores the redemption first**, less what part-refunds already
+   restored, as a positive `ADJUST`; not for an order that was charged back
+   (the customer took the money back through their bank, so the points
+   they spent stay spent). Doing it first also stops a lowered balance from
+   blocking the earn reversal. This does not touch XP.
+5. Reverses each `EARN`, then the order's new-customer `BONUS`, as
+   negative `ADJUST` rows. With `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE`
+   on (the default, `settings.py`), the whole earning comes off even when
+   the customer has spent it, and the balance goes negative: later
+   earnings pay it off, and a negative balance fails the redemption check
+   (`points_amount > balance`), so earning, spending and then refunding
+   cannot keep the points. Off, each reversal is clamped at the current
+   balance and the clamp is logged as a warning.
+6. Subtracts the reversed `EARN` total from XP, floored at zero, and
+   recalculates the tier.
 
 ### Redeeming
 
@@ -298,8 +322,13 @@ storefront never advertises a reward the backend will not grant.
   earning and reversal move it.
 - **Redemption never touches XP**, so a refund restores points without
   changing the tier.
-- **Only a full refund reverses.** `handle_order_refunded_loyalty` returns
-  unless `payment_status` is REFUNDED.
+- **Only a full return reverses the earning.** The refund receivers return
+  unless `payment_status` is REFUNDED (or refunds and chargebacks cover
+  everything received); spent points come back in parts, named by their
+  refund attempt.
+- **A refund may take the balance negative** while
+  `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` is on; a negative balance
+  cannot redeem.
 - **One redemption per order**, enforced under the user lock in the service
   and again in the view.
 - **Reversal restores the redemption before reversing the earn**, or the
@@ -318,12 +347,16 @@ storefront never advertises a reward the backend will not grant.
 - **Points never arrive.** The award runs on `order_completed`, not on order
   creation, and skips guest orders. Then check both gate tiers, then the
   wholesale marker in `order.metadata`.
-- **A partial refund left the points alone.** Expected: the points go with
-  the refund that makes the payment REFUNDED, or with the REFUNDED order
-  status.
-- **A reversal is clamped.** Logged as a warning naming the expected and
-  actual amounts. It means the customer had already spent points earned
-  elsewhere; the clamp is correct, the log exists so the gap is visible.
+- **A partial refund left the earned points alone.** Expected: they go
+  with the refund that makes the payment REFUNDED, or with the REFUNDED
+  order status. Spent points come back only from the part of a refund
+  beyond the provider's money.
+- **A customer's balance is negative.** A refunded order took back points
+  they had already spent (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` on).
+  Redemption is refused until later earnings bring it above zero.
+- **A reversal is clamped.** Only with
+  `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` off; logged as a warning naming
+  the expected and actual amounts.
 - **A tier-up notification never fires.** Check the direction — downgrades and
   lateral moves are silent by design — and the tier-level cache, which is
   invalidated by any `LoyaltyTier` save but otherwise lives for its TTL.
@@ -360,9 +393,9 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/core/models.py` | `FeaturePauseModel`: `open_at`, `close_at`, `active_cutoff` |
 | `grooveshop-django-api/tenant/switches.py` | `on_switch_change`, the hook that queues `sync_loyalty_pause` |
 | `grooveshop-django-api/loyalty/enum.py` | `TransactionType`, `PriceBasis` |
-| `grooveshop-django-api/loyalty/services.py` | `is_enabled`, award, reverse, redeem, tiers, expiry, bonus |
-| `grooveshop-django-api/loyalty/signals.py` | Order hooks (reversal on cancel, full refund and the REFUNDED status), tier-change detection, tier-up notification |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED |
+| `grooveshop-django-api/loyalty/services.py` | `is_enabled`, award, `reverse_order_points`, `restore_spent_points`, redeem, tiers, expiry, bonus |
+| `grooveshop-django-api/loyalty/signals.py` | Order hooks (reversal on cancel, on REFUNDED through `order_refunded` or `order_stored_value_returned`, on a chargeback that completes the return, and on the REFUNDED status), tier-change detection, tier-up notification |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED; `stored_value`, what the order's points are still owed |
 | `grooveshop-django-api/loyalty/tasks.py` | `process_order_points`, `reverse_order_points`, expiry, tier-up notification |
 | `grooveshop-django-api/loyalty/views/loyalty.py` | Summary, transactions, redeem, product points, tiers |
 | `grooveshop-django-api/loyalty/urls.py` | Endpoint paths |
@@ -373,7 +406,7 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/b2b/services.py` | `loyalty_allowed`, `suppresses_loyalty` |
 | `grooveshop-django-api/order/services.py` | Redemption at order create, wholesale suppression |
 | `grooveshop-django-api/cart/views/cart.py` | Preview redemption at payment-intent creation |
-| `grooveshop-django-api/settings.py` | `LOYALTY_*` defaults, beat schedule |
+| `grooveshop-django-api/settings.py` | `LOYALTY_*` defaults (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` included), beat schedule |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/loyalty-enabled.ts` | Fail-open two-tier gate |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useLoyalty.ts` | Summary, transactions, tiers, settings |
 | `grooveshop-storefront-ui-node-nuxt/server/api/loyalty/` | Storefront proxies |
