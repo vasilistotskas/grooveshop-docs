@@ -10,7 +10,8 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     text: 'Getting started',
     items: [
       { text: 'Welcome', link: '/admin/' },
-      { text: 'Signing in', link: '/admin/getting-started/sign-in' },
+      { text: 'First steps', link: '/admin/getting-started/first-steps' },
+      { text: 'Sign-in & password', link: '/admin/getting-started/sign-in' },
       { text: 'Roles & team', link: '/admin/getting-started/roles-and-team' },
       { text: 'Dashboard', link: '/admin/getting-started/dashboard' },
       { text: 'Search & command palette', link: '/admin/getting-started/search-and-command-palette' },
@@ -20,7 +21,9 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     text: 'Sales',
     items: [
       { text: 'Orders', link: '/admin/sales/orders' },
-      { text: 'Receipts & credit documents', link: '/admin/sales/receipts' },
+      { text: 'Refunds and disputes', link: '/admin/sales/refunds-and-disputes' },
+      { text: 'Order source', link: '/admin/sales/order-source' },
+      { text: 'Receipts and credit documents', link: '/admin/sales/receipts' },
       { text: 'Carts', link: '/admin/sales/carts' },
     ],
   },
@@ -29,8 +32,10 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Products', link: '/admin/catalog/products' },
       { text: 'Categories', link: '/admin/catalog/categories' },
+      { text: 'Brands', link: '/admin/catalog/brands' },
       { text: 'Attributes & values', link: '/admin/catalog/attributes-and-values' },
       { text: 'Variant groups', link: '/admin/catalog/variant-groups' },
+      { text: 'Images', link: '/admin/catalog/images' },
       { text: 'Tags', link: '/admin/catalog/tags' },
       { text: 'Reviews', link: '/admin/catalog/reviews' },
     ],
@@ -39,13 +44,15 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     text: 'Customers',
     items: [
       { text: 'Customers & addresses', link: '/admin/customers/users-and-addresses' },
-      { text: 'Messages & feedback', link: '/admin/customers/messages-and-feedback' },
+      { text: 'Messages & Feedback', link: '/admin/customers/messages-and-feedback' },
+      { text: 'Favourites', link: '/admin/customers/favourites' },
+      { text: 'Product alerts', link: '/admin/customers/product-alerts' },
       { text: 'Notifications', link: '/admin/customers/notifications' },
       { text: 'Business customers', link: '/admin/customers/business-customers' },
       { text: 'Customer groups & price lists', link: '/admin/customers/groups-and-price-lists' },
       { text: 'Loyalty', link: '/admin/customers/loyalty' },
       { text: 'Newsletter subscriptions', link: '/admin/customers/subscriptions' },
-      { text: 'Data requests (GDPR)', link: '/admin/customers/data-exports' },
+      { text: 'Data export (GDPR)', link: '/admin/customers/data-exports' },
     ],
   },
   {
@@ -53,7 +60,9 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Promotions', link: '/admin/marketing/promotions' },
       { text: 'Coupon codes', link: '/admin/marketing/coupon-codes' },
+      { text: 'Redemptions', link: '/admin/marketing/redemptions' },
       { text: 'Gift cards', link: '/admin/marketing/gift-cards' },
+      { text: 'Recommendations', link: '/admin/marketing/recommendations' },
     ],
   },
   {
@@ -75,6 +84,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
   {
     text: 'Shipping',
     items: [
+      { text: 'Daily shipping routine', link: '/admin/shipping/daily-routine' },
       { text: 'ACS Courier', link: '/admin/shipping/acs' },
       { text: 'BoxNow', link: '/admin/shipping/boxnow' },
     ],
@@ -82,6 +92,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
   {
     text: 'Settings',
     items: [
+      { text: 'Store profile', link: '/admin/settings/store-profile' },
       { text: 'Store settings', link: '/admin/settings/store-settings' },
       { text: 'Payment methods', link: '/admin/settings/payment-methods' },
       { text: 'Shipping providers', link: '/admin/settings/shipping-providers' },
@@ -94,18 +105,9 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
   {
     text: 'Help',
     items: [
-      { text: 'What happens automatically', link: '/admin/help/automatic-tasks' },
-      { text: 'FAQ & troubleshooting', link: '/admin/faq' },
-    ],
-  },
-  {
-    text: 'Platform team only',
-    collapsed: true,
-    items: [
-      { text: 'Security & access', link: '/admin/settings/security-and-access' },
-      { text: 'Audit & logs', link: '/admin/system/audit-and-logs' },
-      { text: 'Reconciliation', link: '/admin/system/reconciliation' },
-      { text: 'Countries & regions', link: '/admin/localization/countries-and-regions' },
+      { text: 'Automatic tasks', link: '/admin/help/automatic-tasks' },
+      { text: 'FAQ', link: '/admin/faq' },
+      { text: 'When to contact support', link: '/admin/help/contact-support' },
     ],
   },
 ]
