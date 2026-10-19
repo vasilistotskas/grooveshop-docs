@@ -7,9 +7,13 @@ on:
     branches: ['main']
   workflow_dispatch:
 
+# A new push supersedes a pull request's run, but never a run on main: that
+# run may be in the release job, and sources.yml pushes to main on its own
+# schedule. Cancelling a release halfway can leave a tag with no GitHub
+# release, and so no image.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -20,104 +24,8 @@ env:
 
 jobs:
   build:
-    name: Build site
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      # The site pulls per-service reference docs from sibling checkouts
-      # (see .vitepress/sources.ts), so this repo and every source repo
-      # are checked out side by side under the workspace, exactly like
-      # the local monorepo layout.
-      - name: Checkout docs
-        uses: actions/checkout@v7
-        with:
-          path: grooveshop-docs
-
-      # Full checkout, not sparse: sync:sources only needs `docs/`, but the
-      # admin-prose gate derives its allowlist of owner-visible names from the
-      # Django source, and a sparse tree gives it half the answer.
-      - name: Checkout grooveshop-django-api (reference docs)
-        uses: actions/checkout@v7
-        with:
-          repository: vasilistotskas/grooveshop-django-api
-          path: grooveshop-django-api
-
-      # The citation gate can only judge citations into repositories it can
-      # see, so check out the public ones too. It reports what it skipped;
-      # grooveshop-infrastructure is private and stays unchecked in CI.
-      - name: Checkout grooveshop-storefront-ui-node-nuxt (citations)
-        uses: actions/checkout@v7
-        with:
-          repository: vasilistotskas/grooveshop-storefront-ui-node-nuxt
-          path: grooveshop-storefront-ui-node-nuxt
-
-      # Also a reference-docs source: sync:sources copies its docs/.
-      - name: Checkout grooveshop-media-stream (reference docs, citations)
-        uses: actions/checkout@v7
-        with:
-          repository: vasilistotskas/grooveshop-media-stream
-          path: grooveshop-media-stream
-
-      - name: Checkout grooveshop-agent-gateway (citations)
-        uses: actions/checkout@v7
-        with:
-          repository: vasilistotskas/grooveshop-agent-gateway
-          path: grooveshop-agent-gateway
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          package_json_file: grooveshop-docs/package.json
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: grooveshop-docs/pnpm-lock.yaml
-
-      - name: Install dependencies
-        working-directory: grooveshop-docs
-        run: pnpm install --frozen-lockfile
-
-      - name: Type check
-        working-directory: grooveshop-docs
-        run: pnpm typecheck
-
-      # The admin guide is written for shop owners. This fails the build if a
-      # source path, module, class or non-visible setting name creeps into it.
-      - name: Check admin guide prose
-        working-directory: grooveshop-docs
-        env:
-          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
-        run: pnpm check:admin
-
-      # Fails the build when a page cites a file or an admin screen that no
-      # longer exists. It cannot judge whether a sentence is true, only that
-      # what it names is still there — which is the half that rots silently.
-      - name: Check documentation citations
-        working-directory: grooveshop-docs
-        env:
-          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
-        run: pnpm check:claims
-
-      - name: Sync reference sources
-        working-directory: grooveshop-docs
-        env:
-          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
-        run: pnpm sync:sources
-
-      - name: Build
-        working-directory: grooveshop-docs
-        run: pnpm build
-
-      - name: Upload site
-        uses: actions/upload-artifact@v7
-        with:
-          name: site
-          path: grooveshop-docs/dist
-          retention-days: 7
+    name: Build
+    uses: ./.github/workflows/build.yml
 
   release:
     name: Release

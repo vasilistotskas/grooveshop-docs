@@ -1,0 +1,166 @@
+name: Build site
+
+# The one build of the site, called by ci.yml (every push and pull request)
+# and by sources.yml (before it moves the source pins). Both must run the
+# same gates, or a pin could land on main that the next push fails.
+on:
+  workflow_call:
+    inputs:
+      lock:
+        description: >-
+          A sources.lock.json to build with instead of the committed one
+          (sources.yml passes the pins it is about to commit). Empty means
+          the committed file.
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  # Same Node line as docker/Dockerfile's NODE_VERSION
+  NODE_VERSION: 24.19.0
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # The site pulls per-service reference docs from sibling checkouts
+      # (see .vitepress/sources.ts), so this repo and every source repo
+      # are checked out side by side under the workspace, exactly like
+      # the local monorepo layout.
+      - name: Checkout docs
+        uses: actions/checkout@v7
+        with:
+          path: grooveshop-docs
+
+      # Node before the pins: scripts/source-lock.mjs imports
+      # .vitepress/sources.ts, which needs this Node line's type stripping.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: grooveshop-docs/package.json
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: grooveshop-docs/pnpm-lock.yaml
+
+      - name: Use the proposed source pins
+        if: inputs.lock != ''
+        working-directory: grooveshop-docs
+        env:
+          LOCK: ${{ inputs.lock }}
+        run: printf '%s\n' "$LOCK" | jq . > sources.lock.json
+
+      - name: Read the source pins
+        id: pins
+        working-directory: grooveshop-docs
+        run: node scripts/source-lock.mjs refs
+
+      # What the site publishes: each source's synced directory at the
+      # commit sources.lock.json pins, the same commit docker.yml builds the
+      # image from. Kept under locked/ so the up-to-date checkouts below
+      # stay the gates' view of the code.
+      - name: Checkout pinned grooveshop-django-api docs
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-django-api
+          ref: ${{ steps.pins.outputs.django }}
+          path: locked/grooveshop-django-api
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: true
+
+      - name: Checkout pinned grooveshop-media-stream docs
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-media-stream
+          ref: ${{ steps.pins.outputs.media }}
+          path: locked/grooveshop-media-stream
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: true
+
+      # Full checkout, not sparse, and at main, not the pin: the admin-prose
+      # gate derives its allowlist of owner-visible names from the current
+      # Django source, and a sparse tree gives it half the answer.
+      - name: Checkout grooveshop-django-api (gates)
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-django-api
+          path: grooveshop-django-api
+
+      # The citation gate can only judge citations into repositories it can
+      # see, so check out the public ones too. It reports what it skipped;
+      # grooveshop-infrastructure is private and stays unchecked in CI.
+      - name: Checkout grooveshop-storefront-ui-node-nuxt (citations)
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-storefront-ui-node-nuxt
+          path: grooveshop-storefront-ui-node-nuxt
+
+      - name: Checkout grooveshop-media-stream (citations)
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-media-stream
+          path: grooveshop-media-stream
+
+      - name: Checkout grooveshop-agent-gateway (citations)
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-agent-gateway
+          path: grooveshop-agent-gateway
+
+      - name: Install dependencies
+        working-directory: grooveshop-docs
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        working-directory: grooveshop-docs
+        run: pnpm typecheck
+
+      # A page synced from a source repository must build whatever
+      # HTML-looking text it holds (.vitepress/plugins/synced-sources).
+      - name: Test
+        working-directory: grooveshop-docs
+        run: pnpm test
+
+      # The admin guide is written for shop owners. This fails the build if a
+      # source path, module, class or non-visible setting name creeps into it.
+      - name: Check admin guide prose
+        working-directory: grooveshop-docs
+        env:
+          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
+        run: pnpm check:admin
+
+      # Fails the build when a page cites a file or an admin screen that no
+      # longer exists. It cannot judge whether a sentence is true, only that
+      # what it names is still there — which is the half that rots silently.
+      - name: Check documentation citations
+        working-directory: grooveshop-docs
+        env:
+          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
+        run: pnpm check:claims
+
+      - name: Sync reference sources (pinned)
+        working-directory: grooveshop-docs
+        env:
+          GROOVESHOP_WORKSPACE: ${{ github.workspace }}
+          GROOVESHOP_SOURCES: ${{ github.workspace }}/locked
+        run: pnpm sync:sources
+
+      - name: Build
+        working-directory: grooveshop-docs
+        run: pnpm build
+
+      - name: Upload site
+        uses: actions/upload-artifact@v7
+        with:
+          name: site
+          path: grooveshop-docs/dist
+          retention-days: 7

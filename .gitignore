@@ -11,3 +11,7 @@ src/dev/*/reference/
 *.log
 .DS_Store
 /.idea
+
+# Claude Code: per-user agent memory and subagent worktrees are not shared.
+.claude/agent-memory/
+.claude/worktrees/

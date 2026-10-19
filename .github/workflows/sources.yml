@@ -1,0 +1,108 @@
+name: Sync source docs
+
+# Keeps the published reference docs in step with each source repository's
+# `docs/` on main, without a person in the loop.
+#
+# sources.lock.json pins the commit every release syncs from. This workflow
+# moves the pin when a source's `docs/` tree changes, builds the site with
+# the new pin through the same gates as every push, and only then commits
+# the pin to main as a `docs(sources):` commit. That push runs ci.yml like
+# any other: its `docs` type cuts a patch release, the release builds the
+# image (docker.yml, from the same pins), and the image tag is deployed by
+# moving the infra pin, as for every docs release.
+#
+# Triggers: a source repository announces a `docs/` change on main
+# (repository_dispatch `source-docs-changed`), an hourly sweep that catches
+# a missed or not yet configured announcement, and a manual run. A run whose
+# trees match the lock makes two API reads per source and stops.
+on:
+  repository_dispatch:
+    types: [source-docs-changed]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+# One run at a time, and a running one is never cancelled. A run that arrives
+# while another is pending replaces it, which loses nothing: every run reads
+# each source's main afresh once the run before it has committed, so it never
+# pins an older tree.
+concurrency:
+  group: sources
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Same Node line as docker/Dockerfile's NODE_VERSION
+  NODE_VERSION: 24.19.0
+
+jobs:
+  resolve:
+    name: Resolve source pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.lock.outputs.changed }}
+      lock: ${{ steps.lock.outputs.lock }}
+      subject: ${{ steps.lock.outputs.subject }}
+    steps:
+      - name: Checkout docs
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Compare each source's docs/ tree with the lock
+        id: lock
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/source-lock.mjs resolve
+
+  verify:
+    name: Build with the new pins
+    needs: [resolve]
+    if: needs.resolve.outputs.changed == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      lock: ${{ needs.resolve.outputs.lock }}
+
+  commit:
+    name: Commit the new pins
+    needs: [resolve, verify]
+    if: needs.resolve.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # DOCS_TOKEN, not GITHUB_TOKEN: a push made with GITHUB_TOKEN starts no
+      # workflow, so ci.yml would never release the new pins (the same reason
+      # ci.yml's release job uses it).
+      - name: Checkout docs
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.DOCS_TOKEN }}
+
+      - name: Write the pins
+        env:
+          LOCK: ${{ needs.resolve.outputs.lock }}
+        run: printf '%s\n' "$LOCK" | jq . > sources.lock.json
+
+      - name: Commit and push
+        env:
+          SUBJECT: ${{ needs.resolve.outputs.subject }}
+        run: |
+          if git diff --quiet -- sources.lock.json; then
+            echo "main already carries these pins"
+            exit 0
+          fi
+          git config user.name "grooveshop-docs-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "$SUBJECT" -- sources.lock.json
+          # A docs commit that landed while the build ran is fine to sit
+          # under the pin: rebase onto it once, never force.
+          git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }

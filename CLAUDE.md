@@ -29,17 +29,22 @@ pnpm check:admin      # fails if the admin guide names anything from the codebas
 pnpm check:claims     # fails if a page cites a file that no longer exists, or a sidebar path the admin menu does not have
                       # (needs the sibling repos; it reports what it could not check)
 pnpm typecheck        # vue-tsc over .vitepress/
+pnpm test             # synced reference pages build whatever HTML-looking text they hold
 ```
 
 `sync:sources` expects every GrooveShop repository checked out as a sibling
 of this one (the local monorepo layout); set `GROOVESHOP_WORKSPACE` to point
-elsewhere. Sources are declared in `.vitepress/sources.ts`.
+elsewhere, and `GROOVESHOP_SOURCES` to read the synced docs from a different
+root than the gates read the code from (CI does). Sources are declared in
+`.vitepress/sources.ts`; what a release publishes is pinned in
+`sources.lock.json` (see Deployment).
 
 ## Layout
 
 - `.vitepress/config.mts` — site config: locales, sidebars, local search, Mermaid, dead-link policy.
 - `.vitepress/sidebars/` — `admin-en.ts` and `admin-el.ts` must list the same paths; `dev.ts` appends the synced reference groups from `.vitepress/generated/reference-manifest.json`.
 - `.vitepress/plugins/mermaid/` — fenced ```` ```mermaid ```` blocks render through `<Mermaid>`; no third-party VitePress plugin is used anywhere (none supports VitePress 2).
+- `.vitepress/plugins/synced-sources/` — parses the synced reference pages with markdown-it's `html` option off, so a placeholder such as `<email>` in a source repository's doc is text, not a Vue element that fails the build. `pnpm test` (`scripts/synced-pages.test.mjs`) renders such pages and compiles them as the build does.
 - `scripts/sync-sources.mjs` — copies per-service reference docs in. `scripts/postbuild.mjs` — after every build writes `llms.txt` / `llms-full.txt` for the public tree and, separately, under `dist/dev/`, plus `sitemap.xml` (public pages only, hreflang pairs) and `robots.txt` (disallows `/dev/`). `scripts/check-initial-load.mjs` — the last step of `pnpm build`: fails when a page loads a JS file over 500 kB up front (Vite's own chunk warning is off, because the search index and Mermaid's layouts are large but lazy). `scripts/fix-frontmatter.mjs` — quotes frontmatter values that YAML would misparse; run it if a build fails with "incomplete explicit mapping pair".
 - The site has no `lastUpdated` and no VitePress `sitemap` option, both on purpose — see the comments in `.vitepress/config.mts`. Do not re-enable either without reading them.
 - `docker/` — the site is served by `nginx-unprivileged`; `nginx.conf` is baked into the image (`try_files` handles `cleanUrls`).
@@ -91,7 +96,24 @@ no image is built, and the site keeps serving the previous version. A
 
 CI (`.github/workflows/ci.yml`) builds on every push and cuts a semantic
 release on `main`; the published release triggers `docker.yml`, which pushes
-`gro0ve/grooveshop-docs:vX.Y.Z`. The image is pinned in
+`gro0ve/grooveshop-docs:vX.Y.Z`. The build itself is
+`.github/workflows/build.yml`, shared by `ci.yml` and `sources.yml`.
+
+**The synced reference docs are pinned, and the pin moves on its own.**
+`sources.lock.json` holds, per source, a commit and the git tree id of its
+`docs/` at that commit; `build.yml` and `docker.yml` check the sources out
+at that commit, so the image publishes exactly what CI checked.
+`.github/workflows/sources.yml` (hourly, on a `source-docs-changed`
+repository dispatch, or by hand) runs `scripts/source-lock.mjs resolve`,
+which reads each source's `main` through the GitHub API; when a `docs/`
+tree moved, it builds the site with the new pins and commits them as
+`docs(sources): sync reference docs (…)` with `DOCS_TOKEN`. That push
+releases like any `docs:` commit. Never hand-edit the lock; run the
+workflow, or `node scripts/source-lock.mjs resolve` and commit the result.
+A failed sync run (a source's docs break a gate) commits nothing and shows
+red in the Actions tab: fix the page here or the source, then re-run it.
+
+The image is pinned in
 `grooveshop-infrastructure/manifests/app-directory/app-grooveshop.yaml`
 (kustomize image `grooveshop-docs`) and served by `base/docs.yaml`. Bump with
 the infra repo's `/update-deploy-version` skill.
