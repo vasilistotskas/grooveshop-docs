@@ -96,10 +96,7 @@ Defaults are what a fresh store starts with. Money is in euro.
 |---|---|---|---|
 | `STOCK_RESERVATION_TTL_MINUTES` | How long stock stays reserved for a checkout in progress. | 30 | no |
 | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` | Minutes after a failed online payment before the order is cancelled and its stock released. | 30 | no |
-| `ORDER_AUTO_CANCEL_PENDING_HOURS` | Hours an unpaid online order may stay pending before it is cancelled. | 24 | no |
 | `ORDER_FOLLOW_UP_DAYS` | Calendar days, in the store's time zone and counted from the day the order was placed, after which a Pending, Processing or Shipped order is flagged for follow-up. Online orders not paid yet are never flagged. 0 turns the flag off. See [Orders to follow up](/admin/sales/orders#orders-to-follow-up). | 7 | no |
-| `PENDING_ORDER_REMINDER_MAX_COUNT` | Maximum reminder emails for a pending order. | 3 | no |
-| `PENDING_ORDER_REMINDER_INTERVAL_DAYS_1/_2/_3` | Days after placement for the first, second and third reminder. | 1, 3, 7 | no |
 | `CHECKOUT_ABANDONMENT_HOURS` | Hours of inactivity before a checkout counts as abandoned for the reminder email. | 2 | no |
 | `CART_ABANDONED_HOURS` | Hours of inactivity before a cart counts as abandoned, for the Active and Abandoned filters on the carts list. | 24 | no |
 | `ABANDONED_CART_CLEANUP_DAYS` | Days after which abandoned carts are deleted. | 7 | no |
@@ -113,7 +110,6 @@ Shipping prices, free-shipping thresholds and the countries you deliver to are n
 |---|---|---|---|
 | `ACS_SMARTPOINT_ENABLED` | Offer ACS Smartpoint locker pickup at checkout. Turn on only after the stations have synced. | off | yes |
 | `ACS_DYNAMIC_PRICING_ENABLED` | Ask ACS for a live quote at checkout; falls back to the rate's price on any error. | off | no |
-| `DEFAULT_WEIGHT_UNIT` | Unit for product weights. | kg | no |
 
 ### Invoicing & myDATA
 

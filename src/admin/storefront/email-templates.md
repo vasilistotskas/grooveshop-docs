@@ -29,7 +29,7 @@ The list is built from the templates the platform actually ships, so it always m
 
 | Category | Templates |
 |---|---|
-| Order Lifecycle | Order received, Payment confirmed, Order shipped, Order delivered, Order completed, Order canceled, Order refunded, Order returned, Order pending reminder, Order status generic, Payment failed, Invoice issued, Dispute notification, ACS out for delivery, BoxNow parcel at locker, Admin new order |
+| Order Lifecycle | Order received, Payment confirmed, Order shipped, Order delivered, Order completed, Order canceled, Order refunded, Order returned, Order status generic, Payment failed, Invoice issued, Dispute notification, ACS out for delivery, BoxNow parcel at locker, Admin new order |
 | Cart | Checkout abandoned |
 | Product | Low stock alert (to the store), Price drop alert, Restock alert |
 | Giftcard | Gift card delivery, Gift card purchase receipt, Gift card expiry reminder |
