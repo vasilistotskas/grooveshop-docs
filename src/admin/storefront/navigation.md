@@ -67,7 +67,7 @@ Delete the row for that slot. A menu with nothing visible in it has the same eff
 - **Cache.** The storefront keeps each language's menu for 5 minutes and goes on serving the old copy for up to an hour while it fetches a new one, and the rendered pages are cached on top of that. Saving a menu, a column or a link purges both on its own about ten seconds later. If a change still does not show, purge **Pages & navigation** on the [Cache](/admin/system/cache) page.
 - On the standard footer one column is automatic: **Pages**, listing every published content page. It sits next to your configured columns, and it leaves out a legal page that one of your columns already links so the same document is not listed twice. Some storefront themes drop this column entirely.
 - Labels are your content, not translation keys. Write them exactly as they should appear.
-- The Header slot feeds both the desktop header and the burger menu on phones. The **Mobile** slot is accepted and stored, but the storefront does not read it yet; configuring it changes nothing on screen today.
+- The **Header** slot feeds the desktop header. The burger menu on phones lists the **Mobile** slot's links when it has visible ones, and the Header slot's links when it does not, so a store that never sets up a Mobile menu sees no change on phones. If neither slot has links, the phone menu is the built-in one.
 
 ## Related
 
