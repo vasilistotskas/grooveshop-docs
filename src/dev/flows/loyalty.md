@@ -157,7 +157,8 @@ was received **and** the gift cards and points are back.
    earnings pay it off, and a negative balance fails the redemption check
    (`points_amount > balance`), so earning, spending and then refunding
    cannot keep the points. Off, each reversal is clamped at the current
-   balance and the clamp is logged as a warning.
+   balance; an `EARN` clamp is logged as a warning, a new-customer bonus
+   clamp is not.
 6. Subtracts the reversed `EARN` total from XP, floored at zero, and
    recalculates the tier.
 
@@ -355,8 +356,9 @@ storefront never advertises a reward the backend will not grant.
   they had already spent (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` on).
   Redemption is refused until later earnings bring it above zero.
 - **A reversal is clamped.** Only with
-  `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` off; logged as a warning naming
-  the expected and actual amounts.
+  `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` off. An `EARN` clamp is logged
+  as a warning naming the expected and actual amounts; a bonus clamp is
+  silent.
 - **A tier-up notification never fires.** Check the direction — downgrades and
   lateral moves are silent by design — and the tier-level cache, which is
   invalidated by any `LoyaltyTier` save but otherwise lives for its TTL.

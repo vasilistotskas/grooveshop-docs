@@ -99,7 +99,7 @@ read payment "Pending" forever (`0058_settle_returned_unpaid_orders`).
 | DELIVERED → COMPLETED | Automatic, when paid: inline on the carrier DELIVERED and the COD reconcile, and hourly for anything paid outside those two moments | `OrderService.maybe_advance_to_completed`, `order.tasks.complete_paid_delivered_orders` |
 | SHIPPED/DELIVERED → RETURNED | Carrier event (`returned`, `lost`) | `AcsService.order_status_for_shipment_state` |
 | → CANCELED | Customer, staff, the cleanup task, or the ACS replay for a voucher retired before dispatch | `OrderService.cancel_order`, `AcsService._cancel_order_for_dead_shipment` |
-| RETURNED → REFUNDED | Staff, manually; refused with `RefundOutstandingError` while `PaymentLedger.refund_open` holds | `POST /api/v1/order/{id}/update_status`, the `mark_as_refunded` admin action |
+| RETURNED → REFUNDED | Staff, manually; refused with `RefundOutstandingError` while `PaymentLedger.refund_open` holds. The admin action reports the refusal; `update_status` has no handler for it and answers 500 | `POST /api/v1/order/{id}/update_status`, the `mark_as_refunded` admin action |
 | Any | Staff, manually | `OrderViewSet.update_status`, admin bulk actions in `order/admin.py` |
 
 Carriers can skip steps. A parcel that goes from PROCESSING straight to
@@ -318,10 +318,11 @@ delivery the provider repeats records nothing the second time, and the
 | COD_COLLECTION | `OrderService.settle_cod_payment`, in the same atomic step as the payment status (see [Shipping](/dev/flows/shipping)) |
 | REFUND | `OrderService.refund_order`, `handle_stripe_charge_refunded` and `viva_webhook._handle_reversal_created`, through `PaymentLedger.record_refund`; cash paid back through `PaymentLedger.record_cod_refund` |
 | REFUND_REVERSAL | `handle_stripe_refund_failed` (`refund.failed`, `refund.updated`, `charge.refund.updated`), through `PaymentLedger.record_refund_reversal` |
+| CHARGEBACK | `PaymentLedger.record_chargeback`, from `handle_stripe_dispute_closed` (a lost dispute) and `viva_webhook._record_viva_chargeback` (a 1797 of a Refund Claimed type, or a lost-dispute status) |
 
 What the order paid with gift cards and loyalty points is not on this
 ledger. `PaymentLedger.stored_value` reads it from the gift-card ledger
-(REDEEM less REFUND_CREDIT per card) and the points ledger (REDEEM less
+(the order's REDEEM total less its REFUND_CREDIT total; `GiftCardService.credit_refund` splits a credit between the cards) and the points ledger (REDEEM less
 positive ADJUST rows, valued in proportion to the order's loyalty
 discount), never from a counter.
 
@@ -393,8 +394,8 @@ books.
    released, and the stored-value share runs only when every provider share
    was made.
 3. **Record**, under the lock again: `record_refund` (or `record_cod_refund`
-   for cash) writes the REFUND row, settles the attempt and signals
-   `order_refunded`. A webhook that booked the refund while the call was in
+   for cash) writes the REFUND row and settles the attempt; `_make_refund`
+   then signals `order_refunded` for a row it created. A webhook that booked the refund while the call was in
    flight has already settled the attempt (`record_refund` settles the
    oldest live attempt for the same charge and amount), so step 3 books and
    signals nothing. The stored-value share is
@@ -427,11 +428,14 @@ are integers in the currency's own smallest unit and go through
 
 **Viva 1797.** The event's `TransactionId` is the refund, a transaction
 of its own; `ParentId` names the payment it reverses.
-`_verify_viva_refund` reads everything from Retrieve Transaction, never
+`_verify_viva_reversal` reads everything from Retrieve Transaction, never
 from the unauthenticated body: the transaction must carry one of the
 order's issued order codes, have status `F`, a refund or void type
-(`VIVA_REFUND_TRANSACTION_TYPE_IDS`) and a negative amount, whose absolute
-value is the refund. An unreadable answer raises, so Viva retries and the
+(`VIVA_REFUND_TRANSACTION_TYPE_IDS`) or a Refund Claimed type
+(`VIVA_REFUND_CLAIMED_TRANSACTION_TYPE_IDS`), and a negative amount, whose
+absolute value is the amount. A Refund Claimed type is the cardholder's
+bank taking the money back, so it is booked as a CHARGEBACK
+(`_record_viva_chargeback`), not a REFUND. An unreadable answer raises, so Viva retries and the
 multi-tenant candidate loop moves on. The refund is attached to the
 order's own CHARGE row whose reference is `ParentId`: `ParentId` can only
 refuse, never grant. `record_refund` keys the REFUND on the refund
@@ -459,7 +463,10 @@ the loyalty reversal; no email and no toast.
 
 **Loyalty.** The points the order **earned** are reversed once, all or
 nothing, when the order is canceled, reaches REFUNDED (through either
-signal), or is marked REFUNDED (`loyalty/signals.py`). A partial refund
+signal), is marked REFUNDED, or a lost dispute completes the return
+(`order_charged_back`, once `PaymentLedger.fully_returned` holds;
+`loyalty/signals.py`). The spent points are not restored on a
+charged-back order. A partial refund
 reverses none of them. `LoyaltyService.reverse_order_points` restores the
 spent points a refund has not restored yet, then takes the earning back:
 with `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` on (the default) the whole
@@ -765,9 +772,9 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/managers/order.py` | `with_shipments`, `for_list`, `refund_owed` |
 | `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `refund_order`, `_claim_refund`, `_attempts_to_resume`, `_make_refund`, `_return_stored_value`, `RefundResult`, `_note_refund_declined`, `add_tracking_info` |
 | `grooveshop-django-api/order/payment.py` | `refund_payment` per provider, `StripePaymentProvider._ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
-| `grooveshop-django-api/order/views/viva_webhook.py` | `_verify_viva_refund`, `_handle_reversal_created` |
+| `grooveshop-django-api/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
 | `grooveshop-django-api/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_charge_refunded`, `handle_stripe_refund_failed` and every other domain receiver |
-| `grooveshop-django-api/order/signals/__init__.py` | The ten order signals and the `order_refunded` contract |
+| `grooveshop-django-api/order/signals/__init__.py` | The twelve order signals and the `order_refunded` contract |
 | `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `check_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email` |
 | `grooveshop-django-api/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
@@ -789,7 +796,7 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/models/history.py` | `OrderHistory.log_status_change`, `log_payment_update`, `log_refund`, `log_note` |
 | `grooveshop-django-api/order/notifications.py` | `_ORDER_STATUS_COPY` and the live-notification tasks |
 | `grooveshop-django-api/order/payment_events.py` | Redis pub/sub payment-status publish |
-| `grooveshop-django-api/loyalty/signals.py` | Earn on COMPLETED; reverse on CANCELED, on REFUNDED reached through `order_refunded` or `order_stored_value_returned`, and on the REFUNDED status |
+| `grooveshop-django-api/loyalty/signals.py` | Earn on COMPLETED; reverse on CANCELED, on REFUNDED reached through `order_refunded` or `order_stored_value_returned`, on the REFUNDED status, and on `order_charged_back` once everything received is returned |
 | `grooveshop-django-api/settings.py` | `CELERY_BEAT_SCHEDULE` entries and their cadences |
 | `grooveshop-agent-gateway/internal/server/internalapi.go` | `POST /internal/events/order-status` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/[id]/cancel.post.ts` | Cancel proxy that returns the typed refusal body |

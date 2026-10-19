@@ -329,7 +329,7 @@ writes
 flips PENDING to PROCESSING inline, and dispatches the carrier task.
 Event 1798 marks the payment failed. Event 1797 books a refund: its
 `TransactionId` is the refund itself, verified through Retrieve
-Transaction (`_verify_viva_refund`: one of the order's codes, status `F`,
+Transaction (`_verify_viva_reversal`: one of the order's codes, status `F`,
 a refund or void type, a negative amount), and it is recorded as a REFUND
 row against the order's CHARGE row that its `ParentId` names. The payment
 status, PARTIALLY_REFUNDED or REFUNDED, follows from the ledger's sums
@@ -637,7 +637,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value` |
 | `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
-| `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_refund` |
+| `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
 | `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
 | `grooveshop-django-api/order/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |

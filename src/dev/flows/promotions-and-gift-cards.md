@@ -593,8 +593,10 @@ provider-charged remainder.
 
 A refund of a gift-card **purchase** is a Viva 1797 against the purchase
 (`order/views/viva_webhook.py: _process_gift_card_purchase_event`),
-verified by the same `_verify_viva_refund` as an order refund but bound to
-the purchase's own order code, since that code is visible to the buyer.
+verified by the same `_verify_viva_reversal` as an order refund but bound
+to the purchase's own order code, since that code is visible to the buyer.
+A Refund Claimed type (the cardholder's bank taking the money back) voids
+the card at once, whatever amount it names.
 The card is the whole purchase, so each verified refund is added to
 `GiftCardPurchase.refunded_amount` and the card is voided
 (`GiftCardService.handle_purchase_reversal`) only once the refunds reach
