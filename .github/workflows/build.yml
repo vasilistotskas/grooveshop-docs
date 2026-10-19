@@ -124,6 +124,12 @@ jobs:
         working-directory: grooveshop-docs
         run: pnpm typecheck
 
+      # A page synced from a source repository must build whatever
+      # HTML-looking text it holds (.vitepress/plugins/synced-sources).
+      - name: Test
+        working-directory: grooveshop-docs
+        run: pnpm test
+
       # The admin guide is written for shop owners. This fails the build if a
       # source path, module, class or non-visible setting name creeps into it.
       - name: Check admin guide prose

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress'
 import { mermaidPlugin } from './plugins/mermaid/index.ts'
+import { syncedSourcesPlugin } from './plugins/synced-sources/index.ts'
 import { adminSidebarEn } from './sidebars/admin-en.ts'
 import { adminSidebarEl } from './sidebars/admin-el.ts'
 import { devSidebar } from './sidebars/dev.ts'
@@ -32,6 +33,7 @@ export default defineConfig({
   markdown: {
     config(md) {
       md.use(mermaidPlugin)
+      md.use(syncedSourcesPlugin)
     },
     // Query languages Shiki has no grammar for. The fences keep their real
     // name (media-stream's observability reference labels them), and render

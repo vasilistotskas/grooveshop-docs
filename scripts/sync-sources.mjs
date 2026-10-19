@@ -43,11 +43,13 @@ function titleOf(text, fallback) {
 
 /**
  * Reference pages are plain Markdown written for GitHub, so they may hold
- * `{{ … }}` or bare `<tags>` in prose that Vue's template compiler would
- * choke on. Wrapping the body in a four-colon `v-pre` container keeps it
- * as Markdown (headings, tables and code still render) while turning off
- * template compilation. Four colons so that any `:::` container inside
- * the source nests correctly.
+ * `{{ … }}` in prose that Vue would read as an interpolation. Wrapping the
+ * body in a four-colon `v-pre` container keeps it as Markdown (headings,
+ * tables and code still render) while turning off interpolation and
+ * directives. It does not stop Vue's HTML parser, so a bare `<tag>` is
+ * handled where the page is parsed: .vitepress/plugins/synced-sources
+ * renders these pages with raw HTML off. Four colons so that any `:::`
+ * container inside the source nests correctly.
  */
 function wrapVPre(text) {
   const fm = text.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/)
