@@ -33,7 +33,10 @@ pnpm typecheck        # vue-tsc over .vitepress/
 
 `sync:sources` expects every GrooveShop repository checked out as a sibling
 of this one (the local monorepo layout); set `GROOVESHOP_WORKSPACE` to point
-elsewhere. Sources are declared in `.vitepress/sources.ts`.
+elsewhere, and `GROOVESHOP_SOURCES` to read the synced docs from a different
+root than the gates read the code from (CI does). Sources are declared in
+`.vitepress/sources.ts`; what a release publishes is pinned in
+`sources.lock.json` (see Deployment).
 
 ## Layout
 
@@ -91,7 +94,24 @@ no image is built, and the site keeps serving the previous version. A
 
 CI (`.github/workflows/ci.yml`) builds on every push and cuts a semantic
 release on `main`; the published release triggers `docker.yml`, which pushes
-`gro0ve/grooveshop-docs:vX.Y.Z`. The image is pinned in
+`gro0ve/grooveshop-docs:vX.Y.Z`. The build itself is
+`.github/workflows/build.yml`, shared by `ci.yml` and `sources.yml`.
+
+**The synced reference docs are pinned, and the pin moves on its own.**
+`sources.lock.json` holds, per source, a commit and the git tree id of its
+`docs/` at that commit; `build.yml` and `docker.yml` check the sources out
+at that commit, so the image publishes exactly what CI checked.
+`.github/workflows/sources.yml` (hourly, on a `source-docs-changed`
+repository dispatch, or by hand) runs `scripts/source-lock.mjs resolve`,
+which reads each source's `main` through the GitHub API; when a `docs/`
+tree moved, it builds the site with the new pins and commits them as
+`docs(sources): sync reference docs (…)` with `DOCS_TOKEN`. That push
+releases like any `docs:` commit. Never hand-edit the lock; run the
+workflow, or `node scripts/source-lock.mjs resolve` and commit the result.
+A failed sync run (a source's docs break a gate) commits nothing and shows
+red in the Actions tab: fix the page here or the source, then re-run it.
+
+The image is pinned in
 `grooveshop-infrastructure/manifests/app-directory/app-grooveshop.yaml`
 (kustomize image `grooveshop-docs`) and served by `base/docs.yaml`. Bump with
 the infra repo's `/update-deploy-version` skill.

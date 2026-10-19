@@ -17,6 +17,10 @@ import { fileURLToPath } from 'node:url'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const WORKSPACE = resolve(process.env.GROOVESHOP_WORKSPACE ?? join(REPO, '..'))
+// Where the synced sources are read from. CI points it at checkouts of the
+// commits pinned in sources.lock.json, kept apart from the workspace's
+// up-to-date checkouts that the citation and admin-prose gates read.
+const SOURCES = resolve(process.env.GROOVESHOP_SOURCES ?? WORKSPACE)
 const SRC = join(REPO, 'src')
 const MANIFEST = join(REPO, '.vitepress', 'generated', 'reference-manifest.json')
 
@@ -55,10 +59,10 @@ function wrapVPre(text) {
 const manifest = []
 
 for (const source of DOC_SOURCES) {
-  const from = join(WORKSPACE, source.from)
+  const from = join(SOURCES, source.from)
   const to = join(SRC, source.to)
   if (!existsSync(from)) {
-    console.error(`sync-sources: missing ${from} — check out the repository next to this one or set GROOVESHOP_WORKSPACE`)
+    console.error(`sync-sources: missing ${from} — check out the repository next to this one or set GROOVESHOP_WORKSPACE (or GROOVESHOP_SOURCES)`)
     process.exit(1)
   }
 

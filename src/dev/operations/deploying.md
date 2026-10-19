@@ -157,6 +157,18 @@ This site is the sixth repository and deploys the same way as the rest.
 `ci.yml`, `docker.yml` publishes the image on the published release, and
 its tag is one of the five kustomize pins in both Argo files.
 
+The Django and media-stream reference pages under `/dev/*/reference` are
+copied from those repositories' `docs/`, as the docs repository's source list declares, at the
+commit `sources.lock.json` pins. `.github/workflows/sources.yml` keeps the
+pin current: hourly, on a `source-docs-changed` repository dispatch, or by
+hand, it reads each source's `main` (`scripts/source-lock.mjs resolve`),
+and when a `docs/` tree changed it builds the site with the new pins
+through the same gates as any push (`build.yml`) and commits them as a
+`docs(sources):` commit. That commit cuts a patch release, so a source
+docs change reaches a new image tag without a docs-repo edit; moving the
+image pin in the infra repository stays the deploy step, as for every
+release.
+
 The workload is `base/docs.yaml` in the shared construct: Deployment
 `docs-deployment` running nginx on port 80 behind Service `docs-svc`, with
 the same `preStop` sleep as every other Traefik-facing pod. Its Ingress is
@@ -287,6 +299,7 @@ Deployment.
 | `grooveshop-django-api/.github/workflows/ci.yml`, `docker.yml` | Release and image publish; the `Migration Check` deploy replay |
 | `grooveshop-django-api/core/management/commands/migration_preflight.py`, `core/db/migration_safety.py` | PreSync step 0 and its classifier |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml`, `grooveshop-media-stream/.github/workflows/docker.yml`, `grooveshop-docs/.github/workflows/docker.yml` | Image publish on release |
+| `grooveshop-docs/.github/workflows/sources.yml`, `scripts/source-lock.mjs`, `sources.lock.json` | The pinned reference-docs commits and the job that moves them |
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release and image |
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts`, `shared/constants/prerender.ts` | SWR route rules |
 | `grooveshop-storefront-ui-node-nuxt/server/api/admin/cache/purge.post.ts` | Purge endpoint |
