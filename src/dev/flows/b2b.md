@@ -297,10 +297,11 @@ retail documents the platform does issue.
 | Proxies | `server/api/b2b/profile.get.ts`, `profile.put.ts`, `prices.get.ts` |
 | Invoice fields | `app/components/Checkout/StepPersonalInfo.vue`, `app/composables/useCheckoutForm.ts` |
 
-`b2b-enabled.ts` is two-tier like the others, but it fails **closed** on a
-settings-fetch failure: the setting ships `False` and gates a commercial
-program, so a transient error must hide the page. That is the opposite
-posture from the loyalty gate.
+`b2b-enabled.ts` is `createFeatureGate('wholesale')` (`app/utils/routeGate.ts`),
+like every feature gate: it reads the `wholesale` store feature
+synchronously from `TenantConfig.features`, which Django folds from the plan
+flag and `B2B_WHOLESALE_ENABLED`, with no settings request and no fallback of
+its own.
 
 `useB2BPricing` exists because catalogue HTML and product API responses are
 aggressively cached and deliberately anonymous, so a wholesale price must

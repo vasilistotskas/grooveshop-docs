@@ -257,11 +257,15 @@ Every store feature the storefront shows is read from
 `TenantConfig.features` (`shared/utils/storeFeature.ts: storeFeatureOn`),
 which lives in each pod's in-memory copy of the resolve payload
 (`server/utils/tenant.ts`, five minutes). A purge reaches one pod, so the
-copies and anything rendered from them need a signal every pod sees:
+copies and anything rendered from them need a signal every pod of the
+same build sees. The epoch lives in the build's own cache namespace, so a
+purge reaches only the pods running the build that received it; during a
+rolling deploy the other build's pods keep their copy until its five-minute
+TTL:
 
 1. `invalidateTenantConfigs(host?)` clears the receiving pod's copy and
-   writes `Date.now()` to the shared `cache` storage (so inside the
-   build's namespace) under `tenant-config-epoch:<host>`, or `tenant-config-epoch:*` for a
+   writes `Date.now()` to the `cache` storage, which is namespaced by
+   build (`server/plugins/storage.ts`), under `tenant-config-epoch:<host>`, or `tenant-config-epoch:*` for a
    platform-wide purge.
 2. Each pod holds an epoch per store, `<platform>.<store>` (`0.0` until a
    purge has written one). `getTenantConfig` re-reads both keys at most

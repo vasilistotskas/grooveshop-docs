@@ -273,12 +273,12 @@ It is enforced in two places:
 | Data | `app/composables/useLoyalty.ts` |
 | Proxies | `server/api/loyalty/summary.get.ts`, `transactions.get.ts`, `tiers.get.ts`, `settings.get.ts`, `product/` |
 
-The route gate is two-tier and fails **open** on a settings-fetch failure — an
-unavailable settings endpoint must not take loyalty down for a store whose
-plan enables it. That is the opposite of the B2B gate's posture, and
-deliberate: loyalty is chrome on a page, B2B is a commercial program.
+The route gate is `createFeatureGate('loyalty')` (`app/utils/routeGate.ts`):
+it reads the `loyalty` store feature synchronously from `TenantConfig.features`,
+which Django folds from the plan flag and the setting, makes no settings
+request and has no fallback (see the failure mode below).
 
-Both the gate and `useLoyalty` use `useRequestFetch`, not a bare `$fetch`. The
+`useLoyalty` uses `useRequestFetch`, not a bare `$fetch`. The
 comments record why: Nitro stamps `host: "localhost"` on an internal request,
 `server/middleware/0.tenant.ts` then fails to resolve a store and answers 404,
 and the page becomes unreachable for every tenant that has loyalty switched
