@@ -67,6 +67,7 @@ Untick **Is Published** and save, or select posts and choose **Unpublish selecte
 
 - **SEO Score**: it gets 25% for each of: a title of 11 to 59 characters, a subtitle, an image and at least one tag. It does not read the body or the SEO fields.
 - **Text that is refused**: if you paste something the store cannot show, e.g. code from **Source code**, saving stops with a message saying what is wrong.
+- **Text pasted from Word**: it keeps its bold, sizes, colours and alignment, but not its font. The store shows every post in its own fonts, so a font set in Word (Roboto, Calibri, ...) does not appear, and Word's hidden comment marks are left out.
 - **Search**: the store's search finds a scheduled post before its time, even though the blog pages still hide it. Keep posts with a distant date as drafts.
 - **Bulk actions**: **Publish selected posts** puts today's date on every selected post, even ones already published. Changes made by bulk actions reach the store on their own.
 - **Comments**: they cannot be closed per post. The `BLOG_COMMENTS_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span> closes them for the whole blog; see [Comments](/admin/content/blog/comments).
