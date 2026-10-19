@@ -149,14 +149,17 @@ does not match `/^G-[A-Z0-9]{8,}$/`, or when it is the placeholder
 `G-XXXXXXXXXX` — otherwise gtag is preloaded for every visitor and sits
 unused.
 
-Its load trigger is a promise that resolves on the **first user interaction**
-(`pointerdown`, `keydown`, `touchstart`, `wheel`, `scroll`) or after five
-seconds, with `warmupStrategy: 'preconnect'`. The comment carries the
-measurement: gtag was 173 KB downloading for every visitor and the third
-largest resource on the homepage, and the default warmup emitted a
-`rel=preload` so the bytes arrived at preload-scan time regardless of the
-trigger. Now the connection stays warm and the bytes wait; only sub-five-second
-no-interaction bounces go unmeasured.
+Its load trigger is `afterLoadWhenIdle()` (`app/utils/scheduling.ts`): it
+resolves after the window `load` event, at the next idle moment
+(`requestIdleCallback`, at most five seconds later), with
+`warmupStrategy: false`. gtag's evaluation is one ~150–180 ms task on a
+phone-class CPU, followed by timer tasks of its own. Loading it on the visitor's first
+interaction, as before, put that work on their next tap: a burst of taps on a
+webside blog post cost 200 ms of INP against 16 ms once the tag loaded at idle
+(2026-10-19). There is no warmup because the default one emitted a
+`rel=preload`, so the 173 KB arrived at preload-scan time regardless of the
+trigger, and a preconnect would contact Google before the visitor has done
+anything.
 
 `app/composables/useGA4.ts` exposes only the official Recommended Event
 catalogue, because GA4 silently drops unknown parameters. Its events pair
@@ -408,6 +411,7 @@ The script refuses to run unless the tenant's primary domain carries the
 |---|---|
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | Consent categories, scripts registry, evlog sampling and keep list |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/setups.ts` | Consent triggers, GA consent mode, banner telemetry |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/scheduling.ts` | `afterLoadWhenIdle`, the gtag load trigger |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCookieControl.ts` | Banner state accessor |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useMetaPixel.ts` | Meta events, `event_id` minting, the manual-trigger rule |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useTikTokPixel.ts` | TikTok events and `CompletePayment` |
