@@ -28,22 +28,6 @@ jobs:
         with:
           path: grooveshop-docs
 
-      - name: Checkout grooveshop-django-api (reference docs)
-        uses: actions/checkout@v7
-        with:
-          repository: vasilistotskas/grooveshop-django-api
-          path: grooveshop-django-api
-          sparse-checkout: docs
-          sparse-checkout-cone-mode: true
-
-      - name: Checkout grooveshop-media-stream (reference docs)
-        uses: actions/checkout@v7
-        with:
-          repository: vasilistotskas/grooveshop-media-stream
-          path: grooveshop-media-stream
-          sparse-checkout: docs
-          sparse-checkout-cone-mode: true
-
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
@@ -54,6 +38,32 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24.19.0
+
+      # The image publishes each source's docs at the commit the release's
+      # sources.lock.json pins, the same commit CI built and checked, never
+      # whatever main holds by the time this job runs.
+      - name: Read the source pins
+        id: pins
+        working-directory: grooveshop-docs
+        run: node scripts/source-lock.mjs refs
+
+      - name: Checkout grooveshop-django-api (reference docs)
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-django-api
+          ref: ${{ steps.pins.outputs.django }}
+          path: grooveshop-django-api
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: true
+
+      - name: Checkout grooveshop-media-stream (reference docs)
+        uses: actions/checkout@v7
+        with:
+          repository: vasilistotskas/grooveshop-media-stream
+          ref: ${{ steps.pins.outputs.media }}
+          path: grooveshop-media-stream
+          sparse-checkout: docs
+          sparse-checkout-cone-mode: true
 
       - name: Sync reference sources
         working-directory: grooveshop-docs

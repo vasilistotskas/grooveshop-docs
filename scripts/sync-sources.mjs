@@ -17,6 +17,10 @@ import { fileURLToPath } from 'node:url'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const WORKSPACE = resolve(process.env.GROOVESHOP_WORKSPACE ?? join(REPO, '..'))
+// Where the synced sources are read from. CI points it at checkouts of the
+// commits pinned in sources.lock.json, kept apart from the workspace's
+// up-to-date checkouts that the citation and admin-prose gates read.
+const SOURCES = resolve(process.env.GROOVESHOP_SOURCES ?? WORKSPACE)
 const SRC = join(REPO, 'src')
 const MANIFEST = join(REPO, '.vitepress', 'generated', 'reference-manifest.json')
 
@@ -39,11 +43,13 @@ function titleOf(text, fallback) {
 
 /**
  * Reference pages are plain Markdown written for GitHub, so they may hold
- * `{{ … }}` or bare `<tags>` in prose that Vue's template compiler would
- * choke on. Wrapping the body in a four-colon `v-pre` container keeps it
- * as Markdown (headings, tables and code still render) while turning off
- * template compilation. Four colons so that any `:::` container inside
- * the source nests correctly.
+ * `{{ … }}` in prose that Vue would read as an interpolation. Wrapping the
+ * body in a four-colon `v-pre` container keeps it as Markdown (headings,
+ * tables and code still render) while turning off interpolation and
+ * directives. It does not stop Vue's HTML parser, so a bare `<tag>` is
+ * handled where the page is parsed: .vitepress/plugins/synced-sources
+ * renders these pages with raw HTML off. Four colons so that any `:::`
+ * container inside the source nests correctly.
  */
 function wrapVPre(text) {
   const fm = text.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/)
@@ -55,10 +61,10 @@ function wrapVPre(text) {
 const manifest = []
 
 for (const source of DOC_SOURCES) {
-  const from = join(WORKSPACE, source.from)
+  const from = join(SOURCES, source.from)
   const to = join(SRC, source.to)
   if (!existsSync(from)) {
-    console.error(`sync-sources: missing ${from} — check out the repository next to this one or set GROOVESHOP_WORKSPACE`)
+    console.error(`sync-sources: missing ${from} — check out the repository next to this one or set GROOVESHOP_WORKSPACE (or GROOVESHOP_SOURCES)`)
     process.exit(1)
   }
 
