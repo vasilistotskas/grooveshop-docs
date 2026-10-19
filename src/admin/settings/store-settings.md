@@ -104,7 +104,6 @@ Defaults are what a fresh store starts with. Money is in euro.
 | `CART_ABANDONED_HOURS` | Hours of inactivity before a cart counts as abandoned, for the Active and Abandoned filters on the carts list. | 24 | no |
 | `ABANDONED_CART_CLEANUP_DAYS` | Days after which abandoned carts are deleted. | 7 | no |
 | `OLD_GUEST_CART_CLEANUP_DAYS` | Days after which guest carts are deleted. | 30 | no |
-| `LOW_STOCK_THRESHOLD` | Present in the list but read by nothing. The hourly low-stock alert uses each product's own **Low stock threshold** field instead, and the sidebar number on **Products** and the dashboard's **Running low on stock** use a fixed band of 1 to 9. | 10 | no |
 
 ### Shipping
 
@@ -176,7 +175,6 @@ Fill the seller identity **before the first receipt**: the values are printed on
 | `CONTACT_EMAIL` | Public contact email in the footer and contact page; empty falls back to the store profile's contact email. | empty | yes |
 | `REENGAGEMENT_EMAIL_MAX_COUNT`, `REENGAGEMENT_EMAIL_COOLDOWN_DAYS` | Limits of the "we miss you" emails. | 3, 90 | no |
 | `INACTIVE_USER_THRESHOLD_DAYS` | Days without activity before a customer counts as inactive. | 60 | no |
-| `NOTIFICATION_EXPIRATION_DAYS` | Days after which in-app notifications are deleted. | 180 | no |
 
 ### Operational alert emails
 

@@ -76,7 +76,7 @@ There is no "send to everyone" button; a store-wide broadcast means one row per 
 
 - **Real-time delivery** uses the storefront's live connection, which only signed-in customers have. If the customer is offline, the notification waits in their centre; nothing is lost.
 - **Expiry is a label here, not a rule for the customer.** **Expiry Date** drives the **Status** column and the filters on this screen and nothing else: a customer's notification centre shows a message whether or not its date has passed. Deleting is the only way to take one back.
-- **`NOTIFICATION_EXPIRATION_DAYS` does nothing.** The key is listed under [Store settings](/admin/settings/store-settings), but nothing reads it. New notifications always get a date 180 days out; change the date on the notification itself if you want a different one.
+- **New notifications get an expiry date 180 days out.** No setting changes it; edit the date on the notification itself if you want a different one.
 - **Old notifications are cleared out twice a month.** On the 1st and the 15th, notifications created more than a year ago are deleted, whatever their expiry date says.
 - **Languages**: write every language the store serves. When a translation is missing the customer sees English, then Greek.
 - **Editing a delivered notification** changes what recipients see the next time they open the centre; it does not re-push it.

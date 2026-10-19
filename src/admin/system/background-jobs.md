@@ -54,7 +54,7 @@ The two emailing jobs keep running when you switch their email off with `OPS_ALE
 | Job | When | What it does | Your knobs |
 |---|---|---|---|
 | Inactive customer emails | 1st of the month 06:00 | "We miss you" emails. | `INACTIVE_USER_THRESHOLD_DAYS`, `REENGAGEMENT_EMAIL_*` |
-| Expire notifications | 1st and 15th 06:00 | Deletes old in-app notifications. | `NOTIFICATION_EXPIRATION_DAYS` |
+| Expire notifications | 1st and 15th 06:00 | Deletes in-app notifications created more than a year ago. | |
 | Clean expired data exports | daily 03:00 | Deletes data-export files older than seven days. | |
 | Reap unclaimed contact attachments | hourly | Deletes uploads whose enquiry was never submitted. | |
 | Purge expired attachment files | daily 04:00 | Deletes attachment bytes past the retention window; the enquiry stays. | `CONTACT_ATTACHMENTS_RETENTION_DAYS` |
