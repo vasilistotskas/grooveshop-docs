@@ -25,7 +25,7 @@ Signed-in customers have one cart that follows their account. Guests get one per
 | **Items** | Total quantity and number of different products. |
 | **Total** | The cart's value now, and the saving when a product is on sale. |
 | **Last Activity** | The last time the shopper changed the cart. |
-| **Created at** | When the cart was created. |
+| **Created At** | When the cart was created. |
 
 ### Filters and search
 
@@ -51,7 +51,7 @@ A **Unit Price** written as "€10.00 → €12.40" is the price before VAT, the
 
 ### Review abandoned carts
 1. In the filters choose **Cart Type → Abandoned Carts**.
-2. Sort by **Total** to find the most valuable ones.
+2. The **Total** column shows what each cart is worth.
 
 The platform emails signed-in customers about an abandoned checkout on its own (see below). There is no "send a reminder" button here.
 

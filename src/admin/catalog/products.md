@@ -84,7 +84,7 @@ Below the form there are also the **Product Attributes**, **Product Images**, **
 - **What hides a product from customers**: only **Active** turned off, or deletion. An out-of-stock product still shows.
 - **Languages**: where the name is missing in a language, the store shows a blank in that language. It does not borrow another language's text.
 - **Search**: saving a product updates the store's search shortly after. So do the bulk activate and deactivate actions.
-- **Cache**: a change to text, price, image or attributes reaches the store on its own within seconds. A change to stock alone can take a few minutes to show on the page; checkout always checks the real stock.
+- **Cache**: a change you save to text, price, stock, images or attributes reaches the store on its own within seconds. Stock that moves with orders (sales, cancellations) can take a few minutes to show on the page; checkout always checks the real stock.
 - **Stock reservations**: while a customer completes a purchase, their units are held for a while. The length is the `STOCK_RESERVATION_TTL_MINUTES` setting under <span class="sidebar-path">Settings → Store Settings</span> (category **Orders & Checkout**), 30 minutes to start with.
 - **Low-stock email**: once an hour, the store's contact email receives one message listing the active products that reached their **Low Stock Threshold** or fell below it (10 to start with). Each product is listed once, until it rises above the threshold again. Set 0 to stop alerts for a product.
 - **The two deletes differ.** **Delete** on the product's page keeps the record. Bulk delete from the list erases the product for good, with its reviews and images. Prefer deactivating.

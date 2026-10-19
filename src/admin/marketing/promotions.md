@@ -36,7 +36,7 @@ The promotion page has four tabs:
 | **Percentage off** | A percentage off the products the promotion covers. |
 | **Fixed amount off** | An amount off, shared across the products it covers. |
 | **Free shipping** | Sets shipping to zero. Always combines with other promotions. |
-| **Buy X get Y discounted** | For example "buy 2, get 1 free": for every 2 products, the 3rd is discounted. |
+| **Buy X get Y discounted** | For example "buy 2, get 1 free": for every 3 eligible products in the cart, the cheapest one is discounted. |
 | **Free gift item** | Adds a gift product to the order at no charge. |
 
 ## Tasks

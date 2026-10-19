@@ -1,11 +1,11 @@
 ---
 title: Automatic tasks
-description: What your store does on its own every day (cancellations, reminders, alerts, deleting old data) and which setting changes each one.
+description: What your store does on its own every day (cancellations, alerts, deleting old data) and which setting changes each one.
 ---
 
 # Automatic tasks
 
-Some work happens on its own, at fixed times: unpaid orders are cancelled, reminders go out, shipments are updated. Times are Greek time and the platform team sets them. You change the "how much" and the "whether" from your store's settings.
+Some work happens on its own, at fixed times: unpaid orders are cancelled, shipments are updated, old data is deleted. Times are Greek time and the platform team sets them. You change the "how much" and the "whether" from your store's settings.
 
 <span class="sidebar-path">Settings → Store Settings</span>
 
@@ -18,8 +18,7 @@ Automatic tasks have no screen of their own. You see their result on orders, on 
 | What happens | When | Setting |
 |---|---|---|
 | An online order whose payment failed is cancelled. Its stock comes back. | every 15 minutes | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` (30 minutes) |
-| An online order that was never paid is cancelled. Its stock comes back. | every 15 minutes | `ORDER_AUTO_CANCEL_PENDING_HOURS` (24 hours) |
-| The customer gets a "Reminder: Complete Your Order" email for an unpaid online order. | every day 07:00 | `PENDING_ORDER_REMINDER_MAX_COUNT` (3 at most), `PENDING_ORDER_REMINDER_INTERVAL_DAYS_2` (3 days after the 1st), `PENDING_ORDER_REMINDER_INTERVAL_DAYS_3` (7 days after the 2nd) |
+| An online order that was never paid is cancelled once its payment window has passed. Its stock comes back. | every 15 minutes | — |
 | Stock held for a customer at checkout is released if they did not finish the order. | as soon as the time runs out | `STOCK_RESERVATION_TTL_MINUTES` (30 minutes) |
 | A signed-in customer who left checkout halfway gets a "Did you forget something?" email, once. | every day 06:00 | `CHECKOUT_ABANDONMENT_HOURS` (2 hours) |
 | An order that was delivered and is paid moves to "Completed". The customer gets no email. | every hour | — |
@@ -27,7 +26,7 @@ Automatic tasks have no screen of their own. You see their result on orders, on 
 | Empty guest carts are deleted. | every day 04:00 | `ABANDONED_CART_CLEANUP_DAYS` (7 days) |
 | Guest carts not opened for a long time are deleted. Registered customers' carts stay. | every day 06:00 | `OLD_GUEST_CART_CLEANUP_DAYS` (30 days) |
 
-Cash on delivery and other offline payments are never cancelled automatically and get no reminder.
+Cash on delivery and other offline payments are never cancelled automatically. No unpaid order gets a reminder email.
 
 ### Shipping
 
@@ -77,7 +76,7 @@ While gift cards are off, no card expires and no card or reminder is sent.
 ### Change a setting
 
 1. Open <span class="sidebar-path">Settings → Store Settings</span>.
-2. Type the key in the search box, for example `ORDER_AUTO_CANCEL_PENDING_HOURS`.
+2. Type the key in the search box, for example `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`.
 3. Open the setting, change the value and click **Save**.
 
 The new value applies from the next time the task runs.
@@ -99,7 +98,6 @@ If you need ACS's cash-on-delivery payouts recorded sooner, ask [support](/admin
 
 ## Things to know
 
-- **Reminders and automatic cancellation.** The first reminder goes out once an order has been unpaid for more than a day. With the starting value of 24 hours, though, the order has already been cancelled. If you want reminders, raise `ORDER_AUTO_CANCEL_PENDING_HOURS`, for example to 72 hours.
 - If an automatic email did not arrive, check its setting first. For emails to the store, also check that the **Contact Email** is filled in.
 - You cannot change when the tasks run. If a time does not suit you, talk to [support](/admin/help/contact-support).
 

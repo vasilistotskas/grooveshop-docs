@@ -52,7 +52,7 @@ The codes never contain 0, O, 1 or I, so they cannot be mistyped.
 
 - **The dates belong to the promotion.** A code stops working when the promotion's **Ends At** passes or when you deactivate the promotion.
 - **Three limits at once.** The code's **Usage Limit**, the promotion's **Total Usage Limit** and its **Per-customer Usage Limit** all apply. The strictest wins.
-- **One code per cart.** A new code replaces the previous one. If the new one is not valid, the shopper sees why and the cart is left with no code.
+- **One code per cart.** A new code replaces the previous one. If the new code does not exist, is switched off or its promotion is not running, it is refused and the previous code stays. If the cart or the customer does not qualify for it, the shopper sees why and the cart is left with no code.
 - **Each code exists once in the whole store**, even across different promotions.
 - **What shoppers see on the offers page.** A code promotion appears only if it has an active code that is neither personal nor single-use.
 - **Business customers.** Carts with wholesale prices refuse coupons unless `B2B_ALLOW_PROMOTIONS` is on under <span class="sidebar-path">Settings → Store Settings</span>.

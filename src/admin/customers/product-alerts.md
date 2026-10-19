@@ -20,7 +20,7 @@ On the store, the customer sees:
 
 In the window that opens, the customer enters their email. If they are signed in, their account email is used. For a price drop they also enter a **Target price**, which must be below today's price.
 
-Each alert sends **one** email and then switches itself off. If the customer wants another, they ask again.
+Each alert sends **one** email and then switches itself off. The customer cannot ask again for the same alert on the same product.
 
 ## Tasks
 

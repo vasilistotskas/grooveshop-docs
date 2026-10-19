@@ -17,7 +17,7 @@ Each **slot** is a place on the storefront where the strip can appear.
 |---|---|
 | **Surface** | The place: **Product page**, **Out of stock**, **Cart**, **Empty cart**, **Order email**. |
 | **Enabled** | Whether the strip shows in this place. |
-| **Chain** | The order in which suggestions are looked for (see the table below). |
+| **Chain** | Which ways of suggesting this place uses (see the table below). |
 | **Limit** | The most products the strip shows. |
 | **Minimum fill** | If fewer than this are found, the strip does not show at all. |
 | **Price band ratio** | For example 3: no product more than three times dearer or cheaper is suggested. Empty = no limit. |
@@ -26,7 +26,7 @@ Today the storefront shows a strip only on the **Product page**, **Out of stock*
 
 ### The chain
 
-The **Strategy chain** is a list of codes. Each code fills the places still empty, in turn.
+The **Strategy chain** is a list of codes. All the codes suggest products at the same time. The store adds up their scores, each counted by its **Weights**, and shows your own picks first, then the best of the rest. The order of the codes makes no difference.
 
 | Code | What it suggests |
 |---|---|
@@ -55,7 +55,7 @@ A relation works in one direction: the case on the phone's page does not put the
 ### Change a slot
 
 1. Open the slot, for example **Cart**.
-2. Change **Limit**, **Minimum fill** or **Price band ratio**, or reorder the codes in the **Strategy chain**. Save.
+2. Change **Limit**, **Minimum fill** or **Price band ratio**, or add or remove codes in the **Strategy chain**. Save.
 3. To hide the strip in that place, untick **Enabled**.
 
 If something goes wrong, click **Reset to the store's preset** inside the slot, or **Reset all slots to the store's preset** above the list. Your changes are lost.

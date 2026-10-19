@@ -58,7 +58,7 @@ The header holds **Refund (amount, reason)** while money can still be refunded, 
 ### Find an order
 1. Type the order number, the customer's email or phone, or a tracking or voucher number in the search box.
 2. If there are many results, narrow them with **Status** or **Recent Orders**.
-3. Open the order. **Customer's orders** shows the customer's other purchases.
+3. Open the order. To see the customer's other purchases, use the **Customer's orders** button on the order's row in the list.
 
 ### Move an order forward by hand
 1. Tick the order (or several) in the list.
@@ -146,12 +146,11 @@ A customer can cancel an order from their account while it is **Pending** or **P
 ## What happens automatically
 
 - **Stock.** Checkout holds the stock for `STOCK_RESERVATION_TTL_MINUTES` minutes (30 by default). A failed card payment does not free it; the automatic cancellation below does.
-- **Unpaid card orders are cancelled.** Every 15 minutes the platform cancels a **Pending** order whose card payment failed more than `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` minutes ago (30). It also cancels a card order left unpaid for `ORDER_AUTO_CANCEL_PENDING_HOURS` hours (24). Cash on delivery and bank transfer orders are never cancelled this way.
+- **Unpaid card orders are cancelled.** Every 15 minutes the platform cancels a **Pending** order whose card payment failed more than `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` minutes ago (30). It also cancels a card order still unpaid once its payment window has passed. Cash on delivery and bank transfer orders are never cancelled this way.
 - **A limit on unpaid card orders.** One customer can have at most `ORDER_MAX_UNPAID_ONLINE_ORDERS` card orders waiting for payment (5 by default). A sixth is refused until they pay or cancel one. Raise it if genuine customers hit the limit; `0` switches it off.
-- **Reminders.** A card order left unpaid for more than a day gets up to three reminder emails. The number is `PENDING_ORDER_REMINDER_MAX_COUNT`. Cash on delivery is never chased.
 - **Courier voucher.** Created right after checkout for cash on delivery, and after the payment for card orders. The order then moves to **Processing**.
-- **Cash on delivery stays payment-Pending until the courier pays you.** ACS pays out days later. A nightly check matches the payout to the order and marks it **Completed**, without emailing the customer.
-- **Emails to the customer**: order received, payment failed, payment reminders, shipped, out for delivery (ACS) or at the locker (BoxNow), delivered, cancelled, returned, one per refund, and the receipt when the platform issues it. A **Completed** set automatically sends nothing: the customer has just had the "delivered" email.
+- **With ACS, cash on delivery stays payment-Pending until ACS pays you.** ACS pays out days later. A nightly check matches the payout to the order and marks it **Completed**, without emailing the customer. With BoxNow, the payment is marked **Completed** as soon as the parcel is delivered.
+- **Emails to the customer**: order received, payment failed, shipped, out for delivery (ACS) or at the locker (BoxNow), delivered, cancelled, returned, one per refund, and the receipt when the platform issues it. A **Completed** set automatically sends nothing: the customer has just had the "delivered" email.
 
 ## Things to know
 

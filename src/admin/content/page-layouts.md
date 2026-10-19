@@ -24,7 +24,7 @@ The **Page Type** says which page the layout belongs to:
 
 The form has:
 
-- **Page**: the **Page Type** and the **Title**. The title is only for you, in the list; visitors do not see it.
+- **Page**: the **Page Type** and the **Title**. The title is mainly for you, in the list. Visitors see it only as the text of a **Custom page** menu link that has no **Label** (see [Menus](/admin/content/menus)).
 - **Publishing**: **Is Published**. Only published layouts show on the store.
 - **SEO**: the page's **Seo Title** and **Seo Description** for search engines. Left empty, the page keeps its own title and the store's description.
 - The **Page Sections** tab, with the sections in the order they appear.

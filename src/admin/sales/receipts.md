@@ -31,7 +31,7 @@ Both lists are archives: you can browse, search and download, never edit or add.
 
 Filters: issue date, **Has PDF**, **myDATA Status**. The search box finds a receipt by number, order number, customer email or name, or MARK.
 
-The receipt page shows the totals with a **VAT breakdown** per rate (shipping and the payment fee included), the seller and buyer details as they were on the day, and the **myDATA (AADE)** block.
+The receipt page shows the totals with a **VAT Breakdown** per rate (shipping and the payment fee included), the seller and buyer details as they were on the day, and the **myDATA (AADE)** block.
 
 ### The credit documents list
 

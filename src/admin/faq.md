@@ -93,11 +93,11 @@ The product has no English translation. Open it, click the English language tab 
 
 ### A cash-on-delivery order was delivered but its payment says Pending
 
-That is normal. The payment becomes **Completed** when the courier pays the money out, days after delivery. If the money does not arrive, see [When to contact support](/admin/help/contact-support).
+With ACS that is normal: the payment becomes **Completed** when ACS pays the money out, days after delivery. With BoxNow the customer pays at the locker, so the payment becomes **Completed** on delivery. If the money does not arrive, or a delivered BoxNow order still says Pending, see [When to contact support](/admin/help/contact-support).
 
 ### An online-payment order has been Pending for hours
 
-The customer did not pay. The order cancels itself and its stock returns after `ORDER_AUTO_CANCEL_PENDING_HOURS` hours. To do it sooner, select it in the list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
+The customer did not pay. The order cancels itself, and its stock returns, once its payment window has passed. The customer gets no reminder email. To do it sooner, select it in the list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
 
 ### The customer says they paid, but the order does not show as paid
 
@@ -163,7 +163,7 @@ The `NEWSLETTER_ENABLED` setting is off, or the subscription's topic is inactive
 
 ### The Dashboard figures look a little old
 
-They update within a few minutes. See [Dashboard](/admin/getting-started/dashboard).
+Order figures update as soon as an order changes. New customers can take up to 5 minutes, and **Store search** and the carts in **Checkout funnel** up to 15. See [Dashboard](/admin/getting-started/dashboard).
 
 ### The number on Messages does not drop when I read them
 

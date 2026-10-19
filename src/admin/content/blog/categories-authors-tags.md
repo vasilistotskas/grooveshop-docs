@@ -40,7 +40,7 @@ Blog categories are separate from product categories, and blog tags are separate
 ## Things to know
 
 - **Related posts**: under each post the store suggests other published posts from the same category or with tags in common. That is the tags' main job.
-- **Readers see no tag list**, and a tag's **Active** does not change the related posts. To stop a tag linking posts, remove it from them or delete it.
+- **The default store design shows no tag list** (some store designs do), and a tag's **Active** does not change the related posts. To stop a tag linking posts, remove it from them or delete it.
 - **The category list shows no indentation.** Dragging changes the order only among categories with the same parent; check the **Parent** column before you drag.
 - **Deleting a category also deletes its subcategories.** Their posts are left without a category, not deleted.
 - **The author's name** comes from their user account; correct it there. Only the **Bio** and **Website** come from this form.

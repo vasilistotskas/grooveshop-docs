@@ -24,7 +24,7 @@ The login details for Viva Wallet and Stripe are not here: they are on <span cla
 | **Free Threshold** | "Free above" an amount, or **No threshold**. |
 | **Sort Order** | The position at checkout. Drag the rows to change it. |
 
-Filters: **Active**, **Payment Type**, cost and threshold ranges, dates. The search box looks up the method's key, for example `PAY_ON_DELIVERY`, not the name customers see.
+Filters: **Active**, **Payment Type**, cost and threshold ranges, dates. The search box looks in the provider code, the description and the payment instructions, not in the name customers see.
 
 ### The payment method page
 

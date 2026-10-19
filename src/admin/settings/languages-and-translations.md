@@ -11,7 +11,7 @@ Your store's texts (product names and descriptions, categories, blog posts, page
 
 ## What you see
 
-- **Language tabs on the forms.** At the top of every form with translatable texts there are three tabs: **Greek**, **English**, **German**. Each tab holds that language's texts, usually name, description, slug (the last part of the page's address) and SEO texts. The other fields, such as price and stock, are shared by all languages.
+- **Language tabs on the forms.** At the top of every form with translatable texts there are three tabs: **Greek**, **English**, **German**. Each tab holds that language's texts, usually name, description and SEO texts. The other fields, such as the slug (the last part of the page's address), price and stock, are shared by all languages.
 - **Default Locale**, on the **Branding** tab of the Store Profile. It can be **Greek** or **English**. Owners and Admins can change it.
 
 ## Tasks
@@ -43,7 +43,7 @@ Click your name at the bottom of the side menu and choose a language. It changes
 
 ## Things to know
 
-- If a translation is missing, the customer sees the Greek text. A product is never hidden because it has no translation.
+- If a translation is missing, the product page heading and your text pages show the store's default language (text pages with a note for the visitor). Product cards show no name, though, and the product description stays empty. A product is never hidden because it has no translation, so translate what you sell into every language the store serves.
 - If no language list has been set for your store, the storefront shows only the default language.
 - German is on the forms, but the storefront shows only Greek and English. Whatever you write in German stays saved.
 - The storefront search also finds Greek names when a customer types them in Latin letters (greeklish).

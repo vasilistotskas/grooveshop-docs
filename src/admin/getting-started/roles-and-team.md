@@ -13,7 +13,7 @@ This is where you decide who gets into your store's admin and with which role. A
 
 A list with one row per member. Columns: **User**, **Tenant**, **Role**, **Active**, **Created At**. You can filter by role and by **Active**, and search by the member's email.
 
-Each member's form has four fields:
+Each member's form has four fields to fill in, plus the read-only **Created At** and **Updated At**:
 
 | Field | Meaning |
 |---|---|

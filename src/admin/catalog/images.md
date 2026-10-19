@@ -20,7 +20,7 @@ Here you see every product and category image together. You use it mainly to cha
 ### Change the order of a product's photos
 1. Open <span class="sidebar-path">Catalog → Images → Product Images</span>.
 2. In the **Product** filter pick the product and apply.
-3. Drag the rows into the order you want. The order is saved at once.
+3. Drag the rows into the order you want, then click **Save** at the bottom of the list. Until you save, the new order is not kept.
 
 In the store the image marked **Is Main** always comes first. The rest follow in the list's order.
 

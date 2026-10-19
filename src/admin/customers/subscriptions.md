@@ -93,7 +93,7 @@ Open the topic, untick **Active** and save. The topic leaves the store and nobod
 - **Visitors who never confirm** are deleted automatically 30 days after the confirmation email.
 - **If the visitor later creates an account** with the same email and confirms it, their subscription moves onto the account.
 - **The form does not give subscribers away.** It always answers "check your inbox", whether or not the email was already signed up.
-- **Mailing list:** the subscription list has no export. Under <span class="sidebar-path">Customers → Customers</span>, filter by **Users with Subscriptions** and export from there. Visitors without an account are not in that list.
+- **Mailing list:** there is no export of subscribers. Do not use the **Users with Subscriptions** filter under <span class="sidebar-path">Customers → Customers</span> as a mailing list: it also includes customers who unsubscribed, never confirmed, or only have the automatic account topics.
 - **With the `NEWSLETTER_ENABLED` setting off**, the form and the customer's subscriptions page are hidden. Unsubscribe links in emails already sent keep working.
 
 ## Related

@@ -49,7 +49,7 @@ Work that is waiting. Each row opens its list already filtered to those records.
 | Row | What it counts |
 |---|---|
 | **Orders to process** | Orders in **Pending**. |
-| **Orders to follow up** | Customers still waiting for their parcel after more than `ORDER_FOLLOW_UP_DAYS` days. |
+| **Orders to follow up** | Orders placed `ORDER_FOLLOW_UP_DAYS` or more calendar days ago that are still **Pending**, **Processing** or **Shipped**: the customer is still waiting for the parcel. |
 | **Canceled orders to refund** | Paid, then canceled, and the customer has not had the money back. |
 | **COD cash ACS has not paid out** | Cash-on-delivery parcels delivered more than 10 days ago with no payout from ACS. |
 | **Stale ACS shipments** | Parcels with no movement for three days, or orders still without a voucher (the courier's shipping label) one day on. |
@@ -86,8 +86,8 @@ Look at the **Found nothing** list. For each word customers search without a res
 
 ## Things to know
 
-- Revenue counts only paid orders, on the day each was placed. A cash-on-delivery order counts once the cash is paid, days after delivery. So recent days can grow later.
-- The figures update within a few minutes.
+- Revenue counts only paid orders, on the day each was placed. A cash-on-delivery order counts once it is paid: with BoxNow when the parcel is delivered, with ACS when ACS pays the cash out, days after delivery. So recent days can grow later.
+- Order figures update as soon as an order changes, and new customers within 5 minutes. **Store search** and the carts in **Checkout funnel** update within 15 minutes.
 - Guest orders (no account) do not count towards customers who ordered again.
 
 ## Related

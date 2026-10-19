@@ -74,7 +74,7 @@ Then:
 
 ### An order that does not fit in one parcel
 
-The platform sends every ACS or BoxNow order as one parcel, with one voucher. There is no way to add a second parcel from the admin. If you need one, contact the courier or the [platform team](/admin/help/contact-support).
+The platform sends every ACS or BoxNow order as one parcel, with one voucher. With ACS you can change the number of parcels only while the shipment has no voucher yet, for example after ACS rejected it: set **Item quantity** on the **Parcel & COD** tab, then click **Issue ACS voucher now**. A Smartpoint takes one parcel only. Once the voucher exists, or for BoxNow, contact the courier or the [platform team](/admin/help/contact-support).
 
 ## Things to know
 

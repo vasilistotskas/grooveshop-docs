@@ -33,7 +33,6 @@ Above the preview you choose:
 | `order_received` | The order was placed. |
 | `order_payment_confirmed` | The payment was confirmed. |
 | `payment_failed` | The payment failed. |
-| `order_pending_reminder` | A reminder for an order still waiting for payment. |
 | `order_shipped` | The order was shipped. |
 | `acs_out_for_delivery` | ACS is out for delivery. |
 | `boxnow_parcel_at_locker` | The parcel is in the BoxNow locker. |
@@ -80,7 +79,7 @@ Open the same email in every language of the store and read it. If something is 
 - **You do not change the texts here.** A change to an email is a request to the platform team. See [When to contact support](/admin/help/contact-support).
 - **Only the 10 most recent orders** appear under **Data**. You cannot view an older order here.
 - **Customer emails** go out in the customer's language.
-- **Emails to you** go to the store's contact email, which you set under <span class="sidebar-path">Settings → Store Profile</span>. The new-order email has an English subject, e.g. "New order — #123".
+- **Emails to you** go to the store's contact email, which you set under <span class="sidebar-path">Settings → Store Profile</span>. The review and stuck-shipment alerts also go to the owner's email. The subscription notices (`expiring`, `expired`, `suspended`) go only to the owner's email, which the platform team sets. The new-order email has an English subject, e.g. "New order — #123".
 
 ## Related
 

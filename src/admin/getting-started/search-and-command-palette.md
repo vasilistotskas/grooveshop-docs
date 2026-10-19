@@ -44,7 +44,7 @@ Filters, search and sorting go into the page address. Bookmark it to come back t
 
 ### Sort
 
-Click a column heading. Click again to reverse. Once sorted, click another heading for a second sort key.
+Click a column heading. Click again to reverse. Click another heading to sort by it first: the column you sorted before becomes the second key. A small number on each sorted heading shows its order.
 
 ## Things to know
 

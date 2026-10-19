@@ -23,8 +23,9 @@ One row per courier: **ACS Courier** (home delivery and Smartpoint lockers), **B
 | **Priority** | Order at checkout. The lowest number comes first. |
 | **Rates** | How many rate lines the courier has. |
 
-Each courier's form has two tabs:
+Each courier's form has three tabs:
 
+- **General**: the name, the on/off switch, the priority, what the courier supports and the logos.
 - **Rates**: one line per country and shipping kind (see the table below).
 - **Payment-method exclusions**: payment methods you do not want offered with this courier.
 
@@ -79,7 +80,7 @@ To stop shipping to a country, untick **Is Active** on its lines. Once no active
 
 1. On the ACS courier, tick **Supports Pickup Point** and add a line with **Shipping Kind** **Pickup point / locker**.
 2. Turn on the `ACS_SMARTPOINT_ENABLED` setting in Store Settings. It is off by default.
-3. Check that there are shops in <span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span>. The list refreshes every night, for the countries that have an active ACS rate.
+3. Check that there are shops in <span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span>. The list refreshes every night, for the countries that have an active ACS rate. When BoxNow is switched off, **ACS Stations** sits directly under **Shipping**.
 
 ### Hide a payment method for one courier
 

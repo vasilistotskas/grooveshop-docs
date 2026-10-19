@@ -53,7 +53,7 @@ Only the platform team can do this. Send them the customer, the points and the r
 
 ### Change tier thresholds
 
-Change the tier's **Required Level**. Two tiers cannot share a level. Customers change tier the next time they gain or lose XP, not straight away.
+Change the tier's **Required Level**. Two tiers cannot share a level. The tier the customer sees, and the one on their page here, changes at once. The tier's **Points Multiplier** and the notification for moving up follow the next time the customer gains or loses XP.
 
 ## How it works
 
@@ -103,7 +103,7 @@ On each product's page, the **Points Coefficient** multiplies its points (0 = no
 - **Points arrive at Completed**, not at payment. For cash on delivery that happens when the courier pays the money over, a few days after delivery.
 - **While the programme is off**, customers cannot earn, spend or see their balance, but balances stay. That time does not count towards points expiry. The menu shows an **Off** badge, so you can prepare the tiers.
 - **Expiry.** Every night, points older than `LOYALTY_POINTS_EXPIRATION_DAYS` expire, never more than the customer holds.
-- **Deleting a tier** leaves its customers without a tier until their XP next changes. Better to raise its **Required Level** very high.
+- **Deleting a tier** moves its customers at once to the highest remaining tier their level allows, but until their XP changes they earn no tier multiplier. Better to raise its **Required Level** very high.
 
 ## Related
 

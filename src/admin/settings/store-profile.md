@@ -40,7 +40,7 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 2. In **Contact Email** enter the address where customers should reach you.
 3. Click **Save**.
 
-This email shows on the store and receives the contact-form messages. When customers reply to a store email, the reply goes there. Operational alerts arrive there too, for example about a parcel that is not moving. If you leave it empty, contact-form messages reach no one.
+This email receives the contact-form messages and shows at the bottom of the store's emails. When customers reply to a store email, the reply goes there. Operational alerts arrive there too, for example about a parcel that is not moving. If you leave it empty, contact-form messages and replies go to the `CONTACT_EMAIL` setting instead; if that is empty too, contact-form messages reach no one. The email shown on the store's pages is `INVOICE_SELLER_EMAIL` in [Store settings](/admin/settings/store-settings).
 
 ### Enter the credentials of a payment provider or courier
 

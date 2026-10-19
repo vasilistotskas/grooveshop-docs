@@ -25,7 +25,7 @@ The **Attributes** list shows for each attribute whether it is **Active**, wheth
 1. Open <span class="sidebar-path">Catalog → Attributes → Attributes</span>, click **Add**, write the **Name** in every language and save.
 2. Open <span class="sidebar-path">Catalog → Attributes → Attribute Values</span> and click **Add**.
 3. Pick the **Attribute**, write the **Value** in every language and save. Repeat for each option.
-4. Back on the attribute's page, drag the rows of the **Values** tab into the order customers should see.
+4. Back on the attribute's page, drag the rows of the **Attribute Values** tab into the order customers should see.
 
 ### Give a product values
 1. Open the product from [Products](/admin/catalog/products) and its **Product Attributes** tab.
@@ -42,7 +42,7 @@ Select it and choose **Deactivate selected values** (or, for a whole attribute, 
 ## Things to know
 
 - **How filters combine.** Two values of the same attribute mean "or": Black and White shows products that are black or white. Values of different attributes mean "and": Black and 2 metres shows only products that are both.
-- **Languages**: a value shows in the visitor's language. If the translation is missing it shows blank, with no other language put in its place.
+- **Languages**: a value shows in the visitor's language. If the translation is missing, the product page shows it in another language that has it, Greek first.
 - **Deleting cannot be undone.** Deleting an attribute erases all its values and removes them from every product. Deleting a value removes it from every product. Check the **Usage** column first.
 - **Search**: attribute names and values help the store's search find products, Greeklish spellings included. Adding or removing a value on a product updates search at once. Renaming a value reaches search with the nightly update.
 - Values are ordered per attribute: reordering sizes never moves colours.

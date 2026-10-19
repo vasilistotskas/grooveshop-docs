@@ -15,7 +15,7 @@ Every member of your team has one of three roles.
 
 | Role | What they can do |
 |---|---|
-| **Staff** | View, add and edit orders, products, customers, marketing, content, shipping, payment methods, VAT and email templates. Cannot delete anything and does not see the store's settings. |
+| **Staff** | View, add and edit orders, products, customers, marketing, content, shipping, payment methods and VAT, and preview email templates. Cannot delete anything and does not see the store's settings. |
 | **Admin** | Everything Staff can, plus deleting, **Store Profile**, **Team**, **Store Settings** and **Cache**. Cannot edit or remove an Owner. |
 | **Owner** | Everything an Admin can, plus managing the other Owners. |
 

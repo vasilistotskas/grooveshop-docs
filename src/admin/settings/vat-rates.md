@@ -34,7 +34,7 @@ The **Usage Status** filter shows rates that are **Currently in Use**, **Not in 
 
 1. Create the new rate, if it does not exist.
 2. Change the rate on the products, one by one.
-3. When the old rate shows **Not in Use** under **Usage**, delete it.
+3. When the old rate shows **0 products** under **Usage**, delete it.
 
 Do not change the **Value** of a rate in use unless the law changed: all its products change their final price at once.
 

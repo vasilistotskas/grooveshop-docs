@@ -67,7 +67,7 @@ Other people's data is never included.
 - **The download link is valid for 7 days.** After that the file is deleted automatically. The customer simply requests a new export.
 - **One request at a time.** Clicking again while the file is being prepared does not start a second one.
 - **The file is not public.** Only the customer downloads it, from their account.
-- **What deletion does:** orders stay for tax reasons, but without name, email, phone and address. Everything else is erased. The customer is signed out of every device at once.
+- **What deletion does:** orders stay for tax reasons, but without name, email, phone and address. Everything else linked to the account is erased. Contact-form messages, and product alerts they asked for as a visitor, are not linked to the account and stay; delete the messages under <span class="sidebar-path">Customers → Messages</span>. The customer is signed out of every device at once.
 - **Receipts already issued do not change**, because they are legal documents.
 
 ## Related

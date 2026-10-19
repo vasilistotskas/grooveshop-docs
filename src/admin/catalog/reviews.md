@@ -63,7 +63,7 @@ Turn `PRODUCT_REVIEWS_PURCHASE_REQUIRED` off if you have few purchases and want 
 - **When a customer changes their review**: if they change the rating or comment of an approved or rejected review, it goes back to **Waiting for approval**. It leaves the store until you approve it again.
 - **The email**: each time a review waits for approval, the store's contact and owner emails receive the message "Review waiting for approval", with a link to the review. Turn it off with `OPS_ALERT_REVIEW_PENDING_ENABLED` (category **Operational Alerts**, on to start with). With it off, reviews still show on the Dashboard and in the sidebar.
 - **The average counts only approved reviews.** A product's stars are the average of the approved ratings.
-- **Rules for customers**: one review per customer per product, rated from half a star to 5 stars. These rules apply to customers only; here you can set any rating and status.
+- **Rules for every review**: one review per customer per product, rated from half a star to 5 stars. These limits apply here too; only the status is yours to set freely.
 - When a customer's account is deleted, their reviews are erased too.
 
 ## Related

@@ -64,7 +64,7 @@ On the **Contact Attachments** tab click the file name. The **Scan** column show
 | **Clean** | Yes. |
 | **Not scanned** | Yes. No virus checker is set up; open it with care. |
 | **Pending scan** | Not yet. |
-| **Scan failed** | No, until there is a result. |
+| **Scan failed** | No. The check gave up after several tries and the file stays blocked. |
 | **Infected** | Never. |
 
 ### A customer asks for their details to be erased

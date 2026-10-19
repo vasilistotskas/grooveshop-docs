@@ -33,7 +33,7 @@ Only to customers with an account. Guests get email only.
 |---|---|
 | The customer places an order | We received your order. |
 | A Stripe payment succeeds or fails | Payment confirmed or failed. Not sent for Viva Wallet or cash on delivery. |
-| The order becomes **Shipped**, **Delivered**, **Completed** or **Canceled** | The new status. |
+| The order becomes **Shipped**, **Delivered** or **Canceled**, or you set it to **Completed** yourself | The new status. |
 | Money is refunded, in full or in part | The refund. |
 | The ACS parcel goes out for delivery | The parcel arrives today. |
 | The BoxNow parcel reaches the locker or is collected | The parcel is at the locker / delivered. |
@@ -41,7 +41,7 @@ Only to customers with an account. Guests get email only.
 | The customer moves up a Loyalty tier | Congratulations on the new tier. |
 | Someone likes their blog comment | Your comment was liked. |
 
-The **Pending** and **Processing** statuses send no notification.
+The **Pending** and **Processing** statuses send no notification. Neither does **Completed** when the order completes on its own, for example when a paid order is delivered.
 
 ## Tasks
 

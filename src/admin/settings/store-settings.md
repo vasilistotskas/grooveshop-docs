@@ -168,7 +168,6 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 |---|---|---|
 | `ACS_SMARTPOINT_ENABLED` | The customer can choose pickup from an ACS Smartpoint at checkout. | off |
 | `ACS_DYNAMIC_PRICING_ENABLED` | ACS works out the shipping cost at checkout. If ACS does not answer, the normal rate is charged. | off |
-| `DEFAULT_WEIGHT_UNIT` | Not used. Leave it as it is. | kg |
 
 ### Orders & Checkout
 
@@ -178,20 +177,19 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 | `STOCK_RESERVATION_TTL_MINUTES` | How many minutes stock is held for a customer who is at checkout. | 30 |
 | `ORDER_MAX_UNPAID_ONLINE_ORDERS` | How many unpaid online-payment orders one customer can have at once. Each one holds stock. Past the limit, the customer must pay or cancel one. 0 means no limit. | 5 |
 | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` | Minutes after a failed online payment until the order is canceled and its stock returns. | 30 |
-| `ORDER_AUTO_CANCEL_PENDING_HOURS` | Hours an unpaid online order waits before it is canceled. | 24 |
 | `ORDER_FOLLOW_UP_DAYS` | After how many days without delivery an order goes into **Orders to follow up**. 0 turns it off. | 7 |
-| `PENDING_ORDER_REMINDER_MAX_COUNT` | The most reminder emails a customer gets for a pending order. | 3 |
-| `PENDING_ORDER_REMINDER_INTERVAL_DAYS_1`, `PENDING_ORDER_REMINDER_INTERVAL_DAYS_2`, `PENDING_ORDER_REMINDER_INTERVAL_DAYS_3` | After how many days the first, second and third reminders go out. | 1, 3, 7 |
 | `CHECKOUT_ABANDONMENT_HOURS` | After how many hours an unfinished checkout gets a reminder email. | 2 |
 | `CART_ABANDONED_HOURS` | After how many hours without activity a cart counts as abandoned in the **Carts** list. | 24 |
-| `ABANDONED_CART_CLEANUP_DAYS` | After how many days abandoned carts are deleted. | 7 |
+| `ABANDONED_CART_CLEANUP_DAYS` | After how many days empty guest carts are deleted. | 7 |
 | `OLD_GUEST_CART_CLEANUP_DAYS` | After how many days guest carts are deleted. | 30 |
+
+Low stock is not a setting here. The low-stock email (checked every hour) uses each product's own **Low Stock Threshold**, set on [Products](/admin/catalog/products). The number beside **Products** in the sidebar and **Running low on stock** on the [Dashboard](/admin/getting-started/dashboard) count active products with 1 to 9 units left.
 
 ### Emails & Engagement
 
 | Setting | What it does | Default |
 |---|---|---|
-| `CONTACT_EMAIL` | The contact email customers see. Empty: the **Contact Email** on the [Store profile](/admin/settings/store-profile). | empty |
+| `CONTACT_EMAIL` | Used only while the **Contact Email** on the [Store profile](/admin/settings/store-profile) is empty. It then receives the contact-form messages and is the reply address of the store's emails. The email shown on the store's pages is `INVOICE_SELLER_EMAIL`. | empty |
 | `REENGAGEMENT_EMAIL_MAX_COUNT`, `REENGAGEMENT_EMAIL_COOLDOWN_DAYS` | The most "we miss you" emails a customer gets, and how many days apart. | 3, 90 |
 | `INACTIVE_USER_THRESHOLD_DAYS` | After how many days without activity a customer counts as inactive. | 60 |
 | `CONTACT_RETENTION_DAYS` | After how many days contact messages and feedback are deleted. 0 keeps them forever. | 365 |
@@ -205,7 +203,7 @@ See [Messages & feedback](/admin/customers/messages-and-feedback).
 
 ### Operational Alerts
 
-Emails to the store when something needs a person. They go to the **Contact Email** and the owner's email on the [Store profile](/admin/settings/store-profile). All start switched on. If you switch one off, only that email stops. Anything about money or a parcel that is not moving always stays in **Needs attention** on the [Dashboard](/admin/getting-started/dashboard).
+Emails to the store when something needs a person. They go to the **Contact Email** and the owner's email on the [Store profile](/admin/settings/store-profile). All start switched on. If you switch one off, only that email stops. Even with the email off, these stay in **Needs attention** on the [Dashboard](/admin/getting-started/dashboard): ACS parcels that are not moving, cash on delivery ACS has not paid out, ACS payouts that match no shipment, canceled orders that still hold a payment, and reviews waiting for approval. The other alerts come only by email.
 
 | Setting | The email comes when |
 |---|---|
@@ -216,7 +214,7 @@ Emails to the store when something needs a person. They go to the **Contact Emai
 | `OPS_ALERT_WEBHOOK_FAILED_ENABLED` | BoxNow sent a parcel update the store could not apply. |
 | `OPS_ALERT_PAYMENT_AFTER_CANCEL_ENABLED` | A payment arrived for an order already canceled, and you have to refund it. |
 | `OPS_ALERT_REFUND_FAILED_ENABLED` | A refund through Stripe failed, although the customer had been told it went through. |
-| `OPS_ALERT_GIFT_CARD_REVERSAL_ENABLED` | A gift card's payment was disputed or refunded. |
+| `OPS_ALERT_GIFT_CARD_REVERSAL_ENABLED` | A gift card's payment was disputed, or was refunded or charged back after part of the card had been spent. |
 | `OPS_ALERT_PAYMENT_MISMATCH_ENABLED` | A payment does not match its order. The order is not marked paid. |
 | `OPS_ALERT_REVIEW_PENDING_ENABLED` | A review is waiting for approval. |
 

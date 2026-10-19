@@ -34,13 +34,12 @@ The parcel states:
 | **In transit** | ACS has collected the parcel. | **Shipped** |
 | **At destination station** | The parcel reached the ACS shop that will deliver it. | **Shipped** |
 | **Out for delivery** | The parcel is on the courier's van. The customer gets one email. | **Shipped** |
-| **Delivery attempted** | ACS could not deliver, or the parcel is waiting for the customer at a shop or Smartpoint. Call the customer. | **Shipped** |
+| **Delivery attempted** | ACS could not deliver and gave a reason. The parcel may wait at the ACS shop. Call the customer. | **Shipped** |
 | **Delivered** | The customer received it. | **Delivered**, then **Completed** once paid |
 | **Returned** | The parcel came back to you. | **Returned** |
 | **Canceled** | The voucher was cancelled. | **Canceled** |
-| **Lost** | ACS declared the parcel lost. | **Returned** |
 
-The last four are final: the parcel's state no longer changes.
+The last three are final: the parcel's state no longer changes. A parcel that is only waiting for the customer at a Smartpoint keeps its previous state, usually **In transit**.
 
 A shipment's page has the tabs **Shipment**, **Destination**, **Parcel & COD**, **Tracking** and **Diagnostics**, plus one listing every checkpoint of the parcel. The same shipment is shown on the order, in the **ACS Shipment** tab.
 
@@ -125,6 +124,8 @@ If you receive an email that ACS paid money matching none of your parcels (usual
 <span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span>
 
 The list of ACS shops and Smartpoints refreshes by itself every night at 03:00, for the countries that have an active ACS rate. There is no button to refresh it now. Customers are offered only **Smartpoint (no locker)** and **Smartpoint locker**, never plain shops. A point that ACS removes becomes inactive; it is not deleted. How to open Smartpoints at checkout is in [Shipping providers](/admin/settings/shipping-providers).
+
+When BoxNow is switched off, the menu shows **ACS Stations** directly under **Shipping**.
 
 ## Things to know
 

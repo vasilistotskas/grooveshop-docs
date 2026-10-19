@@ -48,7 +48,7 @@ On the **Branding** tab of the store profile add your logo and colours. On the *
 
 ## Things to know
 
-- A cash-on-delivery order through ACS or BoxNow creates a voucher (the shipping label) with the courier straight away. For the test choose another delivery method, or ask the platform team first.
+- Every order sent with ACS or BoxNow creates a real voucher (the shipping label) with the courier: a cash-on-delivery or bank-transfer order straight away, a card order once it is paid. For the test choose another delivery method, or ask the platform team first.
 - A card payment made while **Viva Wallet Live Mode** is not on goes to Viva Wallet's test environment. Go live before you open. See [Store profile](/admin/settings/store-profile).
 - Add your colleagues to the team. See [Roles & team](/admin/getting-started/roles-and-team).
 

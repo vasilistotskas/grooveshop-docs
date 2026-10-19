@@ -19,7 +19,7 @@ The BoxNow screens appear only while BoxNow is active under [Shipping providers]
 | **State** | Where the parcel is (table below). |
 | **Locker External ID** | The destination locker. |
 | **Order** | Link to the order. |
-| **Compartment Size** | Small, medium or large (shown as Μικρό, Μεσαίο, Μεγάλο), as chosen at checkout. |
+| **Compartment Size** | Small, medium or large (shown as Μικρό, Μεσαίο, Μεγάλο). Orders from your store always get small: the customer does not choose a size. |
 | **Created At** | When the shipment was created. |
 
 Filters: **Parcel State Group**, **Parcel State**, **Payment Mode**, **Compartment Size** and **Created At**. Search finds a parcel number, a locker, an order number or a customer email.
