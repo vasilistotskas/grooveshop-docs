@@ -7,9 +7,13 @@ on:
     branches: ['main']
   workflow_dispatch:
 
+# A new push supersedes a pull request's run, but never a run on main: that
+# run may be in the release job, and sources.yml pushes to main on its own
+# schedule. Cancelling a release halfway can leave a tag with no GitHub
+# release, and so no image.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

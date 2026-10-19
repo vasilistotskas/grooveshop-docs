@@ -14,7 +14,7 @@ name: Sync source docs
 # Triggers: a source repository announces a `docs/` change on main
 # (repository_dispatch `source-docs-changed`), an hourly sweep that catches
 # a missed or not yet configured announcement, and a manual run. A run whose
-# trees match the lock does three API reads and stops.
+# trees match the lock makes two API reads per source and stops.
 on:
   repository_dispatch:
     types: [source-docs-changed]
@@ -22,8 +22,10 @@ on:
     - cron: '17 * * * *'
   workflow_dispatch:
 
-# One run at a time, never cancelled: a queued run re-reads main after the
-# one before it committed, so it never pins an older tree.
+# One run at a time, and a running one is never cancelled. A run that arrives
+# while another is pending replaces it, which loses nothing: every run reads
+# each source's main afresh once the run before it has committed, so it never
+# pins an older tree.
 concurrency:
   group: sources
   cancel-in-progress: false
