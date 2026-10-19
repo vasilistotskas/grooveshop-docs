@@ -12,7 +12,7 @@ You give money back from the order itself: for a return, a goodwill gesture, or 
 ## What you see
 
 - **Refund (amount, reason)**, a button at the top of the order page. It appears whenever the order still has money that can go back, whatever its status.
-- The refund form: **Amount**, **Reason** and, only for cash on delivery, **How it was paid back**.
+- The refund form: **Amount**, **Reason** and, only for cash on delivery or a bank transfer you confirmed, **How it was paid back**.
 - The **Payment Transactions** tab of the order: every charge, refund and chargeback, with its amount and reason.
 - The **Refund → Cancelled but still paid** filter in the order list, and **Canceled orders to refund** on the [Dashboard](/admin/getting-started/dashboard).
 
@@ -35,7 +35,7 @@ The card refund goes back through Viva Wallet or Stripe, whichever took the paym
 Refund the whole remaining amount in one go rather than typing a rounded figure. Otherwise a few cents can be left over.
 
 ### Refund a cash-on-delivery order
-No payment provider holds this money, so you pay the customer back yourself and the platform records it.
+No payment provider holds this money, so you pay the customer back yourself and the platform records it. The same goes for a bank-transfer order you confirmed with **Confirm payment received**.
 
 1. Pay the customer first, by bank transfer or in cash.
 2. Open the order and press **Refund (amount, reason)**.

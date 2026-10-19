@@ -627,7 +627,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
 | `grooveshop-django-api/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
 | `grooveshop-django-api/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, REFUND and REFUND_REVERSAL rows, `refund_status` |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
 | `grooveshop-django-api/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
 | `grooveshop-django-api/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
 | `grooveshop-django-api/shipping/services.py` | `quote`, `assert_available`, `available_options` |

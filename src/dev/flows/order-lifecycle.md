@@ -300,9 +300,9 @@ row lock.
 
 | Column | Meaning |
 |---|---|
-| `kind` | From `order/enum/payment_transaction.py: PaymentTransactionKind`: `CHARGE` (a provider captured money), `COD_COLLECTION` (a courier collected cash), `REFUND` (a provider paid it back, or the merchant paid cash back), `CHARGEBACK` (a lost dispute took it back, written when the dispute closes) and `REFUND_REVERSAL` (a refund the ledger counted that the provider later reported failed) |
+| `kind` | From `order/enum/payment_transaction.py: PaymentTransactionKind`: `CHARGE` (a provider captured money), `COD_COLLECTION` (a courier collected cash), `OFFLINE_COLLECTION` (stored as `OFFLINE`: a staff member confirmed a bank transfer arrived), `REFUND` (a provider paid it back, or the merchant paid cash or a transfer back), `CHARGEBACK` (a lost dispute took it back, written when the dispute closes) and `REFUND_REVERSAL` (a refund the ledger counted that the provider later reported failed) |
 | `amount` | Always positive; the kind gives the direction |
-| `provider` | `stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`, or `manual` on a REFUND of cash the merchant paid back |
+| `provider` | `stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`, `bank_transfer` on an OFFLINE_COLLECTION (keyed on the bank's reference, so one transfer cannot pay two orders), or `manual` on a REFUND the merchant paid back |
 | `provider_reference` | The provider's own id for the movement: PaymentIntent, Viva transaction, refund id, voucher or parcel. A Stripe dashboard refund has no id in `charge.refunded`, so it carries the event id |
 | `charge` | On a REFUND, CHARGEBACK or REFUND_REVERSAL, the payment it acts on; null otherwise. A check constraint enforces both |
 | `description` | The reason given for a refund |
@@ -316,7 +316,8 @@ delivery the provider repeats records nothing the second time, and the
 |---|---|
 | CHARGE | `OrderService.handle_payment_succeeded` (the event's `amount_received`), `handle_stripe_checkout_completed` (`amount_total`), `viva_webhook._handle_payment_created` (the verified amount), and `PaymentLedger.ensure_charge`, which reads a capture the ledger lacks from the provider once, when a refund first needs it |
 | COD_COLLECTION | `OrderService.settle_cod_payment`, in the same atomic step as the payment status (see [Shipping](/dev/flows/shipping)) |
-| REFUND | `OrderService.refund_order`, `handle_stripe_charge_refunded` and `viva_webhook._handle_reversal_created`, through `PaymentLedger.record_refund`; cash paid back through `PaymentLedger.record_cod_refund` |
+| OFFLINE_COLLECTION | `OrderService.confirm_offline_payment`, the admin's **Confirm payment received** detail action (`order/admin.py`, offered by `has_confirm_payment_permission` only on a PENDING `PaySettlement.OFFLINE_TRANSFER` order), through `PaymentLedger.record_offline_collection`. Under the order lock it refuses any other settlement, a payment not PENDING, an empty reference and an amount other than `amount_due`; it writes the row, marks the order paid, adds an `OrderHistory` entry and an admin log entry, and moves PENDING to PROCESSING |
+| REFUND | `OrderService.refund_order`, `handle_stripe_charge_refunded` and `viva_webhook._handle_reversal_created`, through `PaymentLedger.record_refund`; cash or a confirmed transfer the merchant paid back through `PaymentLedger.record_cod_refund` (`is_cash_collection` covers both) |
 | REFUND_REVERSAL | `handle_stripe_refund_failed` (`refund.failed`, `refund.updated`, `charge.refund.updated`), through `PaymentLedger.record_refund_reversal` |
 | CHARGEBACK | `PaymentLedger.record_chargeback`, from `handle_stripe_dispute_closed` (a lost dispute) and `viva_webhook._record_viva_chargeback` (a 1797 of a Refund Claimed type, or a lost-dispute status) |
 
@@ -334,7 +335,7 @@ PARTIALLY_REFUNDED between. `record_refund`, `record_refund_reversal` and
 `OrderService._return_stored_value` write it in the same step as their
 rows, so no path decides it for itself. What can still be refunded through
 a provider (`PaymentLedger.refundable`) is computed payment by payment,
-from CHARGE and COD_COLLECTION rows, less what refunds and chargebacks took
+from the receipt rows (CHARGE, COD_COLLECTION and OFFLINE_COLLECTION, `_RECEIPT_KINDS`), less what refunds and chargebacks took
 and what live refund attempts hold; `stored_value_refundable` is what can
 still go back onto gift cards and points; `refundable_value` is both.
 `refund_open` adds the order paid through a registered provider whose
@@ -770,7 +771,7 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/exceptions.py` | `OrderCancellationError`, `ParcelWithCourierError`, `CourierUnreachableError`, `DisputeOpenError`, `RefundOutstandingError` |
 | `grooveshop-django-api/order/models/order.py` | `Order.save()` timestamp rules, `mark_as_paid`, `can_be_canceled`, `can_be_canceled_by_customer`, `awaits_online_payment`, `calculate_order_total_amount`, `AMOUNT_MISMATCH_FLAG` |
 | `grooveshop-django-api/order/managers/order.py` | `with_shipments`, `for_list`, `refund_owed` |
-| `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `refund_order`, `_claim_refund`, `_attempts_to_resume`, `_make_refund`, `_return_stored_value`, `RefundResult`, `_note_refund_declined`, `add_tracking_info` |
+| `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `refund_order`, `_claim_refund`, `_attempts_to_resume`, `_make_refund`, `_return_stored_value`, `RefundResult`, `_note_refund_declined`, `confirm_offline_payment`, `add_tracking_info` |
 | `grooveshop-django-api/order/payment.py` | `refund_payment` per provider, `StripePaymentProvider._ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
 | `grooveshop-django-api/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
 | `grooveshop-django-api/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_charge_refunded`, `handle_stripe_refund_failed` and every other domain receiver |
