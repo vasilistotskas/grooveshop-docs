@@ -1,159 +1,102 @@
 ---
 title: Products
-description: Create and maintain products end to end - translations, pricing, stock and reservations, images, SEO, tags, attributes, variants, publishing and how a change reaches the storefront.
+description: Create products, set price and discount, manage stock and images, copy a product and take one off the store.
 ---
 
 # Products
 
-<span class="sidebar-path">Catalog → Products</span>
+This is where you create and maintain what you sell: name, price, stock, images and publishing. Every store role can open it (Staff, Admin, Owner).
 
-The product list is where the catalog team creates, prices, stocks and publishes everything the store sells. Every store role (staff, admin, owner) can use it.
+<span class="sidebar-path">Catalog → Products</span>
 
 ## What you see
 
-The number beside the sidebar entry counts active products whose stock is between 1 and 9; the dashboard shows the same count under **Needs attention** as **Running low on stock**. The list shows 25 products per page, newest first, with a date drill-down by creation date above the table.
+The list shows the newest products first. Each row has the name with a thumbnail and the start of the SKU (product code), the category, the variant group, the price and the stock.
 
-| Column | Meaning |
+| Label in the **Stock** column | Units |
 |---|---|
-| **Product** | Name, main image thumbnail and the first 8 characters of the SKU. |
-| **Category** | The product's category. |
-| **Variants** | The variant group it belongs to, linked, with the number of siblings. |
-| **Pricing** | Base price. When a discount is set: `price -> final price (-N%)`. |
-| **Stock** | Colour label carrying the unit count: **Out of stock** at 0, **Critical** at 1-5, **Low** at 6-10, **In stock** above that. |
-| **Active** | Whether the product is published on the storefront. |
-| **Created** | Creation date and relative time. |
+| **Out of stock** | 0 |
+| **Critical** | 1 to 5 |
+| **Low** | 6 to 10 |
+| **In stock** | more than 10 |
 
-**Search** (box above the list) matches id, SKU, name, description, category name and brand name.
+The number next to **Products** in the sidebar counts active products with 1 to 9 units. The Dashboard shows the same number as **Running low on stock**.
 
-**Filters** open in a slide-out sheet with an Apply button: **Stock Status**, **Reservation Status** (has active reservations, none, reserved more than half the stock), **Price Range**, **Discount Status**, **Popularity** (trending, loved, well reviewed, new arrivals), **Active**, Category, Variant group, Brand, VAT, numeric ranges for stock, price, discount and view count, date ranges, **Likes count**, **Review Rating**, and **Price-drop Alerts Enabled**.
-
-**Bulk actions** (select rows, then pick from the actions menu):
-
-| Action | What it does |
-|---|---|
-| **Activate selected products** | Sets Active on and re-indexes the products for search. |
-| **Deactivate selected products** | Sets Active off and re-indexes. |
-| **Apply custom discount to selected products** | Opens a confirmation page where you type a percentage and choose whether inactive products are included. |
-| **Clear discount from selected products** | Resets the discount to 0 on each product. |
-
-Each row also has a **Duplicate as draft** row action (see below).
-
-## The product form
-
-The form is split into tabs. Above the tabs, language tabs switch between **Greek** (default), **English** and **German** for the translated fields (name and description).
-
-### Product Information
-
-| Field | Notes |
-|---|---|
-| **SKU** | Read-only. Every new product is given one automatically. |
-| **Category** | Autocomplete. See [Categories](/admin/catalog/categories). |
-| **Variant Group** | Autocomplete. Links the product to its sibling variations; see [Variant groups](/admin/catalog/variant-groups). |
-| **Brand** | Autocomplete. Brand names are not translated. |
-| **Active** | Off keeps the product out of the storefront and the search index. |
-| **Name** | Per language. The slug is pre-filled from the name on a new product. |
-| **Description** | Per language, rich text editor; what it accepts is described under [Blog posts](/admin/blog/posts). |
-
-### Pricing & Inventory
-
-| Field | Notes |
-|---|---|
-| **Price** | Net price in EUR. |
-| **Discount Percent** | 0 to 100. Rejected when the price is 0. |
-| **Vat** | The VAT rate applied on top of the price; see [VAT rates](/admin/sales/vat-rates). |
-| **Stock** | Units on hand. Cannot be negative. |
-| **Weight** | Value and unit. |
-| **Low Stock Threshold** | Alert level for this product; 0 disables the alert. Default 10. |
-
-The storefront price is `price + VAT − discount`, where the discount is a percentage of the net price, rounded to whole cents.
-
-### Loyalty Points
-
-**Points Coefficient** multiplies the store-wide points factor for this product (0 means no calculated points). **Bonus Points** is a fixed amount added on purchase. See [Tiers & points](/admin/loyalty/tiers-and-points).
-
-### Customer Alerts
-
-**Price-drop Alerts Enabled** lets customers subscribe to a one-time email when this product's price falls below their target. It is off by default; opt products in one by one.
-
-### Stock Audit
-
-A read-only summary: current stock, quantity held by active reservations, the resulting available quantity, the count of reserve/release/decrement/increment operations in the last 7 days, and a link **Open full stock history chart**. The chart page shows a stacked bar chart per day for the last 90 days and the 50 most recent stock entries. To widen or narrow the window, add `?days=180` to that page's address; anything below 7 or above 365 is clamped.
-
-### SEO
-
-**Slug** (unique, used in the product URL), **Seo Title** (up to 70 characters), **Seo Description** (plain text, up to 300), **Seo Keywords**.
-
-### Performance
-
-Read-only **View Count** and **Likes count** (favourites).
-
-### System Information
-
-Read-only id, uuid, timestamps and **Changed by**, the admin user who last saved the product.
-
-### Inline tabs under the form
-
-| Tab | What it holds |
-|---|---|
-| **Product Attributes** | One row per attribute value, chosen through autocomplete. See [Attributes & values](/admin/catalog/attributes-and-values). |
-| **Product Images** | Image file (with a preview of the current one) and **Is Main**. Marking one image as main clears the flag on the others, so a product always has at most one. Accepted files are the usual image formats plus SVG, up to 2.5 MB each. Images keep the order in which they were added, and that order cannot be changed from this tab. To reorder them, open the separate <span class="sidebar-path">Catalog → Images → Product Images</span> list, filter it to the product and drag the rows. |
-| **Active Stock Reservations** | Read-only rows: reservation id, quantity, who holds it (customer email or guest session), minutes until it expires, and whether it is pending checkout or already tied to an order. |
-| **Stock activity** | Every stock operation of the product, newest first and 20 per page, with the change, the before/after levels, the related order and who made it. |
-| **Tags** | Generic tags attached to this product. See [Tags](/admin/catalog/tags). |
-| **Related products** | Merchant-curated links to other products with a **Relation type** (Similar product, Goes well with, Accessory for, Replacement for, Bundle with). Rows are drag-ordered per product. Relations are one-directional: to show A on B and B on A, create both rows. A product cannot relate to itself. |
-
-The **History** button on the form opens the field-level change history.
+Search finds products by SKU, name, description, category or brand. The filters (stock, price, discount, category, brand and more) open in a side panel.
 
 ## Tasks
 
-### Create a product
-1. Open <span class="sidebar-path">Catalog → Products</span> and click **Add**.
-2. In **Product Information** pick a Category, type the Greek **Name** and **Description**, then switch the language tab to add English and German.
-3. In **Pricing & Inventory** set **Price**, **Vat** and **Stock**.
-4. Save. Then open the **Product Images** tab, upload images and tick **Is Main** on one.
-5. Add attribute values in **Product Attributes** if the product needs filters or specifications.
-6. Leave **Active** off until the product is ready; switch it on to publish.
+### Add a product
+1. Click **Add**.
+2. On the **Product Information** tab pick a **Category** and, if you like, a **Brand**. Write the **Name** and **Description** in every language tab your store shows.
+3. If the product is not ready to be seen, untick **Active**. A new product is active by default.
+4. On the **Pricing & Inventory** tab fill in **Price** (before VAT), **VAT** and **Stock**.
+5. Save. Then upload photos on the **Product Images** tab and tick **Is Main** on one.
+6. If the product needs filters or specifications (colour, size), add values on the **Product Attributes** tab.
+7. When everything is right, tick **Active** and save.
 
 ### Put a product on sale
-1. Open the product, set **Discount Percent** in **Pricing & Inventory**, save.
-2. For many products at once, select them in the list and run **Apply custom discount to selected products**; the confirmation page shows how many are active and inactive and lets you skip the inactive ones.
-3. **Clear discount from selected products** ends the sale.
+1. Open the product and enter the **Discount Percent** on the **Pricing & Inventory** tab.
+2. Save.
 
-Customers who set a price-drop alert on the product receive their email when the customer-facing price goes down, which includes a discount.
+For many products at once, select them in the list and choose **Apply custom discount to selected products**. The next page asks for the percentage and whether to include inactive products. **Clear discount from selected products** ends the sale.
 
-### Adjust stock by hand
-1. Change **Stock** on the product and save.
-2. The change is recorded in **Stock activity** as **Manual stock adjustment via admin panel**, attributed to you, so the history explains every movement. Sales and reservations are logged separately with their order, and never as a manual adjustment.
-3. A brand-new product is the one exception: the very first save has nothing to compare against, so its opening stock is not logged. Later edits are.
+Example: price €100, VAT 24%, discount 10%. The discount comes off before VAT: €90 + €21.60 VAT = **€111.60** final price.
 
-### Duplicate a product
-1. In the list, use the row action **Duplicate as draft**.
-2. A copy opens with **Active** off, stock 0 and views 0, no translations, images, attributes or tags, a slug ending `-copy-1` and an SKU ending `-COPY-1` (or the next free number).
-3. Price, discount, VAT, weight, category, brand, variant group and the alert settings **are** carried over, so check them before you publish.
-4. Fill in the copy and activate it when ready.
+### Correct the stock
+1. Change the **Stock** on the product and save.
+2. The change is recorded on the **Stock activity** tab with your name. Sales show there too, separately, with their order.
 
-### Take a product off the storefront
-- Temporary: switch **Active** off (or use **Deactivate selected products**). The product leaves the listing and the search index but keeps its history, reviews and links.
-- Permanent: **Delete** on the product's page marks it as deleted. The product is kept, with its reviews, images and history intact, and is excluded from the storefront.
+The very first save of a new product is not recorded there; later changes are.
+
+### Make a similar product
+1. In the list, click **Duplicate as draft** on the product's row.
+2. An inactive copy opens with stock 0. It has no name, description, images, attributes or tags.
+3. The price, discount, VAT, weight, category, brand and variant group **are copied**. Check them.
+4. Fill in the copy and activate it when it is ready.
+
+### Take a product off the store
+- **For now**: untick **Active**, or select it in the list and choose **Deactivate selected products**. The product keeps its reviews, history and links, and comes back when you activate it.
+- **For good**: the **Delete** button on the product's page removes it from the store but keeps the record and everything linked to it.
+
+### Download a product list
+Select products and choose **Export selected to CSV** (for Excel) or **Export selected to XML**.
+
+## The form's tabs
+
+| Tab | What it holds |
+|---|---|
+| **Product Information** | Category, variant group, brand, **Active**, name and description per language. The SKU is filled in automatically. |
+| **Pricing & Inventory** | Price, discount, VAT, stock, weight and **Low Stock Threshold**. Also, read-only, **Effective Price**, **Prior Price** and **Reduction Started At** (see below). |
+| **Loyalty Points** | **Points Coefficient** (multiplies the points the product earns; 0 = none) and **Bonus Points** (fixed points per purchase). |
+| **Customer Alerts** | **Price-drop Alerts Enabled**: tick it so customers can ask for an email when the price drops. Off by default. |
+| **Stock Audit** | How many units customers are holding at checkout right now, how many remain available, and the **Open full stock history chart** link. |
+| **SEO** | **Slug** (the last part of the page's web address), **Seo Title**, **Seo Description**, **Seo Keywords**. |
+| **Performance** | **View Count** and how many customers have the product in their favourites. |
+| **System Information** | **Created At**, **Updated At** and **Changed By** (who saved last). |
+
+Below the form there are also the **Product Attributes**, **Product Images**, **Active Stock Reservations**, **Product price spells** (the price history, read-only), **Tags**, **Related products** and **Stock activity** tabs.
 
 ## Things to know
 
-- **What makes a product invisible on the storefront**: only two things. **Active** is off, or the product has been deleted. Nothing else hides it. A product with no name in any language still appears, with an empty name where the title should be. An out-of-stock product also still appears. Listings prefer in-stock items when ranking, but that is a tie-breaker applied after how well a product matches what the shopper typed, so an out-of-stock product can still come first on a close match.
-- **Search**: only active, non-deleted products are indexed. Saving a product re-indexes it in the background once the save goes through, and so does adding or removing one of its attribute values. Renaming an attribute value does not re-index the products carrying it; a full re-sync runs nightly at 02:00 and catches those. The two bulk activate/deactivate actions re-index explicitly, because a bulk change never runs the per-product save that normally triggers it.
-- **Storefront cache**: the product listing and each product page are held for 5 minutes on the storefront; category data is held for 1 hour there and 2 hours behind it. Saving a product (its text, images, attributes, brand or variant group) purges the **Products** surface on its own about ten seconds later; a change to stock alone does not. If a change still does not show, purge **Products** from the [Cache](/admin/system/cache) tool.
-- **Stock reservations** hold units while a customer checks out. Their lifetime is the store setting **STOCK_RESERVATION_TTL_MINUTES** under <span class="sidebar-path">Settings → Store Settings</span>, seeded at 30 minutes; if it is removed or set to anything other than a positive whole number, 15 minutes is used instead. Expired reservations are cleaned up hourly.
-- **Low-stock alert**: once an hour the store contact address receives a single email listing every **active** product that has just reached or fallen below its **Low Stock Threshold**. A product is listed once and becomes eligible again only after its stock rises back above the threshold. Products that are inactive, or whose threshold is 0, are never alerted. The number beside **Products** in the sidebar is a different measure: a fixed band of 1 to 9 units, whatever the per-product threshold says.
-- **A deleted product is not marked as deleted in the list**: one you deleted from its own page keeps appearing here, looking like any other row, because the list neither hides nor flags them. Deactivate instead if you want the state to be obvious at a glance.
-- **The two kinds of delete differ.** **Delete** on a product's own page only marks it deleted and keeps everything attached to it. The bulk **Delete selected** action erases the rows for good, taking their reviews, images and attribute assignments with them. Prefer deactivation to either.
-- Discount rules enforced on save: percent between 0 and 100, no discount on a zero price, stock never negative.
-- **Changed by** is filled from your admin session and feeds the product history.
+- **Effective Price** is what a customer pays now: the price with VAT, minus the discount and any automatic promotion that applies without conditions. It is calculated for you.
+- **Prior Price** is the lowest price of the 30 days before the current reduction began. The store shows it struck through, labelled "Lowest price in the last 30 days". When it is empty, no struck-through price is shown.
+- **What hides a product from customers**: only **Active** turned off, or deletion. An out-of-stock product still shows.
+- **Languages**: where the name is missing in a language, the store shows a blank in that language. It does not borrow another language's text.
+- **Search**: saving a product updates the store's search shortly after. So do the bulk activate and deactivate actions.
+- **Cache**: a change you save to text, price, stock, images or attributes reaches the store on its own within seconds. Stock that moves with orders (sales, cancellations) can take a few minutes to show on the page; checkout always checks the real stock.
+- **Stock reservations**: while a customer completes a purchase, their units are held for a while. The length is the `STOCK_RESERVATION_TTL_MINUTES` setting under <span class="sidebar-path">Settings → Store Settings</span> (category **Orders & Checkout**), 30 minutes to start with.
+- **Low-stock email**: once an hour, the store's contact email receives one message listing the active products that reached their **Low Stock Threshold** or fell below it (10 to start with). Each product is listed once, until it rises above the threshold again. Set 0 to stop alerts for a product.
+- **The two deletes differ.** **Delete** on the product's page keeps the record. Bulk delete from the list erases the product for good, with its reviews and images. Prefer deactivating.
+- The **History** button at the top right of the form shows who changed what and when.
 
 ## Related
 
 - [Categories](/admin/catalog/categories)
+- [Brands](/admin/catalog/brands)
 - [Attributes & values](/admin/catalog/attributes-and-values)
 - [Variant groups](/admin/catalog/variant-groups)
+- [Images](/admin/catalog/images)
 - [Reviews](/admin/catalog/reviews)
-- [Tags](/admin/catalog/tags)
-- [VAT rates](/admin/sales/vat-rates)
-- [Cache](/admin/system/cache)
+- [Product alerts](/admin/customers/product-alerts)
+- [VAT rates](/admin/settings/vat-rates)

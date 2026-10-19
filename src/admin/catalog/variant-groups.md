@@ -1,55 +1,45 @@
 ---
 title: Variant groups
-description: How product variations are modelled and the admin workflow to offer the same item in several colours or sizes.
+description: How to offer the same product in several colours or sizes, with a selector on the product page.
 ---
 
 # Variant groups
 
+A variant group joins products that are the same item in different versions, e.g. a cable in five colours. On the page of each product in the group the customer sees buttons to switch to the other versions.
+
 <span class="sidebar-path">Catalog → Attributes → Variant Groups</span>
-
-A variant group links sibling products that are the same item in different variations, for example one cable clip in five colours or a phone in three memory sizes. The storefront shows a selector on each member's page so the customer can jump between siblings.
-
-## How variants are modelled
-
-- **Every variant is a full product.** Each colour or size is its own row in [Products](/admin/catalog/products), with its own SKU, price, stock, images, slug and SEO. Carts and orders reference the specific product.
-- **The group is only an identity.** It has a translatable **Name** (an admin label, not shown to customers) and an **Active** flag. Products join it through their own **Variant Group** field.
-- **The axes are attributes.** Which selector appears (Colour, Memory) comes from [Attributes & values](/admin/catalog/attributes-and-values): only attributes with **Is Variant Axis** on become selectors, and each member must carry one value of that attribute so the storefront can tell the siblings apart. Attributes without that flag never become selectors. Every attribute, flagged or not, also stays in the product's specifications list.
 
 ## What you see
 
-| Column | Meaning |
-|---|---|
-| **Group** | Name and id. |
-| **Active** | Flag. |
-| **Members** | Number of products in the group. |
-| **Created** | Timestamp. |
+One row per group, with its name and how many **Members** (products) it has. A group's page lists its members with links to the products.
 
-Search matches id and name. Filters: Active and creation date range. There are no bulk actions beyond the standard delete. The tab strip at the top links to Attributes and Attribute Values.
+### How variants are organised
 
-The group form has **Variant Group** (**Name** per language, **Active**), a read-only **Members** section listing the member products with links to their pages (or "No products assigned yet."), and the collapsed **System Information**.
+- **Each variant is a normal product**, with its own price, stock, images and SKU (product code). Orders record the exact variant.
+- **The group just joins the products.** Only you see its name.
+- **The buttons come from attributes.** Only attributes with **Is Variant Axis** become selectors, and each member needs its own value, e.g. Colour: Red. See [Attributes & values](/admin/catalog/attributes-and-values).
 
 ## Tasks
 
-### Offer a product in several colours
-1. Under <span class="sidebar-path">Catalog → Attributes → Attributes</span>, make sure a **Colour** attribute exists with **Is Variant Axis** on, and that it has one value per colour.
-2. Under <span class="sidebar-path">Catalog → Attributes → Variant Groups</span>, click **Add**, give the group a name such as the product's base name, save.
-3. Create or open the first product. Set **Variant Group** to the new group. In the **Product Attributes** tab add the Colour value for this variant. Save.
-4. For each remaining colour, use **Duplicate as draft** on the first product from the list, then set its name, images, price, stock and its own Colour value, keep the same **Variant Group**, and activate it.
-5. Open the group page: **Members** should list every colour.
+### One product in several colours
+1. In <span class="sidebar-path">Catalog → Attributes → Attributes</span>, make sure **Colour** has **Is Variant Axis** and one value per colour.
+2. In <span class="sidebar-path">Catalog → Attributes → Variant Groups</span> click **Add**, write a name (e.g. the product's base name) and save.
+3. Open the first product. In **Variant Group** pick the new group. On the **Product Attributes** tab add its colour. Save.
+4. For each other colour, click **Duplicate as draft** on the first product. The group is copied with it. Fill in the name, images, stock and its own colour, and activate it.
+5. Open the group: **Members** should list every colour.
 
-### Remove a product from a group
-Open the product and clear its **Variant Group** field. The group page cannot add or remove members.
+### Take a product out of the group
+Open the product, clear **Variant Group** and save. The group's page cannot add or remove members.
 
-### Retire a whole variant family
-Deleting the group does not delete the products; their **Variant Group** field is cleared and each keeps selling as a standalone product. Deactivate the products if they should disappear.
+### Retire a group
+Delete it. Its products are not deleted; they are simply left without a group and each sells on its own.
 
 ## Things to know
 
-- Members of a group are still separate products in listings and search. The selector only offers active, non-deleted siblings.
-- **The selector needs at least two live siblings.** Deactivate all but one member and the remaining product loses its selector entirely, because there is nothing left to switch to. It still sells normally.
-- A product with no variant group shows its variant-axis values as plain specifications. A group of one behaves the same way.
-- The **Variants** column on the product list shows the group name and sibling count, and filters exist there to find every product of a group.
-- Group names are per language but customers never see them; a Greek name is enough.
+- **The group's Active does nothing.** A group cannot be hidden this way. To hide variants, deactivate the products themselves.
+- **The selector needs at least two active members.** If only one is left, the selector disappears and the product sells normally.
+- Each member shows separately in lists and in search.
+- In the product list, the **Variants** column shows the group and the **Variant Group** filter finds all its members.
 
 ## Related
 

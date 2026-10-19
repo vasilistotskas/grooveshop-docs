@@ -1,89 +1,78 @@
 ---
-title: Data exports (GDPR)
-description: How a customer obtains a copy of their personal data, what the export bundle contains, how long it lives, and what the admin ledger under System shows.
+title: Data export (GDPR)
+description: How a customer downloads a copy of their personal data or deletes their account, what the file contains and how long it lasts.
 ---
 
-# Data exports (GDPR)
+# Data export (GDPR)
 
-<span class="sidebar-path">System → Audit & Logs → User Data Exports</span>
+The law gives a customer the right to a copy of their data and to have it erased. On your store the customer does both themselves, from their account. This page tells you what to answer them.
 
-The right of access is self-service: a customer requests a copy of their data from their account on the storefront, a background job compiles it, and an email delivers a download link. The admin screen is a read-only ledger of those requests, visible to superusers, used to answer "did it work" and "when does it expire".
+The screen listing export requests is for the platform team only; if you need the status of a request, ask them.
 
 ## What you see
 
-| Column | Meaning |
+There is no screen for this in your admin. Everything happens in the customer's account, on the **Privacy** page of the account menu (titled "Your data"). It has two buttons:
+
+| Button | What it does |
 |---|---|
-| **User** | The customer. |
-| **Status** | Pending, Processing, Ready, Failed, Expired. |
-| **File Size (bytes)** | Size of the JSON bundle once Ready. |
-| **Expires At** | When the download link stops working. |
-| **Created at** | When the customer asked. |
-
-Filters: **Status**, **Created at** and **Expires At** ranges. Search matches the customer's email and username, and the download token.
-
-The record shows the same fields plus **File Path** (where the file sits inside the store's private media area), **Download Token**, **Error Message** and the timestamps. Every field is read-only, and the screen has no **Add** button: a request can only come from the customer.
-
-Statuses:
-
-| Status | Meaning |
-|---|---|
-| Pending | Queued, the job has not started. |
-| Processing | The bundle is being compiled. |
-| Ready | The file exists and the customer has been emailed. |
-| Failed | The job raised an error; **Error Message** holds it. |
-| Expired | The link is past its date and the file has been deleted. |
+| **Request an export** | Prepares a file with all their data and emails them when it is ready. |
+| **Delete my account** | Deletes their account for good, after they type DELETE to confirm. |
 
 ## Tasks
 
 ### A customer asks for their data
 
-1. Tell them to sign in to the storefront, open their account privacy settings and request the export there. There is no button in the admin to request one on a customer's behalf.
-2. Within a few minutes they receive the email "Your data export is ready" with a link back to the same privacy page, where the download starts.
-3. If they say nothing arrived, open this screen, search their email and read the status. **Ready** means the email was sent; ask them to check spam and remind them the link expires. **Failed** means a platform-side error; pass the **Error Message** to the platform team.
+1. Tell them to sign in to the store and open **Privacy** in their account menu.
+2. They click **Request an export**.
+3. Within a few minutes they get an email titled "Your data export is ready". They download the file from the same page, with the **Download file** button.
 
-### Check whether an export was collected
+You cannot request an export on their behalf.
 
-The ledger does not record downloads. If the row is Ready and not yet expired, the file is still available; the customer can download it again from the same link.
+### The customer says nothing arrived
 
-### Handle a request outside the storefront
+1. Ask them to check their spam folder.
+2. Ask them to open the **Privacy** page again. There they see the status of the request and, if it failed, can request it again.
+3. If it keeps failing, send the customer's email to the platform team. See [When to contact support](/admin/help/contact-support).
 
-If the customer cannot sign in (lost credentials, closed account), the export cannot be produced by the platform. Help them recover access first through the storefront's forgotten-password flow. Erasure requests follow the same rule: account deletion is self-service, and the customer has to have signed in very recently, so the storefront asks them to confirm who they are before it proceeds.
+### The customer cannot sign in
 
-## What the bundle contains
+Export and deletion happen only inside the account. Help them get back in first: they click "Forgot password?" on the sign-in page.
 
-One JSON file with these sections, each limited to data about the requesting customer:
+### The customer wants to be deleted
 
-- Profile: identifiers, contact details, addresses on the profile, social links, language, loyalty XP and tier, activity timestamps.
-- Saved delivery addresses.
-- Orders with their line items, prices and the recipient details as entered at checkout.
-- Favourite products.
-- Product reviews, with the text in every language it was written in.
-- Blog comments and liked blog posts.
-- Notifications received and whether they were seen.
-- Newsletter subscriptions and their status.
-- Loyalty points transactions and the current balance.
-- Search history made while signed in, including the query, the number of results, and the IP address and browser recorded at search time.
-- The current shopping cart.
+Tell them to click **Delete my account** on the **Privacy** page. Before they confirm, they see whether they lose loyalty points or a gift-card balance.
 
-Other people's data is never included, for example the author of a comment the customer replied to.
+## What the file contains
 
-## Retention
+One file (JSON format) with only the customer's own data:
 
-- The download link is valid for seven days from the moment the file is ready.
-- The file is written to the store's private media area, in a folder that belongs to this store only. It is never served as a public file; the only way to it is the tokenised link.
-- One request can be in flight per customer; a second click while one is Pending or Processing returns the existing request.
-- A nightly job at 03:00 deletes the files of every export past its expiry date and marks the row Expired. A file that cannot be deleted is retried the next night and logged as an error, because a personal-data bundle lingering past its date is a retention breach.
-- After expiry the link answers "gone". The customer simply requests a new export.
+- profile and contact details
+- saved addresses
+- orders, with products, prices and delivery details
+- favourite products
+- product reviews
+- blog comments and liked blog posts
+- notifications they received
+- newsletter subscriptions
+- product alerts (back in stock, price drop)
+- messages they sent through the contact form from their confirmed email
+- loyalty points and their history
+- searches they made while signed in
+- their current cart
+
+Other people's data is never included.
 
 ## Things to know
 
-- Retention of the ledger row itself is indefinite: it is the record that the request was honoured.
-- Right to erasure is separate. When a customer deletes their account from the storefront, orders are kept for tax reasons with the buyer details anonymised, and everything else is removed. A pending export of a deleted account disappears with the account.
-- Both flows run inside the store; a customer of another store on the platform cannot see or request anything here.
+- **The download link is valid for 7 days.** After that the file is deleted automatically. The customer simply requests a new export.
+- **One request at a time.** Clicking again while the file is being prepared does not start a second one.
+- **The file is not public.** Only the customer downloads it, from their account.
+- **What deletion does:** orders stay for tax reasons, but without name, email, phone and address. Everything else linked to the account is erased. Contact-form messages, and product alerts they asked for as a visitor, are not linked to the account and stay; delete the messages under <span class="sidebar-path">Customers → Messages</span>. The customer is signed out of every device at once.
+- **Receipts already issued do not change**, because they are legal documents.
 
 ## Related
 
-- [Users & addresses](/admin/customers/users-and-addresses)
-- [Subscriptions](/admin/customers/subscriptions)
-- [Audit & logs](/admin/system/audit-and-logs)
-- [Background jobs](/admin/system/background-jobs)
+- [Customers & addresses](/admin/customers/users-and-addresses)
+- [Newsletter subscriptions](/admin/customers/subscriptions)
+- [Product alerts](/admin/customers/product-alerts)
+- [When to contact support](/admin/help/contact-support)

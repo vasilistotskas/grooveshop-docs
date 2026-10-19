@@ -1,77 +1,68 @@
 ---
 title: Search & command palette
-description: Reach any page or record fast with the command palette, which lists sidebar pages first, then other screens, then records; plus the sidebar filter, list search boxes, filters and column sorting.
+description: Find a page or a record fast with the command palette, the sidebar filter, each list's search, the filters and sorting.
 ---
 
 # Search & command palette
 
-The admin offers four ways to find things: the command palette, the sidebar filter, the search box on every list, and the filters panel. This page explains what each one actually searches.
+Four ways to find something in the admin: the command palette, the sidebar filter, each list's search box and the filters.
 
-## Command palette
+## What you see
 
-Press **Ctrl+K** (Windows, Linux) or **⌘K** (macOS) anywhere in the admin and start typing. The results come in three groups, in this order:
+- **Command palette**: opens with **Ctrl+K** (**⌘K** on a Mac) from any page. It finds pages and records.
+- **Sidebar filter**: the field at the top of the sidebar. It finds only sidebar entry names.
+- **List search**: the field at the top of every list. It searches that list only.
+- **Filters**: the **Filters** button opens a side panel with the list's filters.
 
-1. **Pages of the sidebar.** Every sidebar page you can open whose name matches what you typed. Names are matched in the language the admin is shown in, ignoring case and Greek accents: in the Greek admin, «παραγγελιες» finds **Παραγγελίες**. The best matches come first: the name itself, then names that start with what you typed, then names with a word that starts with it, then names that contain it anywhere. Typing the name of a section or a sub-menu, such as **Customers** or **Wholesale**, also lists every page in it, after the direct matches.
-2. **Other screens you can open**, the ones the sidebar leaves out, such as **Order Items**, **Cart Items** or **Tagged Items**. These are matched by their own name only.
-3. **Records**, once you have typed at least two characters. Each screen gives up to five records that its own list search box would find, with the sidebar's screens first. When a screen has more than five, a **View all** result opens that list already searched for your term.
+## Tasks
 
-After its name, each result shows where it sits in the sidebar (a page), the area it belongs to (another screen) or what kind of record it is. Pick one with the arrow keys and **Enter**, or click it.
+### Find a page or a record with the palette
 
-- What your store does not have, or has switched off, is not offered, exactly as in the sidebar: no screen and no records. That covers a feature off your plan, a courier that is not active, and the pages that leave the sidebar while their setting is off (Reviews, Feedback, Favourites, Newsletter, Blog Comments). A feature on your plan that you switched off in **Store Settings** keeps its sidebar menu, marked **Off**, so it is still found. A page the sidebar does list is always searchable.
-- The palette keeps a **history** of what you recently opened from it, shown before you type.
-- Pressing **Enter** with no result highlighted does nothing.
+1. Press **Ctrl+K** (**⌘K** on a Mac).
+2. Type what you are looking for, for example "orders", a customer's email, a product name or a voucher number.
+3. Pick a result with the arrow keys and **Enter**, or click it.
 
-Examples of records it finds: a customer's email, a product name in any language, an order id, an ACS voucher number, a BoxNow parcel id, a membership by email.
+Results come in this order:
 
-Every search runs afresh, so a record saved a moment ago is found straight away.
+1. **Sidebar pages** that match. Accents and capitals do not matter: "παραγγελιες" finds **Παραγγελίες** in the Greek admin.
+2. **Other screens** that have no sidebar entry, such as **Order Items**.
+3. **Records**, once you have typed at least two characters. Up to five from each screen. If there are more, **View all** opens the list with the search already applied.
 
-## Sidebar filter
+Before you type, the palette shows what you recently opened from it.
 
-The search box at the top of the sidebar narrows the menu entries as you type. It matches section and entry titles only; it does not search records. The sidebar only ever lists the screens your role can open and the features your store has, so a screen missing from it is not hidden by the filter; see [Welcome](/admin/).
+### Filter a list
 
-## List search box
+1. Click **Filters** on the list.
+2. Choose one or more filters. Dates have "from" and "to" fields.
+3. Click **Apply Filters**.
 
-Every list has a search box at the top. It searches the fields defined for that list, for example:
+Lists such as **Orders**, **Carts** and **Messages** also have a year, month and day navigation above the table.
 
-| List | Searches |
-|---|---|
-| Orders | order id, customer email and name, and more |
-| Products | name in every language, SKU |
-| Customers | email, username, name |
-| Stock Logs | product name, SKU, order id, reason |
-| Store Settings | setting name and description |
+### Keep a view
 
-The exact fields per list are documented on that list's page in this guide. Searching is case-insensitive and matches partial words.
+Filters, search and sorting go into the page address. Bookmark it to come back to the same view.
 
-## Filters
+### Sort
 
-The filter panel on the right narrows the list by status, dates, related records and other facets. Two behaviours to know:
-
-- Most lists apply a filter as soon as you pick it. On **Store Settings** the panel has a **submit** button; pick several filters and apply them together.
-- Date-range filters accept a from and a to value. Lists with a date hierarchy (Stock Logs, Meta CAPI Event Log) additionally show a year, month, day drill-down above the table.
-
-Filters are reflected in the address. Bookmark a filtered address to return to the same view, for example the pending orders view that **Orders to process** on the dashboard links to.
-
-## Sorting
-
-Click a column header to sort by it; click again to reverse. Hold the sort and click another header to sort by several columns. Sorting is also part of the address, so a bookmarked link keeps it. There is no per-user saved ordering beyond that.
-
-## Tabs across related lists
-
-Some lists show a tab strip at the top so you can hop between related screens without going through the sidebar:
-
-| Where | Tabs |
-|---|---|
-| Orders | Orders, Order Items, Receipts, Credit Documents, and — for platform operators only — Stock Logs and Order History. **Order Items** has no sidebar entry; it lists every order line, and filtering it by product shows who bought that product. |
-| BoxNow | BoxNow Shipments, BoxNow Lockers, and BoxNow Events for platform operators |
-| ACS | ACS Shipments, ACS Stations, and ACS Pickup Lists, ACS COD Payouts and ACS Tracking Events for platform operators |
-| Product options | Attributes, Attribute Values, Variant Groups |
-| Blog | Blog Posts, Categories, Authors, Comments, Tags |
+Click a column heading. Click again to reverse. Click another heading to sort by it first: the column you sorted before becomes the second key. A small number on each sorted heading shows its order.
 
 ## Things to know
 
-- The palette respects permissions: a Staff member gets no page, screen or record from a screen they cannot open.
-- Searching a translated field (product name, category name) finds the record whichever language the text was entered in.
+- The palette shows only what your role can open and what your store has, just like the sidebar.
+- A record you have just saved is found straight away.
+- A product or category name is found in whichever language you type it.
+- List search ignores capitals and also finds parts of words. Which fields each list searches is on that list's page in this guide.
+- Some lists have tabs at the top to move between related lists without the sidebar:
+
+| List | Tabs |
+|---|---|
+| Orders | Orders, Order Items, Receipts, Credit Documents |
+| ACS Shipments | ACS Shipments, ACS Stations |
+| BoxNow Shipments | BoxNow Shipments, BoxNow Lockers |
+| Attributes | Attributes, Attribute Values, Variant Groups |
+| Blog | Blog Posts, Categories, Authors, Comments, Tags |
+
+**Order Items** lists every line of every order. Filter by product to see who bought it.
 
 ## Related
 

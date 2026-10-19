@@ -1,134 +1,99 @@
 ---
 title: Dashboard
-description: What the admin landing page shows for the period you pick, what is waiting for someone, and how quickly each figure follows your edits.
+description: What the admin's home page shows for the period you choose, and what work is waiting.
 ---
 
 # Dashboard
 
 <span class="sidebar-path">Dashboard</span>
 
-The dashboard is the landing page after login and the first entry in the sidebar. It answers three questions: how the store did over a period, what is waiting for someone right now, and where shoppers come from and what they search for. Everyone with access to the admin sees it; a block for a feature your store does not use, or a link to a page your role cannot open, is simply left out.
+The first page after you sign in. It shows how the store did over a period and what is waiting for someone to handle. A section for a feature you do not have, or for a page your role cannot open, is not shown.
 
 ## What you see
 
-### Header and period
+### Top of the page
 
-At the top, a greeting with your first name (good morning, afternoon or evening by the store's time) and today's date, followed by the period on display.
+A greeting with your name and today's date. On the right you pick the period: **7 days**, **30 days** (the starting choice), **13 weeks** or **12 months**. The **New product** button opens an empty product form.
 
-On the right, the period switch: **7 days**, **30 days**, **13 weeks** and **12 months**. The dashboard opens on **30 days**. Every figure on the page that covers a period follows this switch, and the choice is kept in the page address (`?period=`), so a link you share or bookmark opens the same view and the browser's back button works. The cards below do not repeat the period in their subtitles: the header and the switch show it once for the whole page.
+Every period ends today and is compared with the same length of time just before it. For example, **7 days** is today and the six days before.
 
-A period is made of whole days, weeks or months ending with the current one, in the store's time zone: **7 days** is today and the six days before it, **13 weeks** is this week (from Monday) and the twelve before it, **12 months** is this month and the eleven before it. Each period is compared with the stretch of the same length just before it.
+### Alerts
 
-Next to the switch, **New product** opens an empty product form. It is shown to anyone who may add products.
+They appear under the greeting, only when something needs fixing:
 
-### Warnings
+- **Your legal pages need an update**: the platform added text to its legal documents. Your pages did not change by themselves, because their text is yours. Open each one to see what to add.
+- **Your business's legal details are missing**: the law requires the store to show who is selling. The alert lists what is missing and has a **Fill in details** link.
+- **Details needed to issue receipts are missing**: only while myDATA is on. Without the company name, VAT ID and tax office, receipts cannot reach AADE.
 
-Messages that need someone's attention appear below the header, and only when there is something to do:
-
-- **Your legal pages need an update**: the platform added text to its legal documents, and these pages were not changed for you because their text is yours. Each page is listed with a link; open it to see the text to add. Shown to anyone who may edit content pages.
-- **Your business's legal details are missing**: the law requires your website to show who is selling, and some of those details are still empty (company name, legal form, GEMI number, VAT ID, address, contact email). The missing ones are listed, with a **Fill in details** link. A reminder, not an error: nothing stops working. Shown to Owners and Admins, who can change the store settings.
-- **Details needed to issue receipts are missing**: shown only while myDATA is on, when the company name, **VAT ID (ΑΦΜ)** or **Tax office (ΔΟΥ)** is empty. Receipts cannot be submitted to AADE without them, so this one is red. It has a **Fill in details** link and is shown to the same people.
-- **myDATA** (platform operators): myDATA is on but `MYDATA_FHM_EXEMPTION_GROUND` is empty, so no receipt is issued; credentials missing while myDATA is on, or a reminder that submissions still go to the AADE sandbox. Receipts that myDATA rejected are not a warning here; they are a line under **Needs attention**, below.
-
-These are checked on every page load, so fixing a setting clears its warning at once.
+Owners and Admins see the last two. Once you fill the details in, the alert goes away.
 
 ### Headline figures
 
-Four cards for the period on display. Each shows the figure, its change against the period before as a percentage (rising or falling), and a small line of how it moved across the period. No percentage means the period before had nothing to compare against.
+Four cards for the period. Each shows the change against the previous period and a small line with its trend.
 
-| Card | Meaning |
+| Card | What it counts |
 |---|---|
-| **Revenue** | Money from paid orders (payment status Completed) placed in the period. Opens the order list filtered to paid orders. |
-| **Orders** | Every order placed in the period, whatever its status. Opens the order list. |
-| **Average order** | Revenue divided by the number of paid orders. With no paid order in the period it shows **—** and no percentage, since there is nothing to average. |
-| **New customers** | Customer accounts created in the period. Underneath, the share of paying customers who ordered again: customers with two or more paid orders in the period, out of all customers with at least one. Guest orders are left out, since a guest has no account to come back to. Opens the customer list. |
+| **Revenue** | Money from paid orders in the period. |
+| **Orders** | Every order in the period, whatever its status. |
+| **Average order** | Revenue divided by paid orders. Shows **—** if nothing was paid. |
+| **New customers** | New customer accounts. Underneath, how many of the customers who paid ordered again. |
 
 ### Sales chart
 
-One bar per day (for **7 days** and **30 days**), per week (**13 weeks**) or per month (**12 months**). A switch at the top of the card picks the measure: **Revenue** (paid revenue per bucket, the default) or **Orders** (orders placed per bucket). This choice is kept in the address too (`?metric=`). The bars always add up to the headline figure for the same period.
+One bar per day, week or month, depending on the period. Above the chart you choose **Revenue** or **Orders**.
 
 ### Needs attention
 
-Work that is waiting, each line opening the list it counts, already filtered to exactly those records. **New messages** counts the last 7 days, says **In the last 7 days** under its name, and opens the messages list filtered to the same 7 days.
+Work that is waiting. Each row opens its list already filtered to those records. When nothing is waiting, it reads **All caught up: nothing is waiting for you.**
 
-| Line | What it counts | Shown when |
-|---|---|---|
-| **Orders to process** | Orders in status Pending. | always |
-| **Orders to follow up** | Orders whose shopper has waited `ORDER_FOLLOW_UP_DAYS` days (7 by default) and is still waiting for the parcel: Pending, Processing or Shipped, leaving out online orders not paid yet. It reads **Shoppers still waiting for their parcel** and opens the order list with **Needs follow-up** set to **Yes**. See [Orders to follow up](/admin/sales/orders#orders-to-follow-up). | `ORDER_FOLLOW_UP_DAYS` is not 0 |
-| **Canceled orders to refund** | Cancelled orders whose payment is still Completed or only Partially Refunded: a refund the provider refused, or a payment that arrived after the cancellation. It reads **Paid, then canceled: the customer is owed money** and opens the order list with **Refund → Cancelled but still paid**. See [Orders cancelled but still paid](/admin/sales/orders#orders-cancelled-but-still-paid). | always |
-| **COD cash ACS has not paid out** | ACS cash-on-delivery parcels delivered more than ten days ago for which ACS has reported no payout, unless you recorded the cash as received outside ACS. It reads **Delivered, and ACS reports no payout** and opens ACS Shipments with **Needs attention → Delivered COD never paid out by ACS**. | you can open ACS Shipments |
-| **ACS payouts matching no shipment** | Payouts ACS made that tie to none of the store's shipments and that nobody has marked as reconciled, however old. It reads **Money ACS paid out that no shipment explains** and opens ACS COD Payouts filtered to them. See [Reconciliation](/admin/system/reconciliation#acs-cod-payouts). | you can open ACS COD Payouts, which only platform operators can |
-| **Stale ACS shipments** | ACS parcels with no tracking movement for three days, and vouchers still not created a day after the order (an online order not paid yet is left out, since its voucher waits for the payment). It reads **No tracking movement, or the voucher was never created** and opens ACS Shipments with **Needs attention → Stale: no tracking movement or never created**. See [ACS Courier](/admin/shipping/acs#deal-with-a-shipment-that-stopped-moving). | you can open ACS Shipments |
-| **Running low on stock** | Active products with fewer than 10 left in stock (and at least one). | always |
-| **Receipts rejected by myDATA** | Every receipt still marked Rejected, however old. A rejection does not go away on its own: the line stays until someone corrects the details and sends the receipt again, or cancels it. It reads **Correct the details and send them again** and opens the receipts list filtered to the rejected ones. See [Receipts and credit documents](/admin/sales/receipts). | myDATA is on |
-| **Reviews to approve** | Product reviews in status Waiting for approval, hidden from shoppers until approved. | product reviews are on |
-| **Blog comments to approve** | Comments not approved yet, hidden from readers until approved. | the blog is on your plan and blog comments are on |
-| **New messages** | Contact-form messages received in the last 7 days. | always |
-| **Business accounts to verify** | Wholesale applications waiting for review. | wholesale is on your plan and switched on |
+| Row | What it counts |
+|---|---|
+| **Orders to process** | Orders in **Pending**. |
+| **Orders to follow up** | Orders placed `ORDER_FOLLOW_UP_DAYS` or more calendar days ago that are still **Pending**, **Processing** or **Shipped**: the customer is still waiting for the parcel. |
+| **Canceled orders to refund** | Paid, then canceled, and the customer has not had the money back. |
+| **COD cash ACS has not paid out** | Cash-on-delivery parcels delivered more than 10 days ago with no payout from ACS. |
+| **Stale ACS shipments** | Parcels with no movement for three days, or orders still without a voucher (the courier's shipping label) one day on. |
+| **Running low on stock** | Active products with 1 to 9 in stock. |
+| **Receipts rejected by myDATA** | Receipts to correct and send again. |
+| **Reviews to approve** | Reviews customers cannot see yet. |
+| **Blog comments to approve** | Comments readers cannot see yet. |
+| **New messages** | Contact-form messages from the last 7 days. |
+| **Business accounts to verify** | Business-customer applications waiting for review. |
 
-A line appears only when its count is above zero and you may open the list it leads to. With nothing waiting, the card says **All caught up: nothing is waiting for you.** Orders to process, low stock, reviews, blog comments, new messages and business accounts also show their number beside the matching sidebar entry; see [Welcome](/admin/). The other lines are on the dashboard only.
+A row appears only when it has something to count and you can open its list.
 
-**Canceled orders to refund** and the three ACS lines are the work behind the store's operational alert emails. Each email can be switched off in [Store settings](/admin/settings/store-settings#operational-alert-emails), but its line stays here either way, so muting an email never hides money owed or a parcel nobody is moving.
+### The other cards
 
-### Latest orders
-
-The six newest orders, whatever the period: order number, customer email (or **Guest**), when it was placed, status and total. **View all**, at the foot of the card, opens the full order list.
-
-### Best sellers
-
-Subtitled **Units paid for**: the five products with the most units paid for in the period, counting units from orders whose payment is Completed, minus any units refunded. Each name opens the product, and **View all**, at the foot of the card, opens the product list.
-
-### Checkout funnel
-
-Three bars for the period: **Carts started**, **Orders placed** and **Paid**, each as a share of the carts started, and below them the share of **Carts that ended in a paid order**. A cart turns into its order when the order is placed, so carts started means the orders placed plus the carts that still hold items; a visitor who added nothing does not count.
-
-### Where orders come from
-
-The orders of the period per [order source](/admin/sales/orders#order-source), as shares: the five biggest sources by name, the rest together as **Other**. Orders placed before the store recorded a source are left out rather than counted under a source they did not have.
-
-### Store search
-
-From the storefront's search log, for the period. First, three rows, each a label with its value:
-
-- **Searches**: how many searches shoppers ran.
-- **Found nothing**: the share of searches that returned nothing.
-- **Clicked a result**: clicks on a search result, as a share of the searches. It shows a dash until click tracking has recorded anything, so an unmeasured zero is never mistaken for "nobody clicks".
-
-Below them, two lists one under the other, each with up to five searches and how many times each was made:
-
-- **Found nothing**: the searches to fix, as its note says: **Add synonyms, products or content for these.** With none, it reads **Every search found something**.
-- **Top searches**: **What shoppers look for most.** With none, it reads **No searches in this period**.
-
-Fragments shorter than three characters are ignored, because search-as-you-type records a row per keystroke, and a search counts as "found nothing" only if it never returned a result in the period.
-
-A card with nothing to show for the period says so in words instead of drawing an empty frame.
+- **Latest orders**: the six most recent, whatever the period.
+- **Best sellers**: the five products with the most paid units, minus those returned.
+- **Checkout funnel**: how many carts started, how many became orders and how many were paid.
+- **Where orders come from**: the five biggest order sources, and the rest together as **Other**. See [Order source](/admin/sales/order-source).
+- **Store search**: how many searches were made, how many found nothing, and the lists **Found nothing** and **Top searches**.
 
 ## Tasks
 
-### Look at another period
+### See another period
 
-Click **7 days**, **30 days**, **13 weeks** or **12 months** at the top. Every period figure on the page changes together; **Latest orders** and **Needs attention** are not tied to a period and stay as they are.
+Click **7 days**, **30 days**, **13 weeks** or **12 months**. Every period figure changes. **Latest orders** and **Needs attention** stay the same.
 
-### Switch the chart between revenue and orders
+### Clear what is waiting
 
-Click **Revenue** or **Orders** at the top of the sales chart.
+Click a row in **Needs attention**. Once you have dealt with its records, the row goes away.
 
-### Work through what is waiting
+### Improve search
 
-Click a line under **Needs attention**. It opens the list filtered to exactly the records it counts; once they are handled, the line disappears.
+Look at the **Found nothing** list. For each word customers search without a result, add the product they want, or put the word in the right product's name.
 
 ## Things to know
 
-- Revenue counts **paid** orders only, on the day each order was placed. A cash-on-delivery order is added to the day it was placed once the courier's payout is reconciled, days after delivery, so recent days can grow after the fact. See [Reconciliation](/admin/system/reconciliation).
-- Each figure is kept for a short while: **Needs attention** for one minute; the headline figures, the sales chart and the latest orders for five minutes; best sellers, the funnel, order sources and search for fifteen. A figure is cleared at once when a record it counts is saved or deleted — an order, a receipt, a product, a review, a blog comment, a contact message, a business account, an ACS shipment or payout, a store setting — so an edit shows on the next load. **Orders to follow up** also moves at midnight, when another day's orders reach the follow-up period, so it can lag by up to a minute after that. Counts that nothing clears, such as new customers, open carts and the search log, can lag by up to that time.
-- A widget for a feature your plan does not include, or that you have switched off in [Store settings](/admin/settings/store-settings), is not drawn at all.
-- There is no failed-job counter here. Failed background jobs are listed on the platform console, because one list covers every store. See [Background jobs](/admin/system/background-jobs).
+- Revenue counts only paid orders, on the day each was placed. A cash-on-delivery order counts once it is paid: with BoxNow when the parcel is delivered, with ACS when ACS pays the cash out, days after delivery. So recent days can grow later.
+- Order figures update as soon as an order changes, and new customers within 5 minutes. **Store search** and the carts in **Checkout funnel** update within 15 minutes.
+- Guest orders (no account) do not count towards customers who ordered again.
 
 ## Related
 
 - [Welcome](/admin/)
 - [Orders](/admin/sales/orders)
-- [Products](/admin/catalog/products)
 - [Reviews](/admin/catalog/reviews)
-- [Contact messages & feedback](/admin/sales/contact-and-feedback)
+- [Messages & feedback](/admin/customers/messages-and-feedback)
 - [Search & command palette](/admin/getting-started/search-and-command-palette)

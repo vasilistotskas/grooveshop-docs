@@ -1,78 +1,73 @@
 ---
 title: Roles & team
-description: Add and remove team members, choose their role, and understand what Staff, Admin and Owner may do.
+description: Add and remove team members, choose their role and see what Staff, Admin and Owner may do.
 ---
 
 # Roles & team
 
 <span class="sidebar-path">Settings → Team</span>
 
-A team member is a platform staff account plus a **membership** in your store. The membership carries the role. Admin and Owner manage memberships; Staff do not see the **Team** entry at all.
+This is where you decide who gets into your store's admin and with which role. Admins and Owners see **Team**.
 
 ## What you see
 
-**Team** lists your store's memberships. You can also reach a membership by pressing **Ctrl+K** (or **⌘K**), typing the person's email, and picking the membership result.
+A list with one row per member. Columns: **User**, **Tenant**, **Role**, **Active**, **Created At**. You can filter by role and by **Active**, and search by the member's email.
 
-Columns: **User**, **Tenant**, **Role**, **Is active**, **Created at**. Filters: role, active, tenant. Search: user email, username, store name. You only ever see your own store's rows, whatever you type.
-
-The form has four fields:
+Each member's form has four fields to fill in, plus the read-only **Created At** and **Updated At**:
 
 | Field | Meaning |
 |---|---|
-| **User** | The platform staff account. The dropdown lists platform identities only, never your storefront customers. |
+| **User** | The person's platform account. |
 | **Tenant** | Always your store. |
-| **Role** | Staff, Admin or Owner. An Admin does not get the Owner option. |
-| **Is active** | Untick to suspend access without deleting the row. |
+| **Role** | **Staff**, **Admin** or **Owner**. An Admin does not see the Owner choice. |
+| **Active** | Untick it to cut access without deleting the member. |
+
+## Tasks
+
+### Add a member
+
+1. If the person has no platform account, ask the platform team to create one. A store cannot create accounts.
+2. Open <span class="sidebar-path">Settings → Team</span> and click **Add**.
+3. Choose the **User** and the **Role**. Leave **Active** ticked.
+4. Click **Save**. The person can sign in straight away.
+
+The form opens with the role **Member**. That role gives no access at all, so always change it.
+
+### Change a role
+
+1. Open the member from the list.
+2. Change the **Role** and click **Save**.
+
+Only an Owner can change another Owner or make someone an Owner.
+
+### Remove a member
+
+Untick **Active** (easy to undo) or delete the member. On their next click the person loses access.
 
 ## What each role can do
 
 | Capability | Staff | Admin | Owner |
 |---|---|---|---|
-| View, add, edit sales, catalog, customers, marketing, content and shipping; payment methods, shipping providers, VAT rates; preview email templates | yes | yes | yes |
-| Delete records | no | yes | yes |
-| <span class="sidebar-path">Settings → Store Settings</span> | no | yes | yes |
-| <span class="sidebar-path">Settings → Cache</span> | no | yes | yes |
-| <span class="sidebar-path">Settings → Store Profile</span> (name, branding, colours, socials, pixels, payment, courier and myDATA credentials) | no | yes | yes |
-| <span class="sidebar-path">Settings → Team</span> | no | yes | yes |
-| Edit or remove an Owner, make someone Owner | no | no | yes |
-| System section in the sidebar (audit logs, reconciliation, identity lists, Stripe) | no | no | no |
+| View, add and edit sales, catalog, customers, marketing, content and shipping | yes | yes | yes |
+| Payment methods, shipping providers, VAT rates, email templates | yes | yes | yes |
+| Delete | no | yes | yes |
+| [Store Profile](/admin/settings/store-profile) | no | yes | yes |
+| [Store Settings](/admin/settings/store-settings) | no | yes | yes |
+| [Cache](/admin/settings/cache) | no | yes | yes |
+| Team | no | yes | yes |
+| Edit or remove an Owner | no | no | yes |
 
-The last row is deliberate: the **System** section is for platform operators. See [Welcome](/admin/) for the full picture, and [Security & access](/admin/settings/security-and-access) for one caveat about the identity lists.
-
-The sidebar follows this table: an entry a role cannot open is not listed for that role, so Staff never see Store Profile, Team, Store Settings or Cache, and no store role sees System. What the store's plan and settings switch off is hidden for every role alike; see [Welcome](/admin/).
-
-Where the store profile lives: <span class="sidebar-path">Settings → Store Profile</span> opens straight on your store's own record. Admin and Owner see their own store row only, and can edit only part of it. Editable: store name and description, contact email, default language, branding and colours, social links, analytics pixels (Google Analytics, Meta, TikTok), Google Ads conversion tracking (the `AW-` conversion ID plus one label per action — purchase, add to cart, begin checkout, add payment info, page view; a label without the ID is refused, and every event is sent with the real order or cart value rather than a placeholder), your Viva Wallet, Stripe, ACS, BoxNow and myDATA credentials, and the authenticator-app issuer name. Read-only, because the platform sets them: your plan and billing dates, every plan feature switch, the store's short name, and the currency.
-
-## Tasks
-
-### Add a team member
-
-1. Ask the platform to create the person's staff account if they do not have one. A store cannot create platform accounts.
-2. Open <span class="sidebar-path">Settings → Team</span> and click **Add**.
-3. Pick the **User**, leave **Tenant** as your store, pick the **Role**, keep **Is active** ticked.
-4. **Save**. The person can sign in immediately.
-
-### Change a role
-
-1. Open the membership.
-2. Change **Role** and **Save**.
-
-An Admin cannot open an Owner's row for editing and cannot choose Owner as a role. Only an Owner can.
-
-### Remove a team member
-
-Either untick **Is active** (reversible) or delete the row. Owner rows can only be changed or deleted by an Owner.
+Whatever a role cannot open does not even appear in its sidebar.
 
 ## Things to know
 
-- **Keep more than one Owner.** Nothing stops an Owner from removing the last Owner row, and once it is gone no Admin can put it back — only the platform can. Promote the next person before you remove yourself.
-- Roles are per store. The same staff account can be Owner of one store and Staff of another.
-- Permissions come from the role itself. There is nothing to assign or maintain beyond picking the role, and the permission-groups screen the platform uses has no part in it.
-- A colleague who cannot find **Store Settings**, **Cache**, **Store Profile** or **Team** in the sidebar has the Staff role. That is expected: the entries are left out rather than shown and refused. Change the role if they need them.
-- Suspending a membership does not close the person's open browser tab. It takes effect on their next click, which then fails the membership check.
+- **Always keep two Owners.** Nothing stops the last Owner from being removed, and after that only the platform team can appoint a new one. Appoint the next Owner before you remove yourself.
+- A role applies to one store. The same person can be Owner in one store and Staff in another.
+- There are no other permissions to set up. The role decides everything.
+- If a colleague cannot find **Store Settings**, **Cache**, **Store Profile** or **Team**, their role is Staff. Change it if they need those.
 
 ## Related
 
-- [Signing in & MFA](/admin/getting-started/login-and-mfa)
-- [Store settings](/admin/settings/store-settings)
+- [Sign-in & password](/admin/getting-started/sign-in)
+- [Store profile](/admin/settings/store-profile)
 - [Welcome](/admin/)

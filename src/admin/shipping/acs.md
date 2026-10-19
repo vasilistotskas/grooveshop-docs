@@ -1,210 +1,145 @@
 ---
 title: ACS Courier
-description: Operating ACS shipments end to end, from voucher creation and thermal label printing to the daily pickup list, tracking, cash-on-delivery payouts and Smartpoint stations.
+description: Shipping with ACS, from the voucher and the printed label to the pickup list, parcel tracking, cash on delivery and Smartpoints.
 ---
 
 # ACS Courier
 
+Every order that ships with ACS has one shipment here. The voucher (the ACS shipping label, carrying the parcel number) is issued automatically. You print the label and hand the parcel over. The order of the day is in the [Daily shipping routine](/admin/shipping/daily-routine).
+
 <span class="sidebar-path">Shipping → ACS Shipments</span>
 
-Every order shipped with ACS has one ACS shipment record. The record is created at checkout, receives its voucher from ACS a few seconds later, is printed and collected, and is then tracked by polling ACS every fifteen minutes until it reaches a final state. Store staff work mostly from this list and from the order page. The ACS entries are in the sidebar only while the ACS row under [Shipping providers](/admin/shipping/providers) is active. Superusers also see the pickup lists, the cash-on-delivery payouts and the raw tracking events under <span class="sidebar-path">System</span>.
-
-## The lifecycle at a glance
-
-```mermaid
-flowchart LR
-  A[Order placed] --> B[Pending creation]
-  B -->|voucher issued| C[New]
-  C -->|print label| D[Label printed]
-  D -->|pickup list 16:30| E[On pickup list]
-  E -->|poll| F[In transit / At destination / Out for delivery]
-  F --> G[Delivered]
-  F --> H[Returned / Lost]
-  C --> I[Canceled]
-  G -->|COD payout reconcile| J[Order paid and completed]
-```
-
-What the platform does automatically:
-
-1. **At checkout** the shipment row is created in state **Pending creation** with the delivery kind, the chosen Smartpoint (if any), the parcel weight from the cart, one parcel, and the charge type.
-2. **The voucher** is requested in the background: straight away for cash on delivery, bank transfer and orders paid entirely with a gift card, and only after the payment succeeds for card orders. On success the row gets its **Voucher number**, moves to **New**, the order's tracking number is set and the order moves from Pending to Processing.
-3. **Printing** the label records **Label printed at** on the row.
-4. **The pickup list** (manifest) is issued Monday to Friday at 16:30 Athens time, or on demand with the button on this page. It is the day's record of the vouchers ACS accepted, not a condition for collection: ACS collects a parcel once its label is printed, whether or not it is on a list.
-5. **Tracking** is polled every fifteen minutes for every non-final shipment. The shipment state follows ACS, and the order status follows the shipment state.
-6. **Cash on delivery** is settled days later: a nightly job pulls ACS's payout report and marks the matching orders paid.
+The screen appears only while ACS is active under [Shipping providers](/admin/settings/shipping-providers). Issued pickup lists, cash-on-delivery payouts and the detailed ACS history are visible to the platform team only. If you need something from there, [send them](/admin/help/contact-support) the voucher number.
 
 ## What you see
 
-Columns of the list:
-
 | Column | Meaning |
 |---|---|
-| **Voucher number** | The 10-digit ACS voucher. Empty while the shipment is Pending creation. |
+| **Voucher number** | The 10-digit ACS number. Empty until the voucher is issued. |
 | **Order** | Link to the order. |
-| **State** | See the state table below. |
-| **Delivery kind** | Home delivery or Pickup point / locker. |
-| **Pickup list** | The manifest the voucher was issued on. Empty until a list ACS accepted includes it, and empty on many parcels ACS collected anyway: that is normal. |
-| **Label printed at** | When the label was **first** downloaded through the platform. Later downloads do not change it. Empty means the label has not been printed here yet, and while any voucher is unprinted ACS refuses the day's pickup list. |
-| **Last polled at** | When tracking was last refreshed. |
+| **State** | Where the parcel is (table below). |
+| **Delivery kind** | Home delivery or a Smartpoint. |
+| **Pickup list** | The day's list that holds the voucher. Often empty, and that is normal. |
+| **Label printed at** | When the label was first printed from here. Empty means not printed. |
+| **Last polled at** | When ACS was last asked about the parcel. |
 
-Filters: **Shipment state**, **Delivery kind**, **Label printed at** (empty or not), **Needs attention** (**Stale: no tracking movement or never created**, or **Delivered COD never paid out by ACS**: the same parcels the alert emails and the dashboard count), **Created at** range. The search box matches the voucher number, the order number and the customer email.
+Filters: **Shipment state**, **Delivery kind**, **Label** (**Printed** / **Not printed**), **Needs attention** and **Created At**. Search finds a voucher number, an order number or a customer email.
 
-Shipment states:
+The parcel states:
 
-| State | Meaning | Order status it sets |
+| State | Meaning | The order becomes |
 |---|---|---|
-| Pending creation | Row exists, no voucher yet. | none |
-| New | Voucher issued, parcel still with you. | none (already Processing) |
-| In transit | ACS has loaded the parcel. | Shipped |
-| At destination station | Parcel reached the delivery branch. | Shipped |
-| Out for delivery | On the courier's vehicle. The customer is emailed once. | Shipped |
-| Delivery attempted | ACS could not deliver and recorded why: the customer was absent, the address was wrong, or the parcel is waiting at the branch or a Smartpoint for the customer to collect. ACS texts the customer and holds the parcel for about ten days, then returns it to you. Call the customer while it is held. | Shipped |
-| Delivered | Signed for. | Delivered, then Completed if the order is paid |
-| Returned | Returned to sender. | Returned |
-| Canceled | Voucher cancelled at ACS or retired locally. | Canceled |
-| Lost | Declared lost. | Returned |
+| **Pending creation** | No voucher issued yet. | (unchanged) |
+| **New** | The voucher is issued, the parcel is still with you. | **Processing** |
+| **In transit** | ACS has collected the parcel. | **Shipped** |
+| **At destination station** | The parcel reached the ACS shop that will deliver it. | **Shipped** |
+| **Out for delivery** | The parcel is on the courier's van. The customer gets one email. | **Shipped** |
+| **Delivery attempted** | ACS could not deliver and gave a reason. The parcel may wait at the ACS shop. Call the customer. | **Shipped** |
+| **Delivered** | The customer received it. | **Delivered**, then **Completed** once paid |
+| **Returned** | The parcel came back to you. | **Returned** |
+| **Canceled** | The voucher was cancelled. | **Canceled** |
 
-Delivered, Returned, Canceled and Lost are final: a later noisy poll can never move the shipment out of them.
+The last three are final: the parcel's state no longer changes. A parcel that is only waiting for the customer at a Smartpoint keeps its previous state, usually **In transit**.
 
-The shipment page shows the voucher and tracking fields read-only, the destination (delivery kind, station), the parcel (weight in grams, item quantity, charge type, COD amount, COD payment way, delivery products) and a tab with every tracking event: **Event time**, **Checkpoint action**, **Checkpoint location**, **Notes**, **Received at**. The same shipment is shown as an **ACS Shipment** tab on the order page in <span class="sidebar-path">Sales → Orders</span>.
+A shipment's page has the tabs **Shipment**, **Destination**, **Parcel & COD**, **Tracking** and **Diagnostics**, plus one listing every checkpoint of the parcel. The same shipment is shown on the order, in the **ACS Shipment** tab.
 
-Buttons on this page:
+The buttons:
 
 | Where | Button | What it does |
 |---|---|---|
-| Top of the list | **Issue ACS pickup list now** | Runs the daily manifest immediately for today's vouchers. |
-| Each row | **Re-poll ACS tracking** | Queues one tracking refresh for that shipment. |
-| Each row | **Issue ACS voucher now** | Queues voucher creation. On a Canceled shipment it first clears the old voucher so a fresh one can be issued. |
-| Bulk action | **Print labels for selected shipments** | Downloads one PDF holding every selected label, in order-number order. Pair it with the **Label printed at: empty** filter to clear everything outstanding in a single print job. |
-| Bulk action | **Re-poll tracking for selected shipments** | Queues one refresh per selected row. |
-| Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Local bookkeeping only. Marks the rows Canceled so tracking checks and the stale alert stop. Does not call ACS and does not change the order. Rows already in a final state are skipped. |
+| Above the list | **Issue ACS pickup list now** | Issues the day's pickup list without waiting for 16:30. |
+| On each row | **Re-poll ACS tracking** | Asks ACS for a fresh update on the parcel. |
+| On each row | **Issue ACS voucher now** | Asks for the voucher again, after you fix the details. On a cancelled shipment it issues a new one. |
+| Bulk action | **Print labels for selected shipments** | Downloads one PDF with every selected label, in order-number order. |
+| Bulk action | **Re-poll tracking for selected shipments** | Asks for a fresh update on each selected parcel. |
+| Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Marks the shipments cancelled here only, so the checks and alerts stop. It does not tell ACS and does not change the order. |
+| Shipment page | **Record COD received outside ACS** | See "Cash on delivery that never arrived". |
 
 ## Tasks
 
-### Create a voucher for an order
+### Print the labels
 
-Nothing to do in the normal case: the voucher is minted automatically. If an order shows **Pending creation** for more than a minute:
+1. Filter **Label: Not printed**.
+2. Select every row and run **Print labels for selected shipments**.
+3. Print the PDF on the thermal printer and stick each label on its parcel.
 
-1. Open the order in <span class="sidebar-path">Sales → Orders</span> and check the email you received about the failed voucher, or the **Metadata** section of the shipment, where the last ACS error and the request that failed are stored.
-2. Fix the cause on the order. Checkout now requires a postcode in the country's format, a street that contains a letter, and a street number that is not a postcode, so a mistyped address rarely reaches ACS; the platform strips the space in a postcode such as "703 00" before sending. Orders placed before that check can still carry a bad address: correct it in the order's **Shipping Address** section, where the same check applies. ACS also rejects a phone number that is not a plain 10-digit Greek number, an address it cannot place, and a Smartpoint it does not recognise.
-3. Back on <span class="sidebar-path">Shipping → ACS Shipments</span>, click **Issue ACS voucher now** on the row. It is refused for an order whose online payment is still pending, so an unpaid order never gets a voucher; that voucher is issued automatically once the payment is confirmed. The failure is also written as a note in the order's history.
+For a single parcel, click **Download shipping voucher (PDF)** on the order, in <span class="sidebar-path">Sales → Orders</span>. If a label cannot be downloaded, the screen names its order, and the others print as normal.
 
-A missing ACS credential is a different failure. Nothing is retried, because credentials do not appear on their own; the store's admins are emailed at once and the order waits. An Owner or Admin fills the ACS credentials in on <span class="sidebar-path">Settings → Store Profile</span>; ask the platform team if you do not have them.
-
-### Print the voucher
-
-One parcel at a time, the voucher is printed from the **order**:
-
-1. In <span class="sidebar-path">Sales → Orders</span>, click **Download shipping voucher (PDF)** on the order row or at the top of the order page.
-2. Print the PDF on the thermal roll printer. The layout is the thermal one (one voucher per page) unless the ACS provider's metadata sets `print_type` to `2` for laser, four per A4. See [Shipping providers](/admin/shipping/providers).
-3. **Label printed at** is now set. Printing the label is what lets ACS collect the parcel. ACS also refuses the whole day's pickup list while even one voucher on it is unprinted; that refusal needs no action (see "Issue the pickup list" below).
-
-**Printing everything outstanding at once.** On <span class="sidebar-path">Shipping → ACS Shipments</span>, filter by **Label printed at: empty**, tick the rows and choose the bulk action **Print labels for selected shipments**. ACS has no bulk print of its own, so the platform fetches each label and merges them into a single PDF ordered by order number: one file, one job on the thermal roll, instead of opening one order page per parcel. A label you miss is a parcel ACS cannot collect, so prefer this over working through them by hand.
-
-Downloading the merged file sets **Label printed at** by exactly the same route as the per-order button, so the 16:30 pickup list sees the same truth either way.
-
-If a voucher cannot be fetched — none has been minted yet, or ACS refuses that one — it is named on screen with its order number and **the others still print**. Only when every selected voucher fails is there no download at all: you get the error messages instead of an empty PDF, which would look like a successful print of nothing.
-
-A label printed from ACS's own portal is not visible to the platform, so the column stays empty in that case. Nothing blocks on the column; it is a pre-flight check.
+ACS collects a parcel once its label is printed. A label you miss is a parcel that does not leave.
 
 ### Issue the pickup list
 
-Automatic Monday to Friday at 16:30. The pickup list is the day's manifest: the record of the vouchers ACS accepted for that date. It is not what gets a parcel collected. ACS scans a parcel as collected on the day its label is printed, with or without a list, and on Saturdays too, when no list runs at all.
+The pickup list is the record of the day's parcels at ACS. It is issued automatically Monday to Friday at 16:30.
 
-**A refused list is normal.** ACS refuses the whole list while any voucher on it is unprinted, and it cannot issue a partial one. If you print labels the morning after the order, the 16:30 run finds the newest orders still unprinted and is refused on most days. Nothing is lost: those parcels are collected once their labels are printed. You are not emailed about it; the refusal is written as a note in the history of each order it held back.
+- **If ACS refuses it, it usually does not matter.** ACS refuses the whole list while even one voucher is unprinted. Parcels with a printed label are collected as normal. The refusal is written as a note in the orders' history, with no email.
+- **To issue it yourself:** print any missing labels first, then click **Issue ACS pickup list now** and read the message. If ACS refuses, the message gives its reason.
+- **A day with no new parcels:** the message says no vouchers are waiting. That is not an error.
+- A voucher already on a list can no longer be cancelled from here.
 
-To issue the list anyway, once the labels are printed:
+### A voucher that was not issued
 
-1. Filter the list by **Label printed at: empty**, select every row shown, run **Print labels for selected shipments** and print the PDF it downloads.
-2. Click **Issue ACS pickup list now**.
-3. Read the message. "Pickup list … issued for N voucher(s)" is success. "ACS did not issue the pickup list: …" quotes ACS's own reason, usually naming the unprinted vouchers. "No vouchers are waiting for a pickup list" means there was nothing to put on a list: either every voucher already belongs to a list, or the only ones left are vouchers ACS has never scanned — see "An empty day is not a failure" below.
+The voucher is issued a few seconds after the order. For card payments, as soon as the payment is confirmed. If a shipment stays **Pending creation**:
 
-The pickup list never emails you. Anything that goes wrong with it other than unprinted labels is recorded for the platform team.
+1. Read the email you received about the failure, or the note in the order's history. It says what ACS rejected: usually the address, postcode, phone or Smartpoint.
+2. Fix it on the order, in the **Shipping Address** tab.
+3. Come back here and click **Issue ACS voucher now** on the row.
 
-**An empty day is not a failure.** ACS builds each list for one pickup date and chooses the vouchers itself, so on a day with no new parcels it correctly answers that there is nothing eligible. When the only vouchers still waiting are ones ACS has never scanned — typically a parcel that was never actually handed over — the run ends quietly with no list and no email, and the button reports "No vouchers are waiting for a pickup list". Those rows are reported by the 09:00 stale-shipment email instead, and retiring them is what clears them.
-
-Worth knowing:
-
-- Printing the label is what lets ACS collect a parcel. A parcel on no pickup list is still collected, and tracking follows it like any other.
-- A voucher on a list can no longer be cancelled through the platform and can no longer be reprinted through ACS.
-- **A missed list is not caught up later, and that is fine.** ACS builds each list for one pickup date only, so a voucher that missed the list for its own day is never added to a later one and its **Pickup list** column stays empty. The parcel is collected all the same; nothing needs doing.
-
-Issued lists are visible to superusers at <span class="sidebar-path">System → Reconciliation → ACS Pickup Lists</span> with the **Pickup list number**, **Issued at**, **Voucher count** and **Issued by** (empty when the 16:30 run issued it). Search matches the pickup list number. The rows are read-only, and there is no button here to reprint the manifest as a PDF: print it from the ACS portal if the driver asks for it. See [Reconciliation](/admin/system/reconciliation).
+For a card order that is not paid yet, the button does nothing: the voucher is issued by itself when the payment arrives. If the ACS login details are missing from the [Store profile](/admin/settings/store-profile), no voucher is issued until an Owner or Admin fills them in.
 
 ### Cancel a voucher
 
-- Cancelling the order in <span class="sidebar-path">Sales → Orders</span> also asks ACS to delete the voucher, when it is still allowed. See [Orders](/admin/sales/orders).
-- ACS refuses to delete a voucher that is already on a pickup list. Contact ACS for a manual return instead.
-- A customer can cancel the order from their account only until its voucher is on a pickup list. After that their cancel is refused and the order is left as it is.
-- A cancelled voucher can be reissued: click **Issue ACS voucher now** on the Canceled row. The old voucher number is kept in the row's metadata history.
+- When you cancel the order, the platform asks ACS to cancel the voucher too, if that is still allowed.
+- A voucher that is already on a pickup list cannot be cancelled from here. Contact ACS.
+- A customer can cancel the order from their account only until the voucher is on a pickup list.
 
-### Deal with a shipment that stopped moving
+### A parcel that is not moving
 
-A daily check at 09:00 emails the store's own admins about shipments with no tracking movement for three days, and about rows stuck in Pending creation for more than a day (an online order not paid yet is left out: its voucher is created once the payment arrives). Each shipment is reported once; a new tracking event re-arms the alert. The alert does not stop the polling: only marking the row final does that.
+Every morning at 09:00 you receive an email about parcels with no movement for three days, and about shipments left without a voucher for more than a day. The [Dashboard](/admin/getting-started/dashboard) counts the same parcels, and the filter **Needs attention: Stale: no tracking movement or never created** lists them.
 
-The same shipments are counted on the [Dashboard](/admin/getting-started/dashboard) as **Stale ACS shipments**, and the **Needs attention → Stale: no tracking movement or never created** filter lists them, whether or not they were emailed already. You can switch the email off with `OPS_ALERT_STALE_SHIPMENTS_ENABLED` in [Store settings](/admin/settings/store-settings#operational-alert-emails); the dashboard line and the filter stay, and when you switch it back on the next digest lists every shipment still stale.
+1. Look the voucher number up with ACS.
+2. If the parcel is moving normally, click **Re-poll ACS tracking**.
+3. If the parcel was never handed to ACS and never will be, select the row and run **Retire selected shipments (mark CANCELED, stop polling)**. Cancel the order separately if needed.
 
-The email and that dashboard line are the only places a voucher ACS never collected is reported. Until you retire it, it stays on the list of vouchers offered to ACS every working day — and on a day with no other parcels it is why the pickup list comes back empty.
+You can stop the email with the `OPS_ALERT_STALE_SHIPMENTS_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span>. The Dashboard and the filter keep showing the parcels.
 
-1. Search the voucher on the ACS portal or call ACS.
-2. If the parcel was never handed over and never will be, select the row and run **Retire selected shipments**. The order is not changed; cancel it separately if needed.
-3. If the parcel is genuinely moving, click **Re-poll ACS tracking**.
+### When cash on delivery gets paid
 
-### Cash on delivery
+The ACS contract is cash on delivery only, so every voucher goes out as cash on delivery. On orders paid by card or bank transfer the amount to collect is €0.00 and the courier collects nothing.
 
-The store's ACS contract is cash on delivery only. ACS refuses a prepaid voucher outright, so **Charge type** is not really a choice: every voucher goes out as Cash on delivery. The **COD amount** is the order's paid amount for orders whose payment method is courier cash, and 0,00 for orders paid online or by bank transfer, so the courier collects nothing on those. The payment way is sent only when there is an amount to collect, so the driver is never told to collect zero.
+1. The customer pays the courier. The order becomes **Delivered**, and its payment stays pending.
+2. ACS pays the money out to you a few days later.
+3. Every night the platform fetches the previous day's payouts from ACS. As soon as it finds a parcel's payout, the order becomes paid and **Completed**.
 
-How a COD order gets paid:
+### Cash on delivery that never arrived
 
-1. The customer pays the courier. The shipment reaches Delivered, the order becomes Delivered, and its payment status stays Pending.
-2. ACS remits the collected cash to the store some days later. A measured remittance lag is about four days.
-3. Every night at 02:30 the platform pulls yesterday's payouts from ACS and stores one row per voucher and payout date in <span class="sidebar-path">System → Reconciliation → ACS COD Payouts</span>.
-4. Each payout matched to a shipment flips the order's payment status to Completed and the order to Completed. Customers are not emailed for this step; they were already notified at delivery.
+If a cash-on-delivery parcel was delivered more than ten days ago and ACS has not paid the money out, you receive an email. The filter **Needs attention: Delivered COD never paid out by ACS** lists the same parcels.
 
-The payouts screen (superusers) shows **Voucher number**, **Parcel delivery date**, **COD amount total**, **COD payment date**, **Shipment** and **Customer reference 1** (the order number sent to ACS). Filters: **Shipment** (**Matches no shipment, not reconciled**), **Reconciliation** (**Reconciled** or **Not reconciled**), and **COD payment date** and **Parcel delivery date** ranges. Search matches the voucher, both customer references and the receiver name. The payout data is read-only; the one thing staff can add is a reconciliation, with **Mark as reconciled** (see [Reconciliation](/admin/system/reconciliation#acs-cod-payouts)). **Run COD reconciliation now**, at the top of the list, re-runs the nightly pull for yesterday's date; it is safe to press twice, as a payout already recorded is simply updated in place.
+1. Give ACS the voucher numbers and ask when they will pay.
+2. If you were paid another way, for example by bank transfer, open the shipment and click **Record COD received outside ACS**. Write in the note how the money came. The order becomes paid and the alert stops.
 
-Alerts you may receive:
+If you receive an email that ACS paid money matching none of your parcels (usually a voucher you made in the ACS program), [send the voucher number](/admin/help/contact-support) to the platform team. The two alerts stop with the `OPS_ALERT_UNREMITTED_COD_ENABLED` and `OPS_ALERT_UNATTRIBUTABLE_COD_PAYOUTS_ENABLED` settings. The Dashboard keeps counting them.
 
-| Email subject | Meaning | What to do |
-|---|---|---|
-| "ACS COD reconcile: N unattributable payout row(s)" | ACS paid out money that none of your shipments explains: a voucher the platform does not know, typically one created by hand in the ACS portal, or a payout line with no readable voucher at all. The row is stored; it is not attributed. | Reconcile it against ACS's beneficiary report as an off-platform sale, then mark the payout as reconciled. Until then it is counted on the dashboard as **ACS payouts matching no shipment**. |
-| "ACS COD: N delivered parcel(s) never remitted" | Delivered COD parcels older than ten days with no payout row. Also counted on the dashboard as **COD cash ACS has not paid out**. | Give ACS the voucher numbers and ask for the remittance status. If ACS paid on a date the nightly pull never queried, the platform team can replay that date. If you were paid for the parcel outside ACS, open the shipment and use **Record COD received outside ACS** to clear it. |
+### Smartpoint lockers
 
-Each of these emails has its own switch in [Store settings](/admin/settings/store-settings#operational-alert-emails) (`OPS_ALERT_UNATTRIBUTABLE_COD_PAYOUTS_ENABLED` and `OPS_ALERT_UNREMITTED_COD_ENABLED`). Switching one off stops the email only; the dashboard line keeps counting until the money is accounted for.
+<span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span>
 
-See [Reconciliation](/admin/system/reconciliation) for the finance view.
+The list of ACS shops and Smartpoints refreshes by itself every night at 03:00, for the countries that have an active ACS rate. There is no button to refresh it now. Customers are offered only **Smartpoint (no locker)** and **Smartpoint locker**, never plain shops. A point that ACS removes becomes inactive; it is not deleted. How to open Smartpoints at checkout is in [Shipping providers](/admin/settings/shipping-providers).
 
-### Smartpoint stations
-
-<span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span> is a local copy of ACS shops and Smartpoint lockers, refreshed daily at 03:00. Columns: **External ID** (the area station code), **Name**, **Shop kind**, **City**, **Postal code**, **Country code**, **Is active**. Filters: **Shop kind**, **Country code**, **Is active**. Search matches ID, name, city and postcode. **Last synced at** is read-only. There is no sync button on this screen; the nightly refresh is the only way the list changes. It covers exactly the countries that have an active rate on the ACS provider row: which countries ACS serves for your store is decided by those rates, not by a separate setting.
-
-Notes:
-
-- A locker's identity is the pair of **External ID** and branch code. Many lockers share one area code.
-- Only kinds **Smartpoint (no locker)** and **Smartpoint locker** are offered to customers as pickup points. Kind **Shop** rows are kept fresh but not shown.
-- Smartpoint lockers cap at 6 kg per parcel.
-- The picker appears in checkout only when the ACS row has **Supports Pickup Point** on and the setting **ACS_SMARTPOINT_ENABLED** is on. See [Shipping providers](/admin/shipping/providers).
-- A station that disappears from ACS's list is marked inactive, not deleted. Shipments keep the station code they were created with.
-
-### Tracking events
-
-<span class="sidebar-path">System → Audit & Logs → ACS Tracking Events</span> (superusers) lists every checkpoint the tracking checks have recorded: **Shipment**, **Event time**, **Checkpoint action**, **Checkpoint location**, **Received at**. Filters: **Checkpoint action**, **Received at** range. The rows are read-only and are the same events shown in the tab on the shipment page. See [Audit & logs](/admin/system/audit-and-logs).
+When BoxNow is switched off, the menu shows **ACS Stations** directly under **Shipping**.
 
 ## Things to know
 
-- **Transient 403 and 406 errors.** ACS sporadically answers a tracking poll or a voucher request with HTTP 403 or 406 and then succeeds on the next attempt. The platform retries those automatically with backoff. Only a persistent rejection means a wrong API key or an IP address ACS has not allow-listed; in that case raise it with the platform team.
-- **Business errors do not retry.** A rejected address or station is reported by email at once ("ACS: shipment creation failed for order N"), noted in the order's history and stored on the shipment. Fix the data and click **Issue ACS voucher now**. The email can be switched off with `OPS_ALERT_SHIPMENT_REJECTED_ENABLED`; the history note is written either way.
-- **Parcels per voucher.** ACS's item quantity is the number of physical parcels, not cart lines. The platform sends one. Smartpoint pickup requires exactly one.
-- **Weight** is stored in grams and sent in kilograms with a minimum of 0.5 kg. Bounds come from the provider metadata.
-- **The customer's checkout note** is printed on the voucher's remarks line, trimmed to one paragraph.
-- **Out for delivery** is emailed to the customer once per shipment, even when ACS's snapshot bounces between "on the vehicle" and "at the station" across days.
-- **The order status only moves forward.** When ACS reports Delivered or Returned while the order is still Processing, the platform passes through Shipped first; the Shipped hop is silent for the customer on the Returned path.
-- **Editing the shipment form.** Weight, item quantity, charge type and COD fields are editable but are only read at voucher creation time. Changing them after the voucher exists has no effect at ACS.
+- **ACS sometimes rejects a request.** The platform retries by itself. If the problem stays, tell the platform team.
+- **A wrong address or Smartpoint** is not retried. You receive an email at once and a note is written on the order. The email stops with the `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` setting; the note is always written.
+- **One voucher, one parcel.** The platform sends every order as one parcel. The fields on the **Parcel & COD** tab are read only when the voucher is issued. If you change them later, ACS does not find out.
+- **Weight:** ACS charges at least 0.5 kg per parcel.
+- **The customer's note** from checkout is printed in the voucher's remarks.
+- **The "out for delivery" email** goes out once per parcel, even when ACS moves the state back and forth.
+- **The label is laid out for a thermal printer**, one per page. For a laser printer (four on an A4 page), ask the platform team for the change.
 
 ## Related
 
-- [Shipping providers](/admin/shipping/providers)
+- [Daily shipping routine](/admin/shipping/daily-routine)
+- [Shipping providers](/admin/settings/shipping-providers)
 - [Orders](/admin/sales/orders)
-- [Reconciliation](/admin/system/reconciliation)
-- [Audit & logs](/admin/system/audit-and-logs)
-- [Background jobs](/admin/system/background-jobs)
+- [When to contact support](/admin/help/contact-support)

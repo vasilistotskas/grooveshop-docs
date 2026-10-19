@@ -6,10 +6,21 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
     text: 'Ξεκινώντας',
     items: [
       { text: 'Καλώς ήρθατε', link: '/el/admin/' },
-      { text: 'Σύνδεση & MFA', link: '/el/admin/getting-started/login-and-mfa' },
+      { text: 'Πρώτα βήματα', link: '/el/admin/getting-started/first-steps' },
+      { text: 'Σύνδεση & κωδικός', link: '/el/admin/getting-started/sign-in' },
       { text: 'Ρόλοι & ομάδα', link: '/el/admin/getting-started/roles-and-team' },
       { text: 'Πίνακας ελέγχου', link: '/el/admin/getting-started/dashboard' },
       { text: 'Αναζήτηση & παλέτα εντολών', link: '/el/admin/getting-started/search-and-command-palette' },
+    ],
+  },
+  {
+    text: 'Πωλήσεις',
+    items: [
+      { text: 'Παραγγελίες', link: '/el/admin/sales/orders' },
+      { text: 'Επιστροφές χρημάτων και αμφισβητήσεις', link: '/el/admin/sales/refunds-and-disputes' },
+      { text: 'Πηγή παραγγελίας', link: '/el/admin/sales/order-source' },
+      { text: 'Αποδείξεις και πιστωτικά παραστατικά', link: '/el/admin/sales/receipts' },
+      { text: 'Καλάθια', link: '/el/admin/sales/carts' },
     ],
   },
   {
@@ -17,100 +28,82 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
     items: [
       { text: 'Προϊόντα', link: '/el/admin/catalog/products' },
       { text: 'Κατηγορίες', link: '/el/admin/catalog/categories' },
+      { text: 'Μάρκες', link: '/el/admin/catalog/brands' },
       { text: 'Χαρακτηριστικά & τιμές', link: '/el/admin/catalog/attributes-and-values' },
       { text: 'Ομάδες παραλλαγών', link: '/el/admin/catalog/variant-groups' },
-      { text: 'Κριτικές', link: '/el/admin/catalog/reviews' },
+      { text: 'Εικόνες', link: '/el/admin/catalog/images' },
       { text: 'Ετικέτες', link: '/el/admin/catalog/tags' },
-    ],
-  },
-  {
-    text: 'Κατάστημα',
-    items: [
-      { text: 'Πλοήγηση', link: '/el/admin/storefront/navigation' },
-      { text: 'Σελίδες περιεχομένου', link: '/el/admin/storefront/content-pages' },
-      { text: 'Διατάξεις σελίδων', link: '/el/admin/storefront/page-layouts' },
-      { text: 'Πρότυπα email', link: '/el/admin/storefront/email-templates' },
-    ],
-  },
-  {
-    text: 'Blog',
-    items: [
-      { text: 'Άρθρα', link: '/el/admin/blog/posts' },
-      { text: 'Κατηγορίες, συντάκτες & ετικέτες', link: '/el/admin/blog/categories-authors-tags' },
-      { text: 'Σχόλια', link: '/el/admin/blog/comments' },
-    ],
-  },
-  {
-    text: 'Πωλήσεις',
-    items: [
-      { text: 'Παραγγελίες', link: '/el/admin/sales/orders' },
-      { text: 'Καλάθια', link: '/el/admin/sales/carts' },
-      { text: 'Αποδείξεις', link: '/el/admin/sales/receipts' },
-      { text: 'Τρόποι πληρωμής', link: '/el/admin/sales/payment-methods' },
-      { text: 'Προσφορές', link: '/el/admin/sales/promotions' },
-      { text: 'Κωδικοί κουπονιών', link: '/el/admin/sales/coupon-codes' },
-      { text: 'Δωροκάρτες', link: '/el/admin/sales/gift-cards' },
-      { text: 'Συντελεστές ΦΠΑ', link: '/el/admin/sales/vat-rates' },
-      { text: 'Ειδοποιήσεις', link: '/el/admin/sales/notifications' },
-      { text: 'Μηνύματα επικοινωνίας & feedback', link: '/el/admin/sales/contact-and-feedback' },
-    ],
-  },
-  {
-    text: 'B2B (χονδρική)',
-    items: [
-      { text: 'Επιχειρηματικοί πελάτες', link: '/el/admin/b2b/business-customers' },
-      { text: 'Ομάδες πελατών & τιμοκατάλογοι', link: '/el/admin/b2b/groups-and-price-lists' },
-    ],
-  },
-  {
-    text: 'Αποστολές',
-    items: [
-      { text: 'Πάροχοι αποστολών', link: '/el/admin/shipping/providers' },
-      { text: 'ACS Courier', link: '/el/admin/shipping/acs' },
-      { text: 'BoxNow', link: '/el/admin/shipping/boxnow' },
+      { text: 'Κριτικές', link: '/el/admin/catalog/reviews' },
     ],
   },
   {
     text: 'Πελάτες',
     items: [
-      { text: 'Χρήστες & διευθύνσεις', link: '/el/admin/customers/users-and-addresses' },
-      { text: 'Συνδρομές', link: '/el/admin/customers/subscriptions' },
-      { text: 'Εξαγωγές δεδομένων (GDPR)', link: '/el/admin/customers/data-exports' },
+      { text: 'Πελάτες & διευθύνσεις', link: '/el/admin/customers/users-and-addresses' },
+      { text: 'Μηνύματα & Feedback', link: '/el/admin/customers/messages-and-feedback' },
+      { text: 'Αγαπημένα', link: '/el/admin/customers/favourites' },
+      { text: 'Ειδοποιήσεις προϊόντων', link: '/el/admin/customers/product-alerts' },
+      { text: 'Ειδοποιήσεις', link: '/el/admin/customers/notifications' },
+      { text: 'Εταιρικοί πελάτες', link: '/el/admin/customers/business-customers' },
+      { text: 'Ομάδες πελατών & τιμοκατάλογοι', link: '/el/admin/customers/groups-and-price-lists' },
+      { text: 'Πιστότητα', link: '/el/admin/customers/loyalty' },
+      { text: 'Συνδρομές newsletter', link: '/el/admin/customers/subscriptions' },
+      { text: 'Εξαγωγή δεδομένων (GDPR)', link: '/el/admin/customers/data-exports' },
     ],
   },
   {
-    text: 'Πρόγραμμα επιβράβευσης',
+    text: 'Marketing',
     items: [
-      { text: 'Βαθμίδες & πόντοι', link: '/el/admin/loyalty/tiers-and-points' },
+      { text: 'Προσφορές', link: '/el/admin/marketing/promotions' },
+      { text: 'Κωδικοί κουπονιών', link: '/el/admin/marketing/coupon-codes' },
+      { text: 'Εξαργυρώσεις', link: '/el/admin/marketing/redemptions' },
+      { text: 'Δωροκάρτες', link: '/el/admin/marketing/gift-cards' },
+      { text: 'Συστάσεις', link: '/el/admin/marketing/recommendations' },
     ],
   },
   {
-    text: 'Τοπικοποίηση',
+    text: 'Περιεχόμενο',
     items: [
-      { text: 'Γλώσσες & μεταφράσεις', link: '/el/admin/localization/languages-and-translations' },
-      { text: 'Χώρες & περιοχές', link: '/el/admin/localization/countries-and-regions' },
+      { text: 'Σελίδες', link: '/el/admin/content/pages' },
+      { text: 'Μενού', link: '/el/admin/content/menus' },
+      { text: 'Διατάξεις σελίδων', link: '/el/admin/content/page-layouts' },
+      {
+        text: 'Blog',
+        items: [
+          { text: 'Άρθρα', link: '/el/admin/content/blog/posts' },
+          { text: 'Κατηγορίες, συντάκτες & ετικέτες', link: '/el/admin/content/blog/categories-authors-tags' },
+          { text: 'Σχόλια', link: '/el/admin/content/blog/comments' },
+        ],
+      },
+    ],
+  },
+  {
+    text: 'Μεταφορικά',
+    items: [
+      { text: 'Καθημερινή ρουτίνα αποστολών', link: '/el/admin/shipping/daily-routine' },
+      { text: 'ACS Courier', link: '/el/admin/shipping/acs' },
+      { text: 'BoxNow', link: '/el/admin/shipping/boxnow' },
     ],
   },
   {
     text: 'Ρυθμίσεις',
     items: [
+      { text: 'Προφίλ καταστήματος', link: '/el/admin/settings/store-profile' },
       { text: 'Ρυθμίσεις καταστήματος', link: '/el/admin/settings/store-settings' },
-      { text: 'Ασφάλεια & πρόσβαση', link: '/el/admin/settings/security-and-access' },
-    ],
-  },
-  {
-    text: 'Σύστημα',
-    items: [
-      { text: 'Έλεγχος & αρχεία καταγραφής', link: '/el/admin/system/audit-and-logs' },
-      { text: 'Εργασίες παρασκηνίου', link: '/el/admin/system/background-jobs' },
-      { text: 'Cache', link: '/el/admin/system/cache' },
-      { text: 'Συμφωνίες', link: '/el/admin/system/reconciliation' },
+      { text: 'Μέθοδοι πληρωμής', link: '/el/admin/settings/payment-methods' },
+      { text: 'Πάροχοι αποστολών', link: '/el/admin/settings/shipping-providers' },
+      { text: 'Συντελεστές ΦΠΑ', link: '/el/admin/settings/vat-rates' },
+      { text: 'Πρότυπα email', link: '/el/admin/settings/email-templates' },
+      { text: 'Γλώσσες & μεταφράσεις', link: '/el/admin/settings/languages-and-translations' },
+      { text: 'Cache', link: '/el/admin/settings/cache' },
     ],
   },
   {
     text: 'Βοήθεια',
     items: [
-      { text: 'Συχνές ερωτήσεις & επίλυση προβλημάτων', link: '/el/admin/faq' },
+      { text: 'Αυτόματες εργασίες', link: '/el/admin/help/automatic-tasks' },
+      { text: 'Συχνές ερωτήσεις', link: '/el/admin/faq' },
+      { text: 'Πότε καλώ την υποστήριξη', link: '/el/admin/help/contact-support' },
     ],
   },
 ]

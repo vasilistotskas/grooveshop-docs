@@ -83,6 +83,8 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Suspend, export & destroy', link: '/dev/operator/lifecycle' },
       { text: 'Platform staff & access', link: '/dev/operator/team' },
       { text: 'Scheduled work & platform data', link: '/dev/operator/background-jobs' },
+      { text: 'Audit & logs', link: '/dev/operator/audit-and-logs' },
+      { text: 'Reconciliation', link: '/dev/operator/reconciliation' },
     ],
   },
   {

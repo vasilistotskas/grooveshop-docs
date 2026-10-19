@@ -1,148 +1,178 @@
 ---
-title: FAQ & troubleshooting
-description: Short answers to the questions store owners ask most, each pointing to the page with the full explanation.
+title: FAQ
+description: Short answers to the questions store owners ask most, each with a link to the page that has the details.
 ---
 
-# FAQ & troubleshooting
+# FAQ
 
-Each answer is short on purpose; follow the link for the details.
+Every answer is short. The link at the end leads to the details.
 
-## Access
+## Sign-in and team
 
-### I cannot sign in to the admin with my customer account
+### I forgot my password
 
-The admin accepts platform staff accounts with a membership in your store, never storefront customer accounts, even with the same email. Ask an Owner to add you, and ask the platform for a staff account if you have none. See [Signing in & MFA](/admin/getting-started/login-and-mfa).
+The sign-in page has no password reset. Ask the platform team for a new password, then change it to your own with **Change password**. See [Sign-in & password](/admin/getting-started/sign-in).
+
+### I cannot get into the admin with my customer account
+
+The admin accepts only platform accounts that are members of the store's team. Ask an Owner or Admin to add you, and the platform team for an account if you have none. See [Roles & team](/admin/getting-started/roles-and-team).
 
 ### A colleague cannot find Store Settings, Cache or Team
 
-Their role is Staff. The sidebar leaves out every screen a role cannot open, and only Admin and Owner can open **Store Profile**, **Team**, **Store Settings** and **Cache**. Change the role on their membership. See [Roles & team](/admin/getting-started/roles-and-team).
+Their role is Staff, which does not see them. Change their role to Admin. See [Roles & team](/admin/getting-started/roles-and-team).
 
-### I cannot demote or remove the other Owner
+### I cannot change or remove the other Owner
 
-Only an Owner can edit an Owner's membership, and an Admin cannot pick the Owner role. If you are an Owner and still cannot, check that you are signed in as the right account. See [Roles & team](/admin/getting-started/roles-and-team).
+Only another Owner can change an Owner. If you are an Owner, check that you signed in with the right account. See [Roles & team](/admin/getting-started/roles-and-team).
 
 ### We removed our last Owner by mistake
 
-Nothing prevents that, and no Admin can undo it. Ask the platform to grant an Owner membership again, and promote a second person once it is back. See [Roles & team](/admin/getting-started/roles-and-team).
+Only the platform team can appoint a new one. Ask them, then appoint a second Owner too. See [When to contact support](/admin/help/contact-support).
 
-### Where is the System section? I only see up to Settings
+### Does the admin ask for a code from a phone app?
 
-The System section (audit logs, reconciliation, identity lists, Stripe) is for platform operators and is hidden from store roles. Ask the platform when you need something from there. See [Welcome](/admin/).
+Not for the store's team: sign-in asks for email and password. Use a strong password and give every person their own account. See [Sign-in & password](/admin/getting-started/sign-in).
 
-### A menu in the sidebar is marked "Off"
+## The sidebar
 
-The feature is part of your plan but switched off in **Store Settings**. Its pages work, so you can set it up before shoppers see it; switch its setting on when you are ready. See [Store settings](/admin/settings/store-settings#what-the-admin-shows).
+### A sidebar entry says "Off"
 
-### Loyalty, Promotions, Reviews or another entry is missing from the sidebar
+Your plan includes the feature, but it is switched off. Set it up and switch its setting on when you are ready. See [Store settings](/admin/settings/store-settings).
 
-It depends on the entry. Loyalty, Wholesale, Promotions, Gift Cards, Recommendations and Blog are missing when your plan does not include them; ask the platform. Reviews, Feedback, Favourites, Newsletter and Blog Comments are missing while their setting is off in **Store Settings**. The ACS or BoxNow pages are missing while that courier is not an active shipping provider. And a screen your role cannot open is never listed. See [Store settings](/admin/settings/store-settings#what-the-admin-shows) and [Welcome](/admin/).
+### Something is missing from the sidebar
 
-### Where did Email Templates, Cache and Translations go?
+Your plan may not include it, its setting may be off, or your role cannot open it. The ACS and BoxNow pages show only while that courier is active. See [Welcome](/admin/).
 
-They used to sit in the menu under the store name at the top of the sidebar. All three are in the **Settings** section now; the help link is in the footer of every page. See [Welcome](/admin/).
+### Where is the System section?
 
-### Does the admin have two-factor authentication?
+It is for the platform team only. If you need something from there, see [When to contact support](/admin/help/contact-support).
 
-No. The admin login is email and password only. Your storefront customers do get authenticator apps, passkeys and login-by-code, but staff sign-in does not. Use strong, unique passwords and one membership per person. See [Signing in & MFA](/admin/getting-started/login-and-mfa).
+## How the store looks
 
-## Storefront not reflecting changes
+### How do I change the logo and colours?
 
-### I edited a product but the storefront still shows the old price
+In <span class="sidebar-path">Settings → Store Profile</span>, on the **Branding** tab. See [Store profile](/admin/settings/store-profile).
 
-Saving a product purges its cache on its own about ten seconds later, but your browser may still hold the old page. Reload with Ctrl+Shift+R first; if it still looks old, purge **Products** on the Cache page. See [Cache](/admin/system/cache).
+### How do I add an announcement above the header?
+
+With the `ANNOUNCEMENT_BAR` setting. There is a ready-made example on [Store settings](/admin/settings/store-settings).
+
+### How do I change the time until which an order ships the same day?
+
+With the `DISPATCH_CUTOFF` setting, e.g. `14:00`. On weekends and public holidays the order ships the next working day. See [Store settings](/admin/settings/store-settings).
+
+### Why are the stars not showing on products?
+
+Stars show only on a product with at least one approved review. If they show nowhere, reviews are switched off (`PRODUCT_REVIEWS_ENABLED`). See [Reviews](/admin/catalog/reviews).
+
+### How do I turn reviews off across the store?
+
+Untick the `PRODUCT_REVIEWS_ENABLED` setting. The reviews you have stay and show again when you switch it back on. See [Store settings](/admin/settings/store-settings).
+
+### I changed a product but the store shows the old price
+
+The store updates by itself about ten seconds after you save. Reload the page with Ctrl+Shift+R. If it still shows the old one, clear **Products** on [Cache](/admin/settings/cache).
 
 ### I changed a setting and nothing happened
 
-Public settings reach the storefront within about a minute. If the setting is one half of a two-tier feature (loyalty, promotions, gift cards, wholesale, suggestions), the platform's plan flag must be on as well. See [Store settings](/admin/settings/store-settings).
+If your plan does not include the feature, the setting does not switch it on. Otherwise wait a few minutes, or clear **Storefront pages** on [Cache](/admin/settings/cache).
 
-### Promotions or coupons are not applied at checkout
+### Promotions or coupons do not apply at checkout
 
-Check, in order: the plan flag on the store profile, the `PROMOTIONS_ENABLED` setting, the promotion's dates and conditions, and whether the order is a wholesale order with `B2B_ALLOW_PROMOTIONS` off. See [Promotions](/admin/sales/promotions) and [Store settings](/admin/settings/store-settings).
+Check in order: that **Promotions** does not say **Off** in the sidebar, the promotion's dates and conditions, and whether the customer is a business customer with `B2B_ALLOW_PROMOTIONS` off. See [Promotions](/admin/marketing/promotions).
 
-### My navigation menu edit is not visible
+### My change to the store's menu does not show
 
-Menus and page layouts are cached as rendered pages. Saving a menu, column or link purges them on its own about ten seconds later; if the change still does not show, purge **Pages & navigation** on the Cache page. See [Navigation](/admin/storefront/navigation) and [Cache](/admin/system/cache).
+The store updates by itself about ten seconds after you save. If it does not show, clear **Pages & navigation** on [Cache](/admin/settings/cache). See [Menus](/admin/content/menus).
 
-### A product image does not appear
+### A product's English page shows Greek text
 
-Check that the image is attached to the product and that one image is marked as main, then purge **Products**. See [Products](/admin/catalog/products).
-
-### The English version of a product shows Greek text
-
-There is no English translation of that record, so the fallback is shown. Open the product, click the English tab and fill it in. See [Languages & translations](/admin/localization/languages-and-translations).
+The product has no English translation. Open it, click the English language tab and fill it in. See [Languages & translations](/admin/settings/languages-and-translations).
 
 ## Orders and payments
 
-### A cash-on-delivery order has been delivered but its payment is still Pending
+### A cash-on-delivery order was delivered but its payment says Pending
 
-That is by design. The payment flips to Completed when ACS pays out the collected cash, which the 02:30 reconciliation imports; it usually takes several days after delivery. See [Reconciliation](/admin/system/reconciliation).
+With ACS that is normal: the payment becomes **Completed** when ACS pays the money out, days after delivery. With BoxNow the customer pays at the locker, so the payment becomes **Completed** on delivery. If the money does not arrive, or a delivered BoxNow order still says Pending, see [When to contact support](/admin/help/contact-support).
 
-### An online order has been Pending for hours
+### An online-payment order has been Pending for hours
 
-The customer never completed the payment. Such an order is cancelled automatically, and its stock released, once its payment window has passed (a failed payment after `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`). The customer gets no reminder email. If you want it gone sooner, tick it in the order list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
+The customer did not pay. The order cancels itself, and its stock returns, once its payment window has passed. The customer gets no reminder email. To do it sooner, select it in the list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
 
-### The customer says they paid but the order is not marked paid
+### The customer says they paid, but the order does not show as paid
 
-Platform operators can check the Viva Webhook Events ledger for the order id: no row means the provider never notified us, a Failed row means the notification could not be applied. Ask the platform to look. See [Audit & logs](/admin/system/audit-and-logs).
+Check the payment in your Viva Wallet or Stripe account. If it shows as paid there, send the order number to the platform team. See [When to contact support](/admin/help/contact-support).
+
+### A customer cannot place a new order because others are "waiting for their payment"
+
+They already have as many unpaid online-payment orders as `ORDER_MAX_UNPAID_ONLINE_ORDERS` allows (5 by default). They must pay for or cancel one. See [Store settings](/admin/settings/store-settings).
 
 ### Stock looks wrong after a failed payment
 
-Stock reserved for an order is released by the stuck-order cleanup that runs every fifteen minutes, not at the moment the payment fails. Wait for the next run or cancel the order. See [Background jobs](/admin/system/background-jobs).
+Stock returns when the order is canceled. The store checks every fifteen minutes and cancels orders with a failed payment after `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` minutes. Wait, or cancel it yourself. See [Automatic tasks](/admin/help/automatic-tasks).
 
 ### Why is the receipt number not the next one I expected?
 
-Numbers are taken from a per-year counter that only moves forward; a deleted receipt does not return its number. See [Reconciliation](/admin/system/reconciliation) and [Receipts and credit documents](/admin/sales/receipts).
+Numbering only moves forward, and a number once used is never given again. If something looks wrong, see [When to contact support](/admin/help/contact-support). See also [Receipts](/admin/sales/receipts).
+
+### A customer lost their gift-card code
+
+1. Open <span class="sidebar-path">Marketing → Gift Cards → Gift Cards</span> and search for the recipient's email.
+2. Open the card. Check the **Recipient Email** on the **Delivery** tab.
+3. Click **Resend delivery email**.
+
+See [Gift cards](/admin/marketing/gift-cards).
 
 ## Shipping
 
-### ACS never collected today's parcels
+### ACS did not collect today's parcels
 
-ACS collects a parcel once its label is printed, whether or not a pickup list was issued, so check the labels first: on ACS Shipments, filter by **Label printed at: empty**, select the rows and run **Print labels for selected shipments**. The 16:30 pickup list is only the day's manifest. ACS refuses it as a whole while any voucher is unprinted, which is normal and needs no action; after printing you can issue it with **Issue ACS pickup list now**. A printed parcel that still has not moved after three days is named in the 09:00 stale-shipments email. See [ACS Courier](/admin/shipping/acs) and [Reconciliation](/admin/system/reconciliation).
+1. In <span class="sidebar-path">Shipping → ACS Shipments</span> filter **Label: Not printed**.
+2. Select the shipments and run **Print labels for selected shipments**.
+3. Click **Issue ACS pickup list now**.
 
-### ACS tracking looks out of date
+ACS refuses the day's pickup list while any label is unprinted. See [The daily routine](/admin/shipping/daily-routine).
 
-ACS sends no notifications at all, so every checkpoint arrives through a poll that runs every fifteen minutes. Click **Re-poll ACS tracking** on the shipment if you need it now. See [ACS Courier](/admin/shipping/acs).
+### An ACS shipment's tracking looks old
 
-### The Smartpoint option does not show at checkout
+The store asks ACS every fifteen minutes. For an immediate check, click **Re-poll ACS tracking** on the shipment. See [ACS](/admin/shipping/acs).
 
-`ACS_SMARTPOINT_ENABLED` is off by default; turn it on after the station sync has run. See [Store settings](/admin/settings/store-settings).
+### ACS Smartpoint pickup does not show at checkout
 
-### A BoxNow parcel state looks stale
+It starts switched off. Switch on the `ACS_SMARTPOINT_ENABLED` setting. See [Store settings](/admin/settings/store-settings).
 
-Parcel state comes from BoxNow's notifications and from a poll every fifteen minutes, so a delay of up to fifteen minutes is normal. Platform operators can read every delivery in BoxNow Events. See [BoxNow](/admin/shipping/boxnow).
+### A BoxNow parcel's status looks old
 
-## Customers and emails
+BoxNow updates the store automatically, and the store also asks every fifteen minutes. A delay of up to fifteen minutes is normal. See [BoxNow](/admin/shipping/boxnow).
 
-### A customer cannot receive the verification code
+## Customers
 
-Verification is mandatory. After confirming the address through another channel, mark it verified from the Email Addresses list. That screen is a platform-operator tool and is not in your sidebar, so ask the platform rather than hunting for it. See [Security & access](/admin/settings/security-and-access).
+### A customer does not receive the confirmation code, or lost the phone with their codes
 
-### A customer lost their authenticator app
-
-The customer's second factor can be deleted so they can sign in with the password and enrol again. It is done from the MFA Authenticators list, a platform-operator screen; ask the platform. See [Security & access](/admin/settings/security-and-access).
+Only the platform team can sort these out. See [When to contact support](/admin/help/contact-support).
 
 ### A customer asked for a copy of their data
 
-They request it from their account; the file is ready for seven days. Platform operators see the requests under User Data Exports. See [Data exports (GDPR)](/admin/customers/data-exports).
+They request it themselves from their account. See [Data exports](/admin/customers/data-exports).
 
-### Newsletter subscriptions are gone from the account page
+### Newsletter subscriptions disappeared from customers' accounts
 
-`NEWSLETTER_ENABLED` is off, or the topic is inactive. With the setting off, the **Newsletter** menu also leaves the admin sidebar. Existing unsubscribe links keep working either way. See [Countries & regions](/admin/localization/countries-and-regions) for topics and [Store settings](/admin/settings/store-settings).
+The `NEWSLETTER_ENABLED` setting is off, or the subscription's topic is inactive. See [Subscriptions](/admin/customers/subscriptions).
 
-## Admin itself
+## The admin itself
 
-### The dashboard numbers look a few minutes old
+### The Dashboard figures look a little old
 
-Each block is kept for one to fifteen minutes and refreshed at once when an order, receipt, product, review, blog comment, contact message or business account it counts is saved. New customers, open carts and search figures wait for their time to run out. See [Dashboard](/admin/getting-started/dashboard).
+Order figures update as soon as an order changes. New customers can take up to 5 minutes, and **Store search** and the carts in **Checkout funnel** up to 15. See [Dashboard](/admin/getting-started/dashboard).
 
-### The Messages number does not go down when I read messages
+### The number on Messages does not drop when I read them
 
-It counts the contact-form messages of the last 7 days, not the unread ones: there is no read flag. It falls as messages turn a week old. See [Welcome](/admin/).
+It counts messages from the last 7 days, not unread ones. It drops by itself as messages turn a week old. See [Welcome](/admin/).
 
-### How do I find an order by voucher number or an email quickly?
+### How do I quickly find an order by voucher number or email?
 
 Press Ctrl+K (⌘K on a Mac) and type it. See [Search & command palette](/admin/getting-started/search-and-command-palette).
 
-### An admin label is wrong or in English
+### A word in the admin is wrong or in English
 
-The admin's wording is edited on the platform console and is shared by every store, so a store cannot change it. Tell the platform the screen and the text. See [Languages & translations](/admin/localization/languages-and-translations).
+The platform team corrects the admin's texts. Send them the screen and the word. See [When to contact support](/admin/help/contact-support).
