@@ -79,7 +79,7 @@ That is by design. The payment flips to Completed when ACS pays out the collecte
 
 ### An online order has been Pending for hours
 
-The customer never completed the payment. Such orders are cancelled automatically and their stock released after the time set in `ORDER_AUTO_CANCEL_PENDING_HOURS` (failed payments after `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`). If you want it gone sooner, tick it in the order list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
+The customer never completed the payment. Such an order is cancelled automatically, and its stock released, once its payment window has passed (a failed payment after `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`). The customer gets no reminder email. If you want it gone sooner, tick it in the order list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
 
 ### The customer says they paid but the order is not marked paid
 

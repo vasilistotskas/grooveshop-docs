@@ -17,9 +17,8 @@ Times are store local time (Athens). Each job runs once per store.
 
 | Job | When | What it does | Your knobs |
 |---|---|---|---|
-| Cancel stuck pending orders | every 15 minutes | Cancels orders whose online payment failed or never completed, and releases their stock. | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`, `ORDER_AUTO_CANCEL_PENDING_HOURS` |
+| Cancel stuck pending orders | every 15 minutes | Cancels orders whose online payment failed or never completed, and releases their stock. | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` |
 | Release expired stock reservations | hourly | Frees stock held by checkouts that were never completed. | `STOCK_RESERVATION_TTL_MINUTES` |
-| Pending order reminders | daily 07:00 | Emails customers whose order is still unpaid. | `PENDING_ORDER_REMINDER_*` |
 | Low stock check | hourly | Emails the store when a product falls to its threshold. | the product's own **Low stock threshold** field (0 disables it for that product) |
 | Checkout abandonment emails | daily 06:00 | Reminds customers who left a checkout. | `CHECKOUT_ABANDONMENT_HOURS` |
 | Abandoned cart cleanup | daily 04:00 | Deletes old abandoned carts. | `ABANDONED_CART_CLEANUP_DAYS` |
