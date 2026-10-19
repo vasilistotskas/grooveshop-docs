@@ -184,6 +184,27 @@ setting either: `shippingPrice` is the live option price or `null`
 retry that blocks the step, not a fallback number.
 `cart/serializers/cart.py` requires `country_id` for the same reason.
 
+**Free shipping and a free pay-way fee are judged on one value.**
+`OrderService.threshold_value(cart_total, discount_total)` is the products
+after promotion and coupon discounts, never below zero, excluding shipping
+and the pay-way fee; loyalty points and gift cards are payment, not
+discounts, and do not move it. `ShippingService.quote` makes a rate free
+when that value reaches `ShippingRate.free_shipping_threshold` (a `NULL`
+threshold is never free), and `OrderService.calculate_payment_method_fee`
+waives the fee when it reaches a non-zero `PayWay.free_threshold`. Every
+caller of `shipping_cost` and `calculate_payment_method_fee` passes it:
+both order-creation paths, the payment-first verification and the
+`cart/create-payment-intent` preview (`cart/views/cart.py`), so the preview
+and the order cannot disagree. The cart serializer exposes it as
+`freeThresholdValue` (`cart/serializers/cart.py:
+get_free_threshold_value`). The storefront compares every "free above X"
+with it, never with the cart total: `useCheckoutForm.ts` sends it as the
+shipping options' `orderValueAmount`, `app/utils/payWayCost.ts:
+payWayDisplayCost` waives the displayed fee on it, and the free-shipping
+notices read it. Before this, free shipping compared the gross cart total
+and the fee compared products plus shipping, so a cart just under a
+threshold could pay shipping and skip the fee.
+
 ### 5. Order creation: two paths, one endpoint
 
 `POST /api/v1/order` (`OrderViewSet.create`) picks the path:
@@ -585,7 +606,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | File | Role |
 |---|---|
 | `grooveshop-django-api/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `threshold_value`, `calculate_payment_method_fee`, `settle_cod_payment`, `OrderAttributionService` |
 | `grooveshop-django-api/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
 | `grooveshop-django-api/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
 | `grooveshop-django-api/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
@@ -597,7 +618,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/country/migrations/0012_seed_iso_countries.py` | The full ISO 3166-1 country seed |
 | `grooveshop-django-api/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/country/filters.py` | `?shippable=true` |
-| `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id` |
+| `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value` |
 | `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
 | `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_refund` |
 | `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
@@ -612,7 +633,8 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
 | `grooveshop-django-api/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
 | `grooveshop-django-api/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `create_payment_intent` |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, shippable countries, shipping options and their error state, pay-way loading |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, shippable countries, shipping options (quoted on `freeThresholdValue`) and their error state, pay-way loading |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/payWayCost.ts` | `payWayDisplayCost`: the fee shown, waived on `freeThresholdValue` |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/phone.ts` | `normalizePhone`, `isPlausiblePhone`, `stripDialCodeForDisplay`, `dialCodeLabel` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | Submit orchestration, idempotency key, the three payment flows |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Per-tab landing capture and the override rule |

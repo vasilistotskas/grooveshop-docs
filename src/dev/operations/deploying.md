@@ -209,7 +209,7 @@ production-pin PR or their own.
 
 The SSR renders of the routes in `shared/constants/prerender.ts` live in
 shared Redis for up to an hour (`nuxt.config.ts` gives them
-`cache: { varies: ['host', 'x-device-class'] }` with `swr: 3600` for the
+`cache: { varies: ['host', 'x-device-class', 'x-tenant-epoch'] }` with `swr: 3600` for the
 brand pages, 300 seconds for the homepage, 600 and 300 for the blog and
 catalogue families). Until 2026-09-07 a deploy inherited the previous
 build's entries — old text, and asset URLs the new image no longer served

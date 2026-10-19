@@ -273,12 +273,12 @@ It is enforced in two places:
 | Data | `app/composables/useLoyalty.ts` |
 | Proxies | `server/api/loyalty/summary.get.ts`, `transactions.get.ts`, `tiers.get.ts`, `settings.get.ts`, `product/` |
 
-The route gate is two-tier and fails **open** on a settings-fetch failure — an
-unavailable settings endpoint must not take loyalty down for a store whose
-plan enables it. That is the opposite of the B2B gate's posture, and
-deliberate: loyalty is chrome on a page, B2B is a commercial program.
+The route gate is `createFeatureGate('loyalty')` (`app/utils/routeGate.ts`):
+it reads the `loyalty` store feature synchronously from `TenantConfig.features`,
+which Django folds from the plan flag and the setting, makes no settings
+request and has no fallback (see the failure mode below).
 
-Both the gate and `useLoyalty` use `useRequestFetch`, not a bare `$fetch`. The
+`useLoyalty` uses `useRequestFetch`, not a bare `$fetch`. The
 comments record why: Nitro stamps `host: "localhost"` on an internal request,
 `server/middleware/0.tenant.ts` then fails to resolve a store and answers 404,
 and the page becomes unreachable for every tenant that has loyalty switched
@@ -334,10 +334,13 @@ storefront never advertises a reward the backend will not grant.
 - **Points expire that should not have.** `LOYALTY_POINTS_EXPIRATION_DAYS`
   defaults to 0, which disables expiry entirely; a non-zero value is a
   merchant decision.
-- **The loyalty page 404s for a store that has it on.** The route gate fails
-  open on a settings error but hard-404s on the plan flag, and reads the flag
-  synchronously from the tenant store — so a tenant config that did not load
-  takes the page with it.
+- **The loyalty page 404s for a store that has it on.** The route gate
+  (`app/middleware/loyalty-enabled.ts: createFeatureGate('loyalty')`) reads
+  the `loyalty` store feature synchronously from the tenant config, with no
+  settings request and no fallback, so a tenant config that did not load
+  takes the page with it. Right after the merchant switches loyalty on, a
+  pod can serve its old tenant config until the `store_pages` purge moves
+  the store's epoch (see [Caches & purging](/dev/operations/caches#the-tenant-config-epoch)).
 
 ## Related
 

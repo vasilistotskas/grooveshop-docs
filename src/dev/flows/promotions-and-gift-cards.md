@@ -337,9 +337,11 @@ both get it. The proxy `server/api/cart/coupons.get.ts` is deliberately
 depends on the cart and the signed-in shopper.
 
 `/offers` is indexable, so it also has an entry in
-`server/plugins/sitemap-tenant-gate.ts: GATED_ROUTES` — plan flag
-`promotionsEnabled` plus setting `PROMOTIONS_ENABLED`. Without that entry a
-store with promotions off advertised a URL it then 404s. The other gated
+`shared/utils/gatedRoutes.ts: FEATURE_GATED_ROUTES` — the `promotions`
+store feature from `TenantConfig.features` — which the sitemap
+(`server/plugins/sitemap-tenant-gate.ts`) and the navigation menus read.
+Without that entry a store with promotions off advertised a URL it then
+404s. The other gated
 storefront routes (`/gift-cards`, `/gift-cards/success`, `/feedback`) carry
 `robots: false` and never reach a sitemap at all; removing that noindex from
 one of them means adding it to this table.

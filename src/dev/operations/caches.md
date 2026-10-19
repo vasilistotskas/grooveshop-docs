@@ -128,10 +128,19 @@ what the store offers. `tenant/signals.py` registers
 `tenant/features.py: STORE_FEATURES`, which queues
 `core/tasks.py: purge_store_pages_task` in the store's schema on a real
 change. A store setting purges at once. A plan flag waits
-`STOREFRONT_TENANT_CACHE_SECONDS` (300 by default): the storefront reads
-plan flags from its copy of the resolve payload, kept in each pod's memory
-that long (`server/utils/tenant.ts`), and a page rendered from that copy
-before it expired would be cached with the old flag again.
+`STOREFRONT_TENANT_CACHE_SECONDS` (300 by default, `plan_countdown` in
+`tenant/signals.py`), the lifetime of each storefront pod's in-memory copy
+of the resolve payload (`server/utils/tenant.ts`).
+
+`store_pages` and `settings` are the two surfaces registered with
+`invalidates_tenant_config=True` (`core/cache/registry.py: CacheSurface`).
+`CacheService._purge_surface` passes it to
+`core/cache/nuxt.py: request_purge(..., tenant_config=)`, which adds
+`tenantConfig: true` to the purge body only for them. The storefront then
+drops the store's tenant config on every pod and moves its cache epoch
+before it deletes anything (see [The tenant-config epoch](#the-tenant-config-epoch)),
+so a page re-rendered after the purge reads the store's new `features`.
+Every other surface's purge leaves the tenant config and the epoch alone.
 
 ### Ways to invoke it
 
@@ -164,11 +173,13 @@ manage.py clear_cache --prefixes <raw prefix>    # raw Redis prefixes
 
 `nuxt.config.ts` derives three sets of route rules from
 `shared/constants/prerender.ts`, all with
-`cache: { varies: ['host', 'x-device-class'] }`: the brand pages at
+`cache: { varies: CACHED_PAGE_VARIES }`, which is
+`['host', 'x-device-class', 'x-tenant-epoch']`: the brand pages at
 `swr: 3600`, the homepage at 300 seconds, and the blog and catalogue
 families at 600 and 300. Server handlers use `defineCachedEventHandler`,
 the sitemap source and RSS feeds `defineCachedFunction`. `/sitemap.xml`
-itself is a route-rule cache too (`swr` for a day, `varies: ['host']`);
+itself is a route-rule cache too (`swr` for a day,
+`varies: ['host', 'x-tenant-epoch']`);
 @nuxtjs/sitemap's own cache is off (`sitemap.cacheMaxAgeSeconds: false`)
 because it kept the sitemap under a storage base nothing mounts, in each
 pod's memory, keyed by a hash of the host, where no purge reached it. On
@@ -186,8 +197,8 @@ cacheKeyBelongsToHost`) has to recognise all three:
 
 | Family | Key shape | Where the host is |
 |---|---|---|
-| `nitro:handlers:<name>:<entry>` | `tenantCacheKey` (`host__locale__key`) after Nitro's `escapeKey` (word characters only) | the entry starts with the host stripped of punctuation, then `__` |
-| `nitro:routes:_:<path>.<hash>:host.<hash>:xdeviceclass.<hash>` | route-rule cache; `/` is stored as `index` | `host.<hash>` — Nitro's vary-header hash of the host, never the host text |
+| `nitro:handlers:<name>:<entry>` | `tenantCacheKey` (`host__locale__key__e<epoch>`, then `_<hash>`) after Nitro's `escapeKey` (word characters only, so the epoch's `.` is dropped) | the entry starts with the host stripped of punctuation, then `__` |
+| `nitro:routes:_:<path>.<hash>:host.<hash>:xdeviceclass.<hash>:xtenantepoch.<hash>` | route-rule cache; `/` is stored as `index`; Nitro sorts the vary headers by name, and `/sitemap.xml` carries `host.<hash>:xtenantepoch.<hash>` | `host.<hash>` — Nitro's vary-header hash of the host, never the host text |
 | `nitro:functions:<name>:…:<host>:<locale>:…` | cached functions keyed on the raw host, then the locale | a whole `:`-delimited segment |
 
 The locale follows the host in both keyed families because Django
@@ -208,11 +219,19 @@ The purge endpoint is `POST /api/admin/cache/purge`
 (`server/api/admin/cache/purge.post.ts`), authenticated by the
 `X-Cache-Purge-Token` header compared in constant time against
 `NUXT_CACHE_PURGE_TOKEN`. Body: `{ patterns: string[], dryRun?: boolean,
-host?: string }`. A `host` scopes the purge to one tenant's keys; omit it
-for a platform-wide purge. Only a trailing `*` is a prefix; a mid-pattern
+host?: string, tenantConfig?: boolean }`. A `host` scopes the purge to one
+tenant's keys; omit it for a platform-wide purge. `tenantConfig` (default
+`false`) says the purge follows a change to the store's tenant config:
+only then, and not on a dry run, does the endpoint call
+`invalidateTenantConfigs(host)` before it deletes anything, which drops
+the tenant config and moves the store's epoch, or the platform-wide epoch
+when there is no `host`. Any other purge leaves both alone, because moving
+the epoch orphans everything cached for the store, not just what the
+patterns name. Only a trailing `*` is a prefix; a mid-pattern
 `*` becomes a regex post-filter. Django's `core/cache/nuxt.py` calls it
 through `NUXT_INTERNAL_BASE_URL` (the in-cluster Service) with the same
-token, passing the current tenant's primary domain as `host`.
+token, passing the current tenant's primary domain as `host`, and
+`tenantConfig: true` only for a surface with `invalidates_tenant_config`.
 
 From a pod, after a storefront deploy or when Django is not the writer:
 
@@ -231,6 +250,40 @@ Flip `dryRun` to `false` once the counts look right. `*` reports the
 total; `nitro:routes:*` and `nitro:handlers:*` match nothing because the
 stored keys carry the `cache:` mount and escaping. Entries refill on the
 next request.
+
+### The tenant-config epoch
+
+Every store feature the storefront shows is read from
+`TenantConfig.features` (`shared/utils/storeFeature.ts: storeFeatureOn`),
+which lives in each pod's in-memory copy of the resolve payload
+(`server/utils/tenant.ts`, five minutes). A purge reaches one pod, so the
+copies and anything rendered from them need a signal every pod of the
+same build sees. The epoch lives in the build's own cache namespace, so a
+purge reaches only the pods running the build that received it; during a
+rolling deploy the other build's pods keep their copy until its five-minute
+TTL:
+
+1. `invalidateTenantConfigs(host?)` clears the receiving pod's copy and
+   writes `Date.now()` to the `cache` storage, which is namespaced by
+   build (`server/plugins/storage.ts`), under `tenant-config-epoch:<host>`, or `tenant-config-epoch:*` for a
+   platform-wide purge.
+2. Each pod holds an epoch per store, `<platform>.<store>` (`0.0` until a
+   purge has written one). `getTenantConfig` re-reads both keys at most
+   every `EPOCH_CHECK_MS` (5 seconds) per store, never once per request,
+   and drops the store's copy when the value moved. If the storage cannot
+   be read it keeps the copy and logs `tenant epoch unreadable`.
+3. `tenantConfigEpoch(host)` is the last segment of every
+   `tenantCacheKey`, and `server/middleware/1.tenant-epoch.ts` stamps it
+   on the request as `x-tenant-epoch`, overwriting any client-supplied
+   value, so every cached page rule and `/sitemap.xml` vary on it.
+
+A pod that has not yet seen a new epoch renders from its old copy and
+files the result under the OLD epoch, which no updated pod reads. Entries
+of an old epoch are never read again and expire on their own TTL, so
+moving the epoch in effect empties every handler entry and rendered page
+of the store, whatever the purge patterns name. The cached functions
+(`nitro:functions:`) key on the raw host, not the epoch, and are left to
+the patterns. That is why only a purge with `tenantConfig: true` moves it.
 
 ## Layer 4: media-stream image cache
 
@@ -417,7 +470,7 @@ PageSpeed runs while Traefik's counters never moved.
 | Edit visible with `?cb=1` but not on the plain URL for over a minute | Cloudflare, the store's tag purge failed | Celery log for `purge_edge_cache_task`; the store's Cloudflare credentials |
 | Content edit not visible on a rendered page after ~40 s | Nitro `nitro:routes:` (the edit bypassed signals, or its model is not in the surface's `invalidated_by`) | the surface's Cache tool purge from the tenant admin (`page_config` covers `/`, `/about`, `/contact`, …), or the purge endpoint with `*routes*` |
 | Navigation menu edit not showing | Nitro handler `pageConfigNavigation` | `clear_cache page_config` (purges `*pageConfig*`) |
-| A switched-off feature still on a page | Nitro `nitro:routes:`; after a plan-flag change, until `STOREFRONT_TENANT_CACHE_SECONDS` has passed | `clear_cache store_pages` |
+| A switched-off feature still on a page | Nitro `nitro:routes:` or the pod's tenant config; after a plan-flag change, until `STOREFRONT_TENANT_CACHE_SECONDS` has passed | `clear_cache store_pages` (sends `tenantConfig: true`, so it also moves the store's epoch) |
 | One API route returns pre-edit data | Nitro `nitro:handlers:<name>` | purge endpoint with `*<handlerName>*` |
 | Replaced product image still served | media-stream `image:{schema}` | `flush-tenant` with the internal secret |
 | Google/Meta/TikTok feed stale | gateway feeds | `clear_cache products` (calls `invalidate_feeds`) |
@@ -465,9 +518,12 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/core/urls.py` | Dev/CI media route, which refuses dot-segment paths like the static nginx |
 | `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
 | `grooveshop-django-api/tenant/switches.py`, `tenant/features.py`, `core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The storefront's in-memory copy of the resolve payload |
-| `grooveshop-storefront-ui-node-nuxt/server/api/admin/cache/purge.post.ts` | Nitro purge endpoint |
-| `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts`, `shared/constants/prerender.ts` | SWR route rules |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The storefront's in-memory copy of the resolve payload; `invalidateTenantConfigs`, `tenantConfigEpoch`, `EPOCH_CHECK_MS` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` (ends with the epoch), `cacheKeyBelongsToHost` |
+| `grooveshop-storefront-ui-node-nuxt/server/middleware/1.tenant-epoch.ts` | Stamps `x-tenant-epoch` for the page cache's `varies` |
+| `grooveshop-storefront-ui-node-nuxt/server/api/admin/cache/purge.post.ts` | Nitro purge endpoint, `tenantConfig` |
+| `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts`, `shared/constants/prerender.ts` | SWR route rules, `CACHED_PAGE_VARIES` |
+| `grooveshop-django-api/core/cache/registry.py`, `core/cache/nuxt.py`, `core/cache/service.py` | `CacheSurface.invalidates_tenant_config`, `request_purge(..., tenant_config=)` |
 | `grooveshop-media-stream/src/MediaStream/Cache/controllers/admin-cache.controller.ts` | `flush-tenant` |
 | `grooveshop-django-api/meili/management/commands/` | Meilisearch commands |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend-config.yaml` | Internal service URLs |
