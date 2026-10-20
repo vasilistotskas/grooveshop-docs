@@ -11,7 +11,7 @@ This is your store's identity: name, logo, colours, contact email and the creden
 
 ## What you see
 
-A form with tabs. Some fields are read-only: the platform team sets those, such as the plan, billing, the plan's features and the currency.
+A form with tabs. Some fields are read-only: the platform team sets those, such as the plan, billing, the plan's features and the currency. A few keys belong to the platform, such as the chat assistant's key and the Cloudflare token: for those you see only a tick or a cross, saying whether they are set, never the key itself.
 
 | Tab | What you change |
 |---|---|

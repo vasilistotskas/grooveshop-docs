@@ -86,7 +86,14 @@ inside the cluster). There is no tenant parameter.
   drifted. Disabled features answer 404.
 - **Idempotency.** Mutating requests may send `Idempotency-Key`; the
   middleware replays the stored response for a repeated key
-  (`core/middleware/idempotency.py`).
+  (`core/middleware/idempotency.py`). A key belongs to the caller as the
+  view authenticates it (decided in `process_view`, so Knox, staff and
+  agent tokens all count); an anonymous key to the cart it names
+  (`X-Cart-Token`, else `X-Cart-Id`), else the session, else the client
+  address. A repeat of a request still running answers
+  `409 idempotency_in_flight`, an oversized key
+  `400 idempotency_key_too_long`, and each caller has a key budget
+  (`MAX_KEYS_PER_CALLER`).
 - **Guest access.** Anonymous carts identify themselves with the
   `X-Cart-Id` header; a guest reads their order with `?uuid=<order uuid>`.
 - **Currency** is EUR throughout; there is no per-request currency.

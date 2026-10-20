@@ -436,7 +436,11 @@ arrived through a real checkout — see
 - **Checkout attempt.** The storefront mints one `Idempotency-Key` per
   attempt and reuses it across automatic retries
   (`useCheckoutSubmit.ts`), clearing it on success or on a
-  non-retryable error.
+  non-retryable error. Django scopes the key to the shopper, not the
+  connection (`core/middleware/idempotency.py`: the authenticated user,
+  else the cart token or id, else the session), so a retry from another
+  address (a phone changing networks, the other gateway pod) still
+  replays instead of running twice.
 - **Payment-first order creation.** One order per payment intent: a
   repeat for the same cart returns the first order, backed by the
   `order_payment_id_unique` index (section 5).
