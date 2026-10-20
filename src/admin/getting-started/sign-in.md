@@ -31,7 +31,15 @@ The change signs out every other device you use. The device you are on stays sig
 
 ### I forgot my password
 
-The sign-in page has no password reset. Ask the platform team to set a new password for you. Then change it to one of your own, as above.
+1. On the sign-in page, click **Forgotten your password or username?**.
+2. Enter the email of your account and click **Send the link**.
+3. Open the email. It comes in the store's language and its link works once, for one hour.
+4. Choose the new password twice and click **Change my password**.
+5. Sign in with the new password.
+
+The page says the same thing whether or not the address has an account, so it reveals nothing to a stranger. It sends a link only to an active team account that may sign in to this store. A link that was used, has expired or is for another store is refused; ask for a new one. Asking too often in a short time is refused for a while.
+
+The reset does not sign you in. Platform team accounts are still asked for their authenticator code afterwards.
 
 ### Sign out
 

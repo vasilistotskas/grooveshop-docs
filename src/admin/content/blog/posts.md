@@ -48,7 +48,7 @@ Tick **Featured**, in the list (then click **Save**) or inside the post. A featu
 In the store each question is a bar; the answer opens when the reader taps it.
 
 ### Add a video
-Choose **Insert → Media** in the **Body** and paste a YouTube or Vimeo link. Video files and other platforms are not accepted.
+Choose **Insert → Media** in the **Body** and paste a YouTube or Vimeo link. Video files and other platforms are not accepted. On the store a YouTube video shows as a picture with a play button: the player loads only when the visitor clicks it, so the page opens fast and YouTube sets no cookies before then.
 
 ### Take a post down
 Untick **Is Published** and save, or select posts and choose **Unpublish selected posts**. The post's page then shows "Not found".

@@ -11,7 +11,7 @@ Every answer is short. The link at the end leads to the details.
 
 ### I forgot my password
 
-The sign-in page has no password reset. Ask the platform team for a new password, then change it to your own with **Change password**. See [Sign-in & password](/admin/getting-started/sign-in).
+Click **Forgotten your password or username?** on the sign-in page and follow the link in the email; it works once, for one hour. See [Sign-in & password](/admin/getting-started/sign-in).
 
 ### I cannot get into the admin with my customer account
 
