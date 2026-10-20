@@ -179,6 +179,11 @@ by a namespace regex.
   rejections) reach the logs as `log.source:client` with
   `log.action:client:*`, each distinct error once per page load
   (`app/plugins/error-reporting.client.ts`).
+- A page whose INP is over 200 ms sends one `log.action:client:inp` event
+  at `warn` when it is hidden (`app/plugins/web-vitals.client.ts`): the
+  interaction's target selector, its route name, its three phases and the
+  longest long-animation-frame script. The server keeps only the report's
+  own fields (`redactClientInpReport`).
 - Traefik's request-duration histograms use 11 buckets from 25 ms to
   10 s (`traefik/helmchartconfig.yaml`), so a storefront p95 moves when a
   render gets faster. No query pins an `le` value.
@@ -232,6 +237,8 @@ by a namespace regex.
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/2.evlog-client.ts` | Puts the client (browser, OS, device class, bot, country) on the request's log line |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/backendFetch.ts` | Sends the correlation id on every Django call |
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/error-reporting.client.ts` | Reports browser errors through evlog's client transport |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/web-vitals.client.ts` | Reports a page's slow interaction (INP) with its attribution |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/clientEventRedaction.ts` | The allowlists browser events are cut back to before they are printed |
 | `grooveshop-django-api/core/middleware/correlation_id.py` | Binds and echoes the correlation id |
 | `grooveshop-django-api/core/middleware/access_log.py` | Django's per-request access line |
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask`: the task failure line with its traceback |
