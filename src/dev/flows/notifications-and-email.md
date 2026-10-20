@@ -136,7 +136,7 @@ shared layout and is excluded.
 
 | Directory | Templates |
 |---|---|
-| `order/` | `order_received`, `order_payment_confirmed`, `payment_failed`, `order_shipped`, `order_delivered`, `order_completed`, `order_canceled`, `order_returned`, `order_refunded`, `order_status_generic`, `order_pending_reminder`, `invoice_issued`, `dispute_notification`, `admin_new_order`, `acs_out_for_delivery`, `boxnow_parcel_at_locker` |
+| `order/` | `order_received`, `order_payment_confirmed`, `payment_failed`, `order_shipped`, `order_delivered`, `order_completed`, `order_canceled`, `order_returned`, `order_refunded`, `order_status_generic`, `invoice_issued`, `dispute_notification`, `admin_new_order`, `acs_out_for_delivery`, `boxnow_parcel_at_locker` |
 | `cart/` | `checkout_abandoned` |
 | `giftcard/` | `gift_card_delivery`, `gift_card_purchase_receipt`, `gift_card_expiry_reminder` |
 | `product/` | `price_drop_alert`, `restock_alert`, `low_stock_alert` |
@@ -188,14 +188,19 @@ locale (`OrderService._seed_language_code`, validated against
 `settings.LANGUAGES`). Every customer-facing order email wraps its render
 in `translation.override(get_order_language(order))`
 (`core/utils/i18n.py`), which falls back to the user's language and then
-to `settings.LANGUAGE_CODE`.
+to the store's: `store_language()` is the bound tenant's
+`default_locale`, and `settings.LANGUAGE_CODE` only where no store is
+bound (the public schema). A guest product alert stores the visitor's
+`X-Language` in `ProductAlert.language_code` (`active_language_code`,
+empty when none was stated or it is not served) and its email uses it,
+else the store's language.
 
-**Admin and merchant emails skip the override.**
-`send_admin_new_order_email` has no `translation.override` block at all,
-so it renders in whatever locale is active on the worker — correct,
-because it is addressed to the store operator, not to the customer who
-placed the order. The same holds for the operational alerts in
-`shipping/alerts.py`, which render at call time.
+**Emails to the store render in the store's language**, subject included:
+`send_admin_new_order_email`, the B2B application, dispute, low-stock,
+review-pending and stale-ACS alerts all wrap their render in
+`translation.override(store_language())` (`order/tasks.py`,
+`b2b/tasks.py`, `product/tasks.py`, `shipping_acs/tasks.py`), never in
+the worker's active locale.
 
 ### Link language
 
@@ -357,7 +362,6 @@ together.
 | Retail receipt registered with myDATA | `send_invoice_email`, chained from `send_invoice_to_mydata` once the MARK is on the PDF (never for an unregistered receipt) | — |
 | Retail credit document registered with myDATA | `send_credit_email` (`credit_email_sent_<id>` flag) | — |
 | Stripe or Viva dispute opened; dispute lost (chargeback) | `send_dispute_notification_email` to the store contact address (`lost=True` for a loss) | — |
-| Pending order, 24h+, online only | `check_pending_orders` reminder, up to 3 with widening intervals | — |
 | Reservation expired without an order | `send_checkout_abandonment_emails` | — |
 | ACS parcel out for delivery | `acs_out_for_delivery` | `ACS_OUT_FOR_DELIVERY` |
 | BoxNow parcel at locker | `boxnow_parcel_at_locker` | `BOXNOW_PARCEL_AT_LOCKER` |

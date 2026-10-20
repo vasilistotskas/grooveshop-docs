@@ -43,7 +43,7 @@ If you untick it later, customers cannot request new alerts. Alerts already requ
 
 - **What counts as a price drop:** the price the customer pays for the product itself, that is its price with the product's discount and VAT. The alert starts when you change the price or the discount on the product.
 - **To switch all alerts off**, turn off the `PRODUCT_ALERTS_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span>. It is on from the start. While it is off, the buttons leave the store and no email is sent.
-- **Email language:** a customer with an account gets it in the language they chose. A visitor gets it in the platform's main language, whatever language they were browsing in.
+- **Email language:** a customer with an account gets it in the language they chose. A visitor gets it in the language they were browsing in when they asked, or the store's default language if that is not one the store serves.
 - **[Favourites](/admin/customers/favourites) are a different thing.** A customer with a product in their favourites sees a notification in their account, not an email.
 - **When a customer deletes their account**, the alerts on their account are deleted too. Alerts are included in their [data export](/admin/customers/data-exports).
 

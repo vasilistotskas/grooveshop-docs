@@ -79,7 +79,7 @@ Open the same email in every language of the store and read it. If something is 
 - **You do not change the texts here.** A change to an email is a request to the platform team. See [When to contact support](/admin/help/contact-support).
 - **Only the 10 most recent orders** appear under **Data**. You cannot view an older order here.
 - **Customer emails** go out in the customer's language.
-- **Emails to you** go to the store's contact email, which you set under <span class="sidebar-path">Settings → Store Profile</span>. The review and stuck-shipment alerts also go to the owner's email. The subscription notices (`expiring`, `expired`, `suspended`) go only to the owner's email, which the platform team sets. The new-order email has an English subject, e.g. "New order — #123".
+- **Emails to you** go to the store's contact email, which you set under <span class="sidebar-path">Settings → Store Profile</span>. The review and stuck-shipment alerts also go to the owner's email. The subscription notices (`expiring`, `expired`, `suspended`) go only to the owner's email, which the platform team sets. Emails to you (new order, business-account application, payment dispute, low stock, stuck ACS shipments, new review) are written in the store's default language, subject included. Customer emails use the customer's language, and the store's default language for a guest or an account with none set.
 
 ## Related
 

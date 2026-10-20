@@ -788,7 +788,7 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
 | `grooveshop-django-api/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_charge_refunded`, `handle_stripe_refund_failed` and every other domain receiver |
 | `grooveshop-django-api/order/signals/__init__.py` | The twelve order signals and the `order_refunded` contract |
-| `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `check_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email` |
+| `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email` |
 | `grooveshop-django-api/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
 | `grooveshop-django-api/order/views/item.py` | `restock`, and `_line_price` for a staff-added line |

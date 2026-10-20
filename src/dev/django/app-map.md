@@ -101,7 +101,7 @@ Orders, invoices and stock reservations. Models under `order/models/`:
 `release_stock()` take `select_for_update()` on the product row and the
 reservations; `order/signals/handlers.py` fires the email, WebSocket and
 gateway side-effects on commit; `order/tasks.py` holds every order email,
-invoice generation, myDATA submission, `check_pending_orders`,
+invoice generation, myDATA submission,
 `auto_cancel_stuck_pending_orders` and the abandonment mailer;
 `order/notifications.py` holds the live WebSocket push tasks;
 `order/views/viva_webhook.py` receives Viva Wallet. Read the synced
