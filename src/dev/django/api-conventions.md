@@ -127,9 +127,10 @@ Clients branch on `code` and show `message`; they never compare translated
 text, which is why a `ValidationError` is raised with `code=` (for example
 the review refusal's `must_have_purchased`). Three things bypass it: a
 response a view builds itself (`return Response(..., status=400)`, as
-`OrderViewSet.create` does; most of those set a `code` of their own, but
-not all: the generic invalid-order 400 still has only `error.type`), a
-bare-list body from a `ValidationError`
+`OrderViewSet.create` does; every such 4xx/5xx body sets a `code` of its
+own, which a static guard over the whole project enforces, and provider
+webhook receivers and the allauth rate-limit answer are exempt because
+another protocol defines their body), a bare-list body from a `ValidationError`
 raised outside a serializer, and any exception that is not an
 `APIException`, which Django logs as a 500 with no body of ours. The
 OpenAPI schema publishes the shapes as the `ApiError`, `ApiValidationError`,

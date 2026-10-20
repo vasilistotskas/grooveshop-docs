@@ -432,9 +432,12 @@ storefront adds `Cloudflare-CDN-Cache-Control: max-age=60,
 stale-while-revalidate=86400` and `Cache-Tag: storefront-html,
 storefront-html-<schema>` to those (`server/plugins/edge-cache.ts`), and a
 `storefront pages` Cache Rule per zone makes them eligible and follows the
-header. A response without it — account, cart, checkout, an uncached
-locale — is never stored. Browsers get `Cache-Control: no-cache` and
-revalidate against the edge.
+header. Every other HTML page or `_payload.json` that is not a redirect,
+an error included, gets `Cache-Control: private, no-store`
+(`server/utils/edgeCache.ts: isPrivatePageResponse`), so the cart,
+checkout, account pages and a 404 or 5xx are never stored, whatever a
+Cache Rule's path list says. Cacheable pages get `Cache-Control: no-cache`
+for browsers, which revalidate against the edge.
 
 Two purges keep the edge honest (`core/cache/edge.py`):
 
