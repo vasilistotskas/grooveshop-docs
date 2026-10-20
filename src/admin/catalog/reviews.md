@@ -37,7 +37,7 @@ Search finds reviews by the customer's email or username. The **Status** filter 
 2. Read the comment. Open the review if you want to see all of it.
 3. Select rows and choose **Approve selected reviews** or **Reject selected reviews**. Inside a review, the **Approve** and **Reject** buttons at the top right do the same.
 
-An approved review gets a publication date, the one customers see. It can take a few minutes to show on the product page.
+An approved review gets a publication date, the one customers see. It shows on the product page on its own within about ten seconds.
 
 ### Hide or correct a review
 - Click **Reject**: it leaves the store, and you can approve it again later.

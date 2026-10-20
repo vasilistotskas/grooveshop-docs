@@ -43,8 +43,8 @@ both places, and that duplication is deliberate:
 | Lives in | Apps | Why |
 |---|---|---|
 | Public only | `django_tenants`, `tenant`, `country`, `region`, celery beat and results | Platform control plane and reference data identical for every store |
-| Tenant only | `product`, `order`, `cart`, `blog`, `loyalty`, `promotion`, `giftcard`, `b2b`, `page_config`, `agent`, `knox`, `allauth.account`, `allauth.headless`, `allauth.mfa`, `allauth.socialaccount`, `allauth.idp.oidc` | Store data; a Knox token or an OAuth token minted in one schema does not exist in another |
-| Both | `user`, `django.contrib.sessions`, `extra_settings`, `allauth.usersessions`, `admin` log | Platform staff are public-schema users; customers are tenant-schema users. Sessions must be per schema because a session id resolves against whatever user table serves the request. `extra_settings` holds platform defaults in public and merchant overrides per store |
+| Tenant only | `product`, `order`, `cart`, `blog`, `loyalty`, `promotion`, `giftcard`, `b2b`, `page_config`, `agent`, `knox`, `allauth.account`, `allauth.headless`, `allauth.socialaccount`, `allauth.idp.oidc` | Store data; a Knox token or an OAuth token minted in one schema does not exist in another |
+| Both | `user`, `django.contrib.sessions`, `extra_settings`, `allauth.usersessions`, `allauth.mfa`, `admin` log | Platform staff are public-schema users; customers are tenant-schema users. Sessions must be per schema because a session id resolves against whatever user table serves the request. `extra_settings` holds platform defaults in public and merchant overrides per store. `allauth.mfa` is in public for the platform superusers' admin second factor and per store for customers |
 
 The public schema also carries the platform's own `Tenant` row (created by
 `bootstrap_platform`), which is why helpers use

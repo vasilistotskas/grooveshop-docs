@@ -22,9 +22,9 @@ The store comes with a ready-made top menu and a ready-made footer. Here you rep
 
 One row for each **Slot** you have built, with its **Entries**. There are three slots:
 
-- **Header**: the menu at the top, which is also the phone menu.
+- **Header**: the menu at the top of the page on a computer.
 - **Footer**: the columns at the bottom of the page.
-- **Mobile**: it saves, but the store does not show it anywhere. Do not use it.
+- **Mobile**: the menu behind the burger button on phones. If it has no visible links, phones show the Header's links instead, so a store that never builds a Mobile menu sees no change. If neither has links, phones show the built-in menu.
 
 ### The links
 

@@ -1,6 +1,6 @@
 ---
 title: Promotions
-description: "How to set up cart discounts: automatic and coupon-code promotions, benefit types, targeting, limits, stacking, and when the cache needs clearing."
+description: "How to set up cart discounts: automatic and coupon-code promotions, benefit types, targeting, limits, and stacking."
 ---
 
 # Promotions
@@ -55,7 +55,6 @@ The promotion shows on the storefront within about ten seconds.
 
 1. Create the promotion as above, but with **Trigger** set to **Coupon code**. Save.
 2. Click **Generate codes** at the top right for many single-use codes, or add one easy code (for example `SUMMER10`) under [Coupon codes](/admin/marketing/coupon-codes).
-3. Clear the **Promotions** cache on the [Cache](/admin/settings/cache) page, so the offers page shows the new code.
 
 ### Buy 2, get 1 free
 
@@ -76,7 +75,7 @@ Open the promotion and click **Duplicate**. The copy has the same settings and p
 
 - **Two switches.** Promotions work only if your plan includes them and `PROMOTIONS_ENABLED` is on under <span class="sidebar-path">Settings → Store Settings</span> (off by default). While it is off, the menu shows an **Off** badge and you can prepare promotions without shoppers seeing them.
 - **New promotions start inactive.** Nothing applies until you tick **Active**.
-- **When to clear the cache.** Saving, and the bulk activate or deactivate actions, update the storefront by themselves. Clear the **Promotions** cache only when you change coupon codes, or when a promotion starts or ends on its own because of its dates.
+- **The storefront updates on its own.** Saving, the bulk activate or deactivate actions, changes to coupon codes, and a promotion starting or ending on its dates all refresh the offers within about ten seconds. You do not need to clear the cache.
 - **How they combine.** Promotions with **Stackable** ticked add up, applied in **Priority** order (lower number first). A promotion that is not stackable applies alone, and only if it gives at least as much as all the stackable ones together.
 - **Free shipping** does not open a new destination: the shipping option must already be available for the order's country and weight.
 - **Gift out of stock.** If the gift product is not available, the order goes through without the gift.

@@ -27,7 +27,7 @@ Search looks in the comment text, the commenter's name and email, and the post t
 2. Untick **Approved** and click **Save**. For several at once, select them and choose **Unapprove selected comments**.
 3. Its replies are hidden with it. They all come back if you approve it again.
 
-The change can take a few minutes to show on the post. To make it immediate, clear **Blog** from [Cache](/admin/settings/cache).
+The post updates on its own within about ten seconds.
 
 ### Erase spam
 Select the comments and choose **Mark as spam and delete**. They are erased for good, with all their replies. This cannot be undone; if in doubt, just hide the comment.

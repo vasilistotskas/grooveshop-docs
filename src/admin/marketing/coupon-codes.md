@@ -28,7 +28,6 @@ Search finds a code or the email of the customer it is assigned to. The bulk act
 
 1. Click **Add**, pick the **Promotion** and type the **Code** (for example `SUMMER10`).
 2. Leave **Usage Limit** empty and **Active** ticked. Save.
-3. Clear the **Promotions** cache on the [Cache](/admin/settings/cache) page, so the code shows on the offers page.
 
 ### Many single-use codes
 
@@ -46,9 +45,10 @@ The codes never contain 0, O, 1 or I, so they cannot be mistyped.
 ### A code has leaked
 
 1. Open it and untick **Active**. Save.
-2. Clear the **Promotions** cache.
 
 ## Things to know
+
+- **The storefront updates on its own** within about ten seconds when you add, change or generate codes.
 
 - **The dates belong to the promotion.** A code stops working when the promotion's **Ends At** passes or when you deactivate the promotion.
 - **Three limits at once.** The code's **Usage Limit**, the promotion's **Total Usage Limit** and its **Per-customer Usage Limit** all apply. The strictest wins.

@@ -40,8 +40,7 @@ Do not change the **Value** of a rate in use unless the law changed: all its pro
 
 ### The law changed (say 13% became 14%)
 
-1. Change the rate's **Value** and save. Prices and search update by themselves.
-2. Clear the **Products** cache on the [Cache](/admin/settings/cache) page, so the storefront pages show the new prices.
+1. Change the rate's **Value** and save. Prices, search and the storefront pages update by themselves.
 
 If the new rate is not one myDATA accepts, saving is refused. Get in touch with [support](/admin/help/contact-support).
 

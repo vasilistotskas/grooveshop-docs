@@ -37,6 +37,16 @@ Contact the platform team the way you usually do and write:
 4. When it happened, with date and time.
 5. A screenshot, if you see an error message.
 
+### Report an error message from the store
+
+When something fails on the store, for example a review that is not saved or a payment that does not go through, the message says why. Most such messages also have a **Details** button (**Λεπτομέρειες** on the Greek store). Clicking it shows a **Code** and a **Request ID** in the message.
+
+1. Click **Details**, or ask the customer who saw the message to do so.
+2. Copy the **Code** and the **Request ID**, or take a screenshot that shows them.
+3. Send them with your request, with the date and time.
+
+The request ID lets the platform team find that exact attempt in the store's logs, so they do not have to reproduce it. A message without a **Details** button has nothing more to show.
+
 ## Things to know
 
 - Never send passwords, yours or your customers'. The team does not need them.

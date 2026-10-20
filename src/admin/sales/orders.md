@@ -80,7 +80,14 @@ If the refund does not go through, the order stays cancelled and the money stays
 Use **Refund (amount, reason)** on the order page. The whole process, including cash on delivery and card disputes, is on [Refunds and disputes](/admin/sales/refunds-and-disputes).
 
 ### A bank transfer has arrived
-The payment status cannot be edited on the order page, and the admin has no button to mark a bank transfer as paid. [Contact support](/admin/help/contact-support) with the order number and the transfer details.
+When the money for a bank-transfer order is in your account:
+
+1. Open the order and press **Confirm payment received**. The button is there only while a bank-transfer order is still waiting for its payment.
+2. **Amount received** must be exactly what the order costs.
+3. In **Bank transaction reference**, enter the bank's id for the transfer. One transfer cannot pay two orders, so a reference that is already recorded is refused.
+4. Confirm. The order is marked paid, and a **Pending** order moves to **Processing**.
+
+The order's history keeps who confirmed it, when, and how much. Card payments are never confirmed by hand: the payment provider records them. If you later refund this order, you pay the money back yourself, as for cash on delivery; see [Refunds and disputes](/admin/sales/refunds-and-disputes).
 
 ### Print the voucher or the receipt
 - **Download shipping voucher (PDF)**, on the row or on the order page, fetches the label from the courier. It tells you if no voucher exists yet.
@@ -110,7 +117,7 @@ A **Completed** order cannot be marked **Returned**. A card order usually become
 
 | Payment status | Meaning |
 |---|---|
-| **Pending** | Nothing collected yet. Normal for cash on delivery until the courier pays you, and for a bank transfer. |
+| **Pending** | Nothing collected yet. Normal for cash on delivery until the courier pays you, and for a bank transfer until you confirm it. |
 | **Processing** | Viva Wallet or Stripe is still working on the charge. |
 | **Completed** | Paid in full, including an order covered entirely by gift cards or points. |
 | **Failed** | The card payment was declined. The order is cancelled automatically after a while. |

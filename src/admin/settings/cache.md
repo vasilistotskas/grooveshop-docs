@@ -63,9 +63,9 @@ Click **Purge all** and confirm. Every area is cleared except **Translations (pa
 
 ## Things to know
 
-- **Updated on their own** as soon as you save: products, categories, tags, payment methods, shipping providers and prices, promotions, blog posts, pages, layouts and menus. The same goes for bulk actions on a list, such as activating many products at once.
+- **Updated on their own** as soon as you save: products, categories, tags, payment methods, shipping providers and prices, VAT rates, promotions (also when one starts or ends on its dates), coupon codes, reviews you approve or reject, blog posts and comments, pages, layouts and menus. The same goes for bulk actions on a list, such as activating many products at once.
 - When you switch a feature on or off in [Store settings](/admin/settings/store-settings), every storefront page is updated on its own.
-- **Need a few minutes or a clear:** the other Store Settings values, coupon codes, loyalty, the sitemap, reviews, blog comments, and a sync of lockers or ACS stations.
+- **Need a few minutes or a clear:** the other Store Settings values, loyalty, the sitemap, and a sync of lockers or ACS stations.
 - When an order lowers the stock, the product page is not refreshed right away. Checkout always checks the real stock, though, so you never sell something that ran out.
 - Clearing changes none of your data. If the change itself is wrong, clearing only shows the mistake sooner.
 - If a product is missing from search, save it again. Search is updated on every save and again every night.

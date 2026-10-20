@@ -11,7 +11,7 @@ This is your store's identity: name, logo, colours, contact email and the creden
 
 ## What you see
 
-A form with tabs. Some fields are read-only: the platform team sets those, such as the plan, billing, the plan's features and the currency.
+A form with tabs. Some fields are read-only: the platform team sets those, such as the plan, billing, the plan's features and the currency. A few keys belong to the platform, such as the chat assistant's key and the Cloudflare token: for those you see only a tick or a cross, saying whether they are set, never the key itself.
 
 | Tab | What you change |
 |---|---|
@@ -60,7 +60,7 @@ The switch must always match the credentials you entered.
 
 ## Things to know
 
-- **Language.** The **Default Locale** is the language of the emails the platform sends to you, for example about a new review. It must be one of the store's languages. Which languages the store has is set by the platform team.
+- **Language.** The **Default Locale** is the language of the emails the platform sends to you, for example about a new review. It must be one of the store's languages. Those are listed under **Available Locales** on the same tab; only the platform team can change them.
 - **Description in other languages.** The **Store Description** is in the default language. For another language fill in **Store Description (other languages)**, for example `{"en": "Handmade jewellery from Thessaloniki"}`.
 - **Sender email.** The **From Email** (e.g. orders@your-domain.com) takes effect only after the platform team confirms it. Until then emails go out from the platform's address with your store's name.
 - **TOTP Issuer.** The name your customers see in the code app on their phone. Empty means the store name.

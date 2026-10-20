@@ -50,7 +50,7 @@ The storefront shows the change straight away, either way.
 2. In **Payment Instructions**, write the IBAN, the beneficiary and what the customer should write as the payment reference, in each language.
 3. The customer gets these instructions in the "order received" email.
 
-When the transfer arrives, the admin has no button yet to mark the order paid; see [Orders](/admin/sales/orders#a-bank-transfer-has-arrived).
+When the transfer arrives, mark the order paid with **Confirm payment received** on its page; see [Orders](/admin/sales/orders#a-bank-transfer-has-arrived).
 
 ### Hide a method for one courier
 1. Open the method and add a row under **Payment-method exclusions**.
@@ -66,7 +66,7 @@ The same rows can be edited from the courier's page under [Shipping providers](/
 | **Paid online at checkout** | Viva Wallet or Stripe charges the card before the order is confirmed. | The order waits in **Pending** until the payment succeeds, then the voucher (the courier's shipping label) is created. An unpaid order is cancelled automatically. |
 | **Cash or card to the courier on delivery** | Classic cash on delivery with ACS. | The voucher is created straight away with the amount to collect. The payment stays **Pending** until ACS pays you, days later. |
 | **Paid to the carrier before pickup** | BoxNow sends the customer a payment link when it picks up the parcel; the locker opens once they pay. | The voucher is created straight away. The payment becomes **Completed** when BoxNow reports the parcel delivered. |
-| **Settled off-platform (e.g. bank transfer)** | The customer pays you outside the store. | The order and the voucher are created straight away. Nothing marks it paid on its own. |
+| **Settled off-platform (e.g. bank transfer)** | The customer pays you outside the store. | The order and the voucher are created straight away. You mark it paid with **Confirm payment received** on the order. |
 
 ## Things to know
 

@@ -44,7 +44,8 @@ Change your password. That signs out every other device.
 ## Things to know
 
 - A session ends two weeks after you sign in, even if you keep working in the admin.
-- The store's sign-in asks only for email and password. Use a strong password you do not use anywhere else, and give every person their own account.
+- The store's sign-in asks your team (Owner, Admin, Staff) only for email and password. Use a strong password you do not use anywhere else, and give every person their own account.
+- Platform team accounts, which can open every store, also need a second step: after the password, the same page asks for a six-digit code from an authenticator app, or a recovery code. If the sign-in page asks you for a code, the account you used is a platform team account, not a store account.
 - A customer account cannot get into the admin, even with the same email as yours.
 - When a colleague leaves, untick **Active** on their membership. They lose access on their next click.
 - You change the admin language from your account menu (Greek, English, German). It changes only your own view.

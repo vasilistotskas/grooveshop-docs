@@ -43,7 +43,7 @@ Click your name at the bottom of the side menu and choose a language. It changes
 
 ## Things to know
 
-- If a translation is missing, the product page heading and your text pages show the store's default language (text pages with a note for the visitor). Product cards show no name, though, and the product description stays empty. A product is never hidden because it has no translation, so translate what you sell into every language the store serves.
+- If a translation is missing, the store shows the text in its default language instead: product names on cards and pages, the product description, and your text pages (these with a note for the visitor). A product is never hidden because it has no translation. Still, translate what you sell into every language the store serves, so customers read it in theirs.
 - If no language list has been set for your store, the storefront shows only the default language.
 - German is on the forms, but the storefront shows only Greek and English. Whatever you write in German stays saved.
 - The storefront search also finds Greek names when a customer types them in Latin letters (greeklish).
