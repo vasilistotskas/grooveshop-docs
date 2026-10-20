@@ -100,7 +100,7 @@ Defaults are the values a new store starts with. Amounts are in euros.
 | `PRODUCT_REVIEWS_PURCHASE_REQUIRED` | Only someone who bought the product can review it. Off: any signed-in customer can. A buyer's review always carries the verified-purchase badge. Switch it off if you want more reviews early on. | on |
 | `ACCOUNT_REVIEWS_ENABLED` | The "My reviews" page in the customer's account. Does not affect reviews on product pages. | on |
 | `BLOG_COMMENTS_ENABLED` | Comments and likes under blog posts. | on |
-| `FAVOURITES_ENABLED` | Favourites: the hearts, the favourites page and the emails when a favourite drops in price or is back in stock. | on |
+| `FAVOURITES_ENABLED` | Favourites: the hearts, the favourites page, and the notifications in the customer's account when a favourite drops in price or is back in stock (no emails: those are [Product alerts](/admin/customers/product-alerts)). | on |
 | `NEWSLETTER_ENABLED` | Newsletter subscriptions from the customer's account. Unsubscribe links in emails already sent always work. | on |
 | `FEEDBACK_ENABLED` | The store's feedback page. | on |
 | `PRODUCT_ALERTS_ENABLED` | The "notify me" alerts for back in stock or price drop, and their emails. | on |

@@ -169,7 +169,6 @@ Most entries fall back to hourly when `DEBUG` is on.
 | `cleanup-expired-stock-reservations` | `tenant.tasks.fanout_cleanup_expired_stock_reservations` | hourly | |
 | `purge-expired-tenant-archives` | `tenant.tasks.purge_expired_tenant_archives` | daily 03:00 | public schema, not a fan-out |
 | `process-tenant-billing` | `tenant.tasks.process_tenant_billing` | daily 06:00 | public schema, not a fan-out |
-| `check-pending-orders` | `tenant.tasks.fanout_check_pending_orders` | daily 07:00 | |
 | `auto-cancel-stuck-pending-orders` | `tenant.tasks.fanout_auto_cancel_stuck_pending_orders` | every 15 min | the only place failed-payment stock is released |
 | `process-loyalty-points-expiration` | `tenant.tasks.fanout_process_points_expiration` | daily 03:00 | |
 | `expire-gift-cards` / `deliver-scheduled-gift-cards` / `send-gift-card-expiry-reminders` | `tenant.tasks.fanout_*` | 03:00 / 06:00 / 06:00 | |

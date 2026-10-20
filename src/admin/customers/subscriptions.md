@@ -41,7 +41,7 @@ One row for each subscriber on each topic. A subscriber is a customer with an ac
 | **Active** | Receives the topic's emails. |
 | **Pending Confirmation** | Signed up but has not clicked the confirmation link yet. |
 | **Unsubscribed** | Opted out. The **Dates** column shows when. |
-| **Bounced** | Listed, but the system never sets it on a subscription by itself. |
+| **Bounced** | The confirmation email could not be delivered: the recipient's mail server refused the address for good. Nothing more is sent to it; a new sign-up with that address starts over. |
 
 The **Source** column shows where the subscription came from: **Newsletter form**, **Account** (the customer signed up from their account) or **Signup** (signed up automatically when they opened an account). Filter by **Status**, **Source**, **Subscriber** (account or **Guest (email only)**) and **Topic**.
 
