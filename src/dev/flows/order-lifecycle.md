@@ -99,7 +99,7 @@ read payment "Pending" forever (`0058_settle_returned_unpaid_orders`).
 | DELIVERED → COMPLETED | Automatic, when paid: inline on the carrier DELIVERED and the COD reconcile, and hourly for anything paid outside those two moments | `OrderService.maybe_advance_to_completed`, `order.tasks.complete_paid_delivered_orders` |
 | SHIPPED/DELIVERED → RETURNED | Carrier event (`returned`, `lost`) | `AcsService.order_status_for_shipment_state` |
 | → CANCELED | Customer, staff, the cleanup task, or the ACS replay for a voucher retired before dispatch | `OrderService.cancel_order`, `AcsService._cancel_order_for_dead_shipment` |
-| RETURNED → REFUNDED | Staff, manually; refused with `RefundOutstandingError` while `PaymentLedger.refund_open` holds. The admin action reports the refusal; `update_status` has no handler for it and answers 500 | `POST /api/v1/order/{id}/update_status`, the `mark_as_refunded` admin action |
+| RETURNED → REFUNDED | Staff, manually; refused with `RefundOutstandingError` while `PaymentLedger.refund_open` holds. The admin action reports the refusal; `update_status` answers `409 refund_outstanding` naming what is left | `POST /api/v1/order/{id}/update_status`, the `mark_as_refunded` admin action |
 | Any | Staff, manually | `OrderViewSet.update_status`, admin bulk actions in `order/admin.py` |
 
 Carriers can skip steps. A parcel that goes from PROCESSING straight to
@@ -567,11 +567,23 @@ restricted to online settlement:
 | Bucket | Selector | Window |
 |---|---|---|
 | Failed payment | `status=PENDING`, `payment_status=FAILED`, `updated_at` older than the cutoff. No settlement filter | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`, default 30 |
-| Never completed | `status=PENDING`, `payment_status=PENDING`, `created_at` older than the cutoff, `pay_way__settlement=online` | `ORDER_AUTO_CANCEL_PENDING_HOURS`, default 24 |
+| Never completed | `status=PENDING`, `payment_status=PENDING`, `pay_way__settlement=online`, and the payment hold over (`order/payment_hold.py: expired_unpaid_online_orders`) | `Order.payment_hold_expires_at` (else `created_at` plus `ORDER_ONLINE_PAYMENT_HOLD_MINUTES`, default 30) plus `ORDER_ONLINE_PAYMENT_GRACE_MINUTES`, default 5 |
 
 Note which timestamp each bucket reads: the failed bucket measures the
 grace window from `updated_at`, so it runs from the failure, while the
-never-completed bucket measures from `created_at`.
+never-completed bucket reads the payment's own expiry. Every path that
+opens a payment (the hosted Viva payment order or Stripe Checkout Session,
+and `PayWayService.process_payment` for `create_payment_intent` and
+`retry-payment`) hands the provider the hold as its expiry and stores the
+expiry the provider reports in `Order.payment_hold_expires_at`, so the
+stock is released only once the payment can no longer succeed. A retry
+can move the hold later, never past `created_at` plus
+`ORDER_ONLINE_PAYMENT_MAX_HOLD_MINUTES` (default 60). A Stripe
+PaymentIntent has no expiry of its own, so the sweep cancels it at Stripe
+first; one Stripe will not cancel (processing, succeeded) keeps the order
+open for its webhook. After each sweep, `ORDER_UNPAID_ONLINE_ALERT_THRESHOLD`
+(default 25, `0` off) or more still-unpaid online orders log
+`orders:unpaid_online_spike` at WARNING.
 
 Both windows are `EXTRA_SETTINGS_DEFAULTS` rows (`settings.py`), read
 through `Setting.get`, so a merchant can change them without a deploy.

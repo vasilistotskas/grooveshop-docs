@@ -79,7 +79,7 @@ The email stops with the `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` setting under <sp
 1. Only a parcel in state **New** can be cancelled. For anything later, contact BoxNow.
 2. Open the shipment and click **Cancel parcel via BoxNow API**, or select rows and run **Cancel parcels via BoxNow API**.
 
-When you cancel the order, the parcel is cancelled too, if it is still **New**. A customer can cancel the order from their account only while the parcel is **New**. A cancelled parcel cannot be created again from here; if you need it, [ask](/admin/help/contact-support) the platform team.
+When you cancel the order, the parcel is cancelled too, if it is still **New**. A customer can cancel the order from their account only while the parcel is **New**. If you need a cancelled parcel after all, open the shipment and click **Create BoxNow parcel now**: a new parcel is created and the old one is kept in its history. This is refused while the order itself is cancelled.
 
 ### Refresh the locker list
 

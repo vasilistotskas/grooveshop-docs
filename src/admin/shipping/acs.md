@@ -54,6 +54,7 @@ The buttons:
 | Bulk action | **Re-poll tracking for selected shipments** | Asks for a fresh update on each selected parcel. |
 | Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Marks the shipments cancelled here only, so the checks and alerts stop. It does not tell ACS and does not change the order. |
 | Shipment page | **Record COD received outside ACS** | See "Cash on delivery that never arrived". |
+| Shipment page | **Cancel ACS voucher** | Cancels only the voucher at ACS, with a reason; the order stays as it is. |
 
 ## Tasks
 
@@ -89,7 +90,8 @@ For a card order that is not paid yet, the button does nothing: the voucher is i
 ### Cancel a voucher
 
 - When you cancel the order, the platform asks ACS to cancel the voucher too, if that is still allowed.
-- A voucher that is already on a pickup list cannot be cancelled from here. Contact ACS.
+- To replace a voucher without cancelling the order, for example after correcting the address, open the shipment, click **Cancel ACS voucher**, give the reason, then click **Issue ACS voucher now** for a new one.
+- A voucher that is already on an issued pickup list is refused by ACS. Contact ACS.
 - A customer can cancel the order from their account only until the voucher is on a pickup list.
 
 ### A parcel that is not moving

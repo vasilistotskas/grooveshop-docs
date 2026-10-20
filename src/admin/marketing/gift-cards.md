@@ -50,7 +50,7 @@ Every movement of every card is under <span class="sidebar-path">Marketing → G
 
 Saving alone does not send an email.
 
-**Large amounts need the Owner.** An Admin or Staff member cannot issue a card, or add to a balance, for more than `GIFT_CARD_STAFF_ISSUE_LIMIT` (€500 unless you changed it) in one step: the save is refused with a message that the store's owner can do it. The Owner can. The card's **Issue** or **Adjust** movement then says the amount was above the limit and who authorised it. Taking value off a card has no limit.
+**Large amounts need the Owner.** An Admin or Staff member cannot issue a card, or add to a balance, for more than `GIFT_CARD_STAFF_ISSUE_LIMIT` (€500 unless you changed it) in one step: the save is refused with a message that the store's owner can do it. The Owner can. The card's **Issue** or **Adjust** movement then says the amount was above the limit and who authorised it. There is also a daily cap: one Admin or Staff member cannot put more than `GIFT_CARD_STAFF_DAILY_LIMIT` (€1,000 unless you changed it) on gift cards in any 24 hours, all cards together. Taking value off a card has no limit.
 
 ### Correct a balance
 

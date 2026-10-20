@@ -54,7 +54,7 @@ This email receives the contact-form messages and shows at the bottom of the sto
 Both have separate credentials for testing and for real sales.
 
 - **Viva Wallet**: when you enter the live credentials, set **Viva Wallet Live Mode** to Yes. Otherwise payments go to Viva Wallet's test environment and you are not paid.
-- **BoxNow**: tick **BoxNow Live Mode** when you enter the live credentials. While it is off, the store talks to BoxNow's test environment.
+- **BoxNow**: tick **BoxNow Live Mode** when you enter the live credentials. While it is off, the store talks to BoxNow's test environment. BoxNow works only when the client ID, client secret, partner ID and **BoxNow Warehouse ID** are all filled in; the **BoxNow Notify Phone** is optional.
 
 The switch must always match the credentials you entered.
 
