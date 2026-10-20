@@ -18,7 +18,7 @@ Automatic tasks have no screen of their own. You see their result on orders, on 
 | What happens | When | Setting |
 |---|---|---|
 | An online order whose payment failed is cancelled. Its stock comes back. | every 15 minutes | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` (30 minutes) |
-| An online order that was never paid is cancelled once its payment window has passed. Its stock comes back. | every 15 minutes | — |
+| An online order that was never paid is cancelled once its payment window has passed. Its stock comes back. | every 15 minutes | `ORDER_ONLINE_PAYMENT_HOLD_MINUTES` (30 minutes), `ORDER_ONLINE_PAYMENT_GRACE_MINUTES` (5 minutes), `ORDER_ONLINE_PAYMENT_MAX_HOLD_MINUTES` (60 minutes) |
 | Stock held for a customer at checkout is released if they did not finish the order. | as soon as the time runs out | `STOCK_RESERVATION_TTL_MINUTES` (30 minutes) |
 | A signed-in customer who left checkout halfway gets a "Did you forget something?" email, once. | every day 06:00 | `CHECKOUT_ABANDONMENT_HOURS` (2 hours) |
 | An order that was delivered and is paid moves to "Completed". The customer gets no email. | every hour | — |

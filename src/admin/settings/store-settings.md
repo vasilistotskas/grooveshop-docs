@@ -144,6 +144,7 @@ Set the myDATA settings together with your accountant. See [Receipts](/admin/sal
 | `GIFT_CARD_MIN_AMOUNT`, `GIFT_CARD_MAX_AMOUNT` | The smallest and largest gift-card amount a customer can buy. | 10.00 and 500.00 |
 | `GIFT_CARD_VALIDITY_DAYS` | How many days a gift card is valid; 0 never expires. Greek law requires at least five years. | 1825 |
 | `GIFT_CARD_EXPIRY_REMINDER_DAYS` | How many days before expiry the holder gets a reminder; 0 none. | 30 |
+| `GIFT_CARD_STAFF_DAILY_LIMIT` | The most one Admin or Staff member can put on gift cards in any 24 hours, issuing and adding to balances together. Above it only the Owner can, and the card's movement records that. Lower it for a tighter cap per person; 0 turns it off. | 1000.00 |
 | `GIFT_CARD_STAFF_ISSUE_LIMIT` | The most an Admin or Staff member can put on gift cards in one step: issuing a card, or adding to a card's balance. Above it only the Owner can, and the card's movement records that. Lower it if many people issue cards; 0 turns the limit off. See [Gift cards](/admin/marketing/gift-cards). | 500.00 |
 
 ### Loyalty
@@ -178,6 +179,10 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 | `STOCK_RESERVATION_TTL_MINUTES` | How many minutes stock is held for a customer who is at checkout. | 30 |
 | `ORDER_MAX_UNPAID_ONLINE_ORDERS` | How many unpaid online-payment orders one customer can have at once. Each one holds stock. Past the limit, the customer must pay or cancel one, or choose cash on delivery or another offline method. Raise it if genuine customers are refused; 0 means no limit. | 5 |
 | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` | Minutes after a failed online payment until the order is canceled and its stock returns. | 30 |
+| `ORDER_ONLINE_PAYMENT_HOLD_MINUTES` | How long an unpaid online-payment order holds its stock, and how long its payment link stays payable (the payment provider gets the same expiry). From 30 to 1092. Raise it if customers often pay late, for example from a bank app; lower it if unpaid orders keep stock from other shoppers. | 30 |
+| `ORDER_ONLINE_PAYMENT_GRACE_MINUTES` | Extra minutes before an expired unpaid order is canceled, so a payment confirmation still on its way finds the order open. A confirmation after the cancel is still recorded, but then needs a refund. Leave it as it is. | 5 |
+| `ORDER_ONLINE_PAYMENT_MAX_HOLD_MINUTES` | The longest an online-payment order may hold its stock in total, from when it was placed. A new payment link (a retry) can move the expiry later, never past this; after it the customer orders again from their cart. At least the hold above, and at least 31. | 60 |
+| `ORDER_UNPAID_ONLINE_ALERT_THRESHOLD` | When this many online-payment orders wait for their payment at once, the platform team gets a warning: that many unpaid orders hold stock other shoppers cannot buy. 0 turns it off. | 25 |
 | `ORDER_FOLLOW_UP_DAYS` | After how many days without delivery an order goes into **Orders to follow up**. 0 turns it off. | 7 |
 | `CHECKOUT_ABANDONMENT_HOURS` | After how many hours an unfinished checkout gets a reminder email. | 2 |
 | `CART_ABANDONED_HOURS` | After how many hours without activity a cart counts as abandoned in the **Carts** list. | 24 |

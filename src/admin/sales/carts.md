@@ -19,9 +19,9 @@ Signed-in customers have one cart that follows their account. Guests get one per
 |---|---|
 | **Owner** | The customer's name and email, or "Guest" and the cart number. |
 | **Type** | **User** or **Guest**. |
-| **Order source** | Where the shopper came from when they started the cart. See [Order source](/admin/sales/order-source). |
+| **Cart source** | Where the shopper came from when they started the cart. See [Order source](/admin/sales/order-source). |
 | **Checkout** | A link to the order, when the shopper has reached checkout and has not paid by card yet. |
-| **Activity** | **Active** (changed in the last hour), **Recent**, or **Abandoned** (untouched for longer than `CART_ABANDONED_HOURS`, 24 hours by default). |
+| **Activity** | **Active**, or **Abandoned** once untouched for longer than `CART_ABANDONED_HOURS` (24 hours by default). |
 | **Items** | Total quantity and number of different products. |
 | **Total** | The cart's value now, and the saving when a product is on sale. |
 | **Last Activity** | The last time the shopper changed the cart. |
@@ -30,8 +30,8 @@ Signed-in customers have one cart that follows their account. Guests get one per
 ### Filters and search
 
 - **Cart Type**: **Authenticated Users**, **Guest Users** or **Abandoned Carts** (the same rule as the **Abandoned** badge).
-- **Activity Status**: last 24 hours, last 7 days, or older than 7 days.
-- **Source type** and **Order source**: where the cart was started.
+- **Activity Status**: active within the last `CART_ABANDONED_HOURS` hours, idle for up to 7 days, or idle for 7+ days.
+- **Source type** and **Cart source**: where the cart was started.
 - **Checkout**: **Checkout started, awaiting payment**.
 - Dates, the customer, and a range for **Total Items**.
 

@@ -97,7 +97,7 @@ With ACS that is normal: the payment becomes **Completed** when ACS pays the mon
 
 ### An online-payment order has been Pending for hours
 
-The customer did not pay. The order cancels itself, and its stock returns, once its payment window has passed. The customer gets no reminder email. To do it sooner, select it in the list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
+The customer did not pay. The order cancels itself, and its stock returns, once its payment window has passed: 30 minutes plus 5 by default (`ORDER_ONLINE_PAYMENT_HOLD_MINUTES`, `ORDER_ONLINE_PAYMENT_GRACE_MINUTES`). The customer gets no reminder email. To do it sooner, select it in the list and run **Cancel selected orders and restore stock**. See [Orders](/admin/sales/orders).
 
 ### The customer says they paid, but the order does not show as paid
 

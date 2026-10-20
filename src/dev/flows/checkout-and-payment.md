@@ -607,9 +607,11 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`. See
   [Order lifecycle](/dev/flows/order-lifecycle).
 - **Shopper abandons the hosted page.** The order sits PENDING with a
-  live cart. `auto_cancel_stuck_pending_orders` closes it after
-  `ORDER_AUTO_CANCEL_PENDING_HOURS`; `check_pending_orders` may email a
-  reminder first, but only for online settlements.
+  live cart. `auto_cancel_stuck_pending_orders` closes it once the
+  payment link has expired (`Order.payment_hold_expires_at`, from
+  `ORDER_ONLINE_PAYMENT_HOLD_MINUTES`) plus
+  `ORDER_ONLINE_PAYMENT_GRACE_MINUTES`; see
+  [Order lifecycle](/dev/flows/order-lifecycle).
 - **Reservation expires mid-checkout.** `cleanup_expired_stock_reservations`
   marks it consumed. `_consume_stock_for_order` then releases the lapsed
   hold and decrements the shortfall directly, so a lapsed TTL does not

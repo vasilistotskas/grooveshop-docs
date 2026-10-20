@@ -18,7 +18,7 @@ Each order keeps two sources:
 
 Both appear as a coloured badge with the channel's name (Instagram, Google, a website's address) in the order list. The order page shows them on the **Additional Information** tab, together with **Traffic medium**, **Campaign name**, **Referrer host** (the website the customer came from) and **Landing page** (the first page they saw).
 
-The cart list shows the cart's source in its own column, which is also headed **Order source**.
+The cart list shows the cart's source in its own column, headed **Cart source**.
 
 ### Source types
 
@@ -48,7 +48,7 @@ The cart list shows the cart's source in its own column, which is also headed **
 ### Compare where carts start and where orders come from
 1. In the order list, filter by **Cart source** or **Cart source type**.
 2. You see the orders whose cart was started from that channel, wherever the final visit came from.
-3. In <span class="sidebar-path">Sales → Carts</span>, the **Source type** and **Order source** filters show the carts not yet ordered, by where they were started.
+3. In <span class="sidebar-path">Sales → Carts</span>, the **Source type** and **Cart source** filters show the carts not yet ordered, by where they were started.
 
 ## Things to know
 
