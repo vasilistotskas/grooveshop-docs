@@ -83,12 +83,23 @@ wraps each file into the ConfigMap the Grafana sidecar loads.
 | Rule file | Covers |
 |---|---|
 | `victoria-metrics/rules/vmrule-grooveshop.yaml` | 5xx on the storefront and API, load shedding, certificates (cert-manager not Ready, served certificate near expiry), Celery task failures, no Celery workers, a queue with work and no consumer, no PostgreSQL primary, PostgreSQL unreachable, connection saturation, a transaction idle for over 5 minutes, deadlocks, Redis down or failing to persist, an unhealthy Longhorn volume, Argo CD applications unhealthy or auto-synced and stuck OutOfSync, log ingestion stopped |
-| `victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | Any ERROR, CRITICAL or FATAL log line in production, by container |
+| `victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | Any ERROR, CRITICAL or FATAL log line in production, by container; the storefront rejecting a Django response; a switched-off feature still being called; repeated 5xx with one error code on one route; a checkout or payment flow failing; ACS rejecting tracking polls |
 | chart (`vmks-rule-*`) | Kubernetes itself, including `TargetDown` for any scrape that fails |
 
-The log rule exists because some failures produce no metric: the tasks
+The log rules exist because some failures produce no metric: the tasks
 that send transactional mail catch their own exceptions and return
-`False`, so a broken relay raises no 5xx and no `task-failed`.
+`False`, so a broken relay raises no 5xx and no `task-failed`. Each rule's
+comment in the file records its measured baseline and why its threshold
+is where it is.
+
+| Log alert | Fires on |
+|---|---|
+| `GrooveShopLoggedErrors` | Any ERROR, CRITICAL or FATAL line in `grooveshop` in 10 minutes, by container |
+| `GrooveShopResponseContractBroken` | Any storefront `validation:response` line in 5 minutes, production or staging |
+| `GrooveShopFeatureGateRefused` | Any `feature_gate:refused` line in 10 minutes, by store and route |
+| `GrooveShopApiServerErrorCode` | Three or more 5xx with the same `log.code` on the same `log.route` in 10 minutes (`none` when Django's own 500 page answered) |
+| `GrooveShopCheckoutFlowFailing` | Two or more of one flow-breaking checkout or payment code (provider and verification failures, unserved payment methods, refused order bodies, broken stock reservations) per store and route in 30 minutes |
+| `GrooveShopAcsTrackingRejected` | ACS answering HTTP 406 to 10% or more of the tracking polls over 6 hours, with at least 10 rejections |
 
 ## Attributing traffic to an environment and a store
 
@@ -165,12 +176,18 @@ by a namespace regex.
   none came), stamps it on every log record as `log.correlation_id` and
   echoes it on the response. To follow a storefront request into Django,
   take its `requestId` and filter Django on `log.correlation_id`.
-- Django logs one INFO access line per request it handles
+- Django logs one access line per request it handles
   (`core/middleware/access_log.py`): `log.method`, `log.route` (the URL
   pattern, never the raw path or query string; `unmatched` for a path no
-  pattern matches), `log.status`, `log.duration_ms` and
-  `log.correlation_id`. Kubelet's probes are answered before it and are
-  not logged.
+  pattern matches), `log.status`, `log.duration_ms`, `log.schema` and
+  `log.correlation_id`. A 4xx or 5xx API response also carries
+  `log.code`, the stable code of the API error contract
+  (`docs/error-contract.md` in the Django repository); Django's own error
+  pages and 2xx responses have none. The line is WARNING for a 5xx and
+  INFO otherwise. `django.request` still logs every 5xx at ERROR, with
+  the traceback when an exception caused it. Kubelet's probes are
+  answered before it and are not logged. Count codes with
+  `_time:1h kubernetes.pod_namespace:="grooveshop" log.code:* | stats by (log.code, log.route, log.status) count()`.
 - A failed Celery task logs one ERROR line from `MonitoredTask.on_failure`
   with the traceback in `log.exception` and redacted arguments
   (`core/tasks.py`); Celery's own `celery.app.trace` line also carries
@@ -240,7 +257,8 @@ by a namespace regex.
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/web-vitals.client.ts` | Reports a page's slow interaction (INP) with its attribution |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/clientEventRedaction.ts` | The allowlists browser events are cut back to before they are printed |
 | `grooveshop-django-api/core/middleware/correlation_id.py` | Binds and echoes the correlation id |
-| `grooveshop-django-api/core/middleware/access_log.py` | Django's per-request access line |
+| `grooveshop-django-api/core/middleware/access_log.py` | Django's per-request access line, with the error code of an error response |
+| `grooveshop-django-api/core/api/exception_handler.py` | Puts the `code` on every raised API error |
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask`: the task failure line with its traceback |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |
