@@ -174,9 +174,29 @@ manage.py clear_cache --prefixes <raw prefix>    # raw Redis prefixes
 `nuxt.config.ts` derives three sets of route rules from
 `shared/constants/prerender.ts`, all with
 `cache: { varies: CACHED_PAGE_VARIES }`, which is
-`['host', 'x-device-class', 'x-tenant-epoch']`: the brand pages at
-`swr: 3600`, the homepage at 300 seconds, and the blog and catalogue
-families at 600 and 300. Server handlers use `defineCachedEventHandler`,
+`['host', 'x-device-class', 'x-tenant-epoch']` (declared in the same
+file): the brand pages at `swr: 3600`, the homepage at 300 seconds, and
+the blog and catalogue families at 600 and 300.
+
+A merchant's **custom pages** (`/<slug>`, rendered by
+`app/pages/[slug].vue`; `/kelari` on ekfyseosfyteias.com) are cached too,
+at 600 seconds, but not by a route rule: their slugs are tenant data, and
+a `/*` rule would also cache `/search`, `/cart` and every other
+one-segment page. A `cache: false` rule on those pages does not undo it in
+Nitro 2, which wraps a handler in its cache once, from the rules of the
+handler's own route, and gives a more specific rule a handler of its own
+only under a cached `/**` rule. So `server/handlers/custom-page.ts`
+answers `/*` and `/en/*` (registered through `nitro.handlers`, with Nuxt's
+renderer through a virtual `#page-renderer` module): a path
+`isCachedSsrRoute` accepts, which includes a single segment passing
+`isCustomPageSlug`, goes through Nitro's page cache with the same group,
+key shape and varies as the route rules; every other path goes to the
+renderer itself. Not through the cache's `shouldBypassCache`: Nitro 2
+still renders a bypassed request on the cache's copy of the request,
+which carries only the `varies` headers, so a page would render without
+the visitor's cookies. The entries are `nitro:routes:_:<slug>…` like every
+other cached page, so the edge directive and the `store_pages` purge
+reach them. Server handlers use `defineCachedEventHandler`,
 the sitemap source and RSS feeds `defineCachedFunction`. `/sitemap.xml`
 itself is a route-rule cache too (`swr` for a day,
 `varies: ['host', 'x-tenant-epoch']`);
@@ -186,10 +206,23 @@ pod's memory, keyed by a hash of the host, where no purge reached it. On
 2026-10-15 a store's sitemap kept listing `/products` after the store
 switched its catalogue off. All of it lives in the
 `cache:` mount in shared Redis, namespaced by build as
-`cache:<buildId>:nitro:...` (`server/plugins/storage.ts`). A deploy
-therefore starts from an empty cache — there is no post-deploy purge
-step — and the previous build's namespace is unlinked a minute after
-the new pods start.
+`cache:<buildId>:nitro:...` (`server/plugins/storage.ts`). A storefront
+deploy therefore starts from an empty cache — there is no post-deploy
+purge step — and the previous build's namespace is unlinked a minute
+after the new pods start.
+
+The `storefront-warm` PostSync hook fills the new namespace
+(`scripts/warm-cache.mjs`, run from the storefront image): every page in
+every store's sitemap, plus its twin in each other locale the store
+serves (read from the home page's `hreflang` alternates, because the
+sitemap lists products and posts in the default locale only), for every
+device class, the page and its `_payload.json`, shallowest pages first. It
+runs once per build: it records the build in the `storefront-rollout-state`
+ConfigMap (key `warmedBuild`) after a complete run, and a sync that keeps
+the storefront build logs `build already warm` and requests nothing. A
+second pass after a Django-only release forced every stale page to
+revalidate at once against a backend that had just restarted (2026-10-20:
+3-10 s first loads on demo).
 
 The tenant host sits in a different place in each key family, and the
 purge endpoint's host scoping (`server/utils/cacheKey.ts:
@@ -445,10 +478,19 @@ Two purges keep the edge honest (`core/cache/edge.py`):
   renders, it queues one purge of the store's tag, about 30 seconds later,
   so a burst of saves costs one request — Cloudflare's Free plan allows
   five a minute per account. On the public schema it purges every store.
-- **After a deploy.** The `backend-edge-purge` PostSync hook runs
-  `manage.py purge_edge_cache`, which purges the `storefront-html` tag from
-  every zone before the warm-up: an edge copy from the previous build
-  points at `/_nuxt` chunks the new pods no longer serve.
+- **After a storefront deploy.** The `backend-edge-purge` PostSync hook
+  runs `manage.py purge_edge_cache`, which purges the `storefront-html` tag
+  from every zone before the warm-up: an edge copy from the previous build
+  points at `/_nuxt` chunks the new pods no longer serve. It purges only
+  when the storefront tag moved: it records the tag it purged for in the
+  `storefront-rollout-state` ConfigMap (key `edgePurgedStorefront`) after
+  a successful purge and does nothing while the tag is the same. A Django,
+  gateway or docs release changes no page Nitro holds, so the edge would
+  only refetch the same HTML while the backend restarts. A failed purge is
+  retried by the next sync; a rollback purges too. A Django release that
+  changes what pages show without a data write (a price rule, a
+  serializer) is not purged by its deploy: purge it from the tenant
+  admin's Cache tool, which purges Nitro and then the edge.
 
 The platform zone (`*.grooveshop.space`) is purged with the platform's
 token (`CLOUDFLARE_PLATFORM_*` settings); a store on its own domain in its
@@ -514,7 +556,9 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/core/management/commands/clear_cache.py` | Command |
 | `grooveshop-django-api/core/cache/edge.py`, `core/tasks.py` (`purge_edge_cache_task`), `core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy; by prefix for a tenant's media (`tenant_media_purges`, `purge_media`) |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
-| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook, once per storefront tag |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm-job.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build |
+| `grooveshop-storefront-ui-node-nuxt/server/handlers/custom-page.ts` | Nitro page cache for custom pages |
 | `grooveshop-django-api/tenant/media_flush.py`, `tenant/tasks.py` | Media flush |
 | `grooveshop-django-api/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml` | Originals served only to media-stream; public requests redirected to it |
