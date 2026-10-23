@@ -168,7 +168,6 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 
 | Setting | What it does | Default |
 |---|---|---|
-| `ACS_SMARTPOINT_ENABLED` | The customer can choose pickup from an ACS Smartpoint at checkout. | off |
 | `ACS_DYNAMIC_PRICING_ENABLED` | ACS works out the shipping cost at checkout. If ACS does not answer, the normal rate is charged. | off |
 
 ### Orders & Checkout

@@ -139,7 +139,7 @@ The store asks ACS every fifteen minutes. For an immediate check, click **Re-pol
 
 ### ACS Smartpoint pickup does not show at checkout
 
-It starts switched off. Switch on the `ACS_SMARTPOINT_ENABLED` setting. See [Store settings](/admin/settings/store-settings).
+The lockers appear once the store has fetched the ACS stations of the delivery country, which happens every night. Check that the ACS courier has **Supports Pickup Point** ticked and an active **Pickup point / locker** line for that country, and that <span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span> lists stations for it. See [Shipping providers](/admin/settings/shipping-providers).
 
 ### A BoxNow parcel's status looks old
 
