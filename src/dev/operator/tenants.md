@@ -197,11 +197,13 @@ How the two tiers combine:
   services the public order-create path reaches without passing a viewset
   permission.
 - The runtime tier lives in the store's **own schema** as
-  `extra_settings` rows, read by `IsSettingEnabled` subclasses and — for
-  the storefront's UI — through `GET /api/v1/settings/public`, whose
-  allowlist is `core/api/views.py: PUBLIC_SETTING_KEYS`. A new public
-  extra-setting that is not in that frozenset cannot be read by the
-  storefront at all.
+  `extra_settings` rows, read by `IsSettingEnabled` subclasses. The
+  storefront never reads a switch from the settings: it reads Django's
+  effective state in `TenantConfig.features` and `TenantConfig.preferences`
+  (`tenant/features.py`). `GET /api/v1/settings/public` serves store
+  VALUES only (prices, texts, hours, loyalty figures), whose allowlist is
+  `core/api/views.py: PUBLIC_SETTING_KEYS`; a test refuses a feature or
+  preference key in it.
 - **Both must be on.** `agent_commerce_enabled` defaults to `True` and
   `blog_enabled` to `True` because those surfaces predate their flags; the
   rest ship off, so a feature is dark until the operator sells it *and* the
