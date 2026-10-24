@@ -104,6 +104,7 @@ Defaults are the values a new store starts with. Amounts are in euros.
 | `NEWSLETTER_ENABLED` | Newsletter subscriptions from the customer's account. Unsubscribe links in emails already sent always work. | on |
 | `FEEDBACK_ENABLED` | The store's feedback page. | on |
 | `PRODUCT_ALERTS_ENABLED` | The "notify me" alerts for back in stock or price drop, and their emails. | on |
+| `PRICE_HISTORY_ENABLED` | The **Price history** button beside the rating on product pages. It opens how the price has changed over time, with the change and the lowest and highest price. It shows only prices the store already published. | on |
 
 ### Invoicing & myDATA
 
