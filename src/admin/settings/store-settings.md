@@ -251,7 +251,7 @@ Emails to the store when something needs a person. They go to the **Contact Emai
 | `CATALOGUE_ENABLED` | Product lists, product pages and search. Switch it off only if the store presents work and does not sell. | on |
 | `PRODUCT_SUGGESTIONS_ENABLED` | Switches product suggestions on. | off |
 | `DISPATCH_CUTOFF` | The same-day dispatch time. See the task above. | 15:00 |
-| `RETURN_WINDOW_DAYS` | How many days after delivery a customer can return a product, as your return policy page says. Google then shows your return terms for every country you ship to. Leave it at 0 to give Google only the link to your return policy page. | 0 |
+| `RETURN_WINDOW_DAYS` | How many days after delivery a customer can return a product, as your return policy page says. Google then shows your return terms for every country you ship to. Leave it at 0 to give Google only the link to your return policy page. Google reads this setting, not the page: when you change the return window on the page, change it here too (the admin reminds you each time you save the return policy page). | 0 |
 | `RETURN_FEES` | Who pays to send a return back: `free` (you pay) or `customer` (the customer pays the return shipping). Google shows it with the return window. Leave it empty if your policy does not say. | empty |
 | `ANNOUNCEMENT_BAR` | The announcement bar. See the task above. | empty |
 | `BUSINESS_HOURS` | The store's opening hours. | empty |
