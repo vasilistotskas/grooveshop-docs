@@ -159,14 +159,14 @@ no single shard is expected to reach the threshold on its own.
 | Testing | four pytest-split shards from `.test_durations`, each `-n auto --dist loadfile` with coverage data upload |
 | Testing (multi-tenant lane) | `uv run pytest tests_mt -n 0` |
 | Coverage Gate | combines the shards and enforces `fail_under` |
-| Release | python-semantic-release on `main` once every job above passed or was skipped as already tested; the published release triggers `docker.yml` |
+| Release | python-semantic-release on `main`; needs "Already tested in its PR" and Trivy to pass, and every other job to pass or, only when the push is already tested, to be skipped; the published release triggers `docker.yml` |
 
 A push to `main` is "already tested" when the PR branch was up to date
 with `main` at merge: the squash commit then carries the PR head's own
 tree, which the PR run passed. Code Quality, Migration Check, both test
-jobs and the Coverage Gate skip and the release starts at once; Trivy
-still runs. Merging a branch that is behind `main` costs a full second
-run.
+jobs and the Coverage Gate skip, and the release starts as soon as the
+Trivy scan passes, under a minute after the merge. Merging a branch that
+is behind `main` costs a full second run.
 
 Each shard records its tests' durations on the runner. Refresh
 `.test_durations` from them, not from a local run (a developer machine
