@@ -215,8 +215,8 @@ page: [Agentic commerce](/dev/flows/agentic-commerce).
 `meili/` is the Meilisearch integration layer: `IndexMixin` with a
 `MeiliMeta` inner class (`meili/models.py`), the client
 (`meili/_client.py`), index and delete tasks (`meili/tasks.py`) and the
-management commands. `search/` is the product-facing side: federated
-search views, Greeklish transliteration at index time
+management commands. `search/` is the product-facing side: product and
+blog search views, Greeklish transliteration at index time
 (`search/transliteration.py`), `SearchQuery` / `SearchClick` analytics and
 the click-score task. Flow page: [Search](/dev/flows/search); reference:
 [Search API](/dev/django/reference/api/search) and

@@ -1,6 +1,6 @@
 ---
 title: Search
-description: "Meilisearch end to end: per-tenant indexes, index-time Greeklish, the federated query, the relaxed retry, click analytics and the storefront UI."
+description: "Meilisearch end to end: per-tenant indexes, index-time Greeklish, the product and blog queries, the relaxed retry, click analytics and the storefront UI."
 ---
 
 # Search
@@ -27,11 +27,8 @@ flowchart TD
   Filt -- "false" --> Del["delete document"]
   Ser --> Idx["schema-prefixed index"]
 
-  UI["Nuxt search modal"] --> NR["server/api/search/*"]
-  NR --> DV["Django search views"]
-  DV --> Fed["federated_search"]
-  Fed --> Scoped["search_client_for_schema"]
-  Scoped --> Idx
+  UI["Nuxt search modal and page"] --> NR["server/api/search/*, server/api/products/search"]
+  NR --> DV["product_meili_search / blog_post_meili_search"]
   DV --> Idx
   DV --> Retry{"zero results?"}
   Retry -- "multi-word" --> Relax["drop leading word, retry"]
@@ -73,7 +70,7 @@ on the mixin. `get_search_result_queryset()` is the hit-hydration queryset
 and is **not** part of the mixin: each indexed model defines its own
 (`product/models/product.py`, `blog/models/post.py`) and
 `meili/querysets.py` reaches it through `getattr`. It is what keeps the
-federated view from running four queries per hit.
+product and blog views from paying extra queries per hit.
 
 ### Index-time Greeklish, in three layers
 
@@ -113,8 +110,9 @@ only.
 ### Typo tolerance must match across indexes
 
 Both models declare the identical block, and the comment in
-`product/models/product.py` says why: they feed the same federated search,
-so a looser threshold on one index would make its hits win on noise. Both
+`product/models/product.py` says why: the storefront shows both result
+lists for one query side by side, and mismatched thresholds would make the
+same word typo-tolerant in one list and not the other. Both
 use `oneTypo: 4` and `twoTypos: 8`. The historical `{3, 5}` gave five-letter
 words a two-typo budget, which let first-character noise match. Convention
 differences are the variant bags' job, not the typo budget's.
@@ -122,15 +120,18 @@ differences are the variant bags' job, not the typo budget's.
 A model that declares no `typo_tolerance` gets the client default in
 `meili/_client.py` instead, which is `{5, 9}` — so silence is not agreement.
 
-### The three read endpoints
+### The two read endpoints
 
-`search/urls.py` registers six paths. Three of them run queries:
+`search/urls.py` registers five paths. Two of them run queries:
 
 | Path | View | Gate |
 |---|---|---|
 | `search/product` | `product_meili_search` | `AllowAny` |
 | `search/blog/post` | `blog_post_meili_search` | `IsBlogEnabled` |
-| `search/federated` | `federated_search` | `AllowAny` |
+
+A third, `search/federated` (one `multi_search` over both indexes), was
+removed on 2026-10-25; the storefront searches products and blog posts
+separately and shows the two lists side by side.
 
 Product search parses every filter defensively — `_parse_optional_int`,
 `_parse_optional_float`, `_parse_int_csv` all raise a 400 rather than let a
@@ -142,30 +143,23 @@ filter-injection into the query DSL and because passing the camelCase name
 straight through silently did nothing. Facets are restricted the same way by
 `_ALLOWED_PRODUCT_FACETS`.
 
-The federated view is the interesting one. It builds a `multi_search` with
-federation weights — products 1.0, blog posts 0.7 — and executes it through
-a **schema-scoped** read client:
-`meili/_client.py: Client.search_client_for_schema` mints a Meilisearch
-tenant token from the search key with search rules `{"{schema}__*": {}}`, so
-the engine itself refuses cross-tenant index access even if query-building
-code ever mis-prefixes an index name. It falls back to the unscoped search
-client in three documented cases: the public schema, no dedicated search key
-provisioned, and `OFFLINE` mode.
+Both views go through the model managers into `meili/querysets.py`, which
+uses the client's plain read-only `search_client`. Tenant isolation on
+query traffic therefore rests on the schema-prefixed index name alone, not
+on a token rule. `meili/_client.py: Client.search_client_for_schema` can
+mint a Meilisearch tenant token scoped to `{"{schema}__*": {}}`, but no
+search view calls it, so do not assume the token is a second line of
+defence.
 
-`federated_search` is its **only** caller. Product and blog search go
-through the model managers into `meili/querysets.py`, which uses the
-client's plain read-only `search_client`. Tenant isolation on those two
-paths therefore rests on the schema-prefixed index name alone, not on a
-token rule. Worth knowing before you assume the token is a second line of
-defence everywhere.
-
-Blog gating in federated search is a **drop, not a refusal**. The view is
-not gated on `IsBlogEnabled`, because 404-ing it would take product search
-down with it for a blog-disabled store. Instead the blog index is only added
-to the federation when `tenant_plan_allows("blog_enabled")` is true. This is
-necessary because indexing knows nothing about the plan flag —
+Blog search is **refused, not filtered**, for a store whose plan has the
+blog off: `IsBlogEnabled` answers 404. The gate has to be on the view,
+because indexing knows nothing about the plan flag —
 `BlogPostTranslation.meili_filter` gates on `is_published` alone — so the
-documents exist either way.
+documents exist either way. The storefront does not ask in that case:
+`server/api/search/index.get.ts` skips the blog request when
+`eventStoreFeature(event, 'blog')` is off, and
+`app/composables/useStorefrontSearch.ts` disables it through
+`useStoreFeature('blog')`, so product search keeps working.
 
 ### Attribute filters and their facet counts
 
@@ -185,8 +179,7 @@ attribute value reads the selection through it, so they cannot drift:
 An id that belongs to no attribute (a deleted value in a stale link) stays
 a group of its own and matches nothing, so the request lists nothing
 rather than silently losing the filter, as an unknown category does. The
-federated search has no attribute filter, and the agent gateway sends
-none.
+agent gateway sends no attribute filter.
 
 **Facet counts are disjunctive.** An attribute's own selection does not
 shrink its own counts, or the alternatives to the value you picked would
@@ -213,7 +206,7 @@ the other colours' counts alone.
 ### The relaxed-query retry
 
 `_relaxed_query(query)` returns the query with its **leading** word removed,
-or `None` for a single-word query. All three read views use the same
+or `None` for a single-word query. Both read views use the same
 pattern: run the search, and if it returned nothing and a relaxed form
 exists, run it again and report the relaxed string back in the
 `relaxed_query` response field so the UI can say what it actually searched
@@ -223,9 +216,6 @@ The leading word is the only shape Meilisearch cannot rescue on its own —
 its `last` strategy already relaxes trailing words. A leading word that
 matches nothing is an unindexed transliteration convention, a pasted slug
 fragment, or a typo beyond tolerance.
-
-The federated retry rebuilds fresh query dicts rather than mutating the
-already-submitted ones.
 
 ### Indexing lifecycle
 
@@ -251,10 +241,11 @@ with backoff.
 ### Analytics
 
 `search/middleware.py: SearchAnalyticsMiddleware` records a `SearchQuery`
-row for every response that answers exactly 200 from one of the three
+row for every response that answers exactly 200 from one of the two
 query routes of `search/urls.py` (`search-product`, `search-blog-post`,
-`search-federated`, mapped to a content type in `_QUERY_ROUTES`). The
-route is read from `request.resolver_match` once the view has answered.
+mapped to a content type in `_QUERY_ROUTES`). The `federated` content
+type remains on `SearchQuery` and in the analytics filters only for rows
+recorded before that endpoint's removal on 2026-10-25. The route is read from `request.resolver_match` once the view has answered.
 It used to be a `/search/` substring in the path, which also matched the
 admin's command palette (`/admin/search/`). That recorded every keystroke
 as an empty storefront search, and on the platform host it sent the task
@@ -343,9 +334,9 @@ and no key — the name survives only in type declarations and comments.
 
 | Route | Behaviour |
 |---|---|
-| `server/api/search/index.get.ts` | Runs the product and blog searches in parallel and returns both, or a null pair for an empty query |
-| `server/api/search/federated.get.ts` | Straight proxy, validated with the generated `zFederatedSearchResponse` |
-| `server/api/products/search.get.ts` | `defineCachedEventHandler`, 60 s, **`swr: false`**, keyed with `tenantCacheKey` over every filter |
+| `server/api/search/index.get.ts` | The search modal's: runs the product and blog searches in parallel with one limit and offset and returns both, or a null pair for an empty query; skips the blog search when the store has no blog |
+| `server/api/products/search.get.ts` | `defineCachedRoute`, 60 s, **`swr: false`**, keyed with `tenantCacheKey` over every filter |
+| `server/api/search/blog-posts.get.ts` | The search page's guides, paged on their own: `defineCachedRoute`, 60 s, **`swr: false`**, keyed with `tenantCacheKey` |
 | `server/api/search/trending.get.ts` | Proxies the 24-hour trending list |
 | `server/api/search/click.post.ts` | Forwards the click, answers 202 |
 
@@ -363,13 +354,14 @@ every failure — tracking must never affect the shopper. It no-ops without a
 - **Queries are never rewritten.** Not into Greek variants, not into
   space-joined alternates. Recall is bought at index time or not at all
   (`search/transliteration.py` module docstring).
-- **`minWordSizeForTypos` is identical on every index that shares a
-  federation.** Today that is `{4, 8}` on both `ProductTranslation` and
-  `BlogPostTranslation`. Changing one without the other lets the looser
-  index win on noise.
+- **`minWordSizeForTypos` is identical on every searchable index.** Today
+  that is `{4, 8}` on both `ProductTranslation` and `BlogPostTranslation`,
+  whose result lists the storefront shows side by side for one query.
+  Changing one without the other makes the same word typo-tolerant in one
+  list and not the other.
 - **Every index name is `{schema}__{base}`** on a tenant schema; the public
-  schema gets the bare base name. Federated query traffic additionally goes
-  through a tenant-token client scoped to that prefix.
+  schema gets the bare base name. That prefix is the only tenant boundary
+  on query traffic.
 - **Only the read-only key serves queries.** The master key is for
   administration and indexing.
 - **A save that fails `meili_filter` deletes the document.** Returning early
@@ -389,7 +381,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 - **A blog post is searchable before it is published.**
   `BlogPostTranslation.meili_filter` returns `master.is_published` once it
   has a master to read (it returns false for an unset `master_id` and
-  catches a missing row), and both the blog and federated views filter on
+  catches a missing row), and the blog view filters on
   `is_published = true`. But `blog/managers/post.py: published()` — what
   every public blog endpoint uses — additionally requires `published_at` to
   be null or already past. A post scheduled for next week with
@@ -450,7 +442,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 | `grooveshop-django-api/meili/tasks.py` | `index_document_task`, `delete_document_task`, `reindex_model_task` |
 | `grooveshop-django-api/meili/management/commands/` | Sync, settings, drop, inspect |
 | `grooveshop-django-api/search/transliteration.py` | The three Greeklish layers |
-| `grooveshop-django-api/search/views.py` | Product, blog, federated, click, analytics, trending |
+| `grooveshop-django-api/search/views.py` | Product, blog, click, analytics, trending |
 | `grooveshop-django-api/search/middleware.py` | `SearchAnalyticsMiddleware` |
 | `grooveshop-django-api/search/tasks.py` | Query and click persistence, `update_click_scores`, anonymisation |
 | `grooveshop-django-api/core/sessions.py` | `persisted_session_key`, the session key of a stored session only |
@@ -461,6 +453,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 | `grooveshop-storefront-ui-node-nuxt/server/api/search/` | Storefront proxies |
 | `grooveshop-storefront-ui-node-nuxt/server/api/products/search.get.ts` | Cached product search |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useProductSearchData.ts` | Category and attribute facet queries, the attribute one carrying the selection |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useStorefrontSearch.ts` | The search page: product and guide searches, each paged on its own |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useSearchClickTracking.ts` | Click attribution |
-| `grooveshop-storefront-ui-node-nuxt/app/components/Search/` | Modal, input, result tile |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Search/` | Modal, input, guide card |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml` | PreSync step 3/4 |

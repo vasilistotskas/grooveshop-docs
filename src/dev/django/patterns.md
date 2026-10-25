@@ -372,8 +372,8 @@ class IndexMixin(models.Model):
 `get_additional_meili_fields()` adds computed fields, and
 `Model.meilisearch` is a queryset-like search descriptor. Greeklish shadow
 fields are produced at index time by `search/transliteration.py`. Keep
-`minWordSizeForTypos` identical across indexes; they feed one federated
-search. See [Search](/dev/flows/search).
+`minWordSizeForTypos` identical across indexes; the storefront shows
+product and blog results for one query side by side. See [Search](/dev/flows/search).
 
 ## Factories (`devtools/factories.py`)
 
