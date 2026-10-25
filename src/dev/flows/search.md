@@ -29,7 +29,8 @@ flowchart TD
 
   UI["Nuxt search modal and page"] --> NR["server/api/search/*, server/api/products/search"]
   NR --> DV["product_meili_search / blog_post_meili_search"]
-  DV --> Idx
+  DV --> Scoped["tenant_search_client"]
+  Scoped --> Idx
   DV --> Retry{"zero results?"}
   Retry -- "multi-word" --> Relax["drop leading word, retry"]
   DV --> MW["SearchAnalyticsMiddleware"]
@@ -144,12 +145,15 @@ straight through silently did nothing. Facets are restricted the same way by
 `_ALLOWED_PRODUCT_FACETS`.
 
 Both views go through the model managers into `meili/querysets.py`, which
-uses the client's plain read-only `search_client`. Tenant isolation on
-query traffic therefore rests on the schema-prefixed index name alone, not
-on a token rule. `meili/_client.py: Client.search_client_for_schema` can
-mint a Meilisearch tenant token scoped to `{"{schema}__*": {}}`, but no
-search view calls it, so do not assume the token is a second line of
-defence.
+reads through `meili/_client.py: Client.tenant_search_client()`: the index
+handle (`get_search_index`) and the facet-group `multi_search` both take
+the client for the schema the request runs in. For a store schema that is
+`Client.search_client_for_schema`, a Meilisearch tenant token minted from
+the search key with search rules `{"{schema}__*": {}}`, so the engine
+itself refuses another store's indexes even if query code ever mis-prefixes
+an index name. It falls back to the unscoped `search_client` in three
+documented cases: the public schema, no dedicated search key provisioned,
+and `OFFLINE` mode. Tokens are cached per process for 50 minutes.
 
 Blog search is **refused, not filtered**, for a store whose plan has the
 blog off: `IsBlogEnabled` answers 404. The gate has to be on the view,
