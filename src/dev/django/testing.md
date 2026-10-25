@@ -152,16 +152,27 @@ no single shard is expected to reach the threshold on its own.
 
 | Job | What it runs |
 |---|---|
+| Already tested in its PR | on a push to `main`: `tested=true` when the pushed tree is exactly what a green pull_request run tested (`.github/scripts/tested_in_pr.sh`) |
 | Security Scan (Trivy) | filesystem scan; HIGH/CRITICAL fail |
-| Code Quality | `ruff format --check`, `ruff check`, `ty check`, OpenAPI schema validation |
-| Migration Check | `makemigrations --check --dry-run`, then both django-tenants migration paths on a clean database |
+| Code Quality | `ruff format --check`, `ruff check`, `ty check`, OpenAPI schema validation, committed `schema.yml` matches the code |
+| Migration Check | migrates at the base commit (the release still serving), then the head's `makemigrations --check --dry-run`, `migration_preflight` and both django-tenants migration paths on top |
 | Testing | four pytest-split shards from `.test_durations`, each `-n auto --dist loadfile` with coverage data upload |
 | Testing (multi-tenant lane) | `uv run pytest tests_mt -n 0` |
 | Coverage Gate | combines the shards and enforces `fail_under` |
-| Release | python-semantic-release on `main`; the published release triggers `docker.yml` |
+| Release | python-semantic-release on `main` once every job above passed or was skipped as already tested; the published release triggers `docker.yml` |
 
-Refresh `.test_durations` occasionally with
-`uv run pytest --store-durations` so the shards stay balanced.
+A push to `main` is "already tested" when the PR branch was up to date
+with `main` at merge: the squash commit then carries the PR head's own
+tree, which the PR run passed. Code Quality, Migration Check, both test
+jobs and the Coverage Gate skip and the release starts at once; Trivy
+still runs. Merging a branch that is behind `main` costs a full second
+run.
+
+Each shard records its tests' durations on the runner. Refresh
+`.test_durations` from them, not from a local run (a developer machine
+weighs the shards wrongly):
+`uv run python .github/scripts/merge_test_durations.py` merges the four
+shards of the latest green pull_request run.
 
 ## Source
 
@@ -173,4 +184,6 @@ Refresh `.test_durations` occasionally with
 | `grooveshop-django-api/devtools/factories.py` | `CustomDjangoModelFactory` |
 | `grooveshop-django-api/.test_durations` | Shard timings |
 | `grooveshop-django-api/.github/workflows/ci.yml` | CI jobs |
+| `grooveshop-django-api/.github/scripts/tested_in_pr.sh` | The "already tested in its PR" rule |
+| `grooveshop-django-api/.github/scripts/merge_test_durations.py` | `.test_durations` refresh from CI |
 | `grooveshop-django-api/.claude/skills/migration-check/`, `migration-safety-audit/` | Migration skills |

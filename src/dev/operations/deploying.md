@@ -34,6 +34,13 @@ flowchart LR
 | `grooveshop-docs` | semantic-release on `main` | `docker.yml` as above | `gro0ve/grooveshop-docs`, `ghcr.io/<repo>` |
 | `grooveshop-agent-gateway` | **manual tag**: `release.yml` runs on `push: tags: ['v*.*.*']` and creates the GitHub release itself | the same workflow | `gro0ve/grooveshop-agent-gateway`, `ghcr.io/<repo>` |
 
+In `grooveshop-django-api` and `grooveshop-storefront-ui-node-nuxt` a
+merge whose branch was up to date with `main` skips the tests on `main`
+(the PR run already passed that exact tree, checked by
+`.github/scripts/tested_in_pr.sh`), so the release starts within a
+minute of the merge. A branch behind `main` runs the full workflow
+again first.
+
 Commit type decides the bump (`feat` minor, `fix`/`perf` patch). The image
 workflow triggers on the published release and lags the tag by several
 minutes, so a green CI run does not mean the image exists yet. Check
@@ -297,6 +304,7 @@ Deployment.
 | `grooveshop-infrastructure/docs/deploying.md` | The runbook this page distils |
 | `grooveshop-infrastructure/.claude/skills/update-deploy-version/SKILL.md` | Pin-bump skill |
 | `grooveshop-django-api/.github/workflows/ci.yml`, `docker.yml` | Release and image publish; the `Migration Check` deploy replay |
+| `grooveshop-django-api/.github/scripts/tested_in_pr.sh`, `grooveshop-storefront-ui-node-nuxt/.github/scripts/tested_in_pr.sh` | Skip the tests on `main` when the PR run already passed the tree |
 | `grooveshop-django-api/core/management/commands/migration_preflight.py`, `core/db/migration_safety.py` | PreSync step 0 and its classifier |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml`, `grooveshop-media-stream/.github/workflows/docker.yml`, `grooveshop-docs/.github/workflows/docker.yml` | Image publish on release |
 | `grooveshop-docs/.github/workflows/sources.yml`, `scripts/source-lock.mjs`, `sources.lock.json` | The pinned reference-docs commits and the job that moves them |
