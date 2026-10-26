@@ -99,6 +99,10 @@ jobs:
             type=raw,value=latest,enable=${{ github.event_name == 'release' }}
             type=raw,value=${{ inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
+      # No BuildKit layer cache: this runs on a release tag, and GitHub
+      # never lets one tag restore another tag's cache, so what each
+      # release exported (27-35 s) was never read back: no layer
+      # was CACHED in a release build.
       - name: Build and push Docker images
         uses: docker/build-push-action@v7
         with:
@@ -107,8 +111,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           target: production
           build-args: |
             NODE_VERSION=24.19.0
