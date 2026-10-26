@@ -259,8 +259,9 @@ on `openai_pixel_id` is not cosmetic: the value pasted out of the vendor's
 snippet once carried a stray trailing character, and a malformed id stops
 conversions being attributed silently rather than failing loudly.
 
-Server-side Meta is separate and secret: `meta_capi_access_token` and
-`meta_capi_dataset_id`, with no platform fallback.
+Server-side Meta is separate and secret: `meta_capi_access_token`, with no
+platform fallback. It posts to the store's `meta_pixel_id`, which is the
+Conversions API dataset, so there is no separate dataset id.
 
 ### `allowed_csp_sources`
 
@@ -323,7 +324,7 @@ hard line through them:
 | Viva Wallet | `viva_wallet_merchant_id`, `viva_wallet_api_key`, `viva_wallet_client_id`, `viva_wallet_client_secret`, `viva_wallet_webhook_verification_key`, `viva_wallet_source_code`, `viva_wallet_live_mode` |
 | ACS | `acs_api_key`, `acs_company_id`, `acs_company_password`, `acs_user_id`, `acs_user_password`, `acs_billing_code`, `acs_station_origin` |
 | BoxNow | `box_now_partner_id` (public, digits only), `box_now_client_id`, `box_now_client_secret`, `box_now_warehouse_id`, `box_now_notify_phone`, `box_now_webhook_secret` |
-| Meta CAPI | `meta_capi_access_token`, `meta_capi_dataset_id` |
+| Meta CAPI | `meta_capi_access_token` |
 | Agentic commerce | `chat_api_key`, `acp_bearer_token` |
 | myDATA invoicing | `mydata_user_id`, `mydata_subscription_key` |
 
