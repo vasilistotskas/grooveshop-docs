@@ -65,7 +65,11 @@ The page is added to the footer automatically. To put it in a menu as well, see 
 
 Untick **Is Published** and save. Visitors see the "not found" page, and links to it leave the footer and the menus.
 
-Do not take down the terms, privacy or cookie policy; the store would be left without them. Change their text instead.
+The terms of use, the privacy policy and the cookie policy cannot be taken down. The admin refuses to unpublish them, to schedule them for a later date, to empty their text in a language the store serves, to change their slug or to delete them. Without them the store would show "not found" in their place, and checkout refuses every order, card payments included, while the terms of use or the privacy policy cannot be shown. Change their text instead: that is always allowed.
+
+### See what each order accepted
+
+Every order records the exact terms of use and privacy policy its customer accepted. Open the order and find them under **Legal acceptances**, each with the language and the time. The text there stays as it was, even after you edit the page. **Content → Accepted legal texts** lists every version that orders have accepted.
 
 ### Review a legal text update from the platform
 
@@ -88,7 +92,7 @@ Marking it only clears the notice; it does not add the text. The first such upda
 - **A page without a translation** shows in the store's main language, with a note for the visitor. Still, fill in every language you serve.
 - **The `/info/` address of the four pages with their own address** (terms, privacy, cookies, returns) redirects to their own address.
 - **Two "About" pages.** The `about` page here is at `/info/about`. The `/about` address is a different page, built from a [page layout](/admin/content/page-layouts) of type `about`.
-- **Do not change the slug** of a page already published. Its address changes, and links that were shared stop working. Links in your menus follow on their own.
+- **Do not change the slug** of a page already published. Its address changes, and links that were shared stop working. Links in your menus follow on their own. The legal pages keep theirs: the admin refuses the change.
 - **A starting page you do not need**: leave it unpublished rather than deleting it.
 - **If a change does not show** after a minute, clear the **Pages & navigation** cache on the [Cache](/admin/settings/cache) page.
 
