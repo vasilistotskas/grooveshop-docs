@@ -329,7 +329,7 @@ analytics credentials the clone brought across:
 | Blanked on the tenant row | Why |
 |---|---|
 | `ga_tracking_id`, `meta_pixel_id`, `tiktok_pixel_id`, `openai_pixel_id` | Cloned ids would report staging traffic into production properties |
-| `meta_capi_access_token`, `meta_capi_dataset_id` | Same, for the server leg |
+| `meta_capi_access_token` | Same, for the server leg |
 | The seven `acs_*` fields | ACS has no test environment; production credentials would issue real vouchers |
 
 It also forces `META_CAPI_ENABLED` to **False** as a prod-pollution guard, and
