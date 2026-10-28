@@ -406,8 +406,11 @@ In the storefront:
   parallel through `/api/products/{id}`, drops any that 404 or are inactive,
   and renders `AssistantProductCard.vue` cards with Add to cart.
 - A search shows "Found N" and a **View all** link to `/search?query=…`.
-- The webside design's chat panel (`app/components/Chat/Panel.vue`) ignores the
-  event.
+- The webside design's chat panel (`app/components/Chat/Panel.vue`) renders
+  the same event the same way, mounting `AssistantProducts.vue`, and its
+  launcher (`app/components/Chat/Widget.vue`) shares the open state
+  (`useShopChat().open`) with the default design's, so whatever opens the
+  assistant opens either.
 
 ### Identity linking
 
