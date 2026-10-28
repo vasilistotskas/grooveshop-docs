@@ -13,5 +13,6 @@ src/dev/*/reference/
 /.idea
 
 # Claude Code: per-user agent memory and subagent worktrees are not shared.
-.claude/agent-memory/
+.claude/agent-memory*/
 .claude/worktrees/
+.claude/settings.local.json
