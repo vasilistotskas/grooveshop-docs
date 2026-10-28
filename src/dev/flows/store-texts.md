@@ -306,9 +306,14 @@ ships to browsers.
   every page down. It is logged at ERROR and the render is kept out of every
   cache (Nitro's page cache, the Cloudflare edge and the browser), so the
   defaults cannot outlive the failure and hide the store's wording; the next
-  request asks again (`app/plugins/text-overrides.ts`,
-  `server/plugins/edge-cache.ts`). This is the behaviour #268 is being
-  finalised to; read the merged plugin before relying on the details.
+  request asks again. The mechanism: `markDegradedRender`
+  (`shared/utils/degradedRender.ts`) answers 503 while the render is inside
+  Nitro's page cache, which stores nothing at 400 or above; the edge-cache
+  plugin then puts the real status back as the response ends and sends
+  `Cache-Control: private, no-store` with no edge headers, so the visitor
+  sees a normal page (`app/plugins/text-overrides.ts`,
+  `shared/constants/degradedRender.ts`, `server/plugins/edge-cache.ts`; the
+  e2e suite covers it with a store whose texts answer 503).
 - **Overrides fetch fails in the browser** (a language switch). The defaults
   are kept and a warning is logged; the next switch to that language retries.
 - **Purge missed.** The `textOverrides` entry still expires after its
@@ -343,7 +348,9 @@ ships to browsers.
 | `grooveshop-storefront-ui-node-nuxt/app/utils/textOverrides.ts` | `mergeStoreTexts`, the merge rules (#268) |
 | `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/store-i18n.spec.ts` | Source rule for `useStoreI18n` (#268) |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` |
-| `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts` | Edge cache headers per response |
+| `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts` | Edge cache headers per response; restores a degraded render's status and marks it `private, no-store` |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/degradedRender.ts` | `markDegradedRender`: keeps a defaults-only render out of the page cache |
+| `grooveshop-storefront-ui-node-nuxt/shared/constants/degradedRender.ts` | The 503 a degraded render carries inside the page cache |
 | `grooveshop-django-api/texts/models.py` | `TextOverride`, `TextSurface` |
 | `grooveshop-django-api/texts/storefront.py` | Catalogue and validate client |
 | `grooveshop-django-api/texts/validation.py` | `check_value`, refusal codes and messages |
