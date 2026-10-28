@@ -57,6 +57,7 @@ description: Προσθέστε και αφαιρέστε μέλη της ομά
 | [Προφίλ καταστήματος](/el/admin/settings/store-profile) | όχι | ναι | ναι |
 | [Ρυθμίσεις καταστήματος](/el/admin/settings/store-settings) | όχι | ναι | ναι |
 | [Cache](/el/admin/settings/cache) | όχι | ναι | ναι |
+| [Κείμενα καταστήματος](/el/admin/content/storefront-texts) | μόνο προβολή | ναι | ναι |
 | Ομάδα | όχι | ναι | ναι |
 | Αλλαγή ή αφαίρεση Ιδιοκτήτη | όχι | όχι | ναι |
 

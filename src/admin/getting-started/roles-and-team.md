@@ -57,6 +57,7 @@ A store must always keep at least one active Owner. The last one cannot be remov
 | [Store Profile](/admin/settings/store-profile) | no | yes | yes |
 | [Store Settings](/admin/settings/store-settings) | no | yes | yes |
 | [Cache](/admin/settings/cache) | no | yes | yes |
+| [Storefront texts](/admin/content/storefront-texts) | view only | yes | yes |
 | Team | no | yes | yes |
 | Edit or remove an Owner | no | no | yes |
 

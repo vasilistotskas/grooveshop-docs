@@ -67,6 +67,7 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
       { text: 'Σελίδες', link: '/el/admin/content/pages' },
       { text: 'Μενού', link: '/el/admin/content/menus' },
       { text: 'Διατάξεις σελίδων', link: '/el/admin/content/page-layouts' },
+      { text: 'Κείμενα καταστήματος', link: '/el/admin/content/storefront-texts' },
       {
         text: 'Blog',
         items: [
