@@ -212,7 +212,7 @@ single thing to add. Codes never produce near misses (they produce a
 rejection), and neither does a cart holding none of the promotion's units.
 The cart exposes the list as `promotionNearMiss` with `remainingAmount`,
 `remainingQuantity` and `rewardProducts` (rendered as linked product chips);
-the frozen webside cart renders only the amount teasers.
+the webside design's cart renders only the amount teasers.
 
 The cart's `appliedCoupons` gives one entry per attached code with what the
 engine decided for it — `amount`, `freeShipping`, `gift`, or the
