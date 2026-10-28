@@ -406,7 +406,7 @@ In the storefront:
   parallel through `/api/products/{id}`, drops any that 404 or are inactive,
   and renders `AssistantProductCard.vue` cards with Add to cart.
 - A search shows "Found N" and a **View all** link to `/search?query=…`.
-- The frozen webside chat panel (`app/components/Chat/Panel.vue`) ignores the
+- The webside design's chat panel (`app/components/Chat/Panel.vue`) ignores the
   event.
 
 ### Identity linking

@@ -254,7 +254,7 @@ with `core/utils/tenant_urls.py: storefront_path`. The field is a
 too, because `objects.create` skips field validators. The storefront opens
 the path under the viewer's current locale with `useLocalePath()`
 (`app/components/User/NotificationsBell.vue`,
-`app/pages/account/notifications/index.vue`). The frozen webside bell
+`app/pages/account/notifications/index.vue`). The webside design's bell
 navigates the path as-is, which is correct because webside serves `el`
 only. Migration `notification.0017_notification_link_storefront_path`
 rewrote the absolute links stored before this change to neutral paths.
