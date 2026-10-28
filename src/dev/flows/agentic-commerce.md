@@ -128,7 +128,35 @@ Ergonomic commerce tools: `search_products`, `get_product`,
 `get_shipping_options`, `find_pickup_points`, `get_payment_methods`,
 `create_cart`, `get_cart`, `add_to_cart`, `update_cart_item`,
 `remove_cart_item`, `get_checkout_link`, `track_order`,
-`subscribe_product_alert`.
+`subscribe_product_alert`, `get_store_policies`.
+
+Store facts come from the store, never a default:
+
+- **`find_pickup_points`** (`internal/mcpsrv/shipping.go`) takes a required
+  `countryCode`. It searches only the carriers the store's
+  `/shipping/options` list as `pickup_point` for that country and that the
+  cart fits, among the networks the gateway can search (ACS, BOX NOW). A store
+  with no pickup delivery gets an answer saying so, not an error. BOX NOW's
+  `lockers/nearest` needs city, street AND postal code, so it is called only
+  with all three, and the tool asks the model to collect the rest.
+- **`get_store_policies`** (`internal/mcpsrv/policies.go`) reads
+  `RETURN_WINDOW_DAYS` and `RETURN_FEES` from `/settings/public` (Django's
+  `PUBLIC_SETTING_KEYS`). `0` or `""` means not stated and is left out; a
+  missing or malformed value fails the call. It links the return-policy page
+  only while `/content-page/return-policy` is published (a 404 means it is
+  not). It has no feature gate, like `track_order`: return terms bind orders
+  already placed.
+
+**Links are in a language.** `storefront.Site` (`internal/storefront/urls.go`,
+built once from `STOREFRONT_DEFAULT_LOCALE`, the storefront build's
+`DEFAULT_LOCALE`) hands out `Links(domain, lang)`: the build default is
+unprefixed and every other language goes under `/<code>`, as @nuxtjs/i18n's
+`prefix_except_default` routes them. The cart claim is a Nitro server route,
+not a page, so it carries `?locale=<code>` instead, and the storefront's
+`/cart/claim` redirects to the cart in that language. A tool builds its links
+through `linksFor` (`internal/mcpsrv/helpers.go`) in the turn's language;
+`/mcp` names none, so it links the store's default. ACP, the UCP order
+webhooks, the Server Card and the feeds link the store's default.
 
 Account tools, which need a linked credential: `my_orders`,
 `my_loyalty_points`, `my_favourites`.
@@ -308,7 +336,20 @@ provider). The credential is **per tenant**: `chatApiKey` from
 `tenant/resolve`, attached per turn. A tenant without one gets a localized
 404, so the route is always mounted and the handler rejects keyless tenants.
 Chat carries its own stricter per-IP rate limiter on top of the global one,
-because it pays per token. Conversations live at `ag:{schema}:chat:{id}` with
+because it pays per token.
+
+The request names the page's language as `locale` (the widget sends
+`$i18n.locale`). The turn is served in it when the store serves it
+(`TenantConfig.ServedLocales`: `availableLocales`, else the default alone),
+else in the store's default; an unserved one is ignored, not refused. It
+rides the request context (`django.WithLanguage` / `django.Language`,
+`internal/django/language.go`), so every Django call a tool makes sends that
+`X-Language` and product names come back in the page's language; the
+refusals, the SSE `error` messages and the links speak it too. The prompt
+(`internal/chat/prompt.go`) tells the model to reply in the language of the
+shopper's latest message, else the turn's; never to name a product, category
+or brand that no tool result showed; and to answer return and policy
+questions only from `get_store_policies`. Conversations live at `ag:{schema}:chat:{id}` with
 a configurable TTL and turn cap.
 
 `internal/chat/bridge.go` connects an in-process MCP client to the **same**
@@ -525,7 +566,7 @@ yourself, then bumping the pin in the infrastructure repo.
   serves a feature is registered with `onlyWith`.
 - **`/readyz` never fails on Django.** Only Redis flips it.
 - **Redis keys are `ag:{schema}:…`**, except the tenant cache
-  (`ag:tenant:v2:{host}`) and the shared order-event queue.
+  (`ag:tenant:v4:{host}`) and the shared order-event queue.
 - **No tenant label on Prometheus metrics** — unbounded cardinality; tenant
   goes in the logs.
 - **The gateway is retail-only.** Every catalog, cart and checkout call is
@@ -614,7 +655,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-django-api/tenant/features.py` | `STORE_FEATURES`, `effective_features` |
 | `grooveshop-agent-gateway/internal/mcpsrv/discovery.go` | `storeEntry`, `ARDHandler`, `AICatalogHandler` |
 | `grooveshop-agent-gateway/internal/mcpsrv/servercard.go` | `ServerCardHandler`, `IdentityFor`, `publisher`, `publicDocument` |
-| `grooveshop-agent-gateway/internal/storefront/urls.go` | `MCPServerCard` and every other link into the storefront |
+| `grooveshop-agent-gateway/internal/storefront/urls.go` | `Site.Links` (page links in a language), `MCPServerCard` and the gateway's own endpoints |
 | `grooveshop-agent-gateway/internal/ucp/profile.go` | Business profile document |
 | `grooveshop-agent-gateway/internal/ucp/handler.go` | Payment handler, instruments, hosted selection |
 | `grooveshop-agent-gateway/internal/ucp/webhook.go` | Order-event queue and signed delivery |
@@ -628,6 +669,12 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/media/url.go` | Asset origin fallback |
 | `grooveshop-agent-gateway/internal/chat/handler.go`, `bridge.go` | Chatbot, its SSE events, and withheld tools |
 | `grooveshop-agent-gateway/internal/chat/products.go` | The `products` event: extractors, dedup, card cap |
+| `grooveshop-agent-gateway/internal/chat/prompt.go` | The system prompt: turn language, grounding, policies |
+| `grooveshop-agent-gateway/internal/django/language.go` | `WithLanguage`, `Language`, `ServedLocales` |
+| `grooveshop-agent-gateway/internal/mcpsrv/helpers.go` | `linksFor`: a tool's links in the turn's language |
+| `grooveshop-agent-gateway/internal/mcpsrv/shipping.go` | `find_pickup_points` over the store's pickup carriers |
+| `grooveshop-agent-gateway/internal/mcpsrv/policies.go` | `get_store_policies` |
+| `grooveshop-storefront-ui-node-nuxt/server/routes/cart/claim.get.ts` | Claims an agent cart, lands on the cart in `?locale=` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useShopChat.ts`, `app/utils/sse.ts` | Chat stream client |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Chrome/AssistantProducts.vue`, `AssistantProductCard.vue` | Chat product cards |
 | `grooveshop-agent-gateway/internal/checkout/store.go` | Redis keys and TTLs |
