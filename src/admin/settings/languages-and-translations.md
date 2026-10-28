@@ -47,7 +47,7 @@ Click your name at the bottom of the side menu and choose a language. It changes
 - If no language list has been set for your store, the storefront shows only the default language.
 - German is on the forms, but the storefront shows only Greek and English. Whatever you write in German stays saved.
 - The storefront search also finds Greek names when a customer types them in Latin letters (greeklish).
-- The storefront's own texts (buttons, menus, checkout) and the admin's texts are not changed here. If you see a wrong or untranslated word, send [support](/admin/help/contact-support) the screen and the word.
+- The storefront's own texts (buttons, labels, notices, checkout) are not changed here but in [Storefront texts](/admin/content/storefront-texts), in every language. The admin's own texts cannot be changed by a store: if you see a wrong or untranslated word there, send [support](/admin/help/contact-support) the screen and the word.
 
 ## Related
 
