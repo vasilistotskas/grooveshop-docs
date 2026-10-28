@@ -14,6 +14,13 @@ whose stored consent snapshot does not say `ads`.
 Every tracker id is **per tenant** with no platform or environment fallback —
 a shared id would mix ad accounts and analytics properties across merchants.
 
+The banner is asked only where the store uses something optional: a Google
+(Analytics or Ads), Meta, TikTok or OpenAI id on the tenant
+(`useTenantStore().hasOptionalServices`). A store with none sets no optional
+cookie and loads no third-party script, so there is nothing to ask. One rule for
+every design: the platform's banner and webside's both stay away, the footer
+shows no cookie-settings entry, and no `banner_shown` impression is counted.
+
 Order acquisition source is deliberately **not** behind the banner: it is
 first-party, per-tab `sessionStorage`, keeps no click-id values, and leaves the
 browser only inside the shopper's own order. See
@@ -283,7 +290,8 @@ keyed by (token, version), never the SDK's process-global default.
 
 `setupCookieConsentTracking` emits two server-side wide events:
 `banner_shown` once per browser session while the banner is on screen
-(deduped through `sessionStorage`, forming the accept-rate denominator), and
+(deduped through `sessionStorage`, forming the accept-rate denominator; a store
+with no optional service draws no banner, so it counts none), and
 `consent_decision` the first time the banner is resolved, carrying
 `accept_all`, `accept_partial` or `decline_all` derived from how many optional
 categories ended up enabled. Later preference changes through the floating
