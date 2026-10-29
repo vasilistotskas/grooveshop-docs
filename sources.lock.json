@@ -1,7 +1,7 @@
 {
   "django": {
-    "commit": "afb3e49e3ffdb501951ddd5bcf1b422f4a4d0e94",
-    "tree": "3253ec273e9e4f3ffc1c08d743f23c6372d4fe79"
+    "commit": "c970b0e70599d7f509ea88b74ada9289c2e7afee",
+    "tree": "72447a766b6ce0cd2247ed46bbf101c8c32f741a"
   },
   "media": {
     "commit": "3fbf0e16144e500a6086bfdf22175f8d26071b62",
