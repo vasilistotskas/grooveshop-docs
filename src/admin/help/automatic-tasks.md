@@ -49,7 +49,7 @@ These emails to the store go to the **Contact Email** and the **Owner Email** of
 | A gift card's remaining balance expires on its expiry date. | every day 03:00 | `GIFT_CARD_VALIDITY_DAYS` (1825 days, that is 5 years from issue) |
 | A gift card bought for a future date is sent. | every day 06:00 | — |
 | The recipient of a gift card with a balance gets one reminder before it expires. | every day 06:00 | `GIFT_CARD_EXPIRY_REMINDER_DAYS` (30 days; 0 stops it) |
-| A customer who has not signed in for a long time gets a "We miss you!" email. | 1st of the month 06:00 | `INACTIVE_USER_THRESHOLD_DAYS` (60 days), `REENGAGEMENT_EMAIL_MAX_COUNT` (3; 0 stops it), `REENGAGEMENT_EMAIL_COOLDOWN_DAYS` (90 days between two emails) |
+| A customer who has not signed in for a long time gets a "We miss you!" email, unless they unsubscribed from everything. | 1st of the month 06:00 | `INACTIVE_USER_THRESHOLD_DAYS` (60 days), `REENGAGEMENT_EMAIL_MAX_COUNT` (3; 0 stops it), `REENGAGEMENT_EMAIL_COOLDOWN_DAYS` (90 days between two emails) |
 
 While gift cards are off, no card expires and no card or reminder is sent.
 
