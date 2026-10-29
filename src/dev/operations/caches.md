@@ -90,8 +90,10 @@ Django key patterns, Nuxt key patterns, an optional `invalidated_by` list
 of model labels and `related` surfaces. `core/cache/surfaces.py` registers
 the core set: `pay_way`, `recommendations`, `shipping`, `products`,
 `categories`, `blog`, `regions_countries`, `loyalty`, `page_config`,
-`promotions`, `tags`, `settings`, `store_pages`, `sitemap_seo`,
-`translations`. Apps may add their own in `AppConfig.ready()`.
+`promotions`, `tags`, `settings`, `store_pages`, `sitemap_seo`. Parler's
+translation cache is off (`PARLER_ENABLE_CACHING`), so there is no
+translations surface: translated lists prefetch their translations. Apps
+may add their own in `AppConfig.ready()`.
 
 `CacheService.purge(codes, dry_run=, actor=, include_related=)`
 (`core/cache/service.py`) expands related surfaces, runs each surface's
@@ -156,7 +158,7 @@ Every other surface's purge leaves the tenant config and the epoch alone.
 
 ```bash
 manage.py clear_cache <surface> [<surface> ...] [--dry-run] [--no-related]
-manage.py clear_cache --all                      # every non-heavy surface, skips translations
+manage.py clear_cache --all                      # every non-heavy surface
 manage.py clear_cache --all --schema <tenant>    # one tenant
 manage.py clear_cache --all --public-only        # control plane only
 manage.py clear_cache --prefixes <raw prefix>    # raw Redis prefixes
