@@ -253,10 +253,9 @@ with `core/utils/tenant_urls.py: storefront_path`. The field is a
 `notification/services.py: create_user_notification` runs that validator
 too, because `objects.create` skips field validators. The storefront opens
 the path under the viewer's current locale with `useLocalePath()`
-(`app/components/User/NotificationsBell.vue`,
-`app/pages/account/notifications/index.vue`). The webside design's bell
-navigates the path as-is, which is correct because webside serves `el`
-only. Migration `notification.0017_notification_link_storefront_path`
+(`useNotificationsBell`, which both designs' bells share:
+`app/components/User/NotificationsBell.vue` and the webside design's
+`app/components/variants/webside/User/NotificationsBell.vue`). Migration `notification.0017_notification_link_storefront_path`
 rewrote the absolute links stored before this change to neutral paths.
 It cleared links that pointed at a host outside the tenant's domains.
 
