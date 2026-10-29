@@ -1,3 +1,5 @@
+## [1.2.115](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.114...v1.2.115) (2026-10-29)
+
 ## [1.2.114](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.113...v1.2.114) (2026-10-29)
 
 ## [1.2.113](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.112...v1.2.113) (2026-10-29)
