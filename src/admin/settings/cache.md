@@ -31,7 +31,6 @@ The **Cache Management** page shows one card for each area of the storefront, in
 | **Storefront pages** | every page of the storefront at once. |
 | **Sitemap & SEO** | the sitemap (the site map for search engines) and RSS. |
 | **Site settings** | values in Store Settings and the seller details at the bottom of the page. |
-| **Translations (parler)** | Marked **Heavy**. Clear it only if the platform team asks you to. |
 
 At the bottom, the **Recent activity** table shows your store's last twenty clears: who, when and which areas.
 
@@ -59,7 +58,7 @@ Tick the cards and click **Dry run**. The message says how many items would go. 
 
 ### Clear everything
 
-Click **Purge all** and confirm. Every area is cleared except **Translations (parler)**. Right after, the storefront is a little slower until its pages are built again, so prefer clearing only the area you need.
+Click **Purge all** and confirm. Every area is cleared. Right after, the storefront is a little slower until its pages are built again, so prefer clearing only the area you need.
 
 ## Things to know
 
