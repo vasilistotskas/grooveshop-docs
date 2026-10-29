@@ -136,22 +136,50 @@ shared layout and is excluded.
 
 | Directory | Templates |
 |---|---|
-| `order/` | `order_received`, `order_payment_confirmed`, `payment_failed`, `order_shipped`, `order_delivered`, `order_completed`, `order_canceled`, `order_returned`, `order_refunded`, `order_status_generic`, `invoice_issued`, `dispute_notification`, `admin_new_order`, `acs_out_for_delivery`, `boxnow_parcel_at_locker` |
+| `order/` | `order_received`, `order_payment_confirmed`, `payment_failed`, `order_shipped`, `order_delivered`, `order_completed`, `order_canceled`, `order_returned`, `order_refunded`, `order_status_generic`, `retail_document_issued`, `dispute_notification`, `admin_new_order`, `acs_out_for_delivery`, `boxnow_parcel_at_locker` |
 | `cart/` | `checkout_abandoned` |
 | `giftcard/` | `gift_card_delivery`, `gift_card_purchase_receipt`, `gift_card_expiry_reminder` |
-| `product/` | `price_drop_alert`, `restock_alert`, `low_stock_alert` |
+| `product/` | `price_drop_alert`, `restock_alert`, `low_stock_alert`, `review_pending` |
 | `b2b/` | `business_profile_approved`, `business_profile_rejected`, `admin_new_business_profile` |
 | `billing/` | `expiring`, `expired`, `suspended` |
 | `shipping_acs/` | `stale_shipments_alert` |
 | `user/` | `data_export_ready`, `inactive_user_email_template` |
+| `staff/` | `password_reset` |
+| `contact/` | `contact_notification`, `feedback_notification` |
 | `subscription/` | `confirmation` |
+
+A directory is listed in the admin preview only once it has a heading in
+`EmailTemplateConfig.DIRECTORY_HEADINGS` (`core/email/config.py`); a
+directory without one is logged and left out.
+
+**Order emails are built in one place.** `order/emails.py` has a builder
+per order email (`order_received_email`, `order_status_update_email`,
+`refund_confirmation_email`, ...). It returns an `OrderEmail`: the
+template, the translated subject, the context and the language. The
+sending task in `order/tasks.py` calls it and sends; the admin preview
+calls the same function for a real order (`ORDER_EMAIL_KINDS`), so the
+preview shows the subject and context the customer's email had, not a copy
+kept beside it. A template that no builder owns previews on sample data
+with no subject. The builders read the order's lines inside
+`translation.override`: parler fixes a model's language when the instance
+is created, so lines loaded before the override named every product in the
+worker's language.
+
+**Account emails** (allauth: sign-in code, email confirmation, password
+reset, security notices, MFA and connected-account notices) live in
+`core/templates/account/email/`, `mfa/email/` and `socialaccount/email/`,
+each with an HTML twin. They are rendered by
+`UserAccountAdapter.send_mail` with the same `build_email_context`, so
+`SITE_NAME` and `SITE_URL` name the store. allauth's own `current_site`
+is not in the context and must not be: `SITE_ID` is one store's `Site`
+row, and every other store would sign its mail with that name.
 
 ### Tenant branding
 
 Every email context is built by
 `core/utils/email_context.py: build_email_context`, which supplies
-`SITE_NAME`, `SITE_URL`, `INFO_EMAIL`, `STATIC_BASE_URL`, `SITE_LOGO_URL`
-and `THEME` from the active tenant and merges the caller's keys on top.
+`SITE_NAME`, `SITE_URL`, `INFO_EMAIL`, `STATIC_BASE_URL`, `SITE_LOGO_URL`,
+`THEME` and `LANGUAGE_CODE` from the active tenant and the email's language and merges the caller's keys on top.
 Routing every task through it is what made the per-tenant logo branch in
 `email_base.html` live; before that, every tenant's mail silently carried
 the platform logo.
@@ -181,6 +209,18 @@ from `user/utils/subscription.py: build_transactional_list_headers`.
 programmatic unsubscribe for a receipt, and advertising one without a
 matching endpoint penalises the sender.
 
+**Marketing mail** is different: the re-engagement email and the
+abandoned-cart reminder carry the full RFC 8058 pair
+(`build_list_unsubscribe_headers`) with a signed blanket unsubscribe URL
+(`generate_blanket_unsubscribe_link`). They belong to no subscription
+topic, so that link records the refusal on the account
+(`UserAccount.marketing_opted_out_at`, set by
+`user/views/subscription.py: _apply_unsubscribe` through
+`user/services/subscription.py: opt_out_of_marketing`), and both senders
+skip an opted-out account (`core/tasks.py: send_inactive_user_notifications`,
+`order/tasks.py: send_checkout_abandonment_emails`). A new marketing send
+starts from the same filter. A topic link ends only its topic.
+
 ### Language selection
 
 `Order.language_code` is captured at creation from the active request
@@ -200,7 +240,9 @@ else the store's language.
 review-pending and stale-ACS alerts all wrap their render in
 `translation.override(store_language())` (`order/tasks.py`,
 `b2b/tasks.py`, `product/tasks.py`, `shipping_acs/tasks.py`), never in
-the worker's active locale.
+the worker's active locale. So do the contact-form and feedback
+notifications (`contact/tasks.py`), which also set the submitter's address
+as `Reply-To` after validating it as one bare address.
 
 ### Link language
 
@@ -215,9 +257,10 @@ otherwise it has no prefix.
   storefront's `shared/i18n/tenantLocales.ts: tenantAllowedLocales`:
   `Tenant.available_locales` filtered to `STOREFRONT_LOCALES`, or
   `[default_locale]` when the list is empty. `STOREFRONT_LOCALES`
-  mirrors the storefront's `SUPPORTED_LOCALES` (`el`, `en`), which is
-  narrower than `settings.LANGUAGES`: `de` has content but no storefront
-  routes.
+  mirrors the storefront's `SUPPORTED_LOCALES` (`el`, `en`). It is a
+  second list, kept in step by hand: a language added to
+  `settings.LANGUAGES` has no storefront routes until the storefront
+  serves it.
 - **Unprefixed locale** — `STOREFRONT_DEFAULT_LOCALE` (`el`), which
   mirrors the storefront's build-time `DEFAULT_LOCALE`. It is a constant
   rather than `settings.LANGUAGE_CODE`, because env can override that
@@ -229,7 +272,7 @@ caller passes the value it hands `translation.override`, so the link and
 the copy cannot disagree. `build_email_context(*, language, ...)` makes
 `SITE_URL` the localized home page, and the templates that append
 `/account/orders/...` to it inherit the prefix. A merchant-facing email
-renders under no override, so it passes `translation.get_language()`.
+passes `store_language()`, the language it renders in.
 `get_tenant_base_url` is still the bare origin, for callers that need a
 host rather than a page (`List-ID`, Meta's base check).
 
@@ -548,6 +591,9 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_admin_recipients` |
 | `grooveshop-django-api/user/utils/subscription.py` | `build_transactional_list_headers` |
 | `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
+| `grooveshop-django-api/order/emails.py` | The order email builders (subject, context), `ORDER_EMAIL_KINDS` |
+| `grooveshop-django-api/contact/tasks.py` | The store's contact-form and feedback notifications |
+| `grooveshop-django-api/user/views/subscription.py` | The unsubscribe endpoints and the account-level marketing opt-out |
 | `grooveshop-django-api/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
 | `grooveshop-django-api/order/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask` |

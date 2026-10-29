@@ -90,6 +90,7 @@ Open the topic, untick **Active** and save. The topic leaves the store and nobod
 
 - **Do not delete topics or subscriptions to "tidy up".** Deleting a topic erases all its subscriptions, along with each subscriber's proof of consent. Switch them off instead.
 - **The proof of consent** is on each subscription's page, in the **Consent** section: the sentence the subscriber agreed to, when and from where, and when they confirmed. It cannot be changed.
+- **"Unsubscribe from everything" also covers the reminders.** The link in an abandoned-checkout reminder or a "We miss you!" email, and the **Unsubscribe** button of the customer's mail program, ends all their active subscriptions and also stops those two emails for good. The customer's page then shows the date in **Marketing Opted Out At** (<span class="sidebar-path">Customers → Customers</span>, tab **Loyalty & Engagement**). To let the customer receive them again at their request, clear that date and save. Nothing clears it by itself, not even a new newsletter subscription.
 - **Visitors who never confirm** are deleted automatically 30 days after the confirmation email.
 - **If the visitor later creates an account** with the same email and confirms it, their subscription moves onto the account.
 - **The form does not give subscribers away.** It always answers "check your inbox", whether or not the email was already signed up.

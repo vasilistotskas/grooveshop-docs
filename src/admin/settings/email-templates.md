@@ -16,13 +16,13 @@ The page shows only for people who can view orders, because it shows real custom
 The **Email Template Management** page has two parts:
 
 - **Templates**, on the left: the list of all emails, grouped into categories. Each email has its name, an **Active** badge and a short description. **Search templates...** filters the list as you type.
-- **Preview**, on the right: the email you picked, with its subject above it.
+- **Preview**, on the right: the email you picked, with its subject above it. With one of your orders, the subject is the one that order's customer received (or would receive). With sample data only the order emails show a subject; the other emails show none.
 
 Above the preview you choose:
 
 | Option | What it changes |
 |---|---|
-| **Language** | The email's language: Greek, English or German. |
+| **Language** | The email's language: Greek or English. |
 | **Data** | **Sample data** (a made-up customer and products) or one of your 10 most recent orders. |
 | **Format** | **HTML** (as the customer sees it) or **Text** (the plain version, for email programs without images). |
 
@@ -43,6 +43,8 @@ Above the preview you choose:
 | `retail_document_issued` | The receipt or credit document was issued. |
 | `dispute_notification` | A payment dispute, to you. |
 | `admin_new_order` | A new order, to you. |
+| `contact_notification` | A message from your contact form, to you. |
+| `feedback_notification` | Feedback a visitor left on the store, to you. |
 | `checkout_abandoned` | A reminder for a checkout left half-way. |
 | `restock_alert`, `price_drop_alert` | The [product alerts](/admin/customers/product-alerts). |
 | `low_stock_alert` | Low stock, to you. |
@@ -56,7 +58,9 @@ Above the preview you choose:
 | `inactive_user_email_template` | A message to a customer who has not signed in for a long time. |
 | `expiring`, `expired`, `suspended` | Notices from the platform to you about the store's subscription. |
 
-Ten emails have their own description. The rest just say "Email template". That does not mean they are not sent.
+Some emails have their own description. The rest just say "Email template". That does not mean they are not sent.
+
+The emails a customer gets about their account (sign-in code, confirm email address, password reset, security notices) are not in this list. They carry your store's name and logo in your customer's language.
 
 ## Tasks
 
@@ -79,7 +83,8 @@ Open the same email in every language of the store and read it. If something is 
 - **You do not change the texts here.** A change to an email is a request to the platform team. See [When to contact support](/admin/help/contact-support).
 - **Only the 10 most recent orders** appear under **Data**. You cannot view an older order here.
 - **Customer emails** go out in the customer's language.
-- **Emails to you** go to the store's contact email, which you set under <span class="sidebar-path">Settings → Store Profile</span>. The review and stuck-shipment alerts also go to the owner's email. The subscription notices (`expiring`, `expired`, `suspended`) go only to the owner's email, which the platform team sets. Emails to you (new order, business-account application, payment dispute, low stock, stuck ACS shipments, new review) are written in the store's default language, subject included. Customer emails use the customer's language, and the store's default language for a guest or an account with none set.
+- **Reminder and "We miss you!" emails have an unsubscribe link.** A customer who uses it (or their mail program's **Unsubscribe** button) is not sent `checkout_abandoned` or `inactive_user_email_template` again. See [Newsletter subscriptions](/admin/customers/subscriptions).
+- **Emails to you** go to the store's contact email, which you set under <span class="sidebar-path">Settings → Store Profile</span>. The review and stuck-shipment alerts also go to the owner's email. The subscription notices (`expiring`, `expired`, `suspended`) go only to the owner's email, which the platform team sets. Emails to you (new order, business-account application, payment dispute, low stock, stuck ACS shipments, new review, contact form message, feedback) are written in the store's default language, subject included. The contact form and feedback emails carry the customer's email address as the reply address, so pressing **Reply** answers the customer. Customer emails use the customer's language, and the store's default language for a guest or an account with none set.
 
 ## Related
 
