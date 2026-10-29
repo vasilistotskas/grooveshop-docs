@@ -78,6 +78,7 @@ Open the promotion and click **Duplicate**. The copy has the same settings and p
 - **The storefront updates on its own.** Saving, the bulk activate or deactivate actions, changes to coupon codes, and a promotion starting or ending on its dates all refresh the offers within about ten seconds. You do not need to clear the cache.
 - **How they combine.** Promotions with **Stackable** ticked add up, applied in **Priority** order (lower number first). A promotion that is not stackable applies alone, and only if it gives at least as much as all the stackable ones together.
 - **Free shipping** does not open a new destination: the shipping option must already be available for the order's country and weight.
+- **An automatic free-shipping promotion with a minimum** appears in the cart's free-shipping line, not as a separate "add X more" message. When its minimum is closer than your couriers' **Free Shipping Threshold**, the line counts down to the promotion's minimum instead, so the customer never sees two different amounts. See [Shipping providers](/admin/settings/shipping-providers).
 - **Gift out of stock.** If the gift product is not available, the order goes through without the gift.
 - **Limits count orders.** **Total Usage Limit** and **Per-customer Usage Limit** count orders that got the discount. A canceled order still counts.
 - **First order and per-customer limits** are checked by account and by checkout email, so a guest who later opens an account does not get the discount twice.

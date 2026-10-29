@@ -211,8 +211,64 @@ A promotion short of both minimums produces no teaser, since there is no
 single thing to add. Codes never produce near misses (they produce a
 rejection), and neither does a cart holding none of the promotion's units.
 The cart exposes the list as `promotionNearMiss` with `remainingAmount`,
-`remainingQuantity` and `rewardProducts` (rendered as linked product chips); the default design's `Cart/Banners.vue`
-and the webside design's cart both render all three forms.
+`remainingQuantity`, `rewardProducts` (rendered as linked product chips) and
+`freeShipping`. Both designs render every teaser except the free-shipping
+ones, which the cart's free-shipping progress already tells (below; the cart
+store's `getOfferNearMisses`).
+
+### Free shipping: one distance
+
+A cart can reach free shipping two ways, and checkout
+(`OrderService.shipping_cost`) honours both: a live FREE_SHIPPING promotion
+waives every carrier's price (`free=promotion_result.free_shipping`), and a
+carrier's `ShippingRate.free_shipping_threshold` zeroes that carrier and kind
+once `threshold_value` reaches it. The cart tells the shopper ONE distance,
+`freeShippingProgress`, decided by `OrderService.free_shipping_progress` with
+those same two rules, so the line cannot promise what checkout will not give:
+
+```mermaid
+flowchart TD
+  Eval["PromotionEngine.evaluate"] --> Waived{"result.free_shipping?"}
+  Waived -- "yes" --> Free["free: true, source: promotion"]
+  Waived -- "no" --> Routes["collect routes"]
+  Rates["ShippingService.free_threshold_rates(country, weight, items)"] --> Routes
+  Near["FREE_SHIPPING near-miss teasers, already checked by _teaser_holds"] --> Routes
+  Routes --> Met{"a rate's threshold reached?"}
+  Met -- "yes" --> FreeT["free: true, source: threshold"]
+  Met -- "no" --> Cheapest["cheapest route; a promotion wins a tie"]
+```
+
+- **Promotion routes** are the FREE_SHIPPING near-miss teasers, so every
+  condition the engine checks holds for them too: scope (a category promotion
+  is no route for a cart outside it), first order (no route for an anonymous
+  cart), usage limits, and the wholesale gate (no retail promotion reaches a
+  B2B cart unless `B2B_ALLOW_PROMOTIONS` is on). An amount teaser's distance
+  is its `remaining_amount`, measured on the products before discounts as the
+  engine judges a minimum; a units teaser costs what `PromotionEngine.teaser_cost`
+  adds, the engine's own `_items_after_teaser` simulation, so "2 more items"
+  can be weighed against euros.
+- **Threshold routes** are `ShippingService.free_threshold_rates`: the
+  `active_rate` gate (active provider, registered adapter, the provider
+  supports the kind, `is_kind_enabled`, an active rate), a threshold set, and
+  the weight cap and parcel size of `assert_available` for this cart. Their
+  distance is the threshold minus `threshold_value`, the products after
+  discounts.
+- **No address yet.** Rates are judged for `ShippingService.initial_country_code()`,
+  the store's first shipping country, the one checkout preselects; the payload
+  echoes `countryCode`. A promotion route holds in every country.
+- **Shape.** `free`, `source` (`threshold` or `promotion`), exactly one of
+  `remainingAmount` and `remainingQuantity` while not free, `threshold` (what
+  a meter fills to; `null` for a units route or a waiving promotion), and
+  `null` for the whole field when the cart has no route at all.
+- **The storefront** renders it in both designs: `Shipping/FreeShippingNotice`
+  (the default's cart page, drawer and product page) and webside's
+  `Shipping/FreeShippingNotice` on its cart page. `/shipping/free-shipping-info`
+  is only the store's standing "free over X" line where there is no cart: a
+  visitor who has added nothing, webside's product page.
+
+Staging webside, 2026-10-28: a 19,99 € cart showed "add 19,01 € to unlock
+«free shipping from 39 €»" (the teaser) next to "add 30,01 € for free shipping"
+(the store's 50 € threshold, read from `/shipping/free-shipping-info`).
 
 The cart's `appliedCoupons` gives one entry per attached code with what the
 engine decided for it — `amount`, `freeShipping`, `gift`, or the
@@ -679,6 +735,9 @@ whose plan enables it, and Django still gates the data.
   `announcedDiscountPercent` come from `ProductPriceSpell`; never compute a
   "was" price or a percentage from `price` or `discount_percent`.
 - **Free shipping always combines**; `stackable` does not apply to it.
+- **A cart tells one free-shipping distance**, `freeShippingProgress`,
+  decided by the rules checkout charges with. A storefront never computes
+  one from a threshold, and never shows a free-shipping teaser beside it.
 - **Non-monetary applications still write redemption rows**, or their usage
   limits count nothing.
 - **A wholesale cart does not stack retail promotions** unless
@@ -689,6 +748,12 @@ whose plan enables it, and Django still gates the data.
   middlewares.
 
 ## Failure modes
+
+- **The free-shipping line undershoots with a percentage promotion.** A
+  threshold's distance is the shortfall in `threshold_value`; when a
+  percentage promotion runs, adding exactly that much in goods also grows the
+  discount, so the cart lands a little short. The promotion's own teaser is
+  exact (`_teaser_holds` simulates it).
 
 - **The offers page is stale after editing a promotion.** The `promotions`
   cache surface in `core/cache/surfaces.py` declares **no `invalidated_by` at
@@ -778,7 +843,12 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/search/views.py` | The `onOffer` search filter |
 | `grooveshop-django-api/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
 | `grooveshop-django-api/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
-| `grooveshop-django-api/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
+| `grooveshop-django-api/order/services.py` | Locked evaluation, `record`, `clear_after_order`, `free_shipping_progress`, `FreeShippingProgress` |
+| `grooveshop-django-api/shipping/services.py` | `free_threshold_rates`, `initial_country_code` |
+| `grooveshop-django-api/cart/serializers/cart.py` | `free_shipping_progress`, `promotion_near_miss` (with `freeShipping`) |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Shipping/FreeShippingNotice.vue` | The default free-shipping line and meter |
+| `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Shipping/FreeShippingNotice.vue` | Webside's free-shipping line |
+| `grooveshop-storefront-ui-node-nuxt/app/stores/cart.ts` | `getOfferNearMisses`: the teasers less the free-shipping ones |
 | `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` (`refunded_amount`), `GiftCardPause` |
 | `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, `credit_refund`, `handle_purchase_reversal`, expiry, `sync_pause` |
 | `grooveshop-django-api/giftcard/signals.py` | Cancel credit-back, and refund credit-back only on REFUNDED |

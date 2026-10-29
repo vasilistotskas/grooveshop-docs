@@ -106,7 +106,8 @@ The same tab is on the payment method's own page, see [Payment methods](/admin/s
 - **What each courier can collect.** Cash to a courier is never offered on a BoxNow locker, because nobody meets the customer there. BoxNow's PAY ON THE GO is not offered with Standard delivery. Exclusions do not change these.
 - **Free shipping from a promotion** removes the price but never opens a new country. The country always needs an active rate.
 - **Live prices from ACS.** With the `ACS_DYNAMIC_PRICING_ENABLED` setting on, checkout asks ACS for a price based on weight. If ACS does not answer, the line's **Price** is charged. The free-shipping threshold always applies first.
-- **The "free shipping from…" line** customers see in the store is the lowest free-shipping threshold among the active rates of the first country in the list.
+- **How far a cart is from free shipping.** The cart shows one line, such as "Add €30.01 more for free shipping". It is the cheapest way this cart can get free shipping: the lowest **Free Shipping Threshold** of a courier that can carry the cart, or an automatic free-shipping promotion with a lower minimum. Rates are judged for the first country in the list, the one checkout picks first. A free-shipping promotion is not shown a second time beside it. See [Promotions](/admin/marketing/promotions).
+- **The "free shipping over…" line** on a product page, for a customer whose cart is empty, is the lowest free-shipping threshold among the active rates of the first country in the list.
 - **Switching a courier off** does not touch shipments that already exist. Its screens under **Shipping** are hidden until you switch it back on.
 - **Do not delete a courier.** Its rates go with it. Switch it off instead.
 - **Metadata**: the courier's technical settings. Leave it as it is. If you need a change, for example printing vouchers on a laser printer instead of a thermal one, ask the [platform team](/admin/help/contact-support).

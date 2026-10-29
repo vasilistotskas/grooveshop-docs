@@ -156,7 +156,9 @@ rest is built on it:
 | `shippable_country_codes()` | Countries with at least one active rate, ordered by `Country.sort_order`; backs `GET /api/v1/country?shippable=true` (`country/filters.py`), which returns nothing on the platform host |
 | `resolve_home_delivery_provider(country_code)` | The active home-delivery carrier with the lowest `priority` for that country |
 | `available_options(country_code)` | Checkout options; the country is required (400 without it) |
-| `free_shipping_info(country_code)` | The "free shipping from X" promise; defaults to the first shippable country and echoes the `country_code` it used |
+| `free_shipping_info(country_code)` | The store's standing "free shipping from X" promise, for a page with no cart; defaults to `initial_country_code()` and echoes the `country_code` it used |
+| `free_threshold_rates(country_code, weight_grams, items)` | The rates that ship free above a threshold, on the `active_rate` gate, lowest threshold first; with a cart's weight and items, only those that can carry it. Feeds `free_shipping_info` and the cart's `freeShippingProgress` ([Promotions](/dev/flows/promotions-and-gift-cards#free-shipping-one-distance)) |
+| `initial_country_code()` | The first `shippable_country_codes()` entry, the country a caller with no address is judged for |
 
 The exceptions live in `shipping/exceptions.py`.
 
@@ -667,7 +669,7 @@ move `Order.status`, which the carrier events drive separately.
 | File | Role |
 |---|---|
 | `grooveshop-django-api/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment`), `_REGISTRY`, `register_provider`, `all_payload_keys` |
-| `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
+| `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
 | `grooveshop-django-api/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError` |
 | `grooveshop-django-api/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy |
 | `grooveshop-django-api/shipping_boxnow/exceptions.py` | BoxNow errors on the carrier hierarchy |
