@@ -20,7 +20,9 @@ On the store, the customer sees:
 
 In the window that opens, the customer enters their email. If they are signed in, their account email is used. For a price drop they also enter a **Target price**, which must be below today's price.
 
-Each alert sends **one** email and then switches itself off. The customer cannot ask again for the same alert on the same product.
+A signed-in customer's alert is on at once. A visitor's is not: they are told to check their inbox, and the alert starts only when they open the email and press **Confirm alert** on the page it links to. The link works for a week. An alert never confirmed is deleted after that. Confirming also turns this kind of alert email back on for that address, if its owner had unsubscribed from it.
+
+Each alert sends **one** email and then switches itself off. After that the customer can ask for it again.
 
 ## Tasks
 
