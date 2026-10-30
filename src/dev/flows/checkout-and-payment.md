@@ -70,6 +70,21 @@ creation paths re-lock the cart and re-bind wholesale pricing
 `B2BPricingService.bind_cart`). The binding runs on **every**
 materialisation, never once — see [B2B](/dev/flows/b2b).
 
+Every call that changes the cart answers with the whole cart as `GET /cart`
+would read it, so the storefront never follows a change with a reload: an
+add or a quantity change (`POST /cart/item`, `PUT` and `PATCH
+/cart/item/{id}`) answers with the line and the cart beside it as `cart`, and
+a coupon apply or remove answers with the cart. The Nuxt proxy returns that
+cart, and the cart store sets it (`createCartItem`, `updateCartItem` and
+`setCart` in `app/stores/cart.ts`). Removing a line answers 204 with no body,
+so `deleteCartItem` reads the cart once. A click on an add-to-cart button
+is answered at once: an "Adding…" toast opens before the request and the
+answer replaces it in place with "Added" or the failure
+(`app/composables/useAddToCart.ts`, `app/utils/toast.ts`); stock is Django's
+to judge, so "Added" never shows before it answers. The cart payload carries
+no suggestions: the cart page and drawer ask for them
+([Recommendations](/dev/flows/recommendations#the-storefront-strip)).
+
 Loyalty redemption and gift cards are priced under row locks in the same
 transaction so the amount verified against the provider and the amount
 recorded on the order cannot drift; the detail lives in
@@ -663,6 +678,9 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Per-tab landing capture and the override rule |
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/attribution.client.ts` | Runs the capture once per page load |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckout.ts` | Reserve / release / create-intent calls |
+| `grooveshop-storefront-ui-node-nuxt/app/stores/cart.ts` | The cart state; adds, changes and coupon calls set the cart they answer with |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useAddToCart.ts`, `app/utils/toast.ts` | The add-to-cart click and its "Adding…" toast |
+| `grooveshop-storefront-ui-node-nuxt/server/api/cart/items/index.post.ts`, `server/api/cart/items/[id]/index.put.ts` | Add and change proxies; they return the cart |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Order proxy, Meta context injection, shopper identity headers, upstream error forwarding |
 | `grooveshop-storefront-ui-node-nuxt/server/routes/checkout/viva-return.get.ts` | Viva redirect translation |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/checkout/success/[uuid].vue` | Success page, payment-status polling, purchase pixels |
