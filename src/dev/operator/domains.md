@@ -43,7 +43,7 @@ django-tenants' `DomainMixin`, so the fields are that mixin's:
 
 | Field | Shape |
 |---|---|
-| `domain` | `CharField(max_length=253)`, **unique**, indexed. A bare hostname, no scheme and no port |
+| `domain` | `CharField(max_length=253)`, **unique**, indexed. A bare lowercase hostname: `tenant/validators.py: validate_store_hostname` refuses a scheme or path, a port, a trailing dot, uppercase, a single label, an invalid RFC 1123 label and an IP address, each with its own error code. It runs in the admin forms (field validator) and in `TenantDomain.save()`, so `create` and `get_or_create` in the provisioning commands are covered; `QuerySet.update` and `bulk_create` are not, and nothing uses them on this model. Routing matches the text exactly, so a stored variant would be a store that never resolves |
 | `tenant` | FK to `Tenant`, `related_name="domains"`, `on_delete=CASCADE` |
 | `is_primary` | `BooleanField(default=True)`, indexed |
 
