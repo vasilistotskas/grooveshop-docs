@@ -84,7 +84,7 @@ Fees of payments made before you subscribed stay unreported. Stripe needs nothin
 ## Related
 
 - [Expenses](/admin/sales/expenses)
-- [Monthly turnover](/admin/sales/turnover)
+- [Turnover](/admin/sales/turnover)
 - [Products](/admin/catalog/products)
 - [Refunds and disputes](/admin/sales/refunds-and-disputes)
 - [Roles & team](/admin/getting-started/roles-and-team)

@@ -55,5 +55,5 @@ description: Καταχωρίστε τα κόστη λειτουργίας το�
 ## Σχετικά
 
 - [Κέρδος](/el/admin/sales/profit)
-- [Μηνιαίος τζίρος](/el/admin/sales/turnover)
+- [Τζίρος](/el/admin/sales/turnover)
 - [Ρόλοι και ομάδα](/el/admin/getting-started/roles-and-team)

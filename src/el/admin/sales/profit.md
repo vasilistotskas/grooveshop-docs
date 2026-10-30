@@ -84,7 +84,7 @@ description: Δείτε τι κερδίζει το κατάστημά σας μ�
 ## Σχετικά
 
 - [Έξοδα](/el/admin/sales/expenses)
-- [Μηνιαίος τζίρος](/el/admin/sales/turnover)
+- [Τζίρος](/el/admin/sales/turnover)
 - [Προϊόντα](/el/admin/catalog/products)
 - [Επιστροφές χρημάτων και αμφισβητήσεις](/el/admin/sales/refunds-and-disputes)
 - [Ρόλοι και ομάδα](/el/admin/getting-started/roles-and-team)

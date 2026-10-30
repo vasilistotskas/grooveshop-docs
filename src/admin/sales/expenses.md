@@ -55,5 +55,5 @@ Payment fees are not an expense category: Viva Wallet and Stripe report them for
 ## Related
 
 - [Profit](/admin/sales/profit)
-- [Monthly turnover](/admin/sales/turnover)
+- [Turnover](/admin/sales/turnover)
 - [Roles & team](/admin/getting-started/roles-and-team)
