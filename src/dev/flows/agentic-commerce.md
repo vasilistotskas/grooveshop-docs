@@ -241,7 +241,12 @@ which both calls already carry as `X-Internal-Gateway` (`cartHeaders`,
 Django books the source type `agent` ahead of every other signal, so the
 cart and the order read "AI agent (UCP)" or "AI agent (ACP)" in the admin;
 see [Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).
-The ergonomic `add_to_cart` tool on `/mcp` sends no attribution.
+An agent that fills a cart with the ergonomic `add_to_cart` tool on `/mcp`
+books it the same way with `agentProtocol: "mcp"`
+(`django.AgentProtocolMCP`, chosen per server surface by
+`internal/mcpsrv/shopper_attribution.go: handlers.cartAttribution`), so it
+reads "AI agent (MCP)". The chat assistant serves the same tool but never
+sends a protocol; see the chatbot's request below.
 
 ### An ONLINE payment method is not an instrument
 
