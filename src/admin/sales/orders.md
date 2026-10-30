@@ -30,7 +30,7 @@ The number next to **Orders** in the menu counts the orders still **Pending**.
 
 Each row has two quick buttons: **Download shipping voucher (PDF)**, the courier's label for the parcel, and **Customer's orders**, which lists everything else the same customer bought.
 
-Above the list, tabs lead to **Order Items** (every order line separately, so you can see who bought a product), **Receipts** and **Credit Documents**.
+Above the list, tabs lead to **Order Items** (every order line separately, so you can see who bought a product), and, once myDATA is switched on or any exist, **Receipts** and **Credit Documents**.
 
 ### Filters and search
 
@@ -47,7 +47,7 @@ Press the apply button once you have chosen. The search box finds an order by nu
 
 ### The order page
 
-Cards at the top show **Status**, **Payment**, **Total**, **Customer**, **Shipment** and **Receipt** (or **Invoice** for an invoice order). Below them are tabs: **Order Information**, **Billing / Invoice**, **Customer Information**, **Shipping Address**, **Payment Information**, **Shipping & Tracking** and **Additional Information**.
+Cards at the top show **Status**, **Payment**, **Total**, **Customer**, **Shipment** and **Receipt** (or **Invoice** for an invoice order). Below them are tabs: **Order Information**, **Billing / Invoice** (only when business invoices are switched on, or on an order that asked for an invoice), **Customer Information**, **Shipping Address**, **Payment Information**, **Shipping & Tracking** and **Additional Information**.
 
 Further down: the order lines, **Payment Transactions** (every charge, refund and chargeback), the receipt and credit documents, the order's history, and an ACS or BoxNow tab when a courier is attached.
 

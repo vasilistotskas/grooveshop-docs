@@ -37,11 +37,11 @@ Not for the store's team: sign-in asks for email and password. Use a strong pass
 
 ### A sidebar entry says "Off"
 
-Your plan includes the feature, but it is switched off. Set it up and switch its setting on when you are ready. See [Store settings](/admin/settings/store-settings).
+Your plan includes the feature, but it is switched off. Set it up and switch its setting on when you are ready. Only Owners and Admins see these entries; Staff do not. A page of records (receipts, gift cards, points) can also say **Off** when the feature is off but still holds records you can look up. See [Store settings](/admin/settings/store-settings).
 
 ### Something is missing from the sidebar
 
-Your plan may not include it, its setting may be off, or your role cannot open it. The ACS and BoxNow pages show only while that courier is active. See [Welcome](/admin/).
+Your plan may not include it, its setting may be off (and your role cannot switch it on), it may have nothing to show yet (Receipts and Credit Documents appear once myDATA is switched on or one exists), or your role cannot open it. The ACS and BoxNow pages show only while that courier is active. See [Welcome](/admin/).
 
 ### Where is the System section?
 
