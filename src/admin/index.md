@@ -41,8 +41,9 @@ An entry with a sub-menu opens when you click it. If only one page of the sub-me
 ### Why something is missing from the sidebar
 
 - **Your role.** A screen your role cannot open is not shown at all.
-- **Your plan.** Loyalty, Wholesale, Promotions, Gift Cards, Recommendations and Blog appear only when your plan includes them.
-- **Your settings.** A plan feature you have switched off stays in the sidebar marked **Off**, so you can set it up before customers see it. Reviews, Feedback, Favourites, Newsletter and Blog Comments disappear completely while they are off.
+- **Your plan.** Loyalty, Wholesale, Promotions, Gift Cards, Recommendations and Blog appear only when your plan includes them. If you downgraded and the feature still holds records (gift cards with a balance, for instance), those pages stay, read-only and marked **Off**, so you can still look things up.
+- **Your settings.** A plan feature you have switched off stays in the sidebar marked **Off**, so you can set it up before customers see it, but only for Owners and Admins, who can switch it back on in Store Settings. Staff do not see an **Off** menu. Pages that only collect what customers send (Reviews, Feedback, Favourites, Newsletter, Blog Comments, Receipts, Credit Documents, Gift Cards, Points Transactions and the like) show while their feature is on, or while they hold something, and are marked **Off** when only the second is true.
+- **A shop you have not opened.** With the catalogue or the cart switched off, Products and the other catalogue pages show an **Off** mark to Owners and Admins only, and Carts and Orders appear only if some already exist.
 - **Your couriers.** The ACS or BoxNow pages appear only while that courier is active.
 
 Every switch is on [Store settings](/admin/settings/store-settings).
