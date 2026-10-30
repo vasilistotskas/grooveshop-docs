@@ -89,6 +89,7 @@ Only the **Owner** role sees **Cost price**, under **Price** on the **Pricing & 
 
 - **Effective Price** is what a customer pays now: the price with VAT, minus the discount and any automatic promotion that applies without conditions. It is calculated for you.
 - **Prior Price** is the lowest price of the 30 days before the current reduction began. The store shows it struck through, labelled "Lowest price in the last 30 days". When it is empty, no struck-through price is shown.
+- **The box under the buy button** lists up to three lines: the delivery time (the **Delivery Days** on your [shipping providers](/admin/settings/shipping-providers), with the free-shipping amount under it), how the customer can pay (the active [payment methods](/admin/settings/payment-methods), worded by how the money is collected, for example "Card or cash on delivery") and the return period (`RETURN_WINDOW_DAYS`). A line shows only when the store has that information, and the box follows `PRODUCT_ASSURANCES_ENABLED`. When the box is on, it states the free-shipping amount instead of the separate free-shipping message on the product page; the cart keeps that message.
 - **What hides a product from customers**: only **Active** turned off, or deletion. An out-of-stock product still shows.
 - **Languages**: where the name or description is missing in a language, the store shows the store's default language instead.
 - **Search**: saving a product updates the store's search shortly after. So do the bulk activate and deactivate actions.
