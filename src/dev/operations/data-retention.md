@@ -53,9 +53,13 @@ them, and a failed poll keeps the 90-day period like every other call.
 
 A carrier checkpoint is deleted when it is older than the period **and** its
 shipment is in a terminal state (`shipping_acs.enum.shipment_state.TERMINAL_STATES`,
-`shipping_boxnow.models.shipment.TERMINAL_STATES`). A BoxNow webhook event is
-also the replay guard for that webhook, so an event older than the period can
-be accepted again; a signed event two years old is not a realistic replay.
+`shipping_boxnow.models.shipment.TERMINAL_STATES`). A BoxNow webhook event row
+is also the replay guard for that webhook, so replay protection does not rest
+on the rows alone: `BoxNowService.apply_webhook_event` ignores an event whose
+HMAC-signed `data.time` is older than `BOXNOW_WEBHOOK_MAX_EVENT_AGE_DAYS`
+(env, 90 days), and `settings.py` refuses a window that is not shorter than
+`CARRIER_TRACKING_EVENT_RETENTION_DAYS`. Every event the window admits still
+meets its row, because a row lives at least that period from the event.
 
 ## Sessions and tokens are swept by state
 
