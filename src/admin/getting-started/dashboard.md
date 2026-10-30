@@ -33,9 +33,9 @@ Four cards for the period. Each shows the change against the previous period and
 
 | Card | What it counts |
 |---|---|
-| **Revenue** | Money from paid orders in the period. |
+| **Revenue** | What the orders sent in the period are worth without VAT, shipping and fees included, less the refunds made in the period: the same figure as [Turnover](/admin/sales/turnover). |
 | **Orders** | Every order in the period, whatever its status. |
-| **Average order** | Revenue divided by paid orders. Shows **—** if nothing was paid. |
+| **Average order** | Revenue divided by the orders sent in the period. Shows **—** if none was sent. |
 | **New customers** | New customer accounts. Underneath, how many of the customers who paid ordered again. |
 
 ### Sales chart
@@ -65,7 +65,7 @@ A row appears only when it has something to count and you can open its list.
 ### The other cards
 
 - **Latest orders**: the six most recent, whatever the period.
-- **Best sellers**: the five products with the most paid units, minus those returned.
+- **Best sellers**: the five products with the most units sent in the period, minus those returned.
 - **Checkout funnel**: how many carts started, how many became orders and how many were paid.
 - **Where orders come from**: the five biggest order sources, and the rest together as **Other**. See [Order source](/admin/sales/order-source).
 - **Store search**: how many searches were made, how many found nothing, and the lists **Found nothing** and **Top searches**.
@@ -86,7 +86,7 @@ Look at the **Found nothing** list. For each word customers search without a res
 
 ## Things to know
 
-- Revenue counts only paid orders, on the day each was placed. A cash-on-delivery order counts once it is paid: with BoxNow when the parcel is delivered, with ACS when ACS pays the cash out, days after delivery. So recent days can grow later.
+- Revenue counts an order on the day it was sent, whatever the payment method, so a cash-on-delivery order counts when the parcel ships, not when the courier pays you. A day that is over only changes when a refund is made. See [Turnover](/admin/sales/turnover) for the full rule.
 - Order figures update as soon as an order changes, and new customers within 5 minutes. **Store search** and the carts in **Checkout funnel** update within 15 minutes.
 - Guest orders (no account) do not count towards customers who ordered again.
 
