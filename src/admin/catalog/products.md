@@ -67,7 +67,7 @@ Select products and choose **Export selected to CSV** (for Excel) or **Export se
 | Tab | What it holds |
 |---|---|
 | **Product Information** | Category, variant group, brand, **Active**, name and description per language. The SKU is filled in automatically. |
-| **Pricing & Inventory** | Price, discount, VAT, stock, weight and **Low Stock Threshold**. Also, read-only, **Effective Price**, **Prior Price** and **Reduction Started At** (see below). |
+| **Pricing & Inventory** | Price, discount, VAT, stock, weight and **Low Stock Threshold**. Also, read-only, **Effective Price**, **Prior Price** and **Reduction Started At** (see below). The **Owner** also sees **Cost price** here (see below). |
 | **Loyalty Points** | **Points Coefficient** (multiplies the points the product earns; 0 = none) and **Bonus Points** (fixed points per purchase). |
 | **Customer Alerts** | **Price-drop Alerts Enabled**: tick it so customers can ask for an email when the price drops. Off by default. |
 | **Stock Audit** | How many units customers are holding at checkout right now, how many remain available, and the **Open full stock history chart** link. |
@@ -76,6 +76,14 @@ Select products and choose **Export selected to CSV** (for Excel) or **Export se
 | **System Information** | **Created At**, **Updated At** and **Changed By** (who saved last). |
 
 Below the form there are also the **Product Attributes**, **Product Images**, **Active Stock Reservations**, **Product price spells** (the price history, read-only), **Tags**, **Related products** and **Stock activity** tabs.
+
+## Cost price
+
+Only the **Owner** role sees **Cost price**, under **Price** on the **Pricing & Inventory** tab. It is what one unit costs you, before VAT, in euro. It is optional and it is never shown to customers, Admin or Staff, and it is left out of the exported product files.
+
+- The [Profit](/admin/sales/profit) page uses it. When a product is sold, its current cost price is copied onto the order line. Changing it later does not change past sales, and sales made before you entered one have no cost.
+- Leave it empty when you do not know it: such sales are reported as having no cost, they are not counted as free. Enter **0** only for a product that really costs you nothing.
+- The cost price is not kept in the product's change history.
 
 ## Things to know
 
