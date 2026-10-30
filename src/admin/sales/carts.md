@@ -19,12 +19,11 @@ Signed-in customers have one cart that follows their account. Guests get one per
 |---|---|
 | **Owner** | The customer's name and email, or "Guest" and the cart number. |
 | **Type** | **User** or **Guest**. |
-| **Cart source** | Where the shopper came from when they started the cart. See [Order source](/admin/sales/order-source). |
-| **Checkout** | A link to the order, when the shopper has reached checkout and has not paid by card yet. |
+| **Cart source** | Where the shopper came from when they started the cart. A **-** means the cart is from before 17 October 2026, when the store started recording it, or it never held a product. See [Order source](/admin/sales/order-source). |
 | **Activity** | **Active**, or **Abandoned** once untouched for longer than `CART_ABANDONED_HOURS` (24 hours by default). |
 | **Items** | Total quantity and number of different products. |
 | **Total** | The cart's value now, and the saving when a product is on sale. |
-| **Last Activity** | The last time the shopper changed the cart. |
+| **Last Activity** | The last time the shopper used the cart, to within a few minutes. |
 | **Created At** | When the cart was created. |
 
 ### Filters and search
@@ -57,7 +56,7 @@ The platform emails signed-in customers about an abandoned checkout on its own (
 
 ### Find shoppers stuck at the card payment
 1. In the filters choose **Checkout → Checkout started, awaiting payment**.
-2. The **Checkout** column links to each order waiting for its payment.
+2. The list shows the carts whose order is still waiting for its payment. Find the order itself in <span class="sidebar-path">Sales → Orders</span> by the customer's email.
 
 ### Change when a cart counts as abandoned
 1. Open <span class="sidebar-path">Settings → Store Settings</span> and search for `CART_ABANDONED_HOURS`.

@@ -18,7 +18,7 @@ Each order keeps two sources:
 
 Both appear as a coloured badge with the channel's name (Instagram, Google, a website's address) in the order list. The order page shows them on the **Additional Information** tab, together with **Traffic medium**, **Campaign name**, **Referrer host** (the website the customer came from) and **Landing page** (the first page they saw).
 
-The cart list shows the cart's source in its own column, headed **Cart source**.
+The cart list shows the cart's source in its own column, headed **Cart source**. A cart whose shopper left no trace of where they came from shows **Direct**.
 
 ### Source types
 
@@ -56,7 +56,7 @@ The cart list shows the cart's source in its own column, headed **Cart source**.
 - **It is counted per browser tab.** The first page the customer opens in a tab sets the source. Only a later tagged link or ad click in the same tab replaces it.
 - **Returning from the card payment page never changes it.** Viva Wallet or Stripe is never counted as a source.
 - **Facebook and Instagram** mark ordinary shared links the same way as their ads. A Meta ad reads as **Paid** only when you tag its link with a paid `utm_medium`.
-- **Older orders and carts** placed before the store started recording sources show "-". A cart emptied and filled again starts a new cart source.
+- **Older orders and carts** placed before the store started recording sources show "-", and so does a cart that never held a product. Every cart filled since 17 October 2026 has a source, **Direct** when nothing says otherwise. A cart emptied and filled again starts a new cart source.
 - The [Dashboard](/admin/getting-started/dashboard) card **Where orders come from** shows the share of each source for the period you choose: the five biggest by name, the rest together.
 
 ## Related
