@@ -97,12 +97,24 @@ marked `Cache-Control: private, no-store` with `Vary: X-Internal-Token`.
 
 **Nuxt.** `server/middleware/0.tenant.ts` runs before every other server
 middleware. It reads the host with `getRequestHost(event, { xForwardedHost:
-false })` so a forwarded header can never switch tenants, skips a fixed
-bypass list (build assets, probes, the sitemap source, `robots.txt`, the
-manifest, the AI discovery paths, the cache purge route), and calls
-`getTenantConfig(host)` (`server/utils/tenant.ts`), which strips the port,
-checks a five-minute in-memory cache, proxies to the resolve endpoint and
-validates the answer with the generated `zTenantConfig`. Success sets
+false })` so a forwarded header can never switch tenants, skips the
+bypass list, and resolves the store. The bypass list
+(`server/utils/tenantBypass.ts`) has two kinds of path: tenant-free ones
+(the kubelet's probes, build assets, the server-to-server cache purge and
+text routes), for which nothing looks a store up, Nitro plugins included,
+and self-resolving ones (favicon, `robots.txt`, the manifest, the sitemap
+source, `/llms*.txt`, the `.md` mirrors), whose own handler needs the
+store. **A request looks its store up once**: the middleware, every Nitro
+plugin and every route go through `requestTenantResult(event)`
+(`server/utils/requestTenant.ts`), which memoises the outcome on the
+request, a not-found and a 5xx included. Before that, one probe request
+cost Django up to 37 resolve calls, about 27,000 404s a day (fixed
+2026-10-30). Underneath, `getTenantConfig(host)`
+(`server/utils/tenant.ts`) strips the port, answers not-found at once for
+an IP literal (a store's domain is never one), checks a five-minute
+in-memory cache, proxies to the resolve endpoint and validates the answer
+with the generated `zTenantConfig`; a not-found is never cached across
+requests, so a new store resolves on the next one. Success sets
 `event.context.tenant`; a Django 5xx becomes a 503 that is not cached; a
 404 or a Zod failure becomes "Store not found". The `tenant` Nuxt plugin
 then hydrates `useTenantStore()` from that context
@@ -311,8 +323,10 @@ are the bugs it exists to catch.
   store advertised the platform's URLs. `server/plugins/tenant-site-config.ts`
   pushes the store's `url`, name and per-locale description from
   nuxt-site-config's `site-config:init` hook, which runs whenever a
-  request's site config is first built. It resolves the store itself when
-  `0.tenant.ts` has not run. On a store that does not serve the surfaces,
+  request's site config is first built, for every request. It reads the
+  store through the request's one lookup (`requestTenantResult`), which it
+  starts when it runs before `0.tenant.ts`, and asks for none on a
+  tenant-free path. On a store that does not serve the surfaces,
   it removes those links from the `Link` header as the response ends,
   which is the one point a 200 and a 304 both pass through.
 - **No tenant hostname in code, env or manifests.** `NUXT_PUBLIC_*` values
