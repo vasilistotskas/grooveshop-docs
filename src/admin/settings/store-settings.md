@@ -101,7 +101,7 @@ Defaults are the values a new store starts with. Amounts are in euros.
 | `ACCOUNT_REVIEWS_ENABLED` | The "My reviews" page in the customer's account. Does not affect reviews on product pages. | on |
 | `BLOG_COMMENTS_ENABLED` | Comments and likes under blog posts. | on |
 | `FAVOURITES_ENABLED` | Favourites: the hearts, the favourites page, and the notifications in the customer's account when a favourite drops in price or is back in stock (no emails: those are [Product alerts](/admin/customers/product-alerts)). | on |
-| `NEWSLETTER_ENABLED` | Newsletter subscriptions from the customer's account. Unsubscribe links in emails already sent always work. | on |
+| `NEWSLETTER_ENABLED` | Newsletter subscriptions: the customer's account page, the footer form and the box on the sign-up form. Off hides all of them. Unsubscribe links in emails already sent always work. | on |
 | `FEEDBACK_ENABLED` | The store's feedback page. | on |
 | `PRODUCT_ALERTS_ENABLED` | The "notify me" alerts for back in stock or price drop, and their emails. | on |
 | `PRICE_HISTORY_ENABLED` | The **Price history** button beside the rating on product pages. It opens how the price has changed over time, with the change and the lowest and highest price. It shows only prices the store already published. | on |
