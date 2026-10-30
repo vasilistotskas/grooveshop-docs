@@ -63,6 +63,11 @@ While gift cards are off, no card expires and no card or reminder is sent.
 | The file of a customer data export, seven days after it was ready. | every day 03:00 | — |
 | Guest Newsletter sign-ups not confirmed within 30 days. | every day 04:00 | — |
 | Customer notifications older than a year. | 1st and 15th of the month 06:00 | — |
+| The admin history (who added, changed or deleted what), once an entry is two years old. | every day 04:00 | `ADMIN_LOG_RETENTION_DAYS` (730 days; 0 keeps it all) |
+| The record of which product suggestions were shown and clicked, after 90 days. | every day 04:00 | — |
+| The delivery record of each event sent to Meta, after 90 days. | every day 04:00 | — |
+| The tracking details of an ACS or BoxNow parcel, two years after the parcel was delivered, returned or cancelled. | every day 04:00 | — |
+| Expired sign-in sessions, the device and address records of sessions that no longer exist, and expired app sign-in tokens. | every Monday 04:00 | — |
 
 ### Search
 

@@ -255,6 +255,7 @@ Emails to the store when something needs a person. They go to the **Contact Emai
 | `RETURN_FEES` | Who pays to send a return back: `free` (you pay) or `customer` (the customer pays the return shipping). Google shows it with the return window. Leave it empty if your policy does not say. | empty |
 | `ANNOUNCEMENT_BAR` | The announcement bar. See the task above. | empty |
 | `BUSINESS_HOURS` | The store's opening hours. | empty |
+| `ADMIN_LOG_RETENTION_DAYS` | After how many days an entry of the admin history (who added, changed or deleted what) is deleted. 0 keeps the whole history forever. | 730 |
 | `STORE_OFFICES` | The addresses of your offices or shops. | empty |
 | `STORE_GEO_LAT`, `STORE_GEO_LNG` | The store's position on the map, in decimal degrees, for example `40.565129` and `22.119096`. | empty |
 | `FUNDING_BANNER` | The EU/ESPA co-funding strip at the top of every page. | off |
