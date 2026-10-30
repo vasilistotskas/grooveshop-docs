@@ -246,6 +246,12 @@ Emails to the store when something needs a person. They go to the **Contact Emai
 |---|---|---|
 | `SEARCH_MAX_LIMIT` | The most results one search returns. Leave it as it is. | 100 |
 
+### Admin History
+
+| Setting | What it does | Default |
+|---|---|---|
+| `ADMIN_LOG_RETENTION_DAYS` | After how many days an entry of the admin history (who added, changed or deleted what) is deleted. 0 keeps the whole history forever. | 730 |
+
 ### Other
 
 | Setting | What it does | Default |
