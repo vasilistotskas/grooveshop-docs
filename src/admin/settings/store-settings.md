@@ -114,7 +114,7 @@ Fill in the business details **before the first receipt**. They are printed on e
 | Setting | What it does | Default |
 |---|---|---|
 | `INVOICE_SELLER_NAME` | Company name (the full legal name, ΕΠΩΝΥΜΙΑ). | empty |
-| `INVOICE_SELLER_DISTINCTIVE_TITLE` | Distinctive title (ΔΙΑΚΡΙΤΙΚΟΣ ΤΙΤΛΟΣ) the store trades under, if it differs from the company name. Receipts print it under the company name, and the store footer shows it in place of the company name. Leave it empty to use the company name everywhere. | empty |
+| `INVOICE_SELLER_DISTINCTIVE_TITLE` | Distinctive title (ΔΙΑΚΡΙΤΙΚΟΣ ΤΙΤΛΟΣ) the store trades under, if it differs from the company name. Receipts print it under the company name, and the store footer shows it next to the company name. Leave it empty to use the company name everywhere. | empty |
 | `INVOICE_SELLER_LEGAL_FORM` | Legal form (IKE, AE, OE, sole trader). The law requires it on the store. | empty |
 | `INVOICE_SELLER_VAT_ID` | VAT ID (ΑΦΜ). | empty |
 | `INVOICE_SELLER_TAX_OFFICE` | Tax office (ΔΟΥ). | empty |
