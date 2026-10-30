@@ -220,17 +220,28 @@ name and is refused with that explanation, never a fabricated id.
 detail deliberately does not decode, and an event needs a shipment timestamp
 upstream does not expose.
 
-Completing a checkout, UCP or ACP, places the order through
-`internal/checkout/flow.go: Flow.Complete`, which sets
-`attribution.agentProtocol` on the `POST /order` body
-(`internal/django/client_checkout.go: OrderAttribution`) to the owning
-session's protocol, `ucp` or `acp`. Django believes it only alongside the
-gateway's shared secret, which the same call already carries as
-`X-Internal-Gateway` (`cartHeaders`, `internal/django/client_cart.go`;
-checked by `order/views/order.py: _attribution_input`). With it, Django books
-the order with source type `agent` ahead of every other signal, so it reads as "AI agent (UCP)" or
-"AI agent (ACP)" in the admin; see
-[Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).
+A UCP or ACP checkout books both its cart and its order as the agent's.
+`internal/checkout/session.go: agentAttribution` builds
+`attribution.agentProtocol` (`internal/django/client_checkout.go:
+Attribution`) from the owning session's protocol, `ucp` or `acp`, and two
+calls send it:
+
+- every `POST /cart/item` the checkout makes while it fills the cart
+  (`internal/checkout/cartlines.go: SyncCartLines`, called by the UCP
+  `create_checkout` / `update_checkout` tools and by ACP's line sync).
+  Django records it as the cart's source on the add that first fills the
+  cart;
+- the `POST /order` that completing the checkout makes
+  (`internal/checkout/flow.go: Flow.Complete`).
+
+Django believes `agentProtocol` only alongside the gateway's shared secret,
+which both calls already carry as `X-Internal-Gateway` (`cartHeaders`,
+`internal/django/client_cart.go`; checked by
+`order/services.py: OrderAttributionService.input_from_request`). With it,
+Django books the source type `agent` ahead of every other signal, so the
+cart and the order read "AI agent (UCP)" or "AI agent (ACP)" in the admin;
+see [Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).
+The ergonomic `add_to_cart` tool on `/mcp` sends no attribution.
 
 ### An ONLINE payment method is not an instrument
 
@@ -352,6 +363,48 @@ or brand that no tool result showed; and to answer return and policy
 questions only from `get_store_policies`. Conversations live at `ag:{schema}:chat:{id}` with
 a configurable TTL and turn cap.
 
+#### Request
+
+`POST /chat` takes one JSON object (`internal/chat/handler.go: chatRequest`):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `message` | string, required | The shopper's message, trimmed, at most `CHAT_MAX_MESSAGE_LEN` characters. |
+| `conversationId` | string | The conversation to continue; absent starts one. |
+| `cartId` | UUID | The browser's guest cart. |
+| `cartToken` | string | A signed-in shopper's pass from Django's `POST /cart/agent-token`. Turn context only. |
+| `turnId` | UUID | Minted per message, resent on a retry; keys each add's `Idempotency-Key`. |
+| `locale` | string | The page's language code. |
+| `attribution` | object | The tab's first touch, below. Turn context only. |
+
+`attribution` is what `useOrderAttribution().read()` returns in the
+storefront, sent as is:
+
+```json
+{
+  "utmSource": "instagram",
+  "utmMedium": "paid",
+  "utmCampaign": "autumn",
+  "clickIds": ["fbclid"],
+  "referrer": "https://l.instagram.com",
+  "landingPath": "/products/1"
+}
+```
+
+Every field is optional. The shape is Django's `OrderAttributionInputRequest`
+without `agentProtocol` (`chatAttribution`). The gateway has no field for
+`agentProtocol`, so a request that sends it is decoded without it. Django
+would believe it beside the gateway's secret, and a shopper must not be able
+to book their cart as an agent's. A field of the wrong type is a malformed
+request (400). The gateway checks no content: Django checks only the shape,
+and an unknown `clickIds` name is refused there as it is on the storefront's
+own add. The handler hands the value to the turn's tools
+(`mcpsrv.WithShopperAttribution`, `internal/mcpsrv/shopper_attribution.go`),
+and every `add_to_cart` of the turn sends it as `attribution` on
+`POST /cart/item`. Django records it as the source of the cart that add
+first fills, so a cart the assistant fills keeps the visit's paid or social
+source. A turn without `attribution` sends none.
+
 `internal/chat/bridge.go` connects an in-process MCP client to the **same**
 tool server over in-memory transports, so the chatbot's tool definitions are
 derived from the server's own schemas and the two can never drift. Three
@@ -381,8 +434,8 @@ The handler writes named events (`internal/chat/handler.go`). Each event is
 | `delta` | `{text}` | A chunk of the assistant's reply. Also carries the localized fallback when a turn ends with no prose. |
 | `tool` | `{name, status}` | `running` before each tool call and `done` after it, so the widget can show progress instead of silence. |
 | `products` | `{tool, query?, total?, products: [{id}]}` | After the `done` of a catalog tool (`search_products`, `get_product`). |
-| `error` | `{message}` | The turn failed (for example, the provider rate-limited it). The message is localized. No `done` follows. |
-| `done` | `{conversationId, cartId?, cartMutated}` | The turn is saved. `cartMutated` tells the widget to refresh its cart. A browser that had no cart adopts `cartId`, the cart the assistant created, as its guest cart (`POST /api/cart/claim` in the storefront). |
+| `error` | `{message, code?, retryAfter?}` | The turn failed. The message is localized. `code` is `rate_limited` when the model provider throttled the turn, with `retryAfter` its wait in seconds. No `done` follows. |
+| `done` | `{conversationId, cartId?, cartMutated, cartTokenRefused}` | The turn is saved. `cartMutated` tells the widget to refresh its cart. A browser that had no cart adopts `cartId`, the cart the assistant created, as its guest cart (`POST /api/cart/claim` in the storefront); a turn that sent a `cartToken` gets no `cartId`. `cartTokenRefused` means Django refused the token this turn, and the widget mints a new one. |
 
 The `products` event (`internal/chat/products.go`) carries **ids only**:
 - **Pricing.** The storefront loads each product with the shopper's own
@@ -682,6 +735,8 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Chrome/AssistantProducts.vue`, `AssistantProductCard.vue` | Chat product cards |
 | `grooveshop-agent-gateway/internal/checkout/store.go` | Redis keys and TTLs |
 | `grooveshop-agent-gateway/internal/checkout/flow.go`, `internal/django/client_checkout.go` | Order placement and its `agentProtocol` attribution |
+| `grooveshop-agent-gateway/internal/checkout/cartlines.go`, `internal/checkout/session.go` | UCP/ACP cart adds and their `agentProtocol` attribution |
+| `grooveshop-agent-gateway/internal/mcpsrv/shopper_attribution.go`, `internal/mcpsrv/cart.go` | A chat turn's shopper attribution on `add_to_cart` |
 | `grooveshop-agent-gateway/internal/obs/health.go` | `/healthz`, `/readyz` |
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
 | `grooveshop-django-api/tenant/views.py`, `tenant/serializers.py` | `tenant_resolve` and the folded gates |
