@@ -38,7 +38,7 @@ The fields of a line under **Rates**:
 | **Price** | What the customer pays for shipping. |
 | **Free Shipping Threshold** | From this amount up, shipping is free. Empty means never free. |
 | **Max Weight (grams)** | The heaviest cart it accepts. Empty means no limit. |
-| **Delivery Days (min)** / **Delivery Days (max)** | Delivery time in working days after dispatch. Fill in both or neither. |
+| **Delivery Days (min)** / **Delivery Days (max)** | Delivery time in working days after dispatch. Fill in both or neither. Customers see it on the product page and at checkout. |
 | **Is Active** | Untick to stop offering this option without losing the price. |
 
 ## Tasks

@@ -36,7 +36,7 @@ Above the preview you choose:
 | `order_shipped` | The order was shipped. |
 | `acs_out_for_delivery` | ACS is out for delivery. |
 | `boxnow_parcel_at_locker` | The parcel is in the BoxNow locker. |
-| `order_delivered`, `order_completed` | The order was delivered / completed. |
+| `order_delivered`, `order_completed` | The order was delivered / completed. With product reviews on, each carries a "Write a review" link per product. When customers must have bought a product to review it, orders placed without an account get no link. |
 | `order_canceled` | The order was canceled. |
 | `order_refunded`, `order_returned` | Money refunded / products returned. |
 | `order_status_generic` | Any other status change. |
