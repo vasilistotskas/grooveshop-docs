@@ -106,7 +106,7 @@ A refund you make directly in your Viva Wallet or Stripe account reaches the ord
 - **A refund changes neither the order status nor the stock.** Use the "Mark selected orders as…" actions and the product's **Stock** for those.
 - **You cannot refund more than is left.** The platform refuses and tells you how much can still be refunded.
 - **If Viva Wallet or Stripe did not answer**, the order's history says so. Check your account with the provider before trying again: the refund may already have been made, and it is recorded once the provider confirms it.
-- **A Stripe refund can fail days later.** The money then counts as still paid, the order's history says so and the store receives an email. Pay the customer back another way. That email can be switched off with `OPS_ALERT_REFUND_FAILED_ENABLED` under <span class="sidebar-path">Settings → Store Settings</span>.
+- **A Stripe refund can fail days later.** The money then counts as still paid, the order's history says so and the store receives an email. Pay the customer back another way. That email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store).
 - **Editing the payment fields moves no money.** Only **Refund (amount, reason)** gives money back.
 - **A Viva Wallet refund or dispute that never shows up** on the order: [contact support](/admin/help/contact-support). The store's Viva account may not be sending its notifications.
 

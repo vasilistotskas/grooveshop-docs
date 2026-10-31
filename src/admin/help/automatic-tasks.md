@@ -30,13 +30,13 @@ Cash on delivery and other offline payments are never cancelled automatically. N
 
 ### Shipping
 
-| What happens | When | Setting |
+| What happens | When | Setting or action |
 |---|---|---|
 | The progress of ACS and BoxNow parcels is updated. | every 15 minutes | — |
 | The day's ACS pickup list is issued. | Monday–Friday 16:30 | — |
-| You get an email about ACS parcels with no movement for three days. | every day 09:00 | `OPS_ALERT_STALE_SHIPMENTS_ENABLED` (on) |
+| You get an email about ACS parcels with no movement for three days. | every day 09:00 | the email can be [switched off](#stop-an-email-to-the-store) |
 | The cash-on-delivery money ACS paid out the day before is recorded. The order becomes paid. | every day 02:30 | — |
-| You get an email about cash-on-delivery parcels delivered more than ten days ago that ACS has not paid out yet. | every day 03:00 | `OPS_ALERT_UNREMITTED_COD_ENABLED` (on) |
+| You get an email about cash-on-delivery parcels delivered more than ten days ago that ACS has not paid out yet. | every day 03:00 | the email can be [switched off](#stop-an-email-to-the-store) |
 | The lists of BoxNow lockers and ACS stations are refreshed. | every day 02:00 and 03:00 | — |
 
 These emails to the store go to the **Contact Email** and the **Owner Email** of the Store Profile.
@@ -88,7 +88,30 @@ The new value applies from the next time the task runs.
 
 ### Stop an email to the store
 
-Switch off `OPS_ALERT_STALE_SHIPMENTS_ENABLED` or `OPS_ALERT_UNREMITTED_COD_ENABLED`. The email stops, but the [Dashboard](/admin/getting-started/dashboard) keeps counting the same parcels.
+The emails that tell you something needs a person are not store settings. Each one has its own switch on the <span class="sidebar-path">Settings → Emails</span> page, and switching one off stops only that one. Only Owners and Admins see the page.
+
+1. Open <span class="sidebar-path">Settings → Emails</span>.
+2. Find the email under **Alerts when something needs a person**.
+3. Move its switch to **Off**. The change applies at once, and moving it back to **On** turns the email on again.
+
+Emails your customers or the law need, such as the order confirmation, show **Required** instead of a switch. An email marked **Off:** followed by a reason, for example a feature you have not turned on, is not sent whatever its switch says. The alerts go to the **Contact Email** and the owner's email on the [Store profile](/admin/settings/store-profile); a store with neither gets none of them.
+
+Even with an email off, some of the work stays in **Needs attention** on the [Dashboard](/admin/getting-started/dashboard): ACS parcels that are not moving, cash on delivery ACS has not paid out, ACS payouts that match no shipment, canceled orders that still hold a payment, and reviews waiting for approval. The other emails are the only warning.
+
+| The email comes when |
+|---|
+| Once a day, for ACS parcels without movement or without a voucher. |
+| ACS delivered a cash-on-delivery parcel and has not paid the money out. |
+| ACS paid out money that matches none of your shipments. |
+| A courier refused to create a shipment, for example because of a wrong address. The order also gets a note. |
+| BoxNow sent a parcel update the store could not apply. |
+| A payment arrived for an order already canceled, and you have to refund it. |
+| A refund through Stripe failed, although the customer had been told it went through. |
+| A gift card's payment was disputed, or was refunded or charged back after part of the card had been spent. |
+| A payment does not match its order. The order is not marked paid. |
+| A review is waiting for approval. |
+
+ACS emails are only sent while ACS is an active shipping method of your store.
 
 ### Make something happen now
 
@@ -103,7 +126,7 @@ If you need ACS's cash-on-delivery payouts recorded sooner, ask [support](/admin
 
 ## Things to know
 
-- If an automatic email did not arrive, check its setting first. For emails to the store, also check that the **Contact Email** is filled in.
+- If an automatic email did not arrive, check its setting first. For the emails to the store that tell you something needs a person, check instead that the **Contact Email** or the owner's email on the [Store profile](/admin/settings/store-profile) is filled in, and that the email is not switched off on <span class="sidebar-path">Settings → Emails</span>.
 - You cannot change when the tasks run. If a time does not suit you, talk to [support](/admin/help/contact-support).
 
 ## Related

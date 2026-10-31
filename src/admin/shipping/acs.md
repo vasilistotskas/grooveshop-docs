@@ -102,7 +102,7 @@ Every morning at 09:00 you receive an email about parcels with no movement for t
 2. If the parcel is moving normally, click **Re-poll ACS tracking**.
 3. If the parcel was never handed to ACS and never will be, select the row and run **Retire selected shipments (mark CANCELED, stop polling)**. Cancel the order separately if needed.
 
-You can stop the email with the `OPS_ALERT_STALE_SHIPMENTS_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span>. The Dashboard and the filter keep showing the parcels.
+You can have the email [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store). The Dashboard and the filter keep showing the parcels.
 
 ### When cash on delivery gets paid
 
@@ -119,7 +119,7 @@ If a cash-on-delivery parcel was delivered more than ten days ago and ACS has no
 1. Give ACS the voucher numbers and ask when they will pay.
 2. If you were paid another way, for example by bank transfer, open the shipment and click **Record COD received outside ACS**. Write in the note how the money came. The order becomes paid and the alert stops.
 
-If you receive an email that ACS paid money matching none of your parcels (usually a voucher you made in the ACS program), [send the voucher number](/admin/help/contact-support) to the platform team. The two alerts stop with the `OPS_ALERT_UNREMITTED_COD_ENABLED` and `OPS_ALERT_UNATTRIBUTABLE_COD_PAYOUTS_ENABLED` settings. The Dashboard keeps counting them.
+If you receive an email that ACS paid money matching none of your parcels (usually a voucher you made in the ACS program), [send the voucher number](/admin/help/contact-support) to the platform team. The two alerts can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store). The Dashboard keeps counting them.
 
 ### Smartpoint lockers
 
@@ -132,7 +132,7 @@ When BoxNow is switched off, the menu shows **ACS Stations** directly under **Sh
 ## Things to know
 
 - **ACS sometimes rejects a request.** The platform retries by itself. If the problem stays, tell the platform team.
-- **A wrong address or Smartpoint** is not retried. You receive an email at once and a note is written on the order. The email stops with the `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` setting; the note is always written.
+- **A wrong address or Smartpoint** is not retried. You receive an email at once and a note is written on the order. The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store); the note is always written.
 - **One voucher, one parcel.** The platform sends every order as one parcel. The fields on the **Parcel & COD** tab are read only when the voucher is issued. If you change them later, ACS does not find out.
 - **Weight:** ACS charges at least 0.5 kg per parcel.
 - **The customer's note** from checkout is printed in the voucher's remarks.

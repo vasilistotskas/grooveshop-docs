@@ -209,23 +209,6 @@ Low stock is not a setting here. The low-stock email (checked every hour) uses e
 
 See [Messages & feedback](/admin/customers/messages-and-feedback).
 
-### Operational Alerts
-
-Emails to the store when something needs a person. They go to the **Contact Email** and the owner's email on the [Store profile](/admin/settings/store-profile). All start switched on. If you switch one off, only that email stops. Even with the email off, these stay in **Needs attention** on the [Dashboard](/admin/getting-started/dashboard): ACS parcels that are not moving, cash on delivery ACS has not paid out, ACS payouts that match no shipment, canceled orders that still hold a payment, and reviews waiting for approval. The other alerts come only by email.
-
-| Setting | The email comes when |
-|---|---|
-| `OPS_ALERT_STALE_SHIPMENTS_ENABLED` | Once a day, for ACS parcels without movement or without a voucher. |
-| `OPS_ALERT_UNREMITTED_COD_ENABLED` | ACS delivered a cash-on-delivery parcel and has not paid the money out. |
-| `OPS_ALERT_UNATTRIBUTABLE_COD_PAYOUTS_ENABLED` | ACS paid out money that matches none of your shipments. |
-| `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` | A courier refused to create a shipment, for example because of a wrong address. |
-| `OPS_ALERT_WEBHOOK_FAILED_ENABLED` | BoxNow sent a parcel update the store could not apply. |
-| `OPS_ALERT_PAYMENT_AFTER_CANCEL_ENABLED` | A payment arrived for an order already canceled, and you have to refund it. |
-| `OPS_ALERT_REFUND_FAILED_ENABLED` | A refund through Stripe failed, although the customer had been told it went through. |
-| `OPS_ALERT_GIFT_CARD_REVERSAL_ENABLED` | A gift card's payment was disputed, or was refunded or charged back after part of the card had been spent. |
-| `OPS_ALERT_PAYMENT_MISMATCH_ENABLED` | A payment does not match its order. The order is not marked paid. |
-| `OPS_ALERT_REVIEW_PENDING_ENABLED` | A review is waiting for approval. |
-
 ### Agent Commerce
 
 | Setting | What it does | Default |

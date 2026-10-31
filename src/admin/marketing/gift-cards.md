@@ -79,7 +79,7 @@ The correction is recorded as an **Adjust** movement with your name. Movements a
 - **A lost payment dispute** (chargeback) does not give value back to the gift card.
 - **Expiry.** Every night expired cards are set to zero. The recipient gets a reminder email 30 days before, once; change the number of days with `GIFT_CARD_EXPIRY_REMINDER_DAYS` (0 = no reminder). A new card's default validity is `GIFT_CARD_VALIDITY_DAYS` (1825 days).
 - **Buying from the storefront.** A shopper buys a card of €10 to €500 (`GIFT_CARD_MIN_AMOUNT` and `GIFT_CARD_MAX_AMOUNT`) and pays online. It is not an order: no stock, no shipping, no receipt. The buyer gets a confirmation email and the recipient gets the card.
-- **Refunding a card purchase.** If you refund the full amount from your Viva Wallet or Stripe account, the card is cancelled automatically. If the shopper had already spent part of it, you get an email; that email is controlled by `OPS_ALERT_GIFT_CARD_REVERSAL_ENABLED`.
+- **Refunding a card purchase.** If you refund the full amount from your Viva Wallet or Stripe account, the card is cancelled automatically. If the shopper had already spent part of it, you get an email; that email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store).
 - **myDATA.** Selling a gift card is not reported. When an order is paid with a card, the payment type reported is set by `MYDATA_GIFT_CARD_PAYMENT_TYPE` (3 = cash, the default; 5 = on credit). Ask your accountant before changing it.
 
 ## Related

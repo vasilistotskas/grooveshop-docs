@@ -408,7 +408,7 @@ together.
 | ACS parcel out for delivery | `acs_out_for_delivery` | `ACS_OUT_FOR_DELIVERY` |
 | BoxNow parcel at locker | `boxnow_parcel_at_locker` | `BOXNOW_PARCEL_AT_LOCKER` |
 | ACS shipment stale | `stale_shipments_alert` to operators | — |
-| Carrier rejected a shipment, or a verified webhook failed to apply | `shipping/alerts.py` ops alert | — |
+| Carrier rejected a shipment, or a verified webhook failed to apply | `ops.shipment_rejected`, `ops.webhook_failed` through `shipping/alerts.py` | — |
 
 There is no standalone "tracking available" toast. It used to fire at
 voucher mint — the same premature moment as the old shipped email — and
@@ -521,8 +521,8 @@ so a staging refresh cannot email real customers. See
   merchant and operator mail does not.**
 - **Admin-authored HTML renders `|safe` in `.html` and
   `unescape(strip_tags(...))|safe` in `.txt`.**
-- **Operational alerts go to `tenant_admin_recipients()`**, never to
-  `settings.ADMINS` directly.
+- **Operational alerts are `ops.*` email types sent to `store_operators()`**,
+  never to `settings.ADMINS`; a store with no address skips them.
 - **Guests get email, not toasts.** `_load_order` drops an order with no
   `user_id`; the email uses `order.email`.
 
@@ -588,7 +588,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/user/adapter.py` | `UserAccountAdapter.send_mail` (allauth link localization) |
 | `grooveshop-django-api/notification/migrations/0017_notification_link_storefront_path.py` | Link field change and the rewrite of existing links |
 | `grooveshop-storefront-ui-node-nuxt/app/components/User/NotificationsBell.vue` | Opens a notification path under the viewer's locale |
-| `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_admin_recipients` |
+| `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_operator_addresses` |
 | `grooveshop-django-api/user/utils/subscription.py` | `build_transactional_list_headers` |
 | `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
 | `grooveshop-django-api/order/emails.py` | The order email builders (subject, context), `ORDER_EMAIL_KINDS` |
