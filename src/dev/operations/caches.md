@@ -213,6 +213,14 @@ deploy therefore starts from an empty cache — there is no post-deploy
 purge step — and the previous build's namespace is unlinked a minute
 after the new pods start.
 
+The mount stores every value over 1 KiB brotli-compressed, as
+`br:` + base64 (`withCompressedValues` in `server/plugins/storage.ts`),
+because the cache is most of the shared Redis memory: a cached page or
+`_payload.json` averages ~100 KB raw and ~25 KB stored. Callers never see
+it; a value under 1 KiB (a rate-limit counter, a tenant epoch) is stored
+plain. To read an entry by hand, strip the `br:`, base64-decode and
+brotli-decompress it.
+
 The `storefront-warm` PostSync hook fills the new namespace
 (`scripts/warm-cache.mjs`, run from the storefront image): every page in
 every store's sitemap, plus its twin in each other locale the store
