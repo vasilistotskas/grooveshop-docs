@@ -72,7 +72,7 @@ The shipment stays **Pending creation**, you receive an email with the cause, an
 - **BoxNow login details missing:** an Owner or Admin fills them in on the [Store profile](/admin/settings/store-profile). Nothing is retried until then.
 - Once the details are fixed, open the shipment and click **Create BoxNow parcel now**. For a card order that is not paid yet, the button does nothing: the shipment is sent by itself when the payment arrives.
 
-The email stops with the `OPS_ALERT_SHIPMENT_REJECTED_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span>; the note is always written.
+The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store); the note is always written.
 
 ### Cancel a parcel
 
@@ -106,7 +106,7 @@ At checkout, the customer sees the Cyprus map once they choose Cyprus. The phone
 - **PAY ON THE GO** (pay before pickup): BoxNow sends the customer a payment link, and the compartment opens only after they pay. That is why the order becomes paid as soon as the parcel is **Delivered**. There is no payout to wait for, unlike ACS cash on delivery.
 - **Payment Mode** on the shipment: PAY ON THE GO shows as **Cash on delivery**, card and bank-transfer orders as **Prepaid**, with nothing to collect. **Amount to be Collected** is what the customer owes.
 - **Test or live login details:** BoxNow gives separate details for testing and for real shipping. The **BoxNow Live Mode** switch on the [Store profile](/admin/settings/store-profile) must match them: on for live details, off for test ones. Otherwise BoxNow refuses every shipment.
-- **A lost update:** if you receive an email that a BoxNow update could not be applied, compare the parcel with the BoxNow program. The email stops with the `OPS_ALERT_WEBHOOK_FAILED_ENABLED` setting, but then nothing else warns you.
+- **A lost update:** if you receive an email that a BoxNow update could not be applied, compare the parcel with the BoxNow program. The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store), but then nothing else warns you.
 - **One parcel per order.** The platform sends every order as one parcel.
 - **Do not change the Locker External ID** on a shipment. It is there only for testing with BoxNow.
 

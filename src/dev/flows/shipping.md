@@ -568,12 +568,11 @@ move `Order.status`, which the carrier events drive separately.
   charged and the carrier assigned always agree.
 - **A BoxNow locker must be in the order's country**; an unsynced locker is
   accepted, a mismatched one is not.
-- **Operational alerts go to `tenant_admin_recipients()`**, not to
-  `settings.ADMINS`. `shipping/alerts.py: send_ops_alert` falls back to
-  the platform list only on the public schema or when the tenant carries
-  no contact address, and returns `False` (logged) when there is no
-  recipient at all. These are merchant-operations mails: "fix the address
-  and re-dispatch".
+- **Operational alerts are `ops.*` email types** sent through
+  `emails.send_email` to `store_operators()` (the store's contact and owner
+  addresses), never to `settings.ADMINS`. A store with neither address skips
+  the mail (logged). A store switches each alert off in `EmailSwitch`. These
+  are merchant-operations mails: "fix the address and re-dispatch".
 - **Collection does not depend on the pickup list.** A voucher that
   missed its own day's list is never added to a later one and is
   collected all the same once printed. An unprinted-voucher refusal is a
@@ -682,7 +681,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider`, `settle_cod_payment` |
 | `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
 | `grooveshop-django-api/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
-| `grooveshop-django-api/shipping/alerts.py` | `send_ops_alert` and the two operational alerts |
+| `grooveshop-django-api/shipping/alerts.py`, `shipping/emails.py`, `shipping_acs/emails.py` | The two carrier alerts (`alert_admins_*`) and the ops email types they and the ACS tasks send |
 | `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
 | `grooveshop-django-api/shipping/urls.py` | Options, free-shipping-info, providers |
 | `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
