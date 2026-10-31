@@ -57,10 +57,16 @@ Above the preview you choose:
 | `data_export_ready` | The customer's data export is ready. |
 | `inactive_user_email_template` | A message to a customer who has not signed in for a long time. |
 | `expiring`, `expired`, `suspended` | Notices from the platform to you about the store's subscription. |
+| `email_confirmation`, `login_code` | Confirming an email address and the sign-in code. |
+| `password_reset_key`, `password_reset_code`, `password_reset` | Reset link, reset code, and the notice that the password was reset. |
+| `password_changed`, `password_set`, `email_changed`, `email_deleted` | Security notices: password or email address changed, a password set, an address removed. |
+| `unknown_account`, `account_already_exists` | Someone signed in with an address that has no account, or signed up with one that already has. |
+| `totp_activated`, `totp_deactivated`, `recovery_codes_generated`, `webauthn_added`, `webauthn_removed` | Security notices about two-factor authentication: authenticator app, recovery codes, security keys. |
+| `account_connected`, `account_disconnected` | A social sign-in (Google, Facebook and so on) was connected or disconnected. |
 
 Some emails have their own description. The rest just say "Email template". That does not mean they are not sent.
 
-The emails a customer gets about their account (sign-in code, confirm email address, password reset, security notices) are not in this list. They carry your store's name and logo in your customer's language.
+The emails a customer gets about their account (sign-in code, confirm email address, password reset, security notices) are in the categories **Account security**, **Two-factor authentication** and **Social sign-in**. They carry your store's name and logo in your customer's language. They protect the customer's account, so they cannot be switched off: on the <span class="sidebar-path">Settings → Emails</span> page they show as required.
 
 ## Tasks
 

@@ -166,13 +166,21 @@ is created, so lines loaded before the override named every product in the
 worker's language.
 
 **Account emails** (allauth: sign-in code, email confirmation, password
-reset, security notices, MFA and connected-account notices) live in
-`core/templates/account/email/`, `mfa/email/` and `socialaccount/email/`,
-each with an HTML twin. They are rendered by
-`UserAccountAdapter.send_mail` with the same `build_email_context`, so
-`SITE_NAME` and `SITE_URL` name the store. allauth's own `current_site`
-is not in the context and must not be: `SITE_ID` is one store's `Site`
-row, and every other store would sign its mail with that name.
+reset, security notices, MFA and connected-account notices) are 19 email
+types, `account.*`, `mfa.*` and `social.*` (`user/emails.py`), required and
+customer-facing. Their templates live in
+`core/templates/emails/{account,mfa,social}/`, each an HTML and a text
+file. `UserAccountAdapter.send_mail` maps allauth's template prefix to the
+type (an unmapped prefix raises, so a mail a later allauth adds cannot go
+out unbranded) and queues `send_allauth_email_task`, which calls
+`send_email`: the pipeline renders with `build_email_context`, so
+`SITE_NAME` and `SITE_URL` name the store, and sends with the store's
+`From`. The send is in a task because allauth's own `send_mail` talks SMTP
+inside the view, where a transient 421 became a 500 on sign-up. The
+subject is the type's msgid; allauth's `[store name]` prefix is gone.
+allauth's own `current_site` is not in the context and must not be:
+`SITE_ID` is one store's `Site` row, and every other store would sign its
+mail with that name.
 
 ### Tenant branding
 
@@ -279,7 +287,7 @@ host rather than a page (`List-ID`, Meta's base check).
 allauth builds its email links (`activate_url`, `password_reset_url`,
 `signup_url`) from `HEADLESS_FRONTEND_URLS` before it knows who the
 recipient is. `UserAccountAdapter.send_mail` decides the email's
-language, so it localizes those three keys there with
+language and each type's builder localizes those three keys with
 `localize_storefront_url`. The language is the user's (`get_user_language`)
 when allauth's context names one. Otherwise it is the visitor's
 (`resolve_request_language(self.request)`), as for the unknown-account and
@@ -585,7 +593,8 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
 | `grooveshop-django-api/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
 | `grooveshop-django-api/core/utils/tenant_urls.py` | `STOREFRONT_LOCALES`, `STOREFRONT_DEFAULT_LOCALE`, `storefront_locale_prefix`, `get_tenant_frontend_url`, `localize_storefront_url`, `storefront_path` |
-| `grooveshop-django-api/user/adapter.py` | `UserAccountAdapter.send_mail` (allauth link localization) |
+| `grooveshop-django-api/user/adapter.py` | `UserAccountAdapter.send_mail` (allauth prefix to email type, queues the send) |
+| `grooveshop-django-api/user/emails.py` | the 19 allauth email types, `AllauthMail`, `ALLAUTH_TYPES`, link localization |
 | `grooveshop-django-api/notification/migrations/0017_notification_link_storefront_path.py` | Link field change and the rewrite of existing links |
 | `grooveshop-storefront-ui-node-nuxt/app/components/User/NotificationsBell.vue` | Opens a notification path under the viewer's locale |
 | `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_operator_addresses` |
