@@ -19,6 +19,7 @@ The **Page Type** says which page the layout belongs to:
 |---|---|
 | `home` | It is the whole home page. |
 | `products`, `blog`, `contact`, `feedback` | It adds a band above that page's normal content. |
+| `blog-post` | It adds bands under every blog post, e.g. a promo banner with a link. |
 | `about` | It is the whole `/about` page. Without a published layout, the page does not exist. |
 | Anything else, e.g. `our-shops` | A new page at the address `/our-shops`. Use lowercase Latin letters, numbers and hyphens. |
 

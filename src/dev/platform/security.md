@@ -125,7 +125,13 @@ production every uncached SSR response carries a per-request nonce with
 `'strict-dynamic'`, stamped onto the markup by `server/plugins/csp-nonce.ts`.
 Cached SWR pages and prerender passes are nonce-free, keeping
 `'unsafe-inline'` effective, because a nonce reused for a cache lifetime is
-no nonce. Per-tenant inputs come from `event.context.tenant`:
+no nonce. A nonce also disables `'unsafe-inline'` for event-handler
+attributes, so the nonce policy adds `script-src-attr 'unsafe-hashes'` with
+the sha256 of the one inline handler `@nuxt/image` renders on the server
+(`onerror` on every `<NuxtImg>` / `<NuxtPicture>`, which records an image
+that failed before hydration); a spec recomputes the hash from the installed
+module. The nonce-free policy has no such directive, because a hash there
+would switch `'unsafe-inline'` off. Per-tenant inputs come from `event.context.tenant`:
 `apiDomain` replaces the platform host in `connect-src`, `assetsDomain` and
 `staticDomain` are added to `img-src` and `connect-src`, pixel origins are
 emitted only when the tenant provisioned an id, and
