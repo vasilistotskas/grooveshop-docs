@@ -56,6 +56,7 @@ description: Δείτε πώς φαίνεται κάθε αυτόματο email 
 | `admin_new_business_profile` | Νέα αίτηση εταιρικού πελάτη, προς εσάς. |
 | `stale_shipments_alert` | Αποστολές ACS που έχουν κολλήσει, προς εσάς. |
 | `confirmation` | Επιβεβαίωση συνδρομής newsletter. |
+| `already_subscribed` | Ενημερώνει όποιον έγραψε στη φόρμα newsletter ένα email που είναι ήδη εγγεγραμμένο ότι είναι ήδη εγγεγραμμένος. |
 | `data_export_ready` | Η εξαγωγή δεδομένων του πελάτη είναι έτοιμη. |
 | `inactive_user_email_template` | Μήνυμα σε πελάτη που έχει καιρό να μπει. |
 | `email_confirmation`, `login_code` | Επιβεβαίωση διεύθυνσης email και κωδικός σύνδεσης. |
