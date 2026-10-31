@@ -21,7 +21,9 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
       { text: 'Πηγή παραγγελίας', link: '/el/admin/sales/order-source' },
       { text: 'Αποδείξεις και πιστωτικά παραστατικά', link: '/el/admin/sales/receipts' },
       { text: 'Καλάθια', link: '/el/admin/sales/carts' },
-      { text: 'Μηνιαίος τζίρος', link: '/el/admin/sales/turnover' },
+      { text: 'Τζίρος', link: '/el/admin/sales/turnover' },
+      { text: 'Κέρδος', link: '/el/admin/sales/profit' },
+      { text: 'Έξοδα', link: '/el/admin/sales/expenses' },
     ],
   },
   {

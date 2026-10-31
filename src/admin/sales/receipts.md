@@ -7,7 +7,9 @@ description: The retail receipts and credit documents the platform can issue thr
 
 <span class="sidebar-path">Sales → Receipts</span> · <span class="sidebar-path">Sales → Credit Documents</span>
 
-By default you issue your retail receipts in your own fiscal device (ΦΗΜ) or e-invoicing provider, and these two lists stay empty. In that case this page concerns you only for [invoices to business customers](#issue-an-invoice-for-a-business-customer).
+By default you issue your retail receipts in your own fiscal device (ΦΗΜ) or e-invoicing provider. Then these two entries are not in the sidebar, and an order has no receipt or credit document tab, because there is nothing to show. In that case this page concerns you only for [invoices to business customers](#issue-an-invoice-for-a-business-customer).
+
+The entries appear when myDATA is switched on in Store Settings, even before the platform is ready to issue, so you can see where receipts will land. A receipt or credit document that already exists keeps its entry after myDATA is switched off, marked **Off**.
 
 The platform issues receipts itself, through AADE's myDATA, only for a business exempt from the fiscal device. Then it issues:
 

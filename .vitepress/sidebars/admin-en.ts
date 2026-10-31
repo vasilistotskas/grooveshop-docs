@@ -25,7 +25,9 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
       { text: 'Order source', link: '/admin/sales/order-source' },
       { text: 'Receipts and credit documents', link: '/admin/sales/receipts' },
       { text: 'Carts', link: '/admin/sales/carts' },
-      { text: 'Monthly turnover', link: '/admin/sales/turnover' },
+      { text: 'Turnover', link: '/admin/sales/turnover' },
+      { text: 'Profit', link: '/admin/sales/profit' },
+      { text: 'Expenses', link: '/admin/sales/expenses' },
     ],
   },
   {

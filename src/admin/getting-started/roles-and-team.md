@@ -59,6 +59,7 @@ A store must always keep at least one active Owner. The last one cannot be remov
 | [Cache](/admin/settings/cache) | no | yes | yes |
 | [Storefront texts](/admin/content/storefront-texts) | view only | yes | yes |
 | Team | no | yes | yes |
+| [Profit](/admin/sales/profit), [Expenses](/admin/sales/expenses) and the [cost price](/admin/catalog/products) of a product | no | no | yes |
 | Edit or remove an Owner | no | no | yes |
 
 Whatever a role cannot open does not even appear in its sidebar.
@@ -69,6 +70,7 @@ Whatever a role cannot open does not even appear in its sidebar.
 - A role applies to one store. The same person can be Owner in one store and Staff in another.
 - There are no other permissions to set up. The role decides everything.
 - If a colleague cannot find **Store Settings**, **Cache**, **Store Profile** or **Team**, their role is Staff. Change it if they need those.
+- **Profit**, **Expenses** and the **Cost price** of a product are for the Owner only. An Admin does not see them, even though an Admin sees everything else in the store.
 
 ## Related
 

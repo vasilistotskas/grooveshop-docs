@@ -67,7 +67,7 @@ Select products and choose **Export selected to CSV** (for Excel) or **Export se
 | Tab | What it holds |
 |---|---|
 | **Product Information** | Category, variant group, brand, **Active**, name and description per language. The SKU is filled in automatically. |
-| **Pricing & Inventory** | Price, discount, VAT, stock, weight and **Low Stock Threshold**. Also, read-only, **Effective Price**, **Prior Price** and **Reduction Started At** (see below). |
+| **Pricing & Inventory** | Price, discount, VAT, stock, weight and **Low Stock Threshold**. Also, read-only, **Effective Price**, **Prior Price** and **Reduction Started At** (see below). The **Owner** also sees **Cost price** here (see below). |
 | **Loyalty Points** | **Points Coefficient** (multiplies the points the product earns; 0 = none) and **Bonus Points** (fixed points per purchase). |
 | **Customer Alerts** | **Price-drop Alerts Enabled**: tick it so customers can ask for an email when the price drops. Off by default. |
 | **Stock Audit** | How many units customers are holding at checkout right now, how many remain available, and the **Open full stock history chart** link. |
@@ -77,10 +77,19 @@ Select products and choose **Export selected to CSV** (for Excel) or **Export se
 
 Below the form there are also the **Product Attributes**, **Product Images**, **Active Stock Reservations**, **Product price spells** (the price history, read-only), **Tags**, **Related products** and **Stock activity** tabs.
 
+## Cost price
+
+Only the **Owner** role sees **Cost price**, under **Price** on the **Pricing & Inventory** tab. It is what one unit costs you, before VAT, in euro. It is optional and it is never shown to customers, Admin or Staff, and it is left out of the exported product files.
+
+- The [Profit](/admin/sales/profit) page uses it. When a product is sold, its current cost price is copied onto the order line. Changing it later does not change past sales, and sales made before you entered one have no cost.
+- Leave it empty when you do not know it: such sales are reported as having no cost, they are not counted as free. Enter **0** only for a product that really costs you nothing.
+- The cost price is not kept in the product's change history.
+
 ## Things to know
 
 - **Effective Price** is what a customer pays now: the price with VAT, minus the discount and any automatic promotion that applies without conditions. It is calculated for you.
 - **Prior Price** is the lowest price of the 30 days before the current reduction began. The store shows it struck through, labelled "Lowest price in the last 30 days". When it is empty, no struck-through price is shown.
+- **The box under the buy button** lists up to three lines: the delivery time (the **Delivery Days** on your [shipping providers](/admin/settings/shipping-providers), with the free-shipping amount under it), how the customer can pay (the active [payment methods](/admin/settings/payment-methods), worded by how the money is collected, for example "Card or cash on delivery") and the return period (`RETURN_WINDOW_DAYS`). A line shows only when the store has that information, and the box follows `PRODUCT_ASSURANCES_ENABLED`. When the box is on, it states the free-shipping amount instead of the separate free-shipping message on the product page; the cart keeps that message.
 - **What hides a product from customers**: only **Active** turned off, or deletion. An out-of-stock product still shows.
 - **Languages**: where the name or description is missing in a language, the store shows the store's default language instead.
 - **Search**: saving a product updates the store's search shortly after. So do the bulk activate and deactivate actions.

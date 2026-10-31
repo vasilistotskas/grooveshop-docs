@@ -95,13 +95,14 @@ Defaults are the values a new store starts with. Amounts are in euros.
 | `MOBILE_BOTTOM_NAV_ENABLED` | The navigation bar at the bottom of the screen on phones. | on |
 | `STICKY_ADD_TO_CART_ENABLED` | The "add to cart" bar that stays on screen as you scroll a product page. | on |
 | `RECENTLY_VIEWED_ENABLED` | The "Recently viewed" strip on the home page. | on |
+| `PRODUCT_ASSURANCES_ENABLED` | The box under the buy button on a product page with the delivery time, the free-shipping amount, the payment methods and the return period. Each line shows only when the store has that information (for example delivery days on the shipping rates). | on |
 | `CHAT_WIDGET_ENABLED` | The AI shopping assistant button. Agent commerce must be on too. | on |
 | `PRODUCT_REVIEWS_ENABLED` | Reviews everywhere: on product pages, the stars on cards, the customers' "My reviews". | on |
 | `PRODUCT_REVIEWS_PURCHASE_REQUIRED` | Only someone who bought the product can review it. Off: any signed-in customer can. A buyer's review always carries the verified-purchase badge. Switch it off if you want more reviews early on. | on |
 | `ACCOUNT_REVIEWS_ENABLED` | The "My reviews" page in the customer's account. Does not affect reviews on product pages. | on |
 | `BLOG_COMMENTS_ENABLED` | Comments and likes under blog posts. | on |
 | `FAVOURITES_ENABLED` | Favourites: the hearts, the favourites page, and the notifications in the customer's account when a favourite drops in price or is back in stock (no emails: those are [Product alerts](/admin/customers/product-alerts)). | on |
-| `NEWSLETTER_ENABLED` | Newsletter subscriptions from the customer's account. Unsubscribe links in emails already sent always work. | on |
+| `NEWSLETTER_ENABLED` | Newsletter subscriptions: the customer's account page, the footer form and the box on the sign-up form. Off hides all of them. Unsubscribe links in emails already sent always work. | on |
 | `FEEDBACK_ENABLED` | The store's feedback page. | on |
 | `PRODUCT_ALERTS_ENABLED` | The "notify me" alerts for back in stock or price drop, and their emails. | on |
 | `PRICE_HISTORY_ENABLED` | The **Price history** button beside the rating on product pages. It opens how the price has changed over time, with the change and the lowest and highest price. It shows only prices the store already published. | on |
@@ -112,7 +113,8 @@ Fill in the business details **before the first receipt**. They are printed on e
 
 | Setting | What it does | Default |
 |---|---|---|
-| `INVOICE_SELLER_NAME` | Company name. | empty |
+| `INVOICE_SELLER_NAME` | Company name (the full legal name, ΕΠΩΝΥΜΙΑ). | empty |
+| `INVOICE_SELLER_DISTINCTIVE_TITLE` | Distinctive title (ΔΙΑΚΡΙΤΙΚΟΣ ΤΙΤΛΟΣ) the store trades under, if it differs from the company name. Receipts print it under the company name, and the store footer shows it in place of the company name. Leave it empty to use the company name everywhere. | empty |
 | `INVOICE_SELLER_LEGAL_FORM` | Legal form (IKE, AE, OE, sole trader). The law requires it on the store. | empty |
 | `INVOICE_SELLER_VAT_ID` | VAT ID (ΑΦΜ). | empty |
 | `INVOICE_SELLER_TAX_OFFICE` | Tax office (ΔΟΥ). | empty |
@@ -243,6 +245,12 @@ Emails to the store when something needs a person. They go to the **Contact Emai
 | Setting | What it does | Default |
 |---|---|---|
 | `SEARCH_MAX_LIMIT` | The most results one search returns. Leave it as it is. | 100 |
+
+### Admin History
+
+| Setting | What it does | Default |
+|---|---|---|
+| `ADMIN_LOG_RETENTION_DAYS` | After how many days an entry of the admin history (who added, changed or deleted what) is deleted. 0 keeps the whole history forever. | 730 |
 
 ### Other
 

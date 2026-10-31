@@ -70,6 +70,7 @@ Delete the slot's row from the **Menus** list.
 - **Your pages in the footer:** every published [Page](/admin/content/pages) not already in your columns is added to the row at the bottom automatically.
 - **Labels are your own text.** Write them exactly as they should appear, in every language.
 - **A column's icon** (the **Icon** field) is optional and is written in lowercase Latin letters starting with `i-`, e.g. `i-heroicons-light-bulb`.
+- **Your company details in the footer** (the **Shows the seller's details** tick on a column): the store shows its legal details (company name, tax ID, address, set under [Store settings](/admin/settings/store-settings)) under the links of the column you tick. Only one column can have it. If you tick none, the details stay where the store puts them by default. The law requires these details to stay visible on every page, so give them a column that is always shown.
 - **If a change does not show** after a minute, clear the **Pages & navigation** cache on the [Cache](/admin/settings/cache) page.
 
 ## Related

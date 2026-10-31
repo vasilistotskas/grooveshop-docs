@@ -223,12 +223,9 @@ rows without a manual step.
 | Plan | `Tenant.recommendations_enabled` (default `False`) | `tenant/permissions.py: IsRecommendationsEnabled` answers **404** on both recommendation endpoints |
 | Runtime | `PRODUCT_SUGGESTIONS_ENABLED` extra-setting (ships `False`) | `tenant/permissions.py: IsRecommendationsRuntimeEnabled` answers **404** on both endpoints too; the pages that mount a strip check it before asking |
 
-Note what the plan tier does **not** cover. It guards the two routes in
-`recommendation/urls.py` and nothing else. The cart's own suggestions come
-from `cart/serializers/cart.py: CartDetailSerializer.get_recommendations`,
-which calls `suggest()` directly with no plan check, so `GET /api/v1/cart`
-still returns a populated `recommendations` array on a tenant with the flag
-off. Only the storefront's own check stops it rendering.
+The cart's suggestions are not part of the cart payload: the cart page and
+the cart drawer ask `GET /api/v1/recommendations?surface=cart&seeds=<ids>`
+like every other strip, so the plan tier covers them too.
 
 Plus a third, finer gate: which **strategies** run depends on
 `RecommendationStrategy.min_plan` against the tenant's `plan`. The comment on
@@ -310,9 +307,23 @@ engine's answer for a product is shared by every viewer. What is per viewer is
 applied elsewhere: wholesale prices by `useB2BPricing` on the client, and the
 impression by the strip when it is shown.
 
-The cart page passes its own `items` instead of fetching — the cart payload
-already carries suggestions seeded with the whole basket — and that path
-renders no reason labels and reports no events.
+The cart page passes `seedIds` (the cart's product ids) and the strip asks
+the store-wide route `server/api/recommendations.get.ts` with `surface=cart`
+and `seeds`. That route is the same cached handler name, `productRecommendations`,
+that Django's `recommendations` cache surface purges, so a product, relation or
+slot edit reaches the cart too. It sorts and de-duplicates the seeds before it
+keys the entry or calls Django, so two baskets of the same products share one
+answer; the strip is `hydrate-on-visible`, so a visitor who never scrolls to
+it costs no request. The cart drawer asks the same way for two suggestions,
+only while it is open, and again when the basket changed while it was shut.
+Neither reads anything from the cart payload, and both report impressions and
+clicks like every other strip. An empty basket asks nothing (Django refuses a
+seedless cart surface); the empty cart's strip is the `empty_cart` surface,
+which needs no seed.
+
+Wholesale prices on a cart suggestion are applied per viewer on the client,
+as everywhere (`useShopperPrice` in the product card, `useB2BPricing` in the
+drawer and in webside's strip); the cached body is anonymous.
 
 ## Invariants
 
@@ -401,5 +412,7 @@ renders no reason labels and reports no events.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useRecommendationTracking.ts` | Impression and click reporting |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useRecommendationAttribution.ts` | Per-tab carry of the impression |
 | `grooveshop-storefront-ui-node-nuxt/server/api/products/[id]/recommendations.get.ts` | Cached read proxy |
+| `grooveshop-storefront-ui-node-nuxt/server/api/recommendations.get.ts` | Cached read proxy for the empty cart and for a basket of `seeds` (the cart page and drawer) |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useProductSuggestions.ts` | The strip's fetch: seed, basket, `enabled`, impression |
 | `grooveshop-storefront-ui-node-nuxt/server/api/analytics/recommendation-event.post.ts` | Rate-limited event proxy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml` | PreSync step 4/4 |
