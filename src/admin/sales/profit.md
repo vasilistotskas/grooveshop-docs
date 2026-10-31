@@ -62,8 +62,11 @@ This is **management profit**, a figure to run the shop by. It is not the profit
 ### Turn on the Viva Wallet fee notification
 Viva Wallet tells the store what it charged for each payment only if you subscribe to it. Do this once for your Viva Wallet account:
 1. In Viva Wallet, open the account (live, and the demo one if you test), then **Settings → API Access → Webhooks**.
-2. Press **Create Webhook**, paste the same address you used for your payment notifications, and press **Verify**.
+2. Press **Create Webhook**, paste the same address you used for your payment notifications, and press **Verify**. Wait for the green confirmation.
 3. Choose **Transaction Price Calculated** as the event type, tick **Active** and save.
+4. To check it, wait until your next card payment shows as paid in the store (Viva can report the fee before the payment is recorded, and the store keeps it until then). Then open this page, choose the period that contains the payment (fees count in the month of the payment) and look at **Fee coverage**: it counts that payment's fee. If it does not, tell your developer and give the order number.
+
+If you run more than one store, do this in the Viva Wallet account of each store.
 
 Fees of payments made before you subscribed stay unreported. Stripe needs nothing.
 

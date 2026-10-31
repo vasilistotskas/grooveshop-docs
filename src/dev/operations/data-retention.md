@@ -16,7 +16,7 @@ Source: `core/retention.py`, `core/tasks.py`, `core/history.py`,
 `tenant/tasks.py` (the `fanout_purge_*` wrappers), `settings.py`
 (`CELERY_BEAT_SCHEDULE`, the retention constants, `EXTRA_SETTINGS_DEFAULTS`),
 `shipping_acs/tasks.py`, `shipping_boxnow/tasks.py`,
-`recommendation/tasks.py`, `meta_capi/tasks.py`, `contact/tasks.py`,
+`recommendation/tasks.py`, `order/tasks.py`, `meta_capi/tasks.py`, `contact/tasks.py`,
 `search/tasks.py`, `search/middleware.py`.
 
 ## What is deleted
@@ -32,6 +32,7 @@ store's billing state does not pause a deletion the platform promised.
 | Admin history (`django_admin_log`) | per store and public | 730 days | store setting `ADMIN_LOG_RETENTION_DAYS` (0 keeps); the public schema reads its own row of the same setting |
 | Search queries: personal columns blanked | per store | 90 days | none (weekly, `anonymize-old-search-queries`) |
 | Recommendation events | per store | 90 days | env `RECOMMENDATION_EVENT_RETENTION_DAYS`; startup fails when it is shorter than the learning window or an attribution window |
+| Pending payment fees (`PendingPaymentFee`) | per store | 90 days | env `PENDING_PAYMENT_FEE_RETENTION_DAYS`; a Viva commission reported before its payment was booked is deleted when the payment is recorded, so only the fee of a payment that never settled is swept; keep it well past Viva's 24 hour webhook retry window |
 | Meta Conversions API delivery log | per store | 90 days | env `META_CAPI_EVENT_LOG_RETENTION_DAYS` |
 | Cache purge log (`CachePurgeLog`) | public, every store's purges | 90 days | env `CACHE_PURGE_LOG_RETENTION_DAYS` |
 | ACS API calls, successful tracking reads | per store | 14 days | env `ACS_API_CALL_POLL_RETENTION_DAYS` |
