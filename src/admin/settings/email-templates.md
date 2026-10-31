@@ -54,6 +54,7 @@ Above the preview you choose:
 | `admin_new_business_profile` | A new business customer application, to you. |
 | `stale_shipments_alert` | ACS shipments that are stuck, to you. |
 | `confirmation` | Newsletter subscription confirmation. |
+| `already_subscribed` | Tells someone who entered an already subscribed email in the newsletter form that they are already subscribed. |
 | `data_export_ready` | The customer's data export is ready. |
 | `inactive_user_email_template` | A message to a customer who has not signed in for a long time. |
 | `expiring`, `expired`, `suspended` | Notices from the platform to you about the store's subscription. |
