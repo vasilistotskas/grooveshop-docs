@@ -64,7 +64,7 @@ Viva Wallet tells the store what it charged for each payment only if you subscri
 1. In Viva Wallet, open the account (live, and the demo one if you test), then **Settings → API Access → Webhooks**.
 2. Press **Create Webhook**, paste the same address you used for your payment notifications, and press **Verify**. Wait for the green confirmation.
 3. Choose **Transaction Price Calculated** as the event type, tick **Active** and save.
-4. After your next card payment, open this page: that payment's fee is counted and **Fee coverage** goes up. If it does not, tell your developer and give the order number.
+4. To check it, wait until your next card payment shows as paid in the store (Viva can report the fee before the payment is recorded, and the store keeps it until then). Then open this page, choose the period that contains the payment (fees count in the month of the payment) and look at **Fee coverage**: it counts that payment's fee. If it does not, tell your developer and give the order number.
 
 If you run more than one store, do this in the Viva Wallet account of each store.
 
