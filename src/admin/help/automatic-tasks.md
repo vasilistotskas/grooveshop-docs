@@ -30,7 +30,7 @@ Cash on delivery and other offline payments are never cancelled automatically. N
 
 ### Shipping
 
-| What happens | When | Setting |
+| What happens | When | Setting or action |
 |---|---|---|
 | The progress of ACS and BoxNow parcels is updated. | every 15 minutes | — |
 | The day's ACS pickup list is issued. | Monday–Friday 16:30 | — |
@@ -126,7 +126,7 @@ If you need ACS's cash-on-delivery payouts recorded sooner, ask [support](/admin
 
 ## Things to know
 
-- If an automatic email did not arrive, check its setting first. For emails to the store, also check that the **Contact Email** is filled in.
+- If an automatic email did not arrive, check its setting first. For the emails to the store that tell you something needs a person, check instead that the **Contact Email** or the owner's email on the [Store profile](/admin/settings/store-profile) is filled in, and that the email is not switched off on <span class="sidebar-path">Settings → Emails</span>.
 - You cannot change when the tasks run. If a time does not suit you, talk to [support](/admin/help/contact-support).
 
 ## Related
