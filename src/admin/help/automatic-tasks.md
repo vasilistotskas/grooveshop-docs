@@ -88,7 +88,13 @@ The new value applies from the next time the task runs.
 
 ### Stop an email to the store
 
-The emails that tell you something needs a person are not store settings. Each one can be switched off for your store, and only that one stops. Until the Emails page lets you do it yourself, ask [support](/admin/help/contact-support) to switch one off. They go to the **Contact Email** and the owner's email on the [Store profile](/admin/settings/store-profile); a store with neither gets none of them.
+The emails that tell you something needs a person are not store settings. Each one has its own switch on the <span class="sidebar-path">Settings → Emails</span> page, and switching one off stops only that one. Only Owners and Admins see the page.
+
+1. Open <span class="sidebar-path">Settings → Emails</span>.
+2. Find the email under **Alerts when something needs a person**.
+3. Move its switch to **Off**. The change applies at once, and moving it back to **On** turns the email on again.
+
+Emails your customers or the law need, such as the order confirmation, show **Required** instead of a switch. An email marked **Off:** followed by a reason, for example a feature you have not turned on, is not sent whatever its switch says. The alerts go to the **Contact Email** and the owner's email on the [Store profile](/admin/settings/store-profile); a store with neither gets none of them.
 
 Even with an email off, some of the work stays in **Needs attention** on the [Dashboard](/admin/getting-started/dashboard): ACS parcels that are not moving, cash on delivery ACS has not paid out, ACS payouts that match no shipment, canceled orders that still hold a payment, and reviews waiting for approval. The other emails are the only warning.
 
