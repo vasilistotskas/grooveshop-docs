@@ -1,226 +1,226 @@
 ---
-title: Storefront page builder
-description: "How a store's pages are edited, versioned and published: documents and releases in Django, the block catalogue owned by the storefront, validation, the cache purge on publish, and the public read."
+title: Page builder foundation
+description: "The page builder's block catalogue (defineBlock, the JSON Schema catalogue Django validates against, upgrade and parse of documents) and the staff session of the editor on the store host."
 ---
 
-# Storefront page builder
+# Page builder foundation
 
-A store's theme, section groups (header, footer, announcement bar), templates
-and merchant-made pages are **documents**: versioned JSON that staff edit in
-the storefront's visual editor and publish together. The data, the versions,
-the permissions and the publish live in Django (`builder/`, a tenant app).
-The **block catalogue belongs to the storefront**, as the texts catalogue
-does: each section or block is declared once there with its settings schema,
-and Django validates every write against it and adds the checks only it can
-make.
+The page builder lets a store compose its pages from typed sections and
+blocks. The design is split by who knows what: the **storefront owns every
+block** (its settings schema, which settings are translatable or references,
+its limits and children, how an older version is upgraded) and publishes them
+as a catalogue; **Django stores documents and validates every save against
+that catalogue**, adding only the checks it alone can make. This page covers
+the foundation that exists in the storefront: the catalogue and the staff
+session. The editor, the Django `builder` app's documents, versions and
+releases, and the rendering switch come after it.
 
-The Django side is described in depth in the synced
-[Storefront page builder reference](/dev/django/reference/builder); this page
-is the end-to-end flow. The editor and the storefront's catalogue endpoint
-are the storefront's part of the same epic (storefront #289), and are marked
-below where this page depends on them.
+It follows the pattern of [Store-editable texts](/dev/flows/store-texts): a
+build-time collection, a public tenant-free endpoint whose content hash is its
+ETag, and a Django side that keeps its own copy and refuses to save without
+one.
 
 ## Diagram
 
 ```mermaid
 flowchart TD
-  subgraph SF["Storefront"]
-    Define["defineBlock per section / block"] --> Cat["GET /api/builder/catalogue?schema="]
-    Editor["Visual editor"]
+  subgraph Build["Storefront build"]
+    Defs["app/blocks/*.block.ts: defineBlock"] --> Mod["modules/builder-blocks"]
+    Mod --> Virtual["builder-blocks virtual module"]
   end
 
-  subgraph DJ["Django, store schema"]
-    Save["services.save_draft"] -->|"ETag revalidation"| Cat
-    Save --> Doc["BuilderDocument draft + revision"]
-    Check["services.create_checkpoint"] --> Ver["BuilderVersion (immutable)"]
-    Pub["services.publish"] --> Ver
-    Pub --> Rel["BuilderRelease: document key to version"]
-    Rel --> Index["BuilderReference index"]
-    Rel --> Gen["bump cache_generation"]
-    Rel --> Surface["builder surface purge"]
+  subgraph Server["Storefront server"]
+    Virtual --> Catalogue["builderCatalogue: z.toJSONSchema, hash"]
+    Catalogue --> Endpoint["GET /api/builder/catalogue"]
+    Virtual --> Parse["parseDocument: upgradeNode, validate, rebuild"]
   end
 
-  Editor -->|"PUT draft, If-Match"| Save
-  Editor -->|"POST publish"| Pub
-  Surface --> Nitro["builderPage handler + routes + edge"]
-  Read["GET /api/v1/builder/published/page_key"] --> Rel
-  SF2["Storefront render"] --> Read
+  Endpoint -->|"JSON Schema, ETag"| Django["Django builder: validates every save"]
+
+  subgraph Editor["Editor sign-in"]
+    Admin["Django admin: Edit storefront"] -->|"single-use ticket"| Page["/_builder?ticket="]
+    Page -->|"POST /api/builder/session"| Session["builderSession"]
+    Session -->|"POST builder/staff-session"| Django
+    Session --> Cookie["__Host-builder-session cookie"]
+  end
 ```
 
 ## How it works
 
-### 1. Documents, versions, releases
+### 1. One declaration per block
 
-- A **document** has a key (`theme`, `group:<name>`, `template:<name>`,
-  `page:<slug>`), a **draft** and a per-language **overlay**, and a revision
-  that moves with every change (`builder/models.py: BuilderDocument`).
-- A **version** is an immutable snapshot of one document, numbered per
-  document; only named saves and publishes make one. Autosaves never do.
-- A **release** is an immutable map from document key to version. It is the
-  only thing the public storefront reads. Publishing theme, header and home
-  together is one release, and a rollback is a new release pointing at older
-  versions. History is never rewritten.
+A section or block is a default-exported `defineBlock({...})` in
+`app/blocks/<type>.block.ts` (`shared/builder/defineBlock.ts`). It carries:
 
-### 2. A save
+- `type` (lower snake case), `version` (an integer, bumped by a breaking
+  change) and `kinds`: where it may sit, as a `section` of a page or a `block`
+  inside another node.
+- `schema`: a Zod object, the settings.
+- `translatable` and `refs`: JSON pointers into the settings. A translatable
+  setting may be written per language; a ref names another record
+  (`product`, `category`, `page`, `media` or `menu`) that Django checks exists.
+- `limits` (`maxBlocks`, `maxPerTemplate`), `children` (`allowed` types,
+  `maxDepth`), `groups`, `templates`, `feature` (a store feature that must be
+  on), `deprecated`, `presets` and `hydrate` (`eager`, `visible` or `idle`).
+- `upgrade`: `upgrade[n]` turns a version `n` node into one for version `n + 1`.
 
-`PUT /api/v1/builder/documents/<key>/draft` with the revision in `If-Match`.
-`builder/services.py: save_draft` checks permission, asks for the catalogue
-(`builder/storefront.py: fetch_catalogue`, held per process and revalidated
-by ETag), validates the document in full (`builder/validation.py`) and writes
-under a row lock. A stale revision is a `409 revision_conflict` carrying the
-current revision and who saved it. With no catalogue to check against
-nothing is saved (`503 storefront_unavailable`): there is no fallback.
+A definition holds **data only, never a component**: the server reads every
+definition and must not bundle rendering code. The renderer maps `type` to its
+component on the client. `defineBlock` refuses a malformed declaration when it
+loads (a bad type, a gap in the upgrade chain, a pointer that names no
+setting), so it stops the build or the first test rather than reaching a store.
 
-### 3. What is validated
+`modules/builder-blocks/` collects the files into the Nitro virtual module
+`#builder-blocks`, server bundle only. A new file needs a server restart in
+dev.
 
-The storefront's catalogue entry for each block supplies the settings JSON
-Schema, the allowed children, limits, where it may be placed, which settings
-are translatable or references, a feature gate and the rich-text settings.
-Django adds the store's own limits (settings), that a reference exists in this
-schema (checked at publish, so a draft can outlive a deleted product), that a
-feature-gated block's feature is on, and that rich text survives the sanitiser
-policy. Every problem is `{path, code, message}`, the path a JSON pointer into
-what was sent.
+### 2. The catalogue
 
-### 4. A publish
+`server/utils/builderCatalogue.ts: buildBlockCatalogue` turns the definitions
+into the catalogue when the server loads: each schema through
+`z.toJSONSchema` with `target: 'draft-2020-12'` and `io: 'input'`, every object
+closed (`additionalProperties: false`), blocks sorted by type, and a hash of
+the content. It refuses a set that contradicts itself: two blocks of one type,
+or an allowed child that is missing or cannot be a `block`.
 
-`services.publish` validates every named draft (references included) and
-reports every problem with its document, then in one transaction creates the
-versions, takes the per-store lock, numbers one release and rebuilds the
-reference index. The release is the previous one with the named keys
-repointed.
+`io: 'input'` is deliberate: Django validates what the editor saves, in which a
+field with a default may be absent; the output type would require it. The
+input conversion leaves objects open, so every object is closed explicitly. A
+setting JSON Schema cannot state (a `Date`, a transform) fails the load instead
+of publishing a gap.
 
-### 5. What a release moves
+`GET /api/builder/catalogue?schema=<schema>`
+(`server/api/builder/catalogue.get.ts`) answers
 
-`tenant/signals.py: bump_generation_on_builder_release` moves
-`Tenant.cache_generation` in the release's transaction.
-`core/cache/surfaces.py` registers the `builder` surface
-(`invalidated_by=("builder.BuilderRelease",)`): the storefront's
-`builderPage` handler (a handler name the storefront's cached route must
-carry), every cached route of the store, and `invalidates_tenant_config=True`,
-which moves the storefront's tenant epoch; the Cloudflare edge purge follows.
-Draft saves purge nothing.
+```json
+{ "hash": "…", "blocks": [{
+  "type": "…", "version": 1, "accepts": [1], "schema": {},
+  "translatable": ["/title"], "refs": {"/productId": "product"},
+  "limits": {}, "children": {"allowed": []}, "kinds": ["section"]
+}] }
+```
 
-### 6. The public read
+with `groups`, `templates`, `feature` and `deprecated` only when set, and
+`ETag: "<hash>"`. Like the texts catalogue it is public, tenant-free (listed in
+`server/utils/tenantBypass.ts`), has no Nitro cache, and answers 304 to a
+matching `If-None-Match`; the body is a constant of the server bundle, so it is
+immutable per build. `?schema=` names the store's design and is validated, but
+every design offers every block today. With no block defined it is
+`{ "hash", "blocks": [] }`, which Django answers by refusing every save: there
+is no fallback.
 
-`GET /api/v1/builder/published/<page_key>?locale=` returns the theme, the
-section groups and the page of that key (else the template of that name)
-from the current release, **resolved for the locale in Django**: the overlay
-merged, disabled nodes dropped with their children. It never reads a draft and
-never calls the storefront. The result is cached under
-`builder:<schema>:r<release>:<page_key>:<locale>`: immutable per release,
-never purged.
+`accepts` is the current version alone. Django holds one schema per type, so it
+cannot validate an older version; an older node is upgraded on read and by the
+editor on load, and is always saved at the current version.
 
-### 7. Who may
+### 3. Documents: upgrade, parse
 
-`builder` is in `STORE_SETTINGS_APP_LABELS` and `STAFF_READ_ONLY_APP_LABELS`
-(`tenant/role_scopes.py`): Admin and Owner edit and publish, Staff only look.
+A document is `{ sections: { id: node }, order: [id] }`; a node is
+`{ type: "name@version", disabled?, settings, blocks?, blockOrder? }`, ids are
+`[A-Za-z0-9_-]{1,64}`, and nesting is capped at three levels
+(`shared/constants/builder.ts`).
 
-### 8. Scheduled publishing
+`shared/builder/upgrade.ts: upgradeNode` applies `upgrade[n]` from the node's
+version up to the current one. It is pure (each step gets a copy), usable by
+the server and the editor, and throws a `BlockUpgradeError` with a code for a
+node it cannot bring up: a malformed or foreign type, a version newer than the
+build, or a version no step reaches.
 
-A publish can wait for a time (`builder/scheduling.py`,
-`BuilderScheduledPublish`). `POST /api/v1/builder/schedules` checks exactly
-what a publish checks, now, and **freezes** the drafts as versions held by the
-schedule, so what goes live is what was checked whatever is edited meanwhile; a
-time without an offset is read in the store's timezone. A beat task,
-`builder.tasks.run_due_publishes`, fans out per store every minute
-(`tenant/tasks.py: fanout_run_due_builder_publishes`) and releases each due
-schedule in its own transaction under the per-store release lock with
-`select_for_update`, the status change inside it, so a retry, an overlapping
-sweep or a second worker finds it spent. At that moment references are checked
-again and the documents must still exist; a schedule that can no longer be
-released is `failed` with the problems recorded, never half done. Otherwise it
-is the ordinary release, so the cache generation and the `builder` surface move
-then. A failure reaches a person: the store-staff email
-`ops.builder_schedule_failed` (`builder/emails.py`, listed on the store's Emails
-page, Greek and English) and a danger alert on the store dashboard
-(`admin/dashboard/store/widgets.py: StoreAlerts`) until someone acknowledges it
-(`POST schedules/<id>/acknowledge`, or the admin action in Content, Page
-builder, Scheduled publishes). Moving and cancelling a pending schedule is
-`PATCH` and `DELETE schedules/<id>`.
+`server/utils/builderDocument.ts: parseDocument` is the single producer of
+document data for rendering. For each node it upgrades, checks the block's kind
+and allowed children and the depth, validates the settings with the block's
+schema, and rebuilds the node from the parse, so a key the schema does not know
+never reaches a component. Only what `order` and each `blockOrder` name is
+kept, in that order. A node it cannot use is left out with a
+`log.warn({ tag: 'builder', message: 'node skipped', node, reason })`, its
+children with it; a document that is not one renders as empty. It never throws
+for one bad node. Zod stays on the server, out of the client bundle.
 
-### 9. The media library
+### 4. The editor's staff session
 
-`MediaAsset` (`builder/models.py`) is an image in the store's library; an
-image setting is a `media` reference to its id, never a URL. The storefront
-gets the size a browser shows (EXIF orientation applied, so it can reserve
-space and size `srcset`), a focal point, the alt text per language
-(a parler translation, because the row stands alone, unlike a block's JSON
-overlay) and `path`, what media-stream serves
-(`media/<schema>/uploads/builder/<name>`). `builder/media_services.py` is
-the only writer: raster images only, within `BUILDER_MEDIA_MAX_BYTES` and
-`BUILDER_MEDIA_MAX_PIXELS`. A used asset cannot be deleted
-(`409 media_in_use`, from the reference index), and changing a used asset's
-alt or focal point moves the cache generation and the `builder` surface,
-because a release is immutable and the media is resolved at render. The
-public `GET /api/v1/builder/media/resolve?ids=&locale=` answers only for
-assets the current release uses.
+The editor runs on the store's own host, at `/_builder`. A staff member opens
+it from Django's admin, which mints a **single-use ticket**.
 
-### 10. Signing in to the editor
+1. The browser lands on `/_builder?ticket=…`
+   (`app/pages/_builder.vue`, `app/composables/useBuilderSession.ts`). The page
+   takes the ticket off the address first, so it does not outlive its one use in
+   the history, a reload or a `Referer`.
+2. It posts it to `POST /api/builder/session`
+   (`server/api/builder/session.post.ts`), which exchanges it with Django
+   server to server: `POST {apiBaseUrl}/builder/staff-session` `{ ticket }` →
+   `{ token, expiresAt, staff: { id, name, role } }`, or 400
+   `{ code: "invalid_ticket" }`, returned as it is.
+3. `server/utils/builderSession.ts` seals the answer in its **own cookie**,
+   `__Host-builder-session`: HttpOnly, Secure, SameSite=Strict, `Path=/`, no
+   Domain (the `__Host-` prefix makes a browser enforce that), with a
+   `Max-Age` of the time left to `expiresAt`. It is separate from the customer
+   session. The browser is told `{ staff, expiresAt }`, never the token.
+4. `GET /api/builder/session` says who is signed in (a reload, a second tab) or
+   401. `DELETE` revokes the token at Django (`DELETE {apiBaseUrl}/builder/staff-session`
+   with the token as `StaffBearer`; a 401 or 404 means it is already revoked) and
+   expires the cookie. If Django cannot be asked, the cookie is still expired
+   and the request then fails with 502, so the token may live on until
+   `expiresAt`. A request without a session has nothing to revoke.
+5. Every future `/api/builder/**` route calls `requireBuilderStaff(event)`: 401
+   without a live session, else the staff member and an
+   `Authorization: StaffBearer <token>` header for the Django call.
+   (`StaffBearer`, not `Bearer`: Knox owns that keyword for customer tokens.)
 
-The editor runs on the store's host, where nobody is signed in as staff.
-`Content -> Edit storefront` in the store admin
-(`builder/admin_views.py`) mints a single-use ticket (Redis, one minute,
-`GETDEL` to spend it) and redirects to `/_builder?ticket=`. The storefront's
-server posts it to `POST /api/v1/builder/staff-session` and receives a
-`PlatformStaffToken` of scope `builder`: never renewed, ended at its expiry,
-and refused outside the builder's routes
-(`tenant/api_tokens.py`). The role and `is_staff` are re-checked on every
-request, so losing either ends a session at once. The storefront keeps the
-token in its own HttpOnly cookie, separate from the customer session.
+The shell page is a placeholder (a Nuxt UI dashboard frame, the staff name and
+a sign-out button); the editor replaces it.
 
 ## Invariants
 
-- **The storefront owns the block catalogue.** A new block or setting is one
-  storefront change; Django has no copy of a block's schema.
-- **No catalogue, no save.** A held copy outlives a failed revalidation; with
-  none held the write is refused.
-- **Releases and versions are immutable.** Only whole unreleased checkpoints
-  are ever deleted, by retention.
-- **Document content is never re-cased.** Its keys are the storefront's; only
-  the envelope is camelCased (`builder/rendering.py`).
-- **A staff session is short and narrow**: one ticket spends once, the token
-  is not renewed and works on the builder's routes only.
-- **A publish is atomic**: every document valid, one release, or nothing.
-- **The published read is a pure function of the release number and the
-  locale**, which is why its cache needs no purge.
+- A definition holds data, never a component; the server bundle carries no
+  rendering code for blocks.
+- The catalogue is a constant of the build: one answer for every store, its
+  hash the ETag. Django never saves without a catalogue.
+- Every object schema in the catalogue is closed.
+- `parseDocument` rebuilds nodes from the parse; unknown keys never reach a
+  component, and one bad node never takes a page down.
+- **Only `server/api/builder/**` and `builderSession.ts` may read the staff
+  cookie, and no builder route is cached.** The storefront's SSR and handler
+  caches hold anonymous renders, replayed to every visitor; a cached route that
+  read the cookie would serve one staff member's view to the next visitor
+  (`test/unit/source-rules/builder-session-is-private.spec.ts`).
+- `/_builder` is in no route rule: `isCachedSsrRoute` is false for it, so it
+  gets a per-request nonce CSP and `private, no-store`, and `robots: false`
+  keeps it out of indexes and the sitemap.
+- Reading the staff session never mints a cookie, and a cookie that holds no
+  live session is expired on the spot.
 
 ## Failure modes
 
-- **Storefront down at save time**: the editor's save answers 503; the draft
-  already stored is unchanged.
-- **A reference deleted after publish**: the page still renders, the storefront
-  shows the block empty; the next publish of that document is refused until the
-  reference is fixed.
-- **A block type bumped by a storefront deploy**: drafts at the old version are
-  refused at save and publish (`block_version_outdated`) until the editor
-  upgrades them; published versions keep rendering, because the storefront
-  upgrades them when it renders.
-- **Two editors**: the second save is refused with the first editor's name.
+| Symptom | Cause |
+|---|---|
+| A save is refused for an unknown type | The catalogue is empty or the block's file is missing: production serves an empty catalogue until blocks are defined |
+| The build or first test fails with `defineBlock(<type>): …` | A malformed declaration (type, version, upgrade chain or a pointer) |
+| The server fails to load with "is defined twice" or "allows … inside it" | Two blocks of one type, or an allowed child that is missing or not a `block` |
+| A page renders without a section and logs `node skipped` | An unknown or newer type, settings that fail the schema, a misplaced block or an upgrade that cannot run |
+| `/_builder` shows "You are not signed in" | No staff cookie: the editor was opened without a ticket, the session ended, or the cookie expired |
+| `/_builder` shows the link is no longer valid | Django answered `invalid_ticket`: the ticket expired, was already used, or was minted for another store |
 
 ## Source
 
-| File | Role |
+| File | What |
 |---|---|
-| `grooveshop-django-api/builder/models.py` | Documents, versions, releases, reference index |
-| `grooveshop-django-api/builder/services.py` | The only writer: save, checkpoint, restore, discard, publish, rollback, delete page |
-| `grooveshop-django-api/builder/validation.py` | Every rule, as pointer and code |
-| `grooveshop-django-api/builder/storefront.py` | The catalogue client |
-| `grooveshop-django-api/builder/references.py` | Reference existence and the index |
-| `grooveshop-django-api/builder/published.py` | The public read, cached per release |
-| `grooveshop-django-api/builder/views.py` | Staff and public routes |
-| `grooveshop-django-api/builder/rendering.py` | Parser and renderer that leave document keys alone |
-| `grooveshop-django-api/builder/scheduling.py` | Schedule, move, cancel, the sweep, acknowledging a failure |
-| `grooveshop-django-api/builder/tasks.py` | `run_due_publishes`, the per-store sweep |
-| `grooveshop-django-api/builder/emails.py` | `ops.builder_schedule_failed` |
-| `grooveshop-django-api/builder/media_services.py` | The media library's only writer |
-| `grooveshop-django-api/builder/media_api.py` | Library routes and the public resolve |
-| `grooveshop-django-api/builder/staff_session.py` | Ticket and builder session token |
-| `grooveshop-django-api/builder/session_api.py` | `POST` / `DELETE builder/staff-session` |
-| `grooveshop-django-api/builder/admin_views.py` | `Edit storefront` |
-| `grooveshop-django-api/tenant/api_tokens.py` | Token scope enforcement |
-| `grooveshop-django-api/core/storefront.py` | `base_url`, `StorefrontUnavailable` shared with `texts` |
-| `grooveshop-django-api/core/cache/surfaces.py` | The `builder` surface |
-| `grooveshop-django-api/tenant/signals.py` | `bump_generation_on_builder_release` |
-| `grooveshop-django-api/tenant/role_scopes.py` | Roles |
-| `grooveshop-django-api/settings.py` | `BUILDER_*` settings |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/defineBlock.ts` | `defineBlock` and its load-time checks |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/upgrade.ts` | `upgradeNode`, `parseVersionedType`, `BlockUpgradeError` |
+| `grooveshop-storefront-ui-node-nuxt/shared/types/builder.ts` | Definition, document and catalogue types |
+| `grooveshop-storefront-ui-node-nuxt/shared/constants/builder.ts` | Kinds, reference kinds, hydration modes, the depth cap, id and type patterns |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder-blocks.d.ts` | The `#builder-blocks` virtual module type |
+| `grooveshop-storefront-ui-node-nuxt/modules/builder-blocks/index.ts` | Collects `app/blocks/**/*.block.ts` into the virtual module |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderCatalogue.ts` | `buildBlockCatalogue`, the served document |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderDocument.ts` | `parseDocument` |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/catalogue.get.ts` | `GET /api/builder/catalogue` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/tenantBypass.ts` | The catalogue is tenant-free |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderSession.ts` | The staff cookie, `requireBuilderStaff` |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/session.post.ts` | Ticket exchange and sign-in |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/session.get.ts` | Who is signed in |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/session.delete.ts` | Sign-out |
+| `grooveshop-storefront-ui-node-nuxt/shared/constants/builderSession.ts` | The cookie name |
+| `grooveshop-storefront-ui-node-nuxt/shared/schemas/builderSession.ts` | Ticket body, Django's answer, the cookie's content |
+| `grooveshop-storefront-ui-node-nuxt/app/pages/_builder.vue` | The staff shell page |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Shell.vue` | The placeholder dashboard frame |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderSession.ts` | Ticket sign-in, session lookup, sign-out |
+| `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/builder-session-is-private.spec.ts` | Source rule: only the builder routes read the staff cookie |

@@ -191,7 +191,7 @@ templates, pages, each with a draft), immutable `BuilderVersion` and
 `BuilderRelease`, and the derived `BuilderReference` index. The block
 catalogue is the storefront's; `builder/services.py` is the only writer and a
 release moves the cache generation and the `builder` surface. Flow page:
-[Page builder](/dev/flows/page-builder); reference:
+[Page builder: documents and releases](/dev/flows/page-builder-data); reference:
 [Storefront page builder](/dev/django/reference/builder).
 
 ### `recommendation/`

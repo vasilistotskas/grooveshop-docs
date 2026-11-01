@@ -64,7 +64,7 @@ A section with no content does not show. For example, the carousel shows once yo
 | **Newsletter Signup** | The newsletter form. See [Newsletter subscriptions](/admin/customers/subscriptions). |
 | **Search Bar** | A product search box. |
 | **Business Hours** | Your opening hours, from the `BUSINESS_HOURS` setting. |
-| **Location Map** | Your shop on a map, from the `STORE_GEO_LAT` and `STORE_GEO_LNG` settings. |
+| **Location Map** | Your shop on a map, from the `STORE_GEO_LAT` and `STORE_GEO_LNG` settings. The map loads when the visitor presses «Show map»; it shows street detail in Greece and Cyprus. |
 | **Spacer**, **Divider** | Space or a line between sections. |
 
 The settings `RECENTLY_VIEWED_ENABLED`, `BUSINESS_HOURS`, `STORE_GEO_LAT` and `STORE_GEO_LNG` are under <span class="sidebar-path">Settings → Store Settings</span>.
