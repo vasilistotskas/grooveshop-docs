@@ -14,7 +14,8 @@ is made; staging stays on Mailpit. The code wins over this page.
 Source: `emails/transport.py`, `emails/resend.py`, `emails/sender.py`
 (`own_sender`), `tenant/credentials.py` (`tenant_resend_api_key`),
 `tenant/models.py` (`Tenant.resend_api_key`, `Tenant.resend_webhook_secret`),
-`settings.py` (`EMAIL_TRANSPORT`, `RESEND_API_KEY`), `docs/emails.md` in the
+`settings.py` (`EMAIL_TRANSPORT`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`),
+`emails/webhooks.py`, `emails/svix.py`, `emails/events.py`, `emails/suppression.py`, `docs/emails.md` in the
 Django repository, [Secrets](/dev/operations/secrets).
 
 ## Who sends through which team
@@ -102,6 +103,57 @@ The checklist:
 6. Watch the Resend dashboard for the first hour. The rollback is to set
    `EMAIL_TRANSPORT=smtp` again; nothing else changes.
 
+## The webhook
+
+Resend reports what became of a message (delivered, delayed, bounced, marked
+as spam, failed, suppressed) to a webhook, and the platform records it on the
+`EmailLog` row and keeps a suppression list. One endpoint path serves every
+host, `POST /resend/webhook/` (`emails/webhooks.py`); which host a team
+registers decides whose secret verifies it.
+
+| Team | Endpoint to register | Signing secret kept in |
+|---|---|---|
+| The platform's (platform mail and every store without its own domain) | `https://<platform host>/resend/webhook/` | `RESEND_WEBHOOK_SECRET`, sealed into `backend-secrets` with `kubeseal --merge-into` |
+| A store with its own team | `https://<that store's API host>/resend/webhook/` | the store's tenant row, "Resend webhook signing secret" in the platform admin |
+
+There is no fallback between the two: a store's host never accepts the
+platform's secret, and the platform host never accepts a store's. A host
+with no secret answers 503 and Resend retries until one is set, so register
+the endpoint after the secret exists.
+
+Subscribe each endpoint to **sent, delivered, delivery_delayed, bounced,
+complained, failed and suppressed**, and not to opened or clicked: the
+platform does not track opens or clicks. An event it does not act on is
+recorded and changes nothing.
+
+What each event does (the full table is in the Django repository's
+`docs/emails.md`):
+
+- `delivered`, `delivery_delayed`, `failed` and `suppressed` set the log
+  row's status; a temporary bounce counts as delayed. The status only moves
+  forward, because events arrive out of order.
+- A **permanent bounce** suppresses the address for every email. A **spam
+  complaint** suppresses it for marketing only and opts it out of every
+  marketing type, so a receipt still reaches a customer who complained about
+  a newsletter. A mail the platform would send to a suppressed address is
+  skipped and logged; a required one (a receipt, a security code) is also
+  logged as a warning.
+- The suppression list is per store (and one in `public` for the platform's
+  own mail), keeps only a hash and a masked address, and is kept until
+  removed. Resend keeps its own team-wide list as well, and no API removes an
+  address from it: a removal must be done in both places.
+
+Add the endpoint, save the secret, then send one real mail and look at its
+`EmailLog` row: the status moves to `delivered` and an event appears.
+
+### Rotating a signing secret
+
+Resend shows a new secret for an endpoint when you roll it. Save it in the
+place the table names, then roll it in Resend; while the old secret is still
+valid Resend signs with both, and the platform accepts either signature, so
+nothing is dropped. A store's secret is replaced on its tenant row, the
+platform's by `kubeseal --merge-into` and a sync.
+
 ## Key rotation
 
 - **A store's key or webhook secret**: create the new one in the store's
@@ -111,6 +163,20 @@ The checklist:
   sync, confirm one send, delete the old key.
 
 ## Failure modes
+
+- **The webhook answers 400.** The signature does not match (the wrong secret
+  for that host, a body changed on the way) or the timestamp is more than five
+  minutes old (a replay, or a server clock far off). Nothing about the
+  request is logged. Check the secret for the host the endpoint points at.
+- **The webhook answers 413.** The body is over 256 KB; Resend's events are
+  far smaller, so something else is posting.
+- **The webhook answers 503.** That host has no signing secret. Save it
+  (see the table above); Resend retries.
+- **An event never changes a row.** It matches a row only by both the `log`
+  tag and the provider id. An event whose row is not there yet is retried a
+  few times (a fast event can beat the send's own write of the id) and then
+  fails as a recorded task failure; one for a store that does not exist, or
+  for another store than the endpoint's own, is dropped with a warning.
 
 - **A store's mail is `failed` with `ResendNotConfigured`.** See the table:
   its own verified domain with no `resend_api_key`, or an empty

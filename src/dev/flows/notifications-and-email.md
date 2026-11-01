@@ -211,6 +211,24 @@ a connection error, a 5xx and a 429 are retried by the calling task; any
 other 4xx is permanent. Selecting `resend` while a store with its own verified domain has no key is refused: `migration_preflight` fails the deploy (`emails.E001`), the tenant admin refuses the save, and both dashboards flag the store. Production still sends over SMTP until the switch in
 [Resend setup](/dev/operations/resend) is made.
 
+### Provider events, the webhook and suppression
+
+What Resend reports about a message arrives at `POST /resend/webhook/`
+(`emails/webhooks.py`), mounted on every host. The delivery is verified on
+the raw body (`emails/svix.py`: HMAC-SHA256 over the id, timestamp and body,
+within a five-minute tolerance) with the secret of the host it reached: the
+store's own `Tenant.resend_webhook_secret` on a store's host, the platform's
+`RESEND_WEBHOOK_SECRET` on the platform host, never one for the other. The
+view then queues `emails.tasks.process_provider_event` and answers 200. The
+task routes the event by its signed `schema` tag (a store's endpoint speaks
+only for that store), finds the `EmailLog` row by both the `log` tag and the
+provider id, records the event once per `svix-id`, and moves the row's status
+forward only. A permanent bounce adds an `EmailSuppression` for every email, a
+spam complaint one for marketing only plus an `EmailOptOut`. `send_email` asks
+the list before it renders: a suppressed address gets a `skipped_suppressed`
+row, and a required mail to a fully suppressed address is also logged as a
+warning. Setup and failure modes: [Resend setup](/dev/operations/resend).
+
 ### Tenant branding
 
 Every email context is built by
@@ -581,6 +599,9 @@ so a staging refresh cannot email real customers. See
   never to `settings.ADMINS`; a store with no address skips them.
 - **Guests get email, not toasts.** `_load_order` drops an order with no
   `user_id`; the email uses `order.email`.
+- **A webhook delivery is verified on the raw body with the secret of the
+  host it reached, before anything is parsed**, and a store's secret can never
+  write into another store.
 - **A send leaves an `EmailLog` row whatever happens**, and no column of it
   holds an address, a body or a provider's error text.
 - **A store with its own verified domain never sends with the platform's
@@ -651,7 +672,8 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/emails/types.py`, `emails/registry.py` | `EmailType` and the catalogue of every email |
 | `grooveshop-django-api/emails/send.py`, `emails/render.py`, `emails/transport.py` | `send_email`, `render`, the one sender |
 | `grooveshop-django-api/emails/resend.py` | The Resend HTTP client: which team's key, the request, the error text |
-| `grooveshop-django-api/emails/log.py`, `emails/status.py`, `emails/tasks.py` | The `EmailLog` writes, the status enum, the retention sweep |
+| `grooveshop-django-api/emails/log.py`, `emails/status.py`, `emails/tasks.py` | The `EmailLog` writes, the status enum, the retention sweep and the event task |
+| `grooveshop-django-api/emails/webhooks.py`, `emails/svix.py`, `emails/events.py`, `emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
 | `grooveshop-django-api/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
 | `grooveshop-django-api/emails/preview.py` | The admin preview of any registered email |
 | `grooveshop-django-api/tenant/emails.py`, `core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
