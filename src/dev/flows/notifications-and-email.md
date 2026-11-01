@@ -144,7 +144,7 @@ marketing mail the recipient opted out of, renders through
 `emails.render.render` in the recipient's language, builds the headers and
 hands the message to `emails.transport`, the only module that builds one
 (`tests/unit/emails/test_only_transport_sends.py` fails for any other). The
-admin preview (`emails/preview.py`, Settings → Email Templates) calls the same
+admin preview (`emails/preview.py`, on an email's page under Settings → Emails) calls the same
 `render`: for a real order through `order.emails.preview_object`, which finds
 the refund, receipt, dispute or shipment the email is about, else from the
 type's `sample`. The preview is therefore the mail that is sent, subject and

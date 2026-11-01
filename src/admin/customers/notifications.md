@@ -70,10 +70,10 @@ Delete the notification. It disappears from every recipient's bell at once.
 - **Old notifications are removed.** On the 1st and 15th of each month, notifications created more than a year ago are deleted.
 - **Languages.** Fill in every language of the store. If one is missing, the customer sees the text in another language you filled in.
 - **Editing does not resend.** If you change a notification already sent, the customer sees the new text when they open the bell, with no new pop-up.
-- **Emails are set elsewhere**, under [Email templates](/admin/settings/email-templates).
+- **Emails are set elsewhere**, under [Emails](/admin/settings/emails).
 
 ## Related
 
 - [Users & addresses](/admin/customers/users-and-addresses)
 - [Favourites](/admin/customers/favourites)
-- [Email templates](/admin/settings/email-templates)
+- [Emails](/admin/settings/emails)

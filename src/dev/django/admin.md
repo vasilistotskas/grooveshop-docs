@@ -307,8 +307,8 @@ built per request because Unfold renders dropdown items unchecked:
 `ADMIN_OPS_LINKS` (Flower, Mailpit, Meilisearch, RabbitMQ, each only
 when its `ADMIN_*_URL` is set) for platform superusers, nothing for
 anyone else. The store tools it used to hold are sidebar entries in the
-store's **Settings** group: Email Templates (the preview in `emails/`) for
-`order.view_order`,
+store's **Settings** group (the email preview now lives on each email's page
+under Settings → Emails, `emails/admin.py`):
 Translations (Rosetta) where `core.rosetta_access.tenant_scoped_rosetta_access`
 allows it, Cache for `core.purge_cache` holders (store ADMIN and OWNER;
 STAFF may not change store settings).
