@@ -212,22 +212,28 @@ that the relay holds a DKIM key for that domain. Putting an unsignable
 address in `From` fails DMARC alignment and lands the mail in spam.
 
 Transactional mail carries `List-ID` and a `mailto:` `List-Unsubscribe`
-from `user/utils/subscription.py: build_transactional_list_headers`.
+from `emails/headers.py: build_transactional_list_headers`.
 `List-Unsubscribe-Post=One-Click` is deliberately omitted — there is no
 programmatic unsubscribe for a receipt, and advertising one without a
 matching endpoint penalises the sender.
 
-**Marketing mail** is different: the re-engagement email and the
-abandoned-cart reminder carry the full RFC 8058 pair
-(`build_list_unsubscribe_headers`) with a signed blanket unsubscribe URL
-(`generate_blanket_unsubscribe_link`). They belong to no subscription
-topic, so that link records the refusal on the account
-(`UserAccount.marketing_opted_out_at`, set by
-`user/views/subscription.py: _apply_unsubscribe` through
-`user/services/subscription.py: opt_out_of_marketing`), and both senders
-skip an opted-out account (`core/tasks.py: send_inactive_user_notifications`,
-`order/tasks.py: send_checkout_abandonment_emails`). A new marketing send
-starts from the same filter. A topic link ends only its topic.
+**Marketing mail** is different: every `Kind.MARKETING` type carries the
+full RFC 8058 pair (`emails/headers.py: build_list_unsubscribe_headers`)
+whose URL is `emails/optout.py: unsubscribe_url`, a signed, store-scoped
+token for that type. A mailbox provider POSTs it
+(`POST /api/v1/emails/unsubscribe/<token>`), which records `EmailOptOut`
+for that type only. A GET of the same URL never opts anyone out: it
+redirects to the storefront confirm page.
+
+A link in a mail BODY (today only the re-engagement email) is
+`optout.confirm_url`: the storefront page `/email/unsubscribe/<token>`,
+which does nothing on load (link scanners prefetch body links) and offers
+two buttons: "stop these emails" (the same POST) and "stop all marketing
+emails" (`POST /api/v1/emails/unsubscribe/<token>/all`, through
+`user/services/subscription.py: unsubscribe_from_all_marketing`: every
+marketing type, the account's `marketing_opted_out_at` and its active topic
+subscriptions). `send_email` reads `EmailOptOut` for every marketing send;
+no task filters on its own. See `grooveshop-django-api/docs/emails.md`.
 
 ### Language selection
 
@@ -598,11 +604,11 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/notification/migrations/0017_notification_link_storefront_path.py` | Link field change and the rewrite of existing links |
 | `grooveshop-storefront-ui-node-nuxt/app/components/User/NotificationsBell.vue` | Opens a notification path under the viewer's locale |
 | `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_operator_addresses` |
-| `grooveshop-django-api/user/utils/subscription.py` | `build_transactional_list_headers` |
+| `grooveshop-django-api/emails/headers.py` | `build_list_unsubscribe_headers`, `build_transactional_list_headers` |
 | `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
 | `grooveshop-django-api/order/emails.py` | The order email builders (subject, context), `ORDER_EMAIL_KINDS` |
 | `grooveshop-django-api/contact/tasks.py` | The store's contact-form and feedback notifications |
-| `grooveshop-django-api/user/views/subscription.py` | The unsubscribe endpoints and the account-level marketing opt-out |
+| `grooveshop-django-api/emails/views.py` | The unsubscribe endpoints (one-click, "all", and the GET redirect to the confirm page) |
 | `grooveshop-django-api/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
 | `grooveshop-django-api/order/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask` |
