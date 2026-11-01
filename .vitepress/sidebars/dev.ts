@@ -58,6 +58,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Agentic commerce', link: '/dev/flows/agentic-commerce' },
       { text: 'Analytics & consent', link: '/dev/flows/analytics-and-consent' },
       { text: 'Store-editable texts', link: '/dev/flows/store-texts' },
+      { text: 'Page builder foundation', link: '/dev/flows/page-builder' },
     ],
   },
   {
