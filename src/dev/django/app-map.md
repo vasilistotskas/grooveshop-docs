@@ -184,6 +184,16 @@ Merchant-editable storefront layouts, `NavigationMenu` and translatable
 default, and its Nitro cache key is `pageConfigNavigation`
 (`core/cache/surfaces.py`). Content pages seed unpublished.
 
+### `builder/`
+
+The storefront page builder: `BuilderDocument` (theme, section groups,
+templates, pages, each with a draft), immutable `BuilderVersion` and
+`BuilderRelease`, and the derived `BuilderReference` index. The block
+catalogue is the storefront's; `builder/services.py` is the only writer and a
+release moves the cache generation and the `builder` surface. Flow page:
+[Page builder](/dev/flows/page-builder); reference:
+[Storefront page builder](/dev/django/reference/builder).
+
 ### `recommendation/`
 
 `RecommendationSlot`, `RecommendationCandidate`, `RecommendationEvent`; the
