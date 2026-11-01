@@ -54,7 +54,7 @@ CronJob. One instance in the production namespace serves staging too; the
 data is identical and public.
 
 The refresh (`refresh.sh`) reads the newest key from
-`build-metadata.protomaps.dev/builds.json`, extracts the region
+`https://build-metadata.protomaps.dev/builds.json`, extracts the region
 (`region.geojson`, Natural Earth Greece + Cyprus, buffered) from the planet
 build over HTTP range requests (about 575 MB), verifies it, and
 renames it over the served file. `pmtiles serve` keys its cache on the file's
