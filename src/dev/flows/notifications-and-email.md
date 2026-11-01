@@ -235,6 +235,18 @@ marketing type, the account's `marketing_opted_out_at` and its active topic
 subscriptions). `send_email` reads `EmailOptOut` for every marketing send;
 no task filters on its own. See `grooveshop-django-api/docs/emails.md`.
 
+Only the customer lifts an opt-out, from the storefront account's email
+page ("Store emails", `app/composables/useEmailPreferences.ts` in both
+designs): `GET`/`PATCH /api/v1/user/email-preferences`
+(`user/views/email_preferences.py`, proxied by
+`server/api/user/email-preferences.{get,patch}.ts`) lists the marketing types
+the store sends (`emails/preferences.py: offered_types`) and applies the
+choices through `user/services/subscription.py: set_marketing_preferences`.
+Turning a type on splits a `*` row into one row per other type, so the other
+choices stand. The split writes a row for EVERY marketing type, offered or
+not, so a type the store does not send today keeps its opt-out and
+`marketing_opted_out_at` (cleared only when no row is left) stays set.
+
 ### Language selection
 
 `Order.language_code` is captured at creation from the active request
@@ -609,6 +621,12 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/order/emails.py` | The order email builders (subject, context), `ORDER_EMAIL_KINDS` |
 | `grooveshop-django-api/contact/tasks.py` | The store's contact-form and feedback notifications |
 | `grooveshop-django-api/emails/views.py` | The unsubscribe endpoints (one-click, "all", and the GET redirect to the confirm page) |
+| `grooveshop-django-api/user/views/email_preferences.py` | The customer's marketing email choices, the one place an opt-out is lifted |
+| `grooveshop-django-api/user/services/subscription.py` | `set_marketing_preferences` and `unsubscribe_from_all_marketing` |
+| `grooveshop-django-api/emails/preferences.py` | `offered_types`, the marketing types the store sends |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useEmailPreferences.ts` | The account's "Store emails" list and switches, for both designs |
+| `grooveshop-storefront-ui-node-nuxt/server/api/user/email-preferences.get.ts` | Proxy for `GET /api/v1/user/email-preferences` |
+| `grooveshop-storefront-ui-node-nuxt/server/api/user/email-preferences.patch.ts` | Proxy for `PATCH /api/v1/user/email-preferences` |
 | `grooveshop-django-api/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
 | `grooveshop-django-api/order/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask` |
