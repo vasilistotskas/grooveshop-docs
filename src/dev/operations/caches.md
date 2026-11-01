@@ -331,14 +331,23 @@ the patterns. That is why only a purge with `tenantConfig: true` moves it.
 ## Layer 4: media-stream image cache
 
 The media service keeps processed images in memory, Redis and on disk
-under the namespace `image:{tenantSchema}`. Django's
+under the namespace `image:{tenantSchema}`, and keeps every rendition in a
+Cloudflare R2 bucket (S3 API, EU jurisdiction) that every replica shares, so a
+restart or a deploy loses nothing; Redis is full by design and evicts, so it
+cannot be the durable copy. Every call to the bucket has a deadline and fails
+to a miss or to serving the image uncached, so an outage of the bucket costs a
+request an encode, never a broken image. What is stored is a finite set of
+presets, and the renditions of an upload are made ahead of time (see
+[Media stream reference: renditions](/dev/media/reference/renditions)).
+Django's
 `PROTECTED_FRAGMENTS` includes `image:` so a surface purge never touches
 it. The flush is per tenant: `POST /admin/cache/flush-tenant` with body
 `{"tenantSchema": "<schema>"}` and the `x-internal-secret` header
 (`src/MediaStream/Cache/controllers/admin-cache.controller.ts`, guarded by
 `InternalSecretGuard`, secret `INTERNAL_ADMIN_SECRET`). It invalidates
-every cache layer and sweeps the on-disk `.rsm` / `.rsc` pairs, because
-the disk tier is read directly and would otherwise resurrect the entry.
+every cache layer and deletes the tenant's objects from the rendition store
+(the R2 bucket, prefix `{schema}/`), because the store is read directly and
+would otherwise resurrect the entry.
 Django calls it from `tenant/media_flush.py` through
 `tenant.tasks.flush_tenant_media_task`, using `MEDIA_STREAM_INTERNAL_URL`
 and `MEDIA_STREAM_INTERNAL_SECRET`; suspending a tenant
@@ -359,13 +368,13 @@ same way (`Cache/services/tenant-flush.service.ts`). The response carries
 count when healthy. Pub/sub is fire-and-forget, so a pod that is down or
 reconnecting at that moment misses it.
 
-Each pod clears its tiers **bottom-up**: disk, then Redis, then memory. A
+Each pod clears its tiers **bottom-up**: the store, then Redis, then memory. A
 tier can only be refilled from the tiers below it (memory from Redis, both
-from disk), so a request arriving mid-flush cannot copy a stale entry into
+from the store), so a request arriving mid-flush cannot copy a stale entry into
 a tier that is already done. Before each tier the pod advances a
 per-tenant epoch (`TenantCacheEpochs`); a request records the epoch when
 it starts, and every write that could put an entry back (the processed
-result, a disk-hit backfill, the Redis-to-memory backfill, cache warming)
+result, a store-hit backfill, the Redis-to-memory backfill)
 is skipped when the epoch has moved and removed again when it moves during
 the write. A request already running still answers with its own result,
 and a request that starts after the flush never joins work that began

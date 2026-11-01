@@ -166,7 +166,7 @@ admission control and per-resource deduplication.
 | Nuxt SWR pages | Nitro cache | `varies: ['host', 'x-device-class', 'x-tenant-epoch']` (`CACHED_PAGE_VARIES`) | Homepage, brand pages, blog and catalogue families (`nuxt.config.ts: routeRules`, `shared/constants/prerender.ts`); cached HTML is rendered anonymously by contract |
 | Gateway tenant config | Process memory 5 min, then Redis `ag:tenant:{host}`, then Django | host | Singleflight, negative cache, stale-if-error (`internal/tenant`) |
 | Gateway feeds and sessions | Redis | `ag:{schema}:...` | Feeds have fresh and stale TTLs; checkout sessions expire after a day |
-| Media stream | Memory, then Redis, then disk `.rsc`/`.rsm` pairs | `image:{schema}:…` from `Cache/utils/cache-namespace.util.ts: imageNamespace` | Per-tenant flush via `POST /admin/cache/flush-tenant` with the internal secret |
+| Media stream | Memory, then Redis, then the rendition store (an R2 bucket) | `image:{schema}:…` from `Cache/utils/cache-namespace.util.ts: imageNamespace` | Per-tenant flush via `POST /admin/cache/flush-tenant` with the internal secret |
 
 Purging procedures are in [Caches & purging](/dev/operations/caches).
 
