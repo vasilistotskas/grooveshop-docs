@@ -29,15 +29,16 @@ through Nuxt.
 - Process synchronously with admission control, per-resource
   deduplication and a per-pipeline timeout; overload answers 503 with
   `Retry-After` rather than the default image (`Processing/`).
-- Answer every request with a bounded rendition preset (the width snapped up
-  to a ladder, the quality to a few steps; no URL is refused for its size),
+- Answer every request with a bounded rendition preset (the storefront's own
+  sizes exactly, any other size snapped up to a ladder; no URL is refused for
+  its size),
   keep the renditions in an R2 bucket every replica shares (bounded calls
   that fail to a miss), and render an
   upload's renditions before anyone asks, as background work that yields to
   requests (`Renditions/`, `common/utils/rendition.util.ts`; see
   [renditions](/dev/media/reference/renditions)).
 - Cache under the `image:{schema}:…` namespace in memory and Redis, with
-  `.rsc`/`.rsm` pairs on disk, and flush one tenant on every replica on
+  every rendition in an R2 bucket (the rendition store), and flush one tenant on every replica on
   request (`POST /admin/cache/flush-tenant` with `x-internal-secret`; the
   pod that takes it broadcasts over Redis pub/sub) (`Cache/`, `Storage/`).
   Originals are read only here: the static host redirects every public

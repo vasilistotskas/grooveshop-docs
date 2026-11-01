@@ -345,8 +345,9 @@ it. The flush is per tenant: `POST /admin/cache/flush-tenant` with body
 `{"tenantSchema": "<schema>"}` and the `x-internal-secret` header
 (`src/MediaStream/Cache/controllers/admin-cache.controller.ts`, guarded by
 `InternalSecretGuard`, secret `INTERNAL_ADMIN_SECRET`). It invalidates
-every cache layer and sweeps the on-disk `.rsm` / `.rsc` pairs, because
-the disk tier is read directly and would otherwise resurrect the entry.
+every cache layer and deletes the tenant's objects from the rendition store
+(the R2 bucket, prefix `{schema}/`), because the store is read directly and
+would otherwise resurrect the entry.
 Django calls it from `tenant/media_flush.py` through
 `tenant.tasks.flush_tenant_media_task`, using `MEDIA_STREAM_INTERNAL_URL`
 and `MEDIA_STREAM_INTERNAL_SECRET`; suspending a tenant
@@ -367,13 +368,13 @@ same way (`Cache/services/tenant-flush.service.ts`). The response carries
 count when healthy. Pub/sub is fire-and-forget, so a pod that is down or
 reconnecting at that moment misses it.
 
-Each pod clears its tiers **bottom-up**: disk, then Redis, then memory. A
+Each pod clears its tiers **bottom-up**: the store, then Redis, then memory. A
 tier can only be refilled from the tiers below it (memory from Redis, both
-from disk), so a request arriving mid-flush cannot copy a stale entry into
+from the store), so a request arriving mid-flush cannot copy a stale entry into
 a tier that is already done. Before each tier the pod advances a
 per-tenant epoch (`TenantCacheEpochs`); a request records the epoch when
 it starts, and every write that could put an entry back (the processed
-result, a disk-hit backfill, the Redis-to-memory backfill, cache warming)
+result, a store-hit backfill, the Redis-to-memory backfill)
 is skipped when the epoch has moved and removed again when it moves during
 the write. A request already running still answers with its own result,
 and a request that starts after the flush never joins work that began
