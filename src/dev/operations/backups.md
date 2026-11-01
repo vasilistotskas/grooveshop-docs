@@ -145,8 +145,15 @@ What exists:
 - `core.tasks.monitor_system_health` every 30 minutes: database, cache
   round-trip, Redis persistence status (`CustomCache.failing_persistence_statuses()`),
   and the rest of the health checks. Any failed check mails `ADMINS`
-  (`ADMIN_EMAIL`) and raises, so the task shows failed in Flower. The
-  interval is the throttle: a sustained outage costs two mails an hour.
+  (`ADMIN_EMAIL`) with the `platform.health_alert` email, in the platform's
+  language and from the platform's sender, and raises, so the task shows
+  failed in Flower. A failed send of the alert is logged and never hides
+  the failure. The interval is the throttle: a sustained outage costs two
+  mails an hour.
+- `core.tasks.scheduled_database_backup` mails `ADMINS` the
+  `platform.backup_failed` email when it cannot dispatch the backup chain,
+  then re-raises. It says nothing about a dump that fails later, inside
+  `backup_database_task`.
 - VictoriaLogs (`app-victoria-logs`) for log search; Argo CD notifications
   for sync events (`manifests/app-constructs/argocd/argocd-notifications-cm-patch.yaml`).
 - Flower for task state, behind basic-auth.

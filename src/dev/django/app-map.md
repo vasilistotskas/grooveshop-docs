@@ -51,9 +51,7 @@ Shared infrastructure, no domain models of its own except `Translation`
 (`core/utils/serializers.py`, `core/api/schema.py`), filters, pagination,
 managers, custom fields, the Celery app (`core/celery.py`), system tasks
 (`core/tasks.py`), the cache backend (`core/caches.py`) and the cache
-surface registry (`core/cache/`), middleware (`core/middleware/`), the
-email template registry and preview (`core/email/`), and the root URL
-conf. Covered by [Base classes & patterns](/dev/django/patterns),
+surface registry (`core/cache/`), middleware (`core/middleware/`), and the root URL conf. Covered by [Base classes & patterns](/dev/django/patterns),
 [API conventions](/dev/django/api-conventions),
 [Celery](/dev/django/celery) and [Caches](/dev/operations/caches).
 

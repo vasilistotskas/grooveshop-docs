@@ -307,7 +307,8 @@ built per request because Unfold renders dropdown items unchecked:
 `ADMIN_OPS_LINKS` (Flower, Mailpit, Meilisearch, RabbitMQ, each only
 when its `ADMIN_*_URL` is set) for platform superusers, nothing for
 anyone else. The store tools it used to hold are sidebar entries in the
-store's **Settings** group: Email Templates for `order.view_order`,
+store's **Settings** group: Email Templates (the preview in `emails/`) for
+`order.view_order`,
 Translations (Rosetta) where `core.rosetta_access.tenant_scoped_rosetta_access`
 allows it, Cache for `core.purge_cache` holders (store ADMIN and OWNER;
 STAFF may not change store settings).
@@ -380,9 +381,9 @@ edge zone. See [Caches & purging](/dev/operations/caches).
   and the footer (above).
 - `core/templates/admin/index.html`, `platform_index.html` and
   `admin/dashboard/`: the dashboards.
-- `core/templates/admin/clear_cache.html`,
-  `email_template_management.html` (+ `email_templates/preview.html`,
-  the htmx preview fragment), `platform_billing.html`: custom pages.
+- `core/templates/admin/clear_cache.html`, `platform_billing.html`: custom
+  pages. The email pages (switches, preview and the htmx preview fragment) are
+  in `emails/templates/admin/emails/`.
 - `admin/order/order_summary.html`, `product/apply_discount.html`,
   `product/stock_history.html`, `tenant/destroy_confirmation.html`.
 

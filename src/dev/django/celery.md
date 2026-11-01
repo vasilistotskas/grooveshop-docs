@@ -248,8 +248,8 @@ callbacks immediately. A test therefore sees the full signal cascade of an
    signal handler or service, never inline.
 4. Write the unit test against the task function; eager mode means no
    broker is needed.
-5. For anything user-visible, register the email in `core/email/registry.py`
-   and follow [Notifications & email](/dev/flows/notifications-and-email).
+5. For anything user-visible, declare the email as an email type in the app's
+   `emails.py`, send it through `send_email`, and follow [Notifications & email](/dev/flows/notifications-and-email).
 
 ## Failure modes
 
