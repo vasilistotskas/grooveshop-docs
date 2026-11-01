@@ -156,8 +156,11 @@ it from Django's admin, which mints a **single-use ticket**.
    `Max-Age` of the time left to `expiresAt`. It is separate from the customer
    session. The browser is told `{ staff, expiresAt }`, never the token.
 4. `GET /api/builder/session` says who is signed in (a reload, a second tab) or
-   401; `DELETE` expires the cookie. Django's token is not revoked on sign-out
-   (there is no endpoint for it); it stays valid only until `expiresAt`.
+   401. `DELETE` revokes the token at Django (`DELETE {apiBaseUrl}/builder/staff-session`
+   with the token as Bearer; a 401 or 404 means it is already revoked) and
+   expires the cookie. If Django cannot be asked, the cookie is still expired
+   and the request then fails with 502, so the token may live on until
+   `expiresAt`. A request without a session has nothing to revoke.
 5. Every future `/api/builder/**` route calls `requireBuilderStaff(event)`: 401
    without a live session, else the staff member and an
    `Authorization: Bearer <token>` header for the Django call.
