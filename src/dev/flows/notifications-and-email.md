@@ -197,13 +197,13 @@ logo **only** for the platform tenant, and an empty string otherwise — the
 base template then renders the store name as a text wordmark, so an
 unbranded tenant's mail never wears another store's brand.
 
-Envelope addressing comes from `tenant/credentials.py: tenant_from_email`,
+Envelope addressing comes from `emails/sender.py: from_address`,
 and the sending domain decides it, not the merchant's preference. A tenant
 whose own domain is verified on the relay — `Tenant.from_email` set **and**
 `Tenant.from_email_verified` ticked — sends as `"{store name}" <from_email>`.
 Every other tenant sends as `"{store name}" <DEFAULT_FROM_EMAIL>`: the
 platform envelope the relay can sign, with the merchant's brand in the
-sender line and their own address in `Reply-To` via `tenant_reply_to`.
+sender line and their own address in `Reply-To` via `store_reply_to`.
 
 `from_email_verified` **is** the safety property, which is why it is
 platform-only and absent from `TENANT_SELF_EDITABLE_FIELDS` — a store
@@ -615,7 +615,8 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/user/emails.py` | the 19 allauth email types, `AllauthMail`, `ALLAUTH_TYPES`, link localization |
 | `grooveshop-django-api/notification/migrations/0017_notification_link_storefront_path.py` | Link field change and the rewrite of existing links |
 | `grooveshop-storefront-ui-node-nuxt/app/components/User/NotificationsBell.vue` | Opens a notification path under the viewer's locale |
-| `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_operator_addresses` |
+| `grooveshop-django-api/emails/sender.py` | `from_address`, `reply_to`, `store_reply_to` |
+| `grooveshop-django-api/emails/recipients.py` | `store_operators`, `store_operator_addresses` (the store's own inbox list) |
 | `grooveshop-django-api/emails/headers.py` | `build_list_unsubscribe_headers`, `build_transactional_list_headers` |
 | `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
 | `grooveshop-django-api/order/emails.py` | The order email builders (subject, context), `ORDER_EMAIL_KINDS` |
