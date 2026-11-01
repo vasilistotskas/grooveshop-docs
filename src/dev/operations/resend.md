@@ -57,30 +57,50 @@ platform's own `RESEND_API_KEY` only.
 
 ## Switch production from SMTP to the HTTP API
 
-Do this once, after the platform's team exists, and verify one live send
-before leaving it on.
+The order matters, and the platform enforces it: the switch is guarded three
+ways while `EMAIL_TRANSPORT=resend`.
 
-1. Create the platform team's key (sending access on the platform sender
+- **Deploy guard.** `migration_preflight`, step 0 of the PreSync hook, runs
+  the database system checks first. `emails.E001` is an error naming every
+  active, not suspended store that sends from its own verified domain and
+  has no Resend key, so the hook fails before any pod rolls and the previous
+  release keeps sending over SMTP. Nothing is half-switched.
+- **Save-time validation.** The tenant admin refuses to save such a store
+  (ticking From Email verified without a key, or clearing the key of a
+  verified store), with the error on the Resend API key field.
+- **Dashboards.** The platform dashboard lists each such store ("Emails
+  can't be sent from the store's domain until its Resend key is saved") and the store's
+  own dashboard tells its owner and admins that its emails are not being sent
+  and to contact support.
+
+The checklist:
+
+1. For **each store on its own verified domain** (webside today): create its
+   team and key as above and save the key on its tenant row. The save-time
+   validation does not apply yet (the transport is still `smtp`), so check the
+   store's page yourself; the deploy guard in step 4 is what proves it.
+2. Create the platform team's key (sending access on the platform sender
    domain) and seal it as `RESEND_API_KEY` into `backend-secrets` with
    `kubeseal --merge-into`, never a full `seal.sh` run (it rebuilds the whole
-   Secret from the plaintext). Sync the SealedSecret **before** the setting
+   Secret from the plaintext). Sync that SealedSecret **before** the setting
    below: a production process with `EMAIL_TRANSPORT=resend` and no key
    refuses to start, and the PreSync hook is such a process.
-2. Set `EMAIL_TRANSPORT=resend` on the backend, worker, beat and flower
+3. Set `EMAIL_TRANSPORT=resend` on the backend, worker, beat and flower
    containers (the same four that carry the relay settings). `settings.py`
    then requires `RESEND_API_KEY` and no longer requires
    `EMAIL_HOST_PASSWORD`.
-3. Send one real mail (a test store's order or a password reset) and check,
-   in the Resend dashboard and the `EmailLog` row: the message exists with
-   the `schema` and `log` tags; `provider_message_id` equals the id Resend
-   shows; the customer list headers (`List-Unsubscribe`, and
+4. Deploy. If a verified store still has no key the PreSync hook fails with
+   `emails.E001` naming it: save its key (or set the transport back to
+   `smtp`) and sync again. Nothing has rolled.
+5. Send one real mail from each kind of store (a store on its own domain, a
+   store on the platform sender, a platform mail such as a password reset) and
+   check, in the Resend dashboard and the `EmailLog` row: the message exists
+   with the `schema` and `log` tags; `provider_message_id` equals the id
+   Resend shows; the customer list headers (`List-Unsubscribe`, and
    `List-Unsubscribe-Post` on a marketing mail) survived; the
    `Idempotency-Key` equals the row's uuid.
-4. Watch the Resend dashboard for the first hour. The rollback is to set
+6. Watch the Resend dashboard for the first hour. The rollback is to set
    `EMAIL_TRANSPORT=smtp` again; nothing else changes.
-
-Give every store on its own domain its key **before** the switch, or its
-mail fails (see the table above), and verify each of them with one send.
 
 ## Key rotation
 

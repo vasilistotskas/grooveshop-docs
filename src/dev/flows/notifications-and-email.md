@@ -208,7 +208,7 @@ domain uses the key on its `Tenant` row and, with none, fails instead of
 borrowing the platform's (the platform's team does not own that domain);
 every other store and every platform type uses `RESEND_API_KEY`. A timeout,
 a connection error, a 5xx and a 429 are retried by the calling task; any
-other 4xx is permanent. Production still sends over SMTP until the switch in
+other 4xx is permanent. Selecting `resend` while a store with its own verified domain has no key is refused: `migration_preflight` fails the deploy (`emails.E001`), the tenant admin refuses the save, and both dashboards flag the store. Production still sends over SMTP until the switch in
 [Resend setup](/dev/operations/resend) is made.
 
 ### Tenant branding
