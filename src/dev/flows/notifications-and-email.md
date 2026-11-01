@@ -215,8 +215,9 @@ other 4xx is permanent. Selecting `resend` while a store with its own verified d
 
 What Resend reports about a message arrives at `POST /resend/webhook/`
 (`emails/webhooks.py`), mounted on every host. The delivery is verified on
-the raw body (`emails/svix.py`: HMAC-SHA256 over the id, timestamp and body,
-within a five-minute tolerance) with the secret of the host it reached: the
+the raw body (`emails/webhooks.py`, through the Standard Webhooks library:
+HMAC-SHA256 over the id, timestamp and body, within a five-minute tolerance)
+with the secret of the host it reached: the
 store's own `Tenant.resend_webhook_secret` on a store's host, the platform's
 `RESEND_WEBHOOK_SECRET` on the platform host, never one for the other. The
 view then queues `emails.tasks.process_provider_event` and answers 200. The
@@ -673,7 +674,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/emails/send.py`, `emails/render.py`, `emails/transport.py` | `send_email`, `render`, the one sender |
 | `grooveshop-django-api/emails/resend.py` | The Resend HTTP client: which team's key, the request, the error text |
 | `grooveshop-django-api/emails/log.py`, `emails/status.py`, `emails/tasks.py` | The `EmailLog` writes, the status enum, the retention sweep and the event task |
-| `grooveshop-django-api/emails/webhooks.py`, `emails/svix.py`, `emails/events.py`, `emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
+| `grooveshop-django-api/emails/webhooks.py`, `emails/events.py`, `emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
 | `grooveshop-django-api/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
 | `grooveshop-django-api/emails/preview.py` | The admin preview of any registered email |
 | `grooveshop-django-api/tenant/emails.py`, `core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |

@@ -15,7 +15,7 @@ Source: `emails/transport.py`, `emails/resend.py`, `emails/sender.py`
 (`own_sender`), `tenant/credentials.py` (`tenant_resend_api_key`),
 `tenant/models.py` (`Tenant.resend_api_key`, `Tenant.resend_webhook_secret`),
 `settings.py` (`EMAIL_TRANSPORT`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`),
-`emails/webhooks.py`, `emails/svix.py`, `emails/events.py`, `emails/suppression.py`, `docs/emails.md` in the
+`emails/webhooks.py`, `emails/events.py`, `emails/suppression.py`, `docs/emails.md` in the
 Django repository, [Secrets](/dev/operations/secrets).
 
 ## Who sends through which team
