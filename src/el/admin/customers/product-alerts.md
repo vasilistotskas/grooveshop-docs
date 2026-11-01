@@ -53,5 +53,5 @@ description: Οι ειδοποιήσεις «επαναφορά αποθέματ
 
 - [Αγαπημένα](/el/admin/customers/favourites)
 - [Προϊόντα](/el/admin/catalog/products)
-- [Πρότυπα email](/el/admin/settings/email-templates)
+- [Email](/el/admin/settings/emails)
 - [Πότε καλώ την υποστήριξη](/el/admin/help/contact-support)
