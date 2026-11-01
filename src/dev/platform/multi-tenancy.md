@@ -152,7 +152,7 @@ distinguishes two classes on purpose:
 
 Outbound mail keeps the platform sender in `From` with the store name as
 display name and puts the tenant's address in `Reply-To`, because only the
-platform domain is SPF/DKIM-authorised on the relay (`tenant_from_email`).
+platform domain is SPF/DKIM-authorised on the relay (`emails.sender.from_address`).
 The ACP bearer and the chat key are served to the gateway only through the
 internal-token resolve path, and every secret field is excluded from the
 `Tenant` audit history.

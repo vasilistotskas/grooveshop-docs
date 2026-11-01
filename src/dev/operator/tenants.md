@@ -281,7 +281,7 @@ not delivered and outbound mail carries no `Reply-To`.
 
 `from_email` is the store's **proposed** sender address and it is inert on
 its own — it takes effect only once `from_email_verified` is ticked.
-`tenant/credentials.py: tenant_from_email` reads the pair and produces one
+`emails/sender.py: from_address` reads the pair and produces one
 of three `From` headers:
 
 | Condition | `From` |
@@ -476,7 +476,8 @@ a common bug:
 |---|---|
 | `grooveshop-django-api/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, `ThemePreset`, `TailwindColor`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
 | `grooveshop-django-api/tenant/validators.py` | `validate_theme_metadata`, `validate_available_locales`, `validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES` |
-| `grooveshop-django-api/tenant/credentials.py` | The credential helpers and the no-fallback rule; `tenant_from_email` |
+| `grooveshop-django-api/tenant/credentials.py` | The credential helpers and the no-fallback rule |
+| `grooveshop-django-api/emails/sender.py` | `from_address`, which reads `from_email` and `from_email_verified` |
 | `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, `PLATFORM_ONLY_APP_LABELS` |
 | `grooveshop-django-api/tenant/admin.py` | `TenantAdmin` fieldsets, `get_queryset`, `get_readonly_fields`, `get_inlines`, `get_actions`, `self_service_tenant` |
 | `grooveshop-django-api/tenant/permissions.py` | `IsTenantFeatureEnabled` and `IsSettingEnabled` subclasses |

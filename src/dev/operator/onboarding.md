@@ -265,7 +265,7 @@ Two traps:
   the platform ticks `from_email_verified`, which may be done **after**
   the store's sending domain is authenticated on the mail relay — SPF and
   DKIM published and confirmed. Until then
-  `tenant/credentials.py: tenant_from_email` builds
+  `emails/sender.py: from_address` builds
   `"{store name}" <DEFAULT_FROM_EMAIL>` and the merchant's own address
   rides in `Reply-To`, which is `contact_email`. Ticking the flag early
   makes every message from that store fail DMARC, so onboarding leaves it
@@ -492,7 +492,7 @@ and manifests, these parts of it are wrong today:
 
 | It says | Actually |
 |---|---|
-| Set `defaultFromEmail` so outbound email shows the tenant's address; verify the `From:` header matches | There is no `defaultFromEmail` field. `Tenant.from_email` is honoured only once the platform ticks `from_email_verified` — until then mail goes out as `DEFAULT_FROM_EMAIL` with the store name as display name, for DMARC alignment (`tenant/credentials.py: tenant_from_email`) |
+| Set `defaultFromEmail` so outbound email shows the tenant's address; verify the `From:` header matches | There is no `defaultFromEmail` field. `Tenant.from_email` is honoured only once the platform ticks `from_email_verified` — until then mail goes out as `DEFAULT_FROM_EMAIL` with the store name as display name, for DMARC alignment (`emails/sender.py: from_address`) |
 | The ingress template produces four Ingress objects | Five — the contact-attachment body-limit router was added, and every chain now includes `compress-responses` |
 | OAuth uses a single platform-level client; per-tenant apps would need a migration | Per-tenant `SocialApp` rows already work, keyed on the Site row `ensure_site` creates |
 | Register `https://<domain>/auth/callback/<provider>` | The callback is allauth's, on the **API** host: `https://api.<domain>/accounts/<provider>/login/callback/` |
@@ -524,7 +524,8 @@ Applications.
 | `grooveshop-django-api/tenant/admin.py` | `TenantAdmin.save_related` provisioning, `provision_stripe_webhook` action |
 | `grooveshop-django-api/tenant/models.py` | `Tenant` fields, `TenantPlan`, `StoreVertical`, `TenantDomain`, `available_locales`, `stripe_connect_account_id` |
 | `grooveshop-django-api/tenant/validators.py` | `validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES` |
-| `grooveshop-django-api/tenant/credentials.py` | Fallback policy, `tenant_from_email`, `tenant_contact_email` |
+| `grooveshop-django-api/tenant/credentials.py` | Fallback policy, `tenant_contact_email` |
+| `grooveshop-django-api/emails/sender.py` | `from_address`, the `From` of every email |
 | `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, why `default_currency` is platform-only |
 | `grooveshop-django-api/tenant/views.py` | `tenant_resolve` payload and the internal-token variant |
 | `grooveshop-django-api/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app`, `pre_login` |
