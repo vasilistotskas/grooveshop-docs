@@ -17,6 +17,7 @@ front door to the same Django API for machines instead of browsers.
 flowchart LR
   Browser --> Nuxt["Nuxt SSR :3000"]
   Browser -- "images" --> Media["Media stream :3003"]
+  Browser -- "map tiles" --> Maps["Tile server :8080"]
   Browser -- "ws/notifications" --> Django
   Agents["AI agents"] --> Gateway["Agent gateway :8080"]
   Nuxt -- "/api/v1 with X-Forwarded-Host" --> Django["Django API :8000"]
@@ -42,7 +43,9 @@ flowchart LR
   the gateway and everything else to Nuxt
   (`grooveshop-infrastructure/.../overlays/production/tenants/TEMPLATE/ingress.yaml`).
 - The API host (`api.<tenant domain>`) goes straight to Django; the asset
-  hosts go to the media stream and the static nginx.
+  hosts go to the media stream and the static nginx; `maps.grooveshop.space`
+  goes to the tile server (`pmtiles serve` over a Protomaps extract), which
+  every storefront map reads ([Maps](/dev/operations/maps)).
 - Redis is one instance with separate logical databases: Django cache,
   the Nuxt Nitro cache (`NUXT_REDIS_DB` in `frontend-config.yaml`), the
   gateway (`agent-gateway.yaml`), the media stream.
@@ -179,6 +182,7 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 | Media stream | 3003 | `media-stream-service:80` | `pnpm run dev` |
 | Agent gateway | 8080 | `agent-gateway-service:80` | `go run ./cmd/gateway` |
 | Static nginx | 80 | `static-svc:80` | — |
+| Tile server | 8080 | `maps-tiles-svc:80` | `pmtiles serve` on an extract |
 | Meilisearch | 7700 | `app-grooveshop-meilisearch:7700` | compose |
 | Flower | 5555 | `celery-flower-service:80` | compose |
 
