@@ -38,7 +38,7 @@ sequenceDiagram
   DB->>Q: post_save signal
   Q->>CL: group_send tenant_schema_user_id
   CL->>B: send_notification frame
-  Q->>M: EmailMultiAlternatives
+  Q->>M: send_email via emails.transport
   B->>D: GET websocket ticket
   D-->>B: single-use ticket, 60s
   B->>CL: connect ws with ticket
@@ -127,43 +127,43 @@ tabs in step.
 
 ### The email system
 
-Templates live under `core/templates/emails/<category>/` as
-`.html` + `.txt` pairs, and `core/email/registry.py` discovers them by
-scanning the **filesystem**, not a configured list — a config that named
-three categories while nine directories existed had made twelve live
-templates invisible to the admin preview. `base/email_base.html` is the
-shared layout and is excluded.
+Every email is an **email type** (`emails/types.py: EmailType`), declared
+in its domain app's `emails.py` (`order/emails.py`, `product/emails.py`,
+`user/emails.py`, `tenant/emails.py`, ...) through `emails.declare`. A type
+names its template pair (`core/templates/emails/<directory>/<name>.html` and
+`.txt`), its subject (a gettext msgid with named fields), the builder that
+reads the domain for its context, a `sample` the preview renders, its
+recipients and its gates. `EmailsConfig.ready` collects the declarations and
+`emails.registry` refuses a type with no template pair, and a template file
+that no type names in a directory the catalogue uses, so a template cannot
+exist without a type. `base/email_base.html` is the shared layout.
 
-| Directory | Templates |
-|---|---|
-| `order/` | `order_received`, `order_payment_confirmed`, `payment_failed`, `order_shipped`, `order_delivered`, `order_completed`, `order_canceled`, `order_returned`, `order_refunded`, `order_status_generic`, `retail_document_issued`, `dispute_notification`, `admin_new_order`, `acs_out_for_delivery`, `boxnow_parcel_at_locker` |
-| `cart/` | `checkout_abandoned` |
-| `giftcard/` | `gift_card_delivery`, `gift_card_purchase_receipt`, `gift_card_expiry_reminder` |
-| `product/` | `price_drop_alert`, `restock_alert`, `low_stock_alert`, `review_pending` |
-| `b2b/` | `business_profile_approved`, `business_profile_rejected`, `admin_new_business_profile` |
-| `billing/` | `expiring`, `expired`, `suspended` |
-| `shipping_acs/` | `stale_shipments_alert` |
-| `user/` | `data_export_ready`, `inactive_user_email_template` |
-| `staff/` | `password_reset` |
-| `contact/` | `contact_notification`, `feedback_notification` |
-| `subscription/` | `confirmation` |
+A task never builds a message: it calls `emails.send.send_email(key, obj)`,
+which checks the gates and the store's switch, finds the recipients, skips a
+marketing mail the recipient opted out of, renders through
+`emails.render.render` in the recipient's language, builds the headers and
+hands the message to `emails.transport`, the only module that builds one
+(`tests/unit/emails/test_only_transport_sends.py` fails for any other). The
+admin preview (`emails/preview.py`, Settings → Email Templates) calls the same
+`render`: for a real order through `order.emails.preview_object`, which finds
+the refund, receipt, dispute or shipment the email is about, else from the
+type's `sample`. The preview is therefore the mail that is sent, subject and
+context included. The builders read the order's lines inside
+`translation.override`: parler fixes a model's language when the instance is
+created, so lines loaded before the override named every product in the
+worker's language. The full reference is the Django repository's
+`docs/emails.md`.
 
-A directory is listed in the admin preview only once it has a heading in
-`EmailTemplateConfig.DIRECTORY_HEADINGS` (`core/email/config.py`); a
-directory without one is logged and left out.
-
-**Order emails are built in one place.** `order/emails.py` has a builder
-per order email (`order_received_email`, `order_status_update_email`,
-`refund_confirmation_email`, ...). It returns an `OrderEmail`: the
-template, the translated subject, the context and the language. The
-sending task in `order/tasks.py` calls it and sends; the admin preview
-calls the same function for a real order (`ORDER_EMAIL_KINDS`), so the
-preview shows the subject and context the customer's email had, not a copy
-kept beside it. A template that no builder owns previews on sample data
-with no subject. The builders read the order's lines inside
-`translation.override`: parler fixes a model's language when the instance
-is created, so lines loaded before the override named every product in the
-worker's language.
+**The platform's own mail** (`Owner.PLATFORM`) is sent from the `public`
+schema whatever store is bound: the billing notices to a store's owner
+(`platform.billing_*`, in the store's default locale), the staff password
+reset (`platform.staff_password_reset`, in the asked store's language, with the
+link on the host that asked), and the operators' alerts to `ADMINS`
+(`platform.billing_stage_copy`, `platform.health_alert`,
+`platform.backup_failed`, in the platform's language). They carry the
+platform's name, logo and contact address and the sender `"{SITE_NAME}"
+<DEFAULT_FROM_EMAIL>`, are required (no switch), and are listed on no store's
+email page. `mail_admins` is not called anywhere in the project.
 
 **Account emails** (allauth: sign-in code, email confirmation, password
 reset, security notices, MFA and connected-account notices) are 19 email
@@ -606,8 +606,10 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/notification/views/websocket.py` | Ticket minting, TTL, Knox liveness check |
 | `grooveshop-django-api/core/middleware/channels.py` | `GETDEL` ticket consumption, tenant binding |
 | `grooveshop-django-api/asgi/__init__.py` | WebSocket routing and middleware stack |
-| `grooveshop-django-api/core/email/registry.py` | Filesystem template discovery |
-| `grooveshop-django-api/core/email/config.py` | Per-template metadata for the admin preview |
+| `grooveshop-django-api/emails/types.py`, `emails/registry.py` | `EmailType` and the catalogue of every email |
+| `grooveshop-django-api/emails/send.py`, `emails/render.py`, `emails/transport.py` | `send_email`, `render`, the one sender |
+| `grooveshop-django-api/emails/preview.py` | The admin preview of any registered email |
+| `grooveshop-django-api/tenant/emails.py`, `core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
 | `grooveshop-django-api/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
 | `grooveshop-django-api/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
 | `grooveshop-django-api/core/utils/tenant_urls.py` | `STOREFRONT_LOCALES`, `STOREFRONT_DEFAULT_LOCALE`, `storefront_locale_prefix`, `get_tenant_frontend_url`, `localize_storefront_url`, `storefront_path` |
@@ -618,7 +620,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/tenant/credentials.py` | `tenant_from_email`, `tenant_reply_to`, `tenant_operator_addresses` |
 | `grooveshop-django-api/emails/headers.py` | `build_list_unsubscribe_headers`, `build_transactional_list_headers` |
 | `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
-| `grooveshop-django-api/order/emails.py` | The order email builders (subject, context), `ORDER_EMAIL_KINDS` |
+| `grooveshop-django-api/order/emails.py` | The order email types and builders (subject, context), `ORDER_EMAIL_KEYS` |
 | `grooveshop-django-api/contact/tasks.py` | The store's contact-form and feedback notifications |
 | `grooveshop-django-api/emails/views.py` | The unsubscribe endpoints (one-click, "all", and the GET redirect to the confirm page) |
 | `grooveshop-django-api/user/views/email_preferences.py` | The customer's marketing email choices, the one place an opt-out is lifted |

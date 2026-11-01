@@ -125,20 +125,29 @@ stateDiagram-v2
 stage from dates alone. `run_billing_cycle()` then compares it with what
 has already been notified.
 
-| Stage | Fires when | Template (`core/templates/emails/billing/`) | Recipients |
+| Stage | Fires when | Email type (template in `core/templates/emails/billing/`) | Recipients |
 |---|---|---|---|
-| 1 | today is within `WARN_DAYS` of the term end | `expiring.html` / `.txt` | the tenant's `owner_email` |
-| 2 | today is past the term end | `expired.html` / `.txt` | owner, **plus** `mail_admins` |
-| 3 | today is past term end + `GRACE_DAYS` | `suspended.html` / `.txt` | owner, **plus** `mail_admins` |
+| 1 | today is within `WARN_DAYS` of the term end | `platform.billing_expiring` (`expiring`) | the tenant's `owner_email` |
+| 2 | today is past the term end | `platform.billing_expired` (`expired`) | owner, **plus** `platform.billing_stage_copy` to `ADMINS` |
+| 3 | today is past term end + `GRACE_DAYS` | `platform.billing_suspended` (`suspended`) | owner, **plus** `platform.billing_stage_copy` to `ADMINS` |
 
-The stage-to-template-and-copy map is `_STAGES` in `tenant/billing.py`.
-Subject lines come from `_stage_subject()`, built inside the caller's
-`translation.override(tenant.default_locale)` so the whole message renders
-in the store's own language; the sender is the platform's
-`DEFAULT_FROM_EMAIL`, not the merchant's address (`_send_stage_email`).
-The admin copy is a plain-text ops trail sent `fail_silently=True`, and it
-is a no-op when `ADMINS` is empty — `ADMINS` is built from the
-`ADMIN_EMAIL` environment variable in `settings.py`.
+Each is an email type of the platform (`Owner.PLATFORM`, declared in
+`tenant/emails.py`), sent through `send_email` under the `public` schema, so
+it is branded as the platform and never as a store; it is required, so no
+store's switch or the platform's can mute it. The stage-to-type-and-copy map
+is `_STAGES` in `tenant/billing.py`; `_send_stage_email` hands the pipeline a
+`BillingNotice` (the tenant row and the grace days). The subject is the
+type's msgid (`{store} — your plan expires on {date}`) and the whole message
+renders in `tenant.default_locale`, in the store's own language. The sender is
+the platform's named `"{SITE_NAME}" <DEFAULT_FROM_EMAIL>`, not the merchant's
+address.
+
+The operators' copy (`platform.billing_stage_copy`) is a template pair with
+a translated subject (`[{site}] Tenant billing stage {stage}: {schema}`) in
+the platform's language (`LANGUAGE_CODE`). A failure of the copy is logged and
+never fails the owner's notice it follows, and with `ADMINS` empty there is
+nobody to write to and it is skipped (`ADMINS` is built from the `ADMIN_EMAIL`
+environment variable in `settings.py`).
 
 ### How a run advances
 
@@ -327,7 +336,7 @@ it are in [Scheduled work & platform data](/dev/operator/background-jobs).
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/tenant/billing.py` | `billing_config`, `billing_state`, `target_stage`, `_STAGES`, `_stage_subject`, `_send_stage_email`, `run_billing_cycle` |
+| `grooveshop-django-api/tenant/billing.py` | `billing_config`, `billing_state`, `target_stage`, `_STAGES`, `_send_stage_email`, `run_billing_cycle` |
 | `grooveshop-django-api/tenant/models.py` | `TenantPlan`, `SuspendedReason`, the six billing fields and their `help_text` |
 | `grooveshop-django-api/tenant/lifecycle.py` | `suspend_tenant`, `activate_tenant`, `is_protected_tenant`, `SUSPEND_COOLDOWN` |
 | `grooveshop-django-api/tenant/signals.py` | `reactivate_on_renewal` |
