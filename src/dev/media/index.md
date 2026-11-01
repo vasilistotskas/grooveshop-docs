@@ -31,7 +31,8 @@ through Nuxt.
   `Retry-After` rather than the default image (`Processing/`).
 - Answer every request with a bounded rendition preset (the width snapped up
   to a ladder, the quality to a few steps; no URL is refused for its size),
-  keep the renditions on a volume every replica shares, and render an
+  keep the renditions in an R2 bucket every replica shares (bounded calls
+  that fail to a miss), and render an
   upload's renditions before anyone asks, as background work that yields to
   requests (`Renditions/`, `common/utils/rendition.util.ts`; see
   [renditions](/dev/media/reference/renditions)).
