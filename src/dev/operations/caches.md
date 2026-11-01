@@ -331,7 +331,14 @@ the patterns. That is why only a purge with `tenantConfig: true` moves it.
 ## Layer 4: media-stream image cache
 
 The media service keeps processed images in memory, Redis and on disk
-under the namespace `image:{tenantSchema}`. Django's
+under the namespace `image:{tenantSchema}`. The disk tier is a
+`ReadWriteMany` volume (`grooveshop-media-stream-renditions-pvc`) every
+replica mounts, so a restart or a deploy keeps it and one pod's rendition is
+served by the other; Redis is full by design and evicts, so it cannot be the
+durable copy. What is stored is a finite set of presets, and the renditions
+of an upload are made ahead of time (see
+[Media stream reference: renditions](/dev/media/reference/renditions)).
+Django's
 `PROTECTED_FRAGMENTS` includes `image:` so a surface purge never touches
 it. The flush is per tenant: `POST /admin/cache/flush-tenant` with body
 `{"tenantSchema": "<schema>"}` and the `x-internal-secret` header
