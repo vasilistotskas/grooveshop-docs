@@ -38,7 +38,7 @@ flowchart LR
   lockers into HTML `<button>` markers (keyboard and screen-reader reachable);
   a locker's popup emits it by `key`. `app/components/PageSection/LocationCanvas.client.vue`
   pins the store's location with cooperative gestures.
-- `NUXT_PUBLIC_MAPS_TILEJSON_URL` (`runtimeConfig.public.mapsTileJsonUrl`)
+- `NUXT_PUBLIC_MAPS_TILE_JSON_URL` (`runtimeConfig.public.mapsTileJsonUrl`)
   names the TileJSON; empty means no map renders and an error is logged.
   The CSP adds its origin to `connect-src` and `worker-src 'self'`
   (`shared/utils/csp.ts`).

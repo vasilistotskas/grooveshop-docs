@@ -138,7 +138,7 @@ emitted only when the tenant provisioned an id, and
 `allowedCspSources` from the `Tenant` row extends `script-src`, `img-src`,
 `connect-src` and `frame-src`. Payment iframes need every CDN hop in the
 policy. The maps need two entries: the origin of
-`NUXT_PUBLIC_MAPS_TILEJSON_URL` (the platform maps host) in `connect-src`,
+`NUXT_PUBLIC_MAPS_TILE_JSON_URL` (the platform maps host) in `connect-src`,
 where MapLibre's worker fetches the TileJSON and the tiles, and
 `worker-src 'self'` for that worker, a same-origin `/_nuxt/` file. No tile
 provider appears anywhere; see [Maps](/dev/operations/maps).
