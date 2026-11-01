@@ -99,6 +99,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Maps', link: '/dev/operations/maps' },
       { text: 'Secrets', link: '/dev/operations/secrets' },
       { text: 'Backups', link: '/dev/operations/backups' },
+      { text: 'Resend setup', link: '/dev/operations/resend' },
       { text: 'Data retention', link: '/dev/operations/data-retention' },
       { text: 'Monitoring & alerting', link: '/dev/operations/monitoring' },
     ],

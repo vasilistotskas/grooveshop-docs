@@ -17,6 +17,7 @@ Source: `core/retention.py`, `core/tasks.py`, `core/history.py`,
 (`CELERY_BEAT_SCHEDULE`, the retention constants, `EXTRA_SETTINGS_DEFAULTS`),
 `shipping_acs/tasks.py`, `shipping_boxnow/tasks.py`,
 `recommendation/tasks.py`, `order/tasks.py`, `meta_capi/tasks.py`, `contact/tasks.py`,
+`emails/tasks.py`,
 `search/tasks.py`, `search/middleware.py`.
 
 ## What is deleted
@@ -29,6 +30,7 @@ store's billing state does not pause a deletion the platform promised.
 |---|---|---|---|
 | Contact enquiries and feedback, with their files | per store | 365 days | store setting `CONTACT_RETENTION_DAYS` (0 keeps) |
 | Bytes of contact attachments | per store | 90 days | store setting `CONTACT_ATTACHMENTS_RETENTION_DAYS` |
+| Email log (`EmailLog`), with its provider events | per store and public | 90 days | store setting `EMAIL_LOG_RETENTION_DAYS` (0 keeps); the public schema reads its own row of the same setting. The suppression list is kept until removed |
 | Admin history (`django_admin_log`) | per store and public | 730 days | store setting `ADMIN_LOG_RETENTION_DAYS` (0 keeps); the public schema reads its own row of the same setting |
 | Search queries: personal columns blanked | per store | 90 days | none (weekly, `anonymize-old-search-queries`) |
 | Recommendation events | per store | 90 days | env `RECOMMENDATION_EVENT_RETENTION_DAYS`; startup fails when it is shorter than the learning window or an attribution window |
