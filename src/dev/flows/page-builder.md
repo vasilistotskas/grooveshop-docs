@@ -116,7 +116,30 @@ never purged.
 `builder` is in `STORE_SETTINGS_APP_LABELS` and `STAFF_READ_ONLY_APP_LABELS`
 (`tenant/role_scopes.py`): Admin and Owner edit and publish, Staff only look.
 
-### 8. The media library
+### 8. Scheduled publishing
+
+A publish can wait for a time (`builder/scheduling.py`,
+`BuilderScheduledPublish`). `POST /api/v1/builder/schedules` checks exactly
+what a publish checks, now, and **freezes** the drafts as versions held by the
+schedule, so what goes live is what was checked whatever is edited meanwhile; a
+time without an offset is read in the store's timezone. A beat task,
+`builder.tasks.run_due_publishes`, fans out per store every minute
+(`tenant/tasks.py: fanout_run_due_builder_publishes`) and releases each due
+schedule in its own transaction under the per-store release lock with
+`select_for_update`, the status change inside it, so a retry, an overlapping
+sweep or a second worker finds it spent. At that moment references are checked
+again and the documents must still exist; a schedule that can no longer be
+released is `failed` with the problems recorded, never half done. Otherwise it
+is the ordinary release, so the cache generation and the `builder` surface move
+then. A failure reaches a person: the store-staff email
+`ops.builder_schedule_failed` (`builder/emails.py`, listed on the store's Emails
+page, Greek and English) and a danger alert on the store dashboard
+(`admin/dashboard/store/widgets.py: StoreAlerts`) until someone acknowledges it
+(`POST schedules/<id>/acknowledge`, or the admin action in Content, Page
+builder, Scheduled publishes). Moving and cancelling a pending schedule is
+`PATCH` and `DELETE schedules/<id>`.
+
+### 9. The media library
 
 `MediaAsset` (`builder/models.py`) is an image in the store's library; an
 image setting is a `media` reference to its id, never a URL. The storefront
@@ -133,7 +156,7 @@ because a release is immutable and the media is resolved at render. The
 public `GET /api/v1/builder/media/resolve?ids=&locale=` answers only for
 assets the current release uses.
 
-### 9. Signing in to the editor
+### 10. Signing in to the editor
 
 The editor runs on the store's host, where nobody is signed in as staff.
 `Content -> Edit storefront` in the store admin
@@ -187,6 +210,9 @@ token in its own HttpOnly cookie, separate from the customer session.
 | `grooveshop-django-api/builder/published.py` | The public read, cached per release |
 | `grooveshop-django-api/builder/views.py` | Staff and public routes |
 | `grooveshop-django-api/builder/rendering.py` | Parser and renderer that leave document keys alone |
+| `grooveshop-django-api/builder/scheduling.py` | Schedule, move, cancel, the sweep, acknowledging a failure |
+| `grooveshop-django-api/builder/tasks.py` | `run_due_publishes`, the per-store sweep |
+| `grooveshop-django-api/builder/emails.py` | `ops.builder_schedule_failed` |
 | `grooveshop-django-api/builder/media_services.py` | The media library's only writer |
 | `grooveshop-django-api/builder/media_api.py` | Library routes and the public resolve |
 | `grooveshop-django-api/builder/staff_session.py` | Ticket and builder session token |
