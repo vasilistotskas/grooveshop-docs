@@ -58,6 +58,8 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Agentic commerce', link: '/dev/flows/agentic-commerce' },
       { text: 'Analytics & consent', link: '/dev/flows/analytics-and-consent' },
       { text: 'Store-editable texts', link: '/dev/flows/store-texts' },
+      { text: 'Page builder foundation', link: '/dev/flows/page-builder' },
+      { text: 'Page builder: documents and releases', link: '/dev/flows/page-builder-data' },
     ],
   },
   {
@@ -94,6 +96,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Deploying', link: '/dev/operations/deploying' },
       { text: 'Staging', link: '/dev/operations/staging' },
       { text: 'Caches & purging', link: '/dev/operations/caches' },
+      { text: 'Maps', link: '/dev/operations/maps' },
       { text: 'Secrets', link: '/dev/operations/secrets' },
       { text: 'Backups', link: '/dev/operations/backups' },
       { text: 'Resend setup', link: '/dev/operations/resend' },

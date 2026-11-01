@@ -101,6 +101,7 @@ tenant hostname must never appear as a platform default.
 | `assets.grooveshop.space` | The media stream, the default image origin | `overlays/production/ingress-platform-assets.yaml` |
 | `static.grooveshop.space` | Static nginx, the default static origin | same file |
 | `payments.grooveshop.space` | UCP payment-handler documents served by the gateway | `overlays/production/ingress-payments-handler.yaml` |
+| `maps.grooveshop.space` | The basemap's vector tiles for every storefront map, staging included (no `-staging` twin); see [Maps](/dev/operations/maps) | `overlays/production/maps/` |
 | `docs.grooveshop.space` | This site; `/dev` behind basic auth | `overlays/production/ingress-docs.yaml` |
 
 Staging twins carry a `-staging` suffix on the first label.
