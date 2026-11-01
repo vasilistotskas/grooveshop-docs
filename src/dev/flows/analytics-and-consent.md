@@ -95,6 +95,23 @@ All three setups are **client-only**. Since `@nuxt/scripts` 1.2 the registry's
 throwing during prerender, so each returns early on the server and the
 consumer composables fall back to a no-op proxy.
 
+### Pixels' automatic click tracking
+
+`setupMetaPixelConsent` calls `fbq('set', 'autoConfig', false, pixelId)`
+through the proxy, which replays it once the pixel loads. That opts the pixel
+out of Meta's automatic setup. Its `document` click listener read the tapped
+element's text and features on every tap: 120–196 ms of each tap on a
+6x-slowed phone profile, and the longest script in 9 of 140 slow-tap reports
+on webside (30 days to 2026-11-01). The store's own events, with their
+Conversions API event ids, are unaffected. Only the clicks Meta infers by
+itself (`SubscribedButtonClick`) stop.
+
+TikTok's equivalent cannot be turned off from code. Its `AutoClick` and
+`AutoConfig` plugins arrive enabled in the pixel's own configuration, set in
+TikTok Events Manager. Their `window` click listener cost 201–387 ms of each
+tap on the same profile, and was the longest script in 14 of those 140
+reports.
+
 ### The `trigger: 'manual'` re-arm rule
 
 This one is load-bearing and easy to undo.
