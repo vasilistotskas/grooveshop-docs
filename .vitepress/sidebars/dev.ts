@@ -94,6 +94,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Deploying', link: '/dev/operations/deploying' },
       { text: 'Staging', link: '/dev/operations/staging' },
       { text: 'Caches & purging', link: '/dev/operations/caches' },
+      { text: 'Maps', link: '/dev/operations/maps' },
       { text: 'Secrets', link: '/dev/operations/secrets' },
       { text: 'Backups', link: '/dev/operations/backups' },
       { text: 'Data retention', link: '/dev/operations/data-retention' },

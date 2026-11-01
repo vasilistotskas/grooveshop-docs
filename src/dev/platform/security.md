@@ -118,9 +118,9 @@ purpose.
 
 ## Content Security Policy in the storefront
 
-`shared/utils/csp.ts` is the single builder of the policy; it is a pure
-function so `server/middleware/3.csp.ts` (runtime SSR) and
-`nuxt.config.ts` (static route-rule headers) produce identical output. In
+`shared/utils/csp.ts` is the single builder of the policy, a pure function
+whose only consumer is `server/middleware/3.csp.ts`, which sets it on every
+HTML response. In
 production every uncached SSR response carries a per-request nonce with
 `'strict-dynamic'`, stamped onto the markup by `server/plugins/csp-nonce.ts`.
 Cached SWR pages and prerender passes are nonce-free, keeping
@@ -136,8 +136,12 @@ would switch `'unsafe-inline'` off. Per-tenant inputs come from `event.context.t
 `staticDomain` are added to `img-src` and `connect-src`, pixel origins are
 emitted only when the tenant provisioned an id, and
 `allowedCspSources` from the `Tenant` row extends `script-src`, `img-src`,
-`connect-src` and `frame-src`. Locker maps and payment iframes need every
-CDN hop in the policy.
+`connect-src` and `frame-src`. Payment iframes need every CDN hop in the
+policy. The maps need two entries: the origin of
+`NUXT_PUBLIC_MAPS_TILEJSON_URL` (the platform maps host) in `connect-src`,
+where MapLibre's worker fetches the TileJSON and the tiles, and
+`worker-src 'self'` for that worker, a same-origin `/_nuxt/` file. No tile
+provider appears anywhere; see [Maps](/dev/operations/maps).
 
 ## Ingress
 
@@ -145,7 +149,7 @@ Traefik middlewares in `grooveshop-infrastructure/.../base/`:
 
 | Middleware | Applied to |
 |---|---|
-| `redirect-https`, `security-headers` (HSTS, nosniff, frame deny, referrer and permissions policies) | Every host |
+| `redirect-https`, `security-headers` (HSTS, nosniff, frame deny, referrer and permissions policies; `geolocation=(self)` so the locker map can find the shopper, camera and microphone off) | Every host |
 | `rate-limit-api` | API hosts, asset hosts, the control plane, the docs |
 | `rate-limit-agent`, `rate-limit-chat` | The gateway paths on storefront hosts; chat is the strictest because it pays per token |
 | `limit-attachment-body` | The contact-attachment upload path |
