@@ -40,7 +40,7 @@ through Nuxt.
 - Cache under the `image:{schema}:…` namespace in memory and Redis, with
   every rendition in an R2 bucket (the rendition store), and flush one tenant on every replica on
   request (`POST /admin/cache/flush-tenant` with `x-internal-secret`; the
-  pod that takes it broadcasts over Redis pub/sub) (`Cache/`, `Storage/`).
+  pod that takes it broadcasts over Redis pub/sub) (`Cache/`).
   Originals are read only here: the static host redirects every public
   request for one to the media-stream URL of the same image. Cloudflare's
   copies of a suspended tenant's images are purged by Django; see
@@ -52,7 +52,7 @@ through Nuxt.
 
 All source lives under `src/MediaStream/`, one NestJS module per domain:
 `API`, `Cache`, `Config`, `Correlation`, `Health`, `HTTP`, `Metrics`,
-`Processing`, `RateLimit`, `Renditions`, `Storage`, `Validation`, plus `common/` helpers.
+`Processing`, `RateLimit`, `Renditions`, `Validation`, plus `common/` helpers.
 `common/utils/config-schema.util.ts` is the single source of truth for
 every configuration key and its environment variable.
 
