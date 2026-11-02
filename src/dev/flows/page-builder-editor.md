@@ -234,8 +234,11 @@ every design draws the preview with its own components and chrome.
   store's grids and gaps are unchanged, and it does not depend on a design
   passing attributes to its root; a shopper's page has none. A click on a
   section selects it (`pick`), whatever it was on; a selection made in the
-  outline is sent to the canvas (`select`), which brings it into view, and
-  keeps it in view when a move or a duplicate redraws the page. The canvas
+  outline is sent to the canvas (`select`), which brings it into view, its
+  top just under the store's pinned header (whatever is `sticky` or `fixed`
+  at the top of the viewport, measured there, in every design), and keeps it
+  in view when a move or a duplicate redraws the page. The canvas scrolls its
+  own window only. The canvas
   reports where the section under the pointer and the selected one are drawn
   (`boxes`, the box of each wrapper's contents, once per frame on every
   scroll, resize or redraw), and the editor draws their outlines and, over
