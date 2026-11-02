@@ -1,10 +1,10 @@
 {
   "django": {
-    "commit": "2cf49b744f968a70dec9ac3f64eec61af3b5048c",
-    "tree": "e29c366cc8395a28c69e6b2e13824c2b6f78bb7b"
+    "commit": "6afcf39f5bfd21d6e954dbe5485e16e2a6bf1491",
+    "tree": "be8e4c8ea337b95fb91cff2a26e10fdbf0391a5f"
   },
   "media": {
-    "commit": "3fbf0e16144e500a6086bfdf22175f8d26071b62",
-    "tree": "9948979d70d25a3375df41f7273a556d63349a96"
+    "commit": "e018981626c218179b12c84ffe4bc16d5b7dbd2a",
+    "tree": "3df3a5466acbb2608672f15fa2a0adb5e482d7f8"
   }
 }
