@@ -134,7 +134,47 @@ top bar and on Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z and Cmd/Ctrl+Y, never while a text
 field has focus, which keeps its own undo. Undoing a change of another page
 opens that page. STAFF get none of this.
 
-### 7. Settings
+### 7. Adding sections and blocks
+
+The add-section library (`Builder/Library.vue`) opens from the "+" of each
+document in the outline (a section at its end), from the selection's toolbar
+("Add below": a sibling right after it; "Add inside": a block at the end of a
+node that takes blocks), and later from the preview. Where it was opened is
+the library store's target (`useBuilderLibraryStore`: a document and a
+`BuilderInsertPoint`, a parent and an index).
+
+- **What it offers** (`builderLibraryOffers`, `app/utils/builderWorkingCopy.ts`):
+  at the top of a document, the sections that may sit there
+  (`builderPlacementAllowed`, `shared/builder/placement.ts`, a mirror of
+  Django's `_placement_allowed`, tested against the same cases,
+  `test/fixtures/builder/placement-cases.json`, which Django vendors); inside
+  a node, the block types it allows, while nesting is allowed that deep. Never
+  a deprecated block, and only one with a preset to insert. Shown but refused,
+  with the reason on the card: a block whose store feature is off, one the
+  document already holds as many of as its `maxPerTemplate`, and anything once
+  the parent holds its `maxBlocks`. It only filters what is offered; Django
+  checks it all again on save.
+- **The dialog**: a tab per category (`editor.category`, editor-only, named in
+  the labels; blocks inside a node have none), a search that ignores accents,
+  and a grid of cards the arrow keys move through. Each card carries a
+  schematic of the block (`BUILDER_SCHEMATICS`, `app/utils/builderSchematics.ts`,
+  one per block type, drawn in the editor's palette). Full screen on a phone,
+  and it closes the drawer it was opened from.
+- **What it inserts** (`builderPresetNode`, `app/utils/builderLibrary.ts`): the
+  block's `default` preset (`presets` in the catalogue): its settings, its text
+  from the labels in the language a draft is written in (`presets.<type>.<preset>`,
+  never the editor's language), and its child blocks, each from its own type's
+  default preset, every node under a fresh id. The new node is selected and drawn
+  in the preview. `test/unit/app/builder/presets.spec.ts` holds every block's
+  default preset to what a save accepts. A block that needs an image has none
+  until the media picker, and is not offered (`gallery_image`, `hero_slide`).
+- **A block whose store feature is off.** The published pages leave it out
+  (`parseDocument` skips it as `feature_disabled`, with a warning), so turning a
+  feature off never leaves a dead section live. A draft that holds one is refused
+  on save; the inspector says so on that node, with the feature's name and a
+  one-click "Remove".
+
+### 8. Settings
 
 The settings pane (`Builder/Inspector`, the right sidebar; a drawer below the
 `lg` breakpoint) shows a form for the selected node (`Builder/SettingsForm`).
@@ -171,7 +211,7 @@ disabled.
 The settings are the draft's own values, in the store's default language;
 their translations follow with the translation slice.
 
-### 8. Saving
+### 9. Saving
 
 `useBuilderAutosaveStore` (`app/stores/builderAutosave.ts`) saves a changed
 document `BUILDER_AUTOSAVE_DELAY_MS` after the last change: the whole working
@@ -194,7 +234,7 @@ document (what the running session keeps is never offered to itself), with a
 warning when the document has been saved since. The editor warns
 `BUILDER_SESSION_WARNING_MS` before the staff session ends.
 
-### 9. The live preview
+### 10. The live preview
 
 The middle pane (`Builder/Canvas`) frames the store's real page for the open
 document, at its own address with `?builder-canvas` (`builderDocumentPath`:
@@ -258,7 +298,7 @@ visit (`useBuilderSurface`, `app/plugins/builder-surface.ts`, read once from
 the address the page loaded at): no analytics, ad pixels, consent banner,
 sign-in prompt, landing attribution or interaction timing, and never indexed.
 
-### 10. The address keeps the view
+### 11. The address keeps the view
 
 `useBuilderEditorView` keeps the document (`?doc=`), the selected node
 (`?node=`) and the preview's width (`?device=`) in the address, so a reload, a shared link or Back restores the
@@ -266,7 +306,7 @@ view. Opening another page is a history step; selecting a node or a width
 replaces the current entry. A value that is not a document key or a node reference is read
 as absent.
 
-### 11. Names
+### 12. Names
 
 The editor's names for blocks, section groups and page types live in
 `app/builder/labels/el.json` and `en.json`, merged into a composer of their own
@@ -290,6 +330,9 @@ strings are its components' `<i18n>` blocks.
 - STAFF are never offered a control that writes.
 - A settings form is generated from the block's schema; no block has a form of
   its own, and a new setting needs only its names.
+- What the library inserts is what a save accepts: every offered block's
+  default preset, with its text, parses with its schema.
+- A block whose store feature is off is never drawn on a published page.
 - No change is lost silently: it is saved, kept in this browser, or waits on the
   staff member's choice (a conflict, a refusal, a failed save).
 - A save always names the revision it was made on; Django refuses a stale one.
@@ -331,6 +374,12 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/preview.post.ts` | The preview of working copies |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderPage.ts` | One pipeline for a release and a preview |
 | `grooveshop-storefront-ui-node-nuxt/shared/schemas/builderCanvas.ts` | The messages between editor and canvas |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Library.vue` | The add-section library |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Schematic.vue` | A library card's picture |
+| `grooveshop-storefront-ui-node-nuxt/app/stores/builderLibrary.ts` | Where the library is open |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderLibrary.ts` | A preset as a node |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderSchematics.ts` | The library's schematics |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/placement.ts` | Where a section may sit |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Inspector.vue` | The settings pane |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingsForm.vue` | A node's settings form and its problems |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingField.vue` | One setting's control |
