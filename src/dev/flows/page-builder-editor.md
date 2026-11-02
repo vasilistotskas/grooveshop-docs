@@ -1,6 +1,6 @@
 ---
 title: Page builder editor
-description: "The storefront's visual page editor at /_builder: who may open it and in which mode, the platform look it is drawn in, the staff proxy routes it reads and saves documents through, the outline of a page and its section groups, structural changes with undo and redo, the settings forms generated from each block's schema, the autosave with its conflict, refusal, retry and recovery paths, the address that keeps its view, and the labels it names blocks with."
+description: "The storefront's visual page editor at /_builder: who may open it and in which mode, the platform look it is drawn in, the staff proxy routes it reads and saves documents through, the outline of a page and its section groups, structural changes with undo and redo, the settings forms generated from each block's schema, the live preview that draws the store's real pages with the working copies, the autosave with its conflict, refusal, retry and recovery paths, the address that keeps its view, and the labels it names blocks with."
 ---
 
 # Page builder editor
@@ -14,8 +14,9 @@ routes that forward the staff token to Django
 
 It is built in slices. Today it opens a page with the store's section groups,
 shows their outline, changes their structure (move, duplicate, hide, remove)
-and the settings of any section or block with undo and redo, and saves every
-change as it goes. The live preview, publishing and history follow; each slice
+and the settings of any section or block with undo and redo, draws every
+change in a live preview of the store's real page, and saves every change as
+it goes. Selecting in the preview, publishing and history follow; each slice
 extends this page.
 
 ## Diagram
@@ -35,7 +36,11 @@ flowchart LR
   Detail -->|"StaffBearer"| Django
   Editor --> Outline["Builder/Outline: UTree per document"]
   Editor --> TopBar["Builder/TopBar: page switcher, view-only notice, account"]
-  View["useBuilderEditorView: ?doc= ?node="] --> Editor
+  View["useBuilderEditorView: ?doc= ?node= ?device="] --> Editor
+  Editor --> Canvas["Builder/Canvas: iframe of the store page ?builder-canvas"]
+  Canvas <-->|"postMessage, same origin"| Bridge["canvas bridge in the framed page"]
+  Bridge -->|"POST /api/builder/preview"| Preview["preview.post: resolve, builderPageOf, builderNavigationOf"]
+  Bridge --> Seams["useBuilderPage, useNavigation: the preview in place of the release"]
 ```
 
 ## How it works
@@ -188,15 +193,59 @@ document (what the running session keeps is never offered to itself), with a
 warning when the document has been saved since. The editor warns
 `BUILDER_SESSION_WARNING_MS` before the staff session ends.
 
-### 9. The address keeps the view
+### 9. The live preview
 
-`useBuilderEditorView` keeps the document (`?doc=`) and the selected node
-(`?node=`) in the address, so a reload, a shared link or Back restores the
-view. Opening another page is a history step; selecting a node replaces the
-current entry. A value that is not a document key or a node reference is read
+The middle pane (`Builder/Canvas`) frames the store's real page for the open
+document, at its own address with `?builder-canvas` (`builderDocumentPath`:
+a template at its page type's route, a page the store made at its slug), so
+every design draws the preview with its own components and chrome.
+
+- **Framing.** Only that request, from a live staff session, may be framed,
+  and only by the store's own pages; every answer to it is private
+  ([Security model](/dev/platform/security), "Framing"). The frame is
+  sandboxed (`allow-same-origin allow-scripts`): it cannot navigate the
+  editor, open windows or send forms.
+- **Messages.** The editor and the framed page talk by `postMessage` on the
+  same origin, each taking a message only from the window it expects, on
+  `BUILDER_CANVAS_CHANNEL`, and only if it parses
+  (`shared/schemas/builderCanvas.ts`). The canvas says `ready`; the editor
+  sends the working copies of the page and its section groups, then again on
+  every change; the canvas answers `drawn` or `failed` (it keeps what it
+  drew last, and the editor offers to try again).
+- **Drawing.** The framed page's bridge (`app/builder/canvas/bridge.ts`,
+  started by `app/plugins/builder-canvas.client.ts` once the page has
+  hydrated, and loaded only there) asks `POST /api/builder/preview`, one
+  request for a burst of changes (`BUILDER_CANVAS_PREVIEW_DELAY_MS`), the
+  answer of an overtaken request dropped. The route resolves each copy for
+  the request's language as Django resolves a release
+  (`resolveWorkingCopy`, `shared/builder/resolve.ts`: the overlay merged,
+  disabled nodes dropped) and runs what the published reads run
+  (`builderPageOf`, `builderNavigationOf`, `server/utils/builderPage.ts`).
+  The answer goes into `useBuilderCanvasPreview`, which `useBuilderPage` and
+  `useNavigation` read before the release. On the canvas a page the store has
+  not published is drawn empty until the preview arrives, never answered as
+  a 404.
+- **Links.** A link followed in the preview never navigates it: one to a page
+  the editor builds opens that page in the editor (`builderDocumentAt`); any
+  other says it is not built here.
+- **Widths.** Phone, tablet, desktop or the full pane
+  (`BUILDER_PREVIEW_DEVICES`, `?device=`); a width wider than the pane is
+  scaled down, so a desktop page keeps its desktop layout.
+
+The editor and the canvas are the page builder's own pages, not a shopper's
+visit (`useBuilderSurface`, `app/plugins/builder-surface.ts`, read once from
+the address the page loaded at): no analytics, ad pixels, consent banner,
+sign-in prompt, landing attribution or interaction timing, and never indexed.
+
+### 10. The address keeps the view
+
+`useBuilderEditorView` keeps the document (`?doc=`), the selected node
+(`?node=`) and the preview's width (`?device=`) in the address, so a reload, a shared link or Back restores the
+view. Opening another page is a history step; selecting a node or a width
+replaces the current entry. A value that is not a document key or a node reference is read
 as absent.
 
-### 10. Names
+### 11. Names
 
 The editor's names for blocks, section groups and page types live in
 `app/builder/labels/el.json` and `en.json`, merged into a composer of their own
@@ -223,6 +272,9 @@ strings are its components' `<i18n>` blocks.
 - No change is lost silently: it is saved, kept in this browser, or waits on the
   staff member's choice (a conflict, a refusal, a failed save).
 - A save always names the revision it was made on; Django refuses a stale one.
+- The preview draws the working copy through the pipeline that draws a release,
+  so what it shows is what publishing would serve.
+- No page of the page builder counts as a shopper's visit.
 
 ## Failure modes
 
@@ -234,6 +286,8 @@ strings are its components' `<i18n>` blocks.
 | Signed out on every request | The staff token expired (a working day) or was revoked; open the editor from the admin again. The unsaved changes are offered back. |
 | "Offline, retrying" that does not clear | Django is unreachable, or cannot reach the storefront's catalogue (503 `storefront_unavailable`). |
 | "Someone else saved" | Another session saved the document in between; the dialog asks which version to keep. |
+| "The preview didn't update" | `POST /api/builder/preview` failed (logged by the route); the canvas shows the last version it drew. |
+| The preview stays on "Drawing the preview" | The framed page never said `ready`: framing refused (an expired staff session answers `frame-ancestors 'none'`) or its bridge did not start. |
 | A setting says it isn't valid | Its value fails the block's schema; the save that follows is refused by Django and the field names its problem. |
 
 ## Source
@@ -248,6 +302,15 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/DocumentSwitcher.vue` | The page switcher |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Outline.vue` | The outline |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/NodeActions.vue` | The selection's toolbar |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Canvas.vue` | The preview frame, widths, link following |
+| `grooveshop-storefront-ui-node-nuxt/app/builder/canvas/bridge.ts` | The framed page's half of the preview |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/builder-canvas.client.ts` | Starts the bridge on the canvas |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/builder-surface.ts` | Whether a page is the editor or its canvas |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderCanvas.ts` | `useBuilderSurface`, `useBuilderCanvasPreview` |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/preview.post.ts` | The preview of working copies |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderPage.ts` | One pipeline for a release and a preview |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/resolve.ts` | A working copy resolved for a language |
+| `grooveshop-storefront-ui-node-nuxt/shared/schemas/builderCanvas.ts` | The messages between editor and canvas |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Inspector.vue` | The settings pane |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingsForm.vue` | A node's settings form and its problems |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingField.vue` | One setting's control |
