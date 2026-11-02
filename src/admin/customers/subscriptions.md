@@ -102,4 +102,4 @@ Open the topic, untick **Active** and save. The topic leaves the store and nobod
 - [Customers & addresses](/admin/customers/users-and-addresses)
 - [Data export (GDPR)](/admin/customers/data-exports)
 - [Page layouts](/admin/content/page-layouts)
-- [Email templates](/admin/settings/email-templates)
+- [Emails](/admin/settings/emails)
