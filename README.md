@@ -90,14 +90,13 @@ sources.lock.json   the source-repository commits a release publishes
   `sources.yml` moves the pins when a source repository's `docs/` changes (on
   a repository dispatch, hourly, or by hand) and commits them as a `docs:`
   commit, which releases. Never hand-edit the lock.
-- The image is deployed through
-  [grooveshop-infrastructure](https://github.com/vasilistotskas/grooveshop-infrastructure)
-  (Argo CD), like every other service.
+- The image is deployed through grooveshop-infrastructure (private, Argo CD),
+  like every other service.
 
 ## Related repositories
 
-- [grooveshop-django-api](https://github.com/vasilistotskas/grooveshop-django-api): Django REST API, admin and Celery workers; the system of record for every tenant.
-- [grooveshop-storefront-ui-node-nuxt](https://github.com/vasilistotskas/grooveshop-storefront-ui-node-nuxt): Nuxt SSR storefront, one deployment serving every tenant's store.
-- [grooveshop-media-stream](https://github.com/vasilistotskas/grooveshop-media-stream): NestJS image processing and caching service.
-- [grooveshop-agent-gateway](https://github.com/vasilistotskas/grooveshop-agent-gateway): Go gateway for AI agents (MCP, UCP, ACP, product feeds, storefront chat).
-- [grooveshop-infrastructure](https://github.com/vasilistotskas/grooveshop-infrastructure) (private): Kubernetes manifests for the K3s cluster, deployed by Argo CD.
+- [grooveshop-django-api](https://github.com/vasilistotskas/grooveshop-django-api): Django REST API, admin, and background jobs; the platform's source of truth
+- [grooveshop-storefront-ui-node-nuxt](https://github.com/vasilistotskas/grooveshop-storefront-ui-node-nuxt): Nuxt server-rendered storefront for every store
+- [grooveshop-media-stream](https://github.com/vasilistotskas/grooveshop-media-stream): NestJS image processing and caching service
+- [grooveshop-agent-gateway](https://github.com/vasilistotskas/grooveshop-agent-gateway): Go gateway for AI agents (MCP, UCP, ACP), catalogue feeds and the storefront chat
+- grooveshop-infrastructure (private): Kubernetes manifests deployed by Argo CD
