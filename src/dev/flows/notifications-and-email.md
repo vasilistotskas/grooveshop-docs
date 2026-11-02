@@ -230,6 +230,21 @@ the list before it renders: a suppressed address gets a `skipped_suppressed`
 row, and a required mail to a fully suppressed address is also logged as a
 warning. Setup and failure modes: [Resend setup](/dev/operations/resend).
 
+### The admin pages
+
+A store's staff see the emails under Settings → Emails (status, log,
+suppression list, preview, test send): `emails/admin.py`, over the store's
+schema. The control plane has the same pages over `public`, in the platform
+admin's sidebar (`PlatformEmailSwitchAdmin`, `Owner.PLATFORM` types grouped by
+who receives them, the platform's log and suppression list, a throttled test
+send to the operator's own address, and a dashboard alert when the platform's
+own mail failed in the last 7 days). Every platform type is required, so the
+page has no switches. What differs follows the schema: a store type's page is
+a 404 on the platform and the reverse, the preview form has no order field
+(there is no order table in `public`), `send_test` runs under `owner_schema`
+so a platform test is rendered and logged in `public`, and the figures'
+cache key carries the schema so the two pages never share an answer.
+
 ### Tenant branding
 
 Every email context is built by
@@ -677,6 +692,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/emails/webhooks.py`, `emails/events.py`, `emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
 | `grooveshop-django-api/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
 | `grooveshop-django-api/emails/preview.py` | The admin preview of any registered email |
+| `grooveshop-django-api/emails/admin.py`, `emails/switches.py`, `emails/figures.py`, `emails/testsend.py` | The Emails pages of the store admin and the platform admin: grouping, figures, test send |
 | `grooveshop-django-api/tenant/emails.py`, `core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
 | `grooveshop-django-api/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
 | `grooveshop-django-api/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
