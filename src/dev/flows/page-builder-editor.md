@@ -13,7 +13,8 @@ routes that forward the staff token to Django
 ([Page builder data](/dev/flows/page-builder-data)).
 
 It is built in slices. Today it opens a page with the store's section groups,
-shows their outline, changes their structure (move, duplicate, hide, remove)
+shows their outline, changes their structure (move, also by dragging a row of
+the outline, duplicate, hide, remove)
 and the settings of any section or block with undo and redo, draws every
 change in a live preview of the store's real page, where a section is selected
 and changed in place, and saves every change as it goes. Publishing and
@@ -106,7 +107,7 @@ and `error` (with a retry).
 
 ### 5. The outline
 
-`Builder/Outline` draws one `UTree` per document, top to bottom as the
+`Builder/Outline` draws one `Builder/OutlineTree` (a flat `UTree`, `nested: false`) per document, top to bottom as the
 storefront draws them: the groups above the page, the page, the groups below
 it (`BUILDER_EDITOR_GROUPS_BELOW_PAGE`). `builderOutline`
 (`app/utils/builderOutline.ts`) lists each document's sections and their blocks
@@ -126,6 +127,25 @@ parent's `maxBlocks` or a type's `maxPerTemplate` would be exceeded:
 `canDuplicateNode`), hide from shoppers or show again (`disabled`), and
 remove after a confirmation (with every translation of the removed nodes). Each
 is a pure function of the working copy (`app/utils/builderWorkingCopy.ts`).
+
+A row of the outline is also dragged by its handle (its icon, which turns into
+a grip on hover and always shows one on a touch screen) to a new place among
+its siblings: a section among the sections of its document, a block among the
+blocks of its parent, never into another parent or document, as Move up and
+Move down do. While a row is dragged, the rows under every sibling are folded
+away, so a drop between two siblings is never a drop among one's blocks
+(`builderOutlineDrag`, `builderOutlineDropIndex` in
+`app/utils/builderOutline.ts`). The drag is Sortable.js through VueUse's
+`useSortable` (`@vueuse/integrations`), the path Nuxt UI documents for
+`UTree`; the dragged row's DOM move is undone and the outline redrawn from the
+document. Keyboard users move with Alt+Arrow or the toolbar, the
+single-pointer alternative WCAG 2.5.7 asks for.
+
+Every move, from the toolbar, the shortcut or a drag, goes through
+`useBuilderEditorStore().move(key, nodeId, to)` (`canMoveNode`, `moveNode`
+take the target place among the siblings) and is announced through Nuxt's
+`useAnnouncer` and the `<NuxtAnnouncer>` of the builder layout: "Hero
+carousel moved to position 3 of 13".
 
 Every change goes through `useBuilderEditorStore().change`, which records it
 for undo (`BUILDER_HISTORY_LIMIT` steps, across every open document, kept
@@ -328,7 +348,10 @@ strings are its components' `<i18n>` blocks.
 
 - No editor code in the public bundle: the page renders inside `<ClientOnly>`,
   and the block definitions (with their Zod schemas) are imported only by the
-  editor (`app/utils/builderEditorBlocks.ts`).
+  editor (`app/utils/builderEditorBlocks.ts`). The drag library is imported by
+  `Builder/OutlineTree.vue` alone, which only the outline mounts
+  (`test/unit/source-rules/drag-library-stays-in-the-editor.spec.ts`), so it
+  ships in the `/_builder` page's chunk.
 - Every `/api/builder/**` staff route reads the session through
   `requireBuilderStaff` and is never cached.
 - The editor never opens a working copy it cannot read whole.
@@ -370,6 +393,7 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/TopBar.vue` | Exit, page switcher, view-only notice, account |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/DocumentSwitcher.vue` | The page switcher |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Outline.vue` | The outline |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/OutlineTree.vue` | One document's rows, dragged to reorder |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/NodeActions.vue` | The selection's toolbar |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Canvas.vue` | The preview frame, widths, link following |
 | `grooveshop-storefront-ui-node-nuxt/app/builder/canvas/bridge.ts` | The framed page's half of the preview |
@@ -402,7 +426,7 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/stores/builderEditor.ts` | Documents, working copies, role, `canEdit`, undo history |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderEditorView.ts` | The address state |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderLabels.ts` | Names of blocks, groups, page types, settings, choices, routes |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/builderOutline.ts` | Outline rows and node references |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderOutline.ts` | Outline rows, node references, where a dragged row may land |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/index.get.ts` | Document list |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/[key]/index.get.ts` | One document |
 | `grooveshop-storefront-ui-node-nuxt/shared/schemas/builderEditor.ts` | Key and working-copy schemas |
