@@ -148,8 +148,14 @@ GA is consent-**mode**, not consent-triggered: `setupGoogleAnalyticsConsent`
 registers `useScriptGoogleAnalytics` with `wait_for_update: 500` and every
 storage denied by default **except `functionality_storage`, which starts
 `granted`** — it is a necessary category, so there is nothing to ask for. The
-composable then watches `cookiesEnabledIds` and calls `consent.update(...)`
-mapping each of the seven categories to `granted` or `denied`.
+composable calls `consent.update(...)`, mapping each of the seven categories
+to `granted` or `denied`: at once for the decision the visitor arrived with,
+and, for a decision made on the page, after the next paint (`afterNextPaint()`
+in `app/utils/scheduling.ts`). Once gtag has loaded, a consent update runs its
+listeners and sends the hits it held back synchronously. Inside the banner's
+Accept that was ~260 ms of a 360–550 ms tap at a 6x-slowed CPU, and the
+commonest slow interaction in webside's INP reports; deferred, the tap
+measures 72–80 ms (2026-11-01).
 
 The script is skipped entirely when the tenant has no measurement id, when it
 does not match `/^G-[A-Z0-9]{8,}$/`, or when it is the placeholder
@@ -419,7 +425,7 @@ The script refuses to run unless the tenant's primary domain carries the
 |---|---|
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | Consent categories, scripts registry, evlog sampling and keep list |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/setups.ts` | Consent triggers, GA consent mode, banner telemetry |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/scheduling.ts` | `afterLoadWhenIdle`, the gtag load trigger |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/scheduling.ts` | `afterLoadWhenIdle`, the gtag load trigger; `afterNextPaint`, the deferred consent update |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCookieControl.ts` | Banner state accessor |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useMetaPixel.ts` | Meta events, `event_id` minting, the manual-trigger rule |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useTikTokPixel.ts` | TikTok events and `CompletePayment` |
