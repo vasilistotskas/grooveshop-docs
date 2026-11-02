@@ -5,7 +5,7 @@ description: Write and publish your store's text pages (terms, privacy, cookies,
 
 # Pages
 
-Here you write the store's plain text pages: the terms of use, the privacy and cookie policies, the return policy, the FAQ, shipping information. Each page has a title and a text in every language. For pages built from sections, like the home page, see [Page layouts](/admin/content/page-layouts).
+Here you write the store's plain text pages: the terms of use, the privacy and cookie policies, the return policy, the FAQ, shipping information. Each page has a title and a text in every language. For pages built from sections, like the home page, see [Page builder](/admin/content/page-builder).
 
 <span class="sidebar-path">Content → Pages</span>
 
@@ -59,7 +59,7 @@ Within about ten seconds the page shows at `/return-policy` and at the bottom of
 3. Give a short **Slug** in lowercase Latin letters and hyphens, e.g. `payment-methods`. The page will be at `/info/payment-methods`.
 4. Tick **Is Published** when it is ready and save.
 
-The page is added to the footer automatically. To put it in a menu as well, see [Menus](/admin/content/menus).
+The page is added to the footer automatically. To put it in a menu as well, see [Page builder](/admin/content/page-builder).
 
 ### Take a page down
 
@@ -91,13 +91,12 @@ Marking it only clears the notice; it does not add the text. The first such upda
 
 - **A page without a translation** shows in the store's main language, with a note for the visitor. Still, fill in every language you serve.
 - **The `/info/` address of the four pages with their own address** (terms, privacy, cookies, returns) redirects to their own address.
-- **Two "About" pages.** The `about` page here is at `/info/about`. The `/about` address is a different page, built from a [page layout](/admin/content/page-layouts) of type `about`.
+- **Two "About" pages.** The `about` page here is at `/info/about`. The `/about` address is a different page, made in the [page builder](/admin/content/page-builder).
 - **Do not change the slug** of a page already published. Its address changes, and links that were shared stop working. Links in your menus follow on their own. The legal pages keep theirs: the admin refuses the change.
 - **A starting page you do not need**: leave it unpublished rather than deleting it.
-- **If a change does not show** after a minute, clear the **Pages & navigation** cache on the [Cache](/admin/settings/cache) page.
+- **If a change does not show** after a minute, clear the **Content pages** cache on the [Cache](/admin/settings/cache) page.
 
 ## Related
 
-- [Menus](/admin/content/menus)
-- [Page layouts](/admin/content/page-layouts)
+- [Page builder](/admin/content/page-builder)
 - [Cache](/admin/settings/cache)

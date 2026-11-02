@@ -72,8 +72,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     text: 'Content',
     items: [
       { text: 'Pages', link: '/admin/content/pages' },
-      { text: 'Menus', link: '/admin/content/menus' },
-      { text: 'Page layouts', link: '/admin/content/page-layouts' },
+      { text: 'Page builder', link: '/admin/content/page-builder' },
       { text: 'Storefront texts', link: '/admin/content/storefront-texts' },
       {
         text: 'Blog',

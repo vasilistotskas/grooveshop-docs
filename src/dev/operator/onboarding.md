@@ -179,12 +179,13 @@ into operator messages (`tenant/provisioning.py`):
 | `ensure_api_domain` | Creates the API `TenantDomain` row (`derive_api_domain`: `api.<primary>`, or `api-<label>.<zone>` on a platform subdomain) | Returns `None` with no primary domain. **Not optional**: the resolver derives `apiDomain` the same way and the storefront dials it, but request routing matches domain rows exactly — a derived host with no row is one Django refuses to serve. The storefront looks healthy while WebSocket notifications close 4004 and every social login 404s at the form POST |
 | `ensure_site` | Creates the public-schema `django.contrib.sites` Site for the primary domain | Per-tenant `SocialApp` credentials are keyed on that Site; without it the adapter's lookup always misses and allauth silently falls back to the platform's OAuth app |
 | `provision_owner_membership` | Grants OWNER `UserTenantMembership`, looked up in the **public** schema | Returns `None` if the owner has no `UserAccount` yet — the caller warns; grant the membership from the admin once they register |
-| `seed_tenant_defaults` | Inside the tenant's schema: extra settings, page layouts, content pages, the flat-rate carrier, the default newsletter topic, recommendation slots, Meilisearch indexes | Each step is independently best-effort and **returns the names that failed** |
+| `seed_tenant_defaults` | Inside the tenant's schema: extra settings, the page builder's default documents, content pages, the flat-rate carrier, the default newsletter topic, recommendation slots, Meilisearch indexes | Each step is independently best-effort and **returns the names that failed** |
 
 Seeding detail worth knowing:
 
-- **Page layouts** seed **published** (`page_config/defaults.py:
-  seed_page_layouts`). Of the **content pages** (`seed_content_pages`),
+- **The page builder** seeds its default documents as release 1
+  (`builder/seeding.py: seed_store`; today the home page). Of the
+  **content pages** (`page_config/content_pages.py: seed_content_pages`),
   the three legal documents seed published with the platform's text,
   and the rest unpublished with a prompt. A new store therefore has a
   composed homepage, its terms, privacy and cookie policies, and a set
@@ -199,7 +200,7 @@ Seeding detail worth knowing:
   is the first). Any other page keeps its text, stays below the
   revision, and is flagged to the merchant (dashboard banner, content
   page list and form, `pending_legal_reviews` in
-  `page_config/defaults.py`) until they run the admin action that marks
+  `page_config/content_pages.py`) until they run the admin action that marks
   it reviewed. `manage.py legal_text_status` lists, per tenant, the
   pages still behind.
 - **The flat-rate carrier** is switched on (`_activate_default_carrier`)
@@ -529,7 +530,8 @@ Applications.
 | `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, why `default_currency` is platform-only |
 | `grooveshop-django-api/tenant/views.py` | `tenant_resolve` payload and the internal-token variant |
 | `grooveshop-django-api/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app`, `pre_login` |
-| `grooveshop-django-api/page_config/defaults.py` | `seed_page_layouts` (published), `seed_content_pages` (legal documents published, the rest unpublished), `pending_legal_reviews` |
+| `grooveshop-django-api/builder/seeding.py` | `seed_store`: the page builder's default documents as release 1 |
+| `grooveshop-django-api/page_config/content_pages.py` | `seed_content_pages` (legal documents published, the rest unpublished), `pending_legal_reviews` |
 | `grooveshop-django-api/page_config/legal_documents.py` | The seeded legal text, `LEGAL_TEXT_UPDATES`, `LEGAL_TEXT_REVISION` |
 | `grooveshop-django-api/page_config/management/commands/legal_text_status.py` | Which tenants have legal pages behind the platform text |
 | `grooveshop-django-api/recommendation/presets.py` | `seed_recommendation_slots`, `reset_slot_to_preset` |

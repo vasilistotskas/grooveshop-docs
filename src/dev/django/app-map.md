@@ -181,10 +181,12 @@ through `TaggedModel`), and `contact/` (`Contact`, `ContactAttachment`,
 
 ### `page_config/`
 
-Merchant-editable storefront layouts, `NavigationMenu` and translatable
-`ContentPage`. A saved navigation row shadows the storefront's code
-default, and its Nitro cache key is `pageConfigNavigation`
-(`core/cache/surfaces.py`). Content pages seed unpublished.
+Translatable `ContentPage` (policies, FAQ, information pages) and the
+legal documents: the platform's texts and their rollout
+(`legal_documents.py`, `legal_guard.py`), the version each order accepted
+(`LegalDocumentVersion`) and the content pages a new store is seeded with
+(`content_pages.py`; the non-legal ones seed unpublished). Pages and menus
+are the page builder's (`builder/`).
 
 ### `builder/`
 

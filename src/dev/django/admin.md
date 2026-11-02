@@ -203,14 +203,6 @@ without a reference resolver. Fields covered: `Tenant.theme_metadata`,
 `RecommendationSlot.strategy_chain` and `weights`
 (`recommendation/json_schemas.py`).
 
-Page sections are the dynamic case: a section's schema depends on its
-`component_type`, so `page_config/section_schemas.py` holds one schema per
-type (props, plus the derived per-locale `i18n` override), validated in
-`PageSection.clean()` and the serializer, and `PageSectionForm` swaps in
-the type's editor for a saved section. See
-[OpenAPI contract](/dev/django/openapi-contract) for how they are
-published to the storefront.
-
 ## Dashboards
 
 Both dashboards are Unfold component widgets
