@@ -81,15 +81,17 @@ sources.lock.json   the source-repository commits a release publishes
 
 ## Deployment and release
 
-- CI (`.github/workflows/ci.yml`) builds every pull request and every push to `main`, and runs
+- CI (`.github/workflows/ci.yml`) builds every pull request and every push to
+  `main` through the reusable `.github/workflows/build.yml` (typecheck, tests,
+  the `check:admin` and `check:claims` gates, then the site build), and runs
   semantic-release on `main`. Unlike the other GrooveShop repositories, a
   `docs:` commit cuts a patch release here.
-- A published release triggers `docker.yml`, which pushes
-  `gro0ve/grooveshop-docs:vX.Y.Z` to Docker Hub.
+- A published release triggers `docker.yml`, which pushes the image to Docker
+  Hub (`gro0ve/grooveshop-docs`) and GHCR, tagged `vX.Y.Z` and `latest`.
 - The synced reference docs are pinned in `sources.lock.json`.
   `sources.yml` moves the pins when a source repository's `docs/` changes (on
-  a repository dispatch, hourly, or by hand) and commits them as a `docs:`
-  commit, which releases. Never hand-edit the lock.
+  a repository dispatch, hourly, or by hand), builds with the new pins through
+  the same `build.yml`, and commits them as a `docs:` commit, which releases. Never hand-edit the lock.
 - The image is deployed through grooveshop-infrastructure (private, Argo CD),
   like every other service.
 
