@@ -1,6 +1,6 @@
 ---
 title: Page builder editor
-description: "The storefront's visual page editor at /_builder: who may open it and in which mode, the platform look it is drawn in, the staff proxy routes it reads and saves documents through, the outline of a page and its section groups, structural changes with undo and redo, the autosave with its conflict, refusal, retry and recovery paths, the address that keeps its view, and the labels it names blocks with."
+description: "The storefront's visual page editor at /_builder: who may open it and in which mode, the platform look it is drawn in, the staff proxy routes it reads and saves documents through, the outline of a page and its section groups, structural changes with undo and redo, the settings forms generated from each block's schema, the autosave with its conflict, refusal, retry and recovery paths, the address that keeps its view, and the labels it names blocks with."
 ---
 
 # Page builder editor
@@ -14,8 +14,9 @@ routes that forward the staff token to Django
 
 It is built in slices. Today it opens a page with the store's section groups,
 shows their outline, changes their structure (move, duplicate, hide, remove)
-with undo and redo, and saves every change as it goes. Settings forms, the live
-preview, publishing and history follow; each slice extends this page.
+and the settings of any section or block with undo and redo, and saves every
+change as it goes. The live preview, publishing and history follow; each slice
+extends this page.
 
 ## Diagram
 
@@ -127,7 +128,44 @@ top bar and on Cmd/Ctrl+Z, Shift+Cmd/Ctrl+Z and Cmd/Ctrl+Y, never while a text
 field has focus, which keeps its own undo. Undoing a change of another page
 opens that page. STAFF get none of this.
 
-### 7. Saving
+### 7. Settings
+
+The settings pane (`Builder/Inspector`, the right sidebar; a drawer below the
+`lg` breakpoint) shows a form for the selected node (`Builder/SettingsForm`).
+The form is not written per block: `builderSettingsFields`
+(`app/utils/builderSettingsFields.ts`) reads the block's settings schema as the
+catalogue publishes it (`blockSettingsJsonSchema`, `shared/builder/jsonSchema.ts`,
+the same JSON Schema Django validates with) and gives each setting a control
+(`Builder/SettingField`), in the order the schema declares them:
+
+| Schema | Control |
+|---|---|
+| a string up to `BUILDER_TEXTAREA_MIN_LENGTH` characters, or longer | one line, or a growing text area |
+| an enum | segmented buttons up to `BUILDER_SEGMENTED_CHOICE_MAX` choices, else a select; an enum of fixed routes (`LINK_ROUTES`) names the pages |
+| a boolean | a switch; an optional one offers Default, On, Off |
+| a number, or a union of numbers | a number field with the schema's bounds |
+| `BUILDER_FIELD_PATTERNS` `hexColor`, `icon`, `httpsUrl` | a colour picker with its hex value, an icon name, an address |
+| a link (`builderField.link`) | no link, a store page, or an external address; a link to a record is shown read only until the record picker |
+| a reference (`refs`) | the record's id (a number), until the record picker |
+| a list of strings | rows that can be added, reordered and removed, up to `maxItems` |
+| an object | a group of its own fields |
+| rich text | not editable yet (it comes with the rich-text editor) |
+
+An optional setting offers Default, which takes it out of the node so the
+section component falls back to its own default (`setNodeSetting`; an empty
+text or list is taken out too). The form checks the settings against the
+block's Zod schema as the merchant types and shows the issue on its field;
+a save Django refuses (`invalid_document`) shows each problem on the field its
+JSON pointer names (`builderProblemSettingPath`, `fieldForSettingPath`).
+Typing into one field is one undo step: changes to the same setting of the
+same node within `BUILDER_HISTORY_COALESCE_MS` of each other are merged
+(`change(key, next, { coalesce })`). STAFF see the form with every control
+disabled.
+
+The settings are the draft's own values, in the store's default language;
+their translations follow with the translation slice.
+
+### 8. Saving
 
 `useBuilderAutosaveStore` (`app/stores/builderAutosave.ts`) saves a changed
 document `BUILDER_AUTOSAVE_DELAY_MS` after the last change: the whole working
@@ -150,7 +188,7 @@ document (what the running session keeps is never offered to itself), with a
 warning when the document has been saved since. The editor warns
 `BUILDER_SESSION_WARNING_MS` before the staff session ends.
 
-### 8. The address keeps the view
+### 9. The address keeps the view
 
 `useBuilderEditorView` keeps the document (`?doc=`) and the selected node
 (`?node=`) in the address, so a reload, a shared link or Back restores the
@@ -158,14 +196,17 @@ view. Opening another page is a history step; selecting a node replaces the
 current entry. A value that is not a document key or a node reference is read
 as absent.
 
-### 9. Names
+### 10. Names
 
 The editor's names for blocks, section groups and page types live in
 `app/builder/labels/el.json` and `en.json`, merged into a composer of their own
 (`useBuilderLabels`), not the global locale files: no public page carries them,
-and the store's text editor does not offer them. `test/unit/app/builder/labels.spec.ts`
-fails when a block, group or page type lacks a name in either language, or a
-name is left for something that no longer exists. The editor's own interface
+and the store's text editor does not offer them. The same files name every setting (`settings`, with optional help), every
+choice a setting offers (`options`, by the setting's name) and every fixed
+route a link may name (`routes`). `test/unit/app/builder/labels.spec.ts`
+fails when a block, group, page type, setting, choice or route lacks a name in
+either language, a name is blank, or a name is left for something that no
+longer exists. The editor's own interface
 strings are its components' `<i18n>` blocks.
 
 ## Invariants
@@ -177,6 +218,8 @@ strings are its components' `<i18n>` blocks.
   `requireBuilderStaff` and is never cached.
 - The editor never opens a working copy it cannot read whole.
 - STAFF are never offered a control that writes.
+- A settings form is generated from the block's schema; no block has a form of
+  its own, and a new setting needs only its names.
 - No change is lost silently: it is saved, kept in this browser, or waits on the
   staff member's choice (a conflict, a refusal, a failed save).
 - A save always names the revision it was made on; Django refuses a stale one.
@@ -191,6 +234,7 @@ strings are its components' `<i18n>` blocks.
 | Signed out on every request | The staff token expired (a working day) or was revoked; open the editor from the admin again. The unsaved changes are offered back. |
 | "Offline, retrying" that does not clear | Django is unreachable, or cannot reach the storefront's catalogue (503 `storefront_unavailable`). |
 | "Someone else saved" | Another session saved the document in between; the dialog asks which version to keep. |
+| A setting says it isn't valid | Its value fails the block's schema; the save that follows is refused by Django and the field names its problem. |
 
 ## Source
 
@@ -204,17 +248,23 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/DocumentSwitcher.vue` | The page switcher |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Outline.vue` | The outline |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/NodeActions.vue` | The selection's toolbar |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Inspector.vue` | The settings pane |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingsForm.vue` | A node's settings form and its problems |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingField.vue` | One setting's control |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/LinkField.vue` | A link setting |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderSettingsFields.ts` | Settings fields from a block's schema |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/jsonSchema.ts` | A block's settings as JSON Schema |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/History.vue` | Undo, redo, save status |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/ConflictDialog.vue` | Keep mine or load theirs |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecoveryNotice.vue` | Unsaved changes offered back |
 | `grooveshop-storefront-ui-node-nuxt/app/stores/builderAutosave.ts` | The autosave |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderSelection.ts` | The selected node and its changes |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/builderWorkingCopy.ts` | Structural changes, upgrade, comparison |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderWorkingCopy.ts` | Structural and settings changes, upgrade, comparison |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderRecovery.ts` | The copy kept in this browser |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/[key]/draft.put.ts` | The save |
 | `grooveshop-storefront-ui-node-nuxt/app/stores/builderEditor.ts` | Documents, working copies, role, `canEdit`, undo history |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderEditorView.ts` | The address state |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderLabels.ts` | Names of blocks, groups, page types |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderLabels.ts` | Names of blocks, groups, page types, settings, choices, routes |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderOutline.ts` | Outline rows and node references |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/index.get.ts` | Document list |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/[key]/index.get.ts` | One document |
