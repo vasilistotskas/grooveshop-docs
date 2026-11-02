@@ -196,7 +196,13 @@ the library store's target (`useBuilderLibraryStore`: a document and a
   (`parseDocument` skips it as `feature_disabled`, with a warning), so turning a
   feature off never leaves a dead section live. A draft that holds one is refused
   on save; the inspector says so on that node, with the feature's name and a
-  one-click "Remove".
+  one-click "Remove". For ADMIN and OWNER it also offers "Turn on <feature>",
+  which opens the store admin's page for the first setting that is off in a new
+  tab: `GET /api/builder/features` (Django's `builder/features`, staff only, never
+  cached: `{ features: { <name>: { on, turnOnUrl } } }`), asked once a node is
+  refused for its feature. `turnOnUrl` is null when the plan keeps the feature
+  off (only the platform can change that) or for any other role, and then only
+  "Remove" is offered.
 
 ### 8. Settings
 
@@ -424,6 +430,7 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderSchematics.ts` | The library's schematics |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/placement.ts` | Where a section may sit |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Inspector.vue` | The settings pane |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/features.get.ts` | Which features are on, and where this person turns one on |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingsForm.vue` | A node's settings form and its problems |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingField.vue` | One setting's control |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/LinkField.vue` | A link setting |
