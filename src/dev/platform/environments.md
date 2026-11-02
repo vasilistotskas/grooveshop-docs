@@ -22,12 +22,22 @@ infrastructure and the app on the host for a normal dev loop:
 docker compose -f infra.compose.yml up -d
 cp .env.example .env
 uv sync --locked --all-extras --dev
-uv run python manage.py migrate_schemas
-uv run python manage.py runserver
+uv run python manage.py migrate     # django-tenants' migrate: every schema
+uv run uvicorn asgi:application --reload
+uv run celery --app core worker --queues celery,meilisearch --loglevel=info
+uv run celery --app core beat --loglevel=info \
+  --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
 
+The API is an ASGI application (`asgi/__init__.py`): uvicorn serves HTTP
+and the `ws/notifications/` WebSocket on port 8000, as the `backend`
+service in `app.compose.yml` does. `manage.py runserver` is not the dev
+server: the project has no WSGI module, so it falls back to Django's
+default WSGI handler and serves no WebSocket. The worker must consume the
+`meilisearch` queue as well as `celery`, or search-index tasks never run.
+
 Configuration is a single `.env` read by `settings.py`; `SYSTEM_ENV` is
-`dev`, `production` or `ci`. Every request needs a tenant: `localhost`
+`dev`, `staging`, `production` or `ci`. Every request needs a tenant: `localhost`
 must exist as a `TenantDomain` row (`server/utils/tenant.ts` strips the
 port before resolving), so create the platform row with
 `bootstrap_platform` and a store with `tenant_create`.
@@ -165,7 +175,8 @@ the sealed `frontend-secrets`
 | File | Role |
 |---|---|
 | `grooveshop-django-api/docker-compose.yml`, `infra.compose.yml`, `app.compose.yml` | Local stack |
-| `grooveshop-django-api/.env.example` | Django configuration keys |
+| `grooveshop-django-api/.env.example`, `settings.py` | Django configuration keys, `SYSTEM_ENV` |
+| `grooveshop-django-api/asgi/__init__.py` | The ASGI application uvicorn serves |
 | `grooveshop-django-api/tenant/management/commands/bootstrap_platform.py`, `tenant_create.py` | Local and production provisioning |
 | `grooveshop-storefront-ui-node-nuxt/.env.example`, `nuxt.config.ts` | Storefront configuration |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml` | Build-time versus runtime secrets |
