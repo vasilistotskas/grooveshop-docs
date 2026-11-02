@@ -39,7 +39,8 @@ flowchart LR
   View["useBuilderEditorView: ?doc= ?node= ?device="] --> Editor
   Editor --> Canvas["Builder/Canvas: iframe of the store page ?builder-canvas"]
   Canvas <-->|"postMessage, same origin"| Bridge["canvas bridge in the framed page"]
-  Bridge -->|"POST /api/builder/preview"| Preview["preview.post: resolve, builderPageOf, builderNavigationOf"]
+  Bridge -->|"POST /api/builder/preview"| Preview["preview.post: builderPageOf, builderNavigationOf"]
+  Preview -->|"POST builder/preview/resolve, StaffBearer"| Django
   Bridge --> Seams["useBuilderPage, useNavigation: the preview in place of the release"]
 ```
 
@@ -216,11 +217,13 @@ every design draws the preview with its own components and chrome.
   started by `app/plugins/builder-canvas.client.ts` once the page has
   hydrated, and loaded only there) asks `POST /api/builder/preview`, one
   request for a burst of changes (`BUILDER_CANVAS_PREVIEW_DELAY_MS`), the
-  answer of an overtaken request dropped. The route resolves each copy for
-  the request's language as Django resolves a release
-  (`resolveWorkingCopy`, `shared/builder/resolve.ts`: the overlay merged,
-  disabled nodes dropped) and runs what the published reads run
-  (`builderPageOf`, `builderNavigationOf`, `server/utils/builderPage.ts`).
+  answer of an overtaken request dropped. The route asks Django to resolve
+  the copies (`POST builder/preview/resolve`): each stands in for the current
+  release's document of its key and is resolved for the request's language by
+  the code the published reads use, so there is one implementation of a
+  document in a language. The answer has `published/<pageKey>`'s shape and
+  goes through what the published routes run (`builderPageOf`,
+  `builderNavigationOf`, `server/utils/builderPage.ts`).
   The answer goes into `useBuilderCanvasPreview`, which `useBuilderPage` and
   `useNavigation` read before the release. On the canvas a page the store has
   not published is drawn empty until the preview arrives, never answered as
@@ -309,7 +312,6 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderCanvas.ts` | `useBuilderSurface`, `useBuilderCanvasPreview` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/preview.post.ts` | The preview of working copies |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderPage.ts` | One pipeline for a release and a preview |
-| `grooveshop-storefront-ui-node-nuxt/shared/builder/resolve.ts` | A working copy resolved for a language |
 | `grooveshop-storefront-ui-node-nuxt/shared/schemas/builderCanvas.ts` | The messages between editor and canvas |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Inspector.vue` | The settings pane |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingsForm.vue` | A node's settings form and its problems |
