@@ -177,7 +177,7 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 
 | Service | Container port | In-cluster Service | Local dev |
 |---|---|---|---|
-| Django API | 8000 | `backend-service:80` | `uv run python manage.py runserver` |
+| Django API | 8000 | `backend-service:80` | `uv run uvicorn asgi:application --reload` |
 | Nuxt storefront | 3000 | `frontend-nuxt-service:80` | `pnpm dev` |
 | Media stream | 3003 | `media-stream-service:80` | `pnpm run dev` |
 | Agent gateway | 8080 | `agent-gateway-service:80` | `go run ./cmd/gateway` |
