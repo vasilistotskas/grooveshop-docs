@@ -39,8 +39,15 @@ default WSGI handler and serves no WebSocket. The worker must consume the
 Configuration is a single `.env` read by `settings.py`; `SYSTEM_ENV` is
 `dev`, `staging`, `production` or `ci`. Every request needs a tenant: `localhost`
 must exist as a `TenantDomain` row (`server/utils/tenant.ts` strips the
-port before resolving), so create the platform row with
-`bootstrap_platform` and a store with `tenant_create`.
+port before resolving), so create the platform row and a store, then
+optionally seed sample data into it:
+
+```bash
+uv run python manage.py bootstrap_platform --domain platform.localhost
+uv run python manage.py tenant_create --name "Local store" --slug local \
+  --schema local --domain localhost --owner-email you@example.com
+uv run python manage.py seed_all --schema local
+```
 
 **Storefront.** `cp .env.example .env`, then `pnpm install` and `pnpm dev`.
 `NUXT_API_BASE_URL` points at the local Django API; `NUXT_CACHE_BASE` can
@@ -178,6 +185,7 @@ the sealed `frontend-secrets`
 | `grooveshop-django-api/.env.example`, `settings.py` | Django configuration keys, `SYSTEM_ENV` |
 | `grooveshop-django-api/asgi/__init__.py` | The ASGI application uvicorn serves |
 | `grooveshop-django-api/tenant/management/commands/bootstrap_platform.py`, `tenant_create.py` | Local and production provisioning |
+| `grooveshop-django-api/devtools/management/commands/seed_all.py` | Local sample data |
 | `grooveshop-storefront-ui-node-nuxt/.env.example`, `nuxt.config.ts` | Storefront configuration |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml` | Build-time versus runtime secrets |
 | `grooveshop-agent-gateway/.env.example`, `internal/config` | Gateway configuration, `ENV` handling |
