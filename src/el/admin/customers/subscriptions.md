@@ -102,4 +102,4 @@ description: Τα θέματα στα οποία γράφονται οι πελ�
 - [Πελάτες & διευθύνσεις](/el/admin/customers/users-and-addresses)
 - [Εξαγωγή δεδομένων (GDPR)](/el/admin/customers/data-exports)
 - [Διατάξεις σελίδων](/el/admin/content/page-layouts)
-- [Πρότυπα email](/el/admin/settings/email-templates)
+- [Email](/el/admin/settings/emails)
