@@ -215,8 +215,8 @@ the same JSON Schema Django validates with) and gives each setting a control
 | a boolean | a switch; an optional one offers Default, On, Off |
 | a number, or a union of numbers | a number field with the schema's bounds |
 | `BUILDER_FIELD_PATTERNS` `hexColor`, `icon`, `httpsUrl` | a colour picker with its hex value, an icon name, an address |
-| a link (`builderField.link`) | no link, a store page, or an external address; a link to a record is shown read only until the record picker |
-| a reference (`refs`) | the record's id (a number), until the record picker |
+| a link (`builderField.link`) | no link, a store page, an external address, or a product, category, post or page picked by name (`Builder/RecordPicker`) |
+| a reference (`refs`) | the record picker for its kind: a product, category, blog category, page or content page, saved as its id or key |
 | a list of strings | rows that can be added, reordered and removed, up to `maxItems` |
 | an object | a group of its own fields |
 | rich text | not editable yet (it comes with the rich-text editor) |
@@ -231,6 +231,17 @@ Typing into one field is one undo step: changes to the same setting of the
 same node within `BUILDER_HISTORY_COALESCE_MS` of each other are merged
 (`change(key, next, { coalesce })`). STAFF see the form with every control
 disabled.
+
+The record picker (`Builder/RecordPicker`, `app/utils/builderRecordPicker.ts`)
+finds records as the staff member types, `BUILDER_LINK_SEARCH_DELAY_MS` after
+the last key, through `GET /api/builder/link-search` (Django's
+`builder/link-search`: only what a link may point at, grouped by kind, at most
+`BUILDER_LINK_SEARCH_LIMIT` of each). It names the record a setting already
+holds through `GET /api/builder/link-labels` (Django's `builder/link-labels`)
+and warns when that record can no longer be linked (`active: false`: it is
+left out when the page is published). Both routes are staff only, never
+cached, and ask in the editor's language: Django matches and names records
+in that language, else in the store's default.
 
 The settings are the draft's own values, in the store's default language;
 their translations follow with the translation slice.
@@ -413,6 +424,10 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingsForm.vue` | A node's settings form and its problems |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingField.vue` | One setting's control |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/LinkField.vue` | A link setting |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecordPicker.vue` | A record picked by name |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderRecordPicker.ts` | The picker's records, groups and labels |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/link-search.get.ts` | Records that match what is typed |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/link-labels.get.ts` | The names of the records a document names |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderSettingsFields.ts` | Settings fields from a block's schema |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/jsonSchema.ts` | A block's settings as JSON Schema |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/History.vue` | Undo, redo, save status |
