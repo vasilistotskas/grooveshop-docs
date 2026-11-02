@@ -36,8 +36,10 @@ serve it. See [Multi-tenancy](/dev/platform/multi-tenancy).
   to Django wrapped in a bare `/health/` responder, WebSocket goes through
   `AllowedHostsOriginValidator` → `TenantWebsocketMiddleware` →
   `TokenAuthMiddlewareStack` → `ws/notifications/` →
-  `NotificationConsumer`. The service is ASGI-only in production (Gunicorn
-  with Uvicorn workers); Daphne only backs `runserver`.
+  `NotificationConsumer`. The service is ASGI-only: Gunicorn with Uvicorn
+  workers in production, `uvicorn asgi:application --reload` locally.
+  Daphne is not a dependency, so `manage.py runserver` falls back to
+  Django's default WSGI handler and serves no WebSocket.
 
 ## Core and tenant
 
