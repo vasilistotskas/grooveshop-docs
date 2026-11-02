@@ -43,15 +43,13 @@ class UUIDModel(models.Model):
 `seo_keywords` once, for a model's parler **translations** model — never the
 shared row, so a bilingual store serves each locale its own `<title>` and meta
 description. An explicit `TranslatedFieldsModel` subclass inherits it
-(`ProductTranslation`, `BlogPostTranslation`, `ContentPageTranslation`,
-`PageLayoutTranslation`); a `TranslatedFields(...)` declaration, which cannot
+(`ProductTranslation`, `BlogPostTranslation`, `ContentPageTranslation`); a
+`TranslatedFields(...)` declaration, which cannot
 take a base class, spreads `**SeoTranslationModel.translated_fields()`
 (`ProductCategory`). `seo_description` is a `PlainTextField`
 (`core/fields/plain_text.py`) because it lands verbatim inside a `<meta>` tag.
 The API ships the fields inside `translations` like any other translated
-field, except the public page-config response, which answers one locale per
-request and resolves a layout's SEO for it strictly (no parler fallback: an
-untranslated locale answers empty).
+field.
 
 **`SortableModel`** adds `sort_order` plus `move_up()` / `move_down()`.
 Concurrent appends are serialised with a transaction-scoped advisory lock

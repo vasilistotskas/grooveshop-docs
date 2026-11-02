@@ -19,7 +19,7 @@ URLs, dashboards, sidebars or settings blocks.
 |---|---|---|
 | Class | `admin/admin.py: MyAdminSite` | `admin/platform_site.py: PlatformAdminSite` |
 | Instance name | `admin` | `platform_admin` |
-| Mounted by | `core/urls.py` (`ROOT_URLCONF`, locale-prefixed `admin/`) | `tenant/urls_public.py` (`PUBLIC_SCHEMA_URLCONF`, bare `admin/`) |
+| Mounted by | `core/urls.py` (`ROOT_URLCONF`, locale-prefixed `admin/`) | `tenant/urls_public.py` (`PUBLIC_SCHEMA_URLCONF`, locale-prefixed `admin/`) |
 | Unfold settings | `UNFOLD` in `settings.py` | `UNFOLD_PLATFORM` (`settings_name = "UNFOLD_PLATFORM"`) |
 | Dashboard | `admin/index.html`, widgets in `admin/dashboard/store/` | `admin/platform_index.html`, widgets in `admin/dashboard/platform.py` |
 | Who passes `has_permission` | a platform-staff session with an active staff-capable `UserTenantMembership` in the current tenant, or a superuser | a platform-staff session that is a superuser |
@@ -203,14 +203,6 @@ without a reference resolver. Fields covered: `Tenant.theme_metadata`,
 `RecommendationSlot.strategy_chain` and `weights`
 (`recommendation/json_schemas.py`).
 
-Page sections are the dynamic case: a section's schema depends on its
-`component_type`, so `page_config/section_schemas.py` holds one schema per
-type (props, plus the derived per-locale `i18n` override), validated in
-`PageSection.clean()` and the serializer, and `PageSectionForm` swaps in
-the type's editor for a saved section. See
-[OpenAPI contract](/dev/django/openapi-contract) for how they are
-published to the storefront.
-
 ## Dashboards
 
 Both dashboards are Unfold component widgets
@@ -307,8 +299,8 @@ built per request because Unfold renders dropdown items unchecked:
 `ADMIN_OPS_LINKS` (Flower, Mailpit, Meilisearch, RabbitMQ, each only
 when its `ADMIN_*_URL` is set) for platform superusers, nothing for
 anyone else. The store tools it used to hold are sidebar entries in the
-store's **Settings** group: Email Templates (the preview in `emails/`) for
-`order.view_order`,
+store's **Settings** group (the email preview now lives on each email's page
+under Settings → Emails, `emails/admin.py`):
 Translations (Rosetta) where `core.rosetta_access.tenant_scoped_rosetta_access`
 allows it, Cache for `core.purge_cache` holders (store ADMIN and OWNER;
 STAFF may not change store settings).
@@ -407,6 +399,21 @@ is out of scope for the admin). Three catalogues meet on one page:
   `f"{_('Welcome')} {username}"`) and would drop them.
 - **Django's and the other packages'**, which win wherever they
   translate a string.
+
+**Switching language.** Greek is the unprefixed address and every other
+language has its prefix (`/admin/`, `/en/admin/`), on both sites
+(`prefix_default_language=False`); the `django_language` cookie alone does
+not choose a language there, because `LocaleMiddleware` answers an
+unprefixed path in `LANGUAGE_CODE` once the urlconf has `i18n_patterns`.
+The switcher posts to `core.views.set_language`, a thin wrapper around
+Django's view that activates the language the posted address already
+carries before delegating: `translate_url` resolves under the active
+language, so without it `/en/admin/` could never be translated back to
+Greek. Both sites need `SHOW_LANGUAGES` and `LANGUAGE_FLAGS` (`UNFOLD` and
+`UNFOLD_PLATFORM` share `ADMIN_LANGUAGE_FLAGS`): `UNFOLD_PLATFORM` is
+merged over Unfold's defaults, not over `UNFOLD`, so a key set on one is
+absent on the other. `tests_mt/test_admin_language_switch.py` presses the
+rendered switcher on both hosts in both directions.
 
 Guards: `tests/unit/test_locale_catalogue.py` fails on an untranslated
 or fuzzy Greek entry in either catalogue, and when the installed Unfold

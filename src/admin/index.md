@@ -32,9 +32,9 @@ The sidebar shows only what concerns you and your store. The sections, in order:
 - **Catalog**: Products, Categories, Brands, Attributes, Images, Tags, Reviews. See [Products](/admin/catalog/products).
 - **Customers**: Customers, Addresses, Messages, Feedback, Favourites, Notifications, Wholesale, Loyalty, Newsletter. See [Users & addresses](/admin/customers/users-and-addresses).
 - **Marketing**: Promotions, Gift Cards, Recommendations. See [Promotions](/admin/marketing/promotions).
-- **Content**: Pages, Menus, Page Layouts, Blog. See [Pages](/admin/content/pages).
+- **Content**: Pages, the page builder, Blog. See [Pages](/admin/content/pages).
 - **Shipping**: ACS Shipments, BoxNow Shipments, Pickup Points. See [The daily routine](/admin/shipping/daily-routine).
-- **Settings**: Store Profile, Team, Store Settings, Payment Methods, Shipping Providers, VAT Rates, Email Templates, Cache.
+- **Settings**: Store Profile, Team, Store Settings, Payment Methods, Shipping Providers, VAT Rates, Emails, Cache.
 
 An entry with a sub-menu opens when you click it. If only one page of the sub-menu concerns you, the entry opens that page directly.
 

@@ -36,8 +36,10 @@ serve it. See [Multi-tenancy](/dev/platform/multi-tenancy).
   to Django wrapped in a bare `/health/` responder, WebSocket goes through
   `AllowedHostsOriginValidator` → `TenantWebsocketMiddleware` →
   `TokenAuthMiddlewareStack` → `ws/notifications/` →
-  `NotificationConsumer`. The service is ASGI-only in production (Gunicorn
-  with Uvicorn workers); Daphne only backs `runserver`.
+  `NotificationConsumer`. The service is ASGI-only: Gunicorn with Uvicorn
+  workers in production, `uvicorn asgi:application --reload` locally.
+  Daphne is not a dependency, so `manage.py runserver` falls back to
+  Django's default WSGI handler and serves no WebSocket.
 
 ## Core and tenant
 
@@ -179,10 +181,22 @@ through `TaggedModel`), and `contact/` (`Contact`, `ContactAttachment`,
 
 ### `page_config/`
 
-Merchant-editable storefront layouts, `NavigationMenu` and translatable
-`ContentPage`. A saved navigation row shadows the storefront's code
-default, and its Nitro cache key is `pageConfigNavigation`
-(`core/cache/surfaces.py`). Content pages seed unpublished.
+Translatable `ContentPage` (policies, FAQ, information pages) and the
+legal documents: the platform's texts and their rollout
+(`legal_documents.py`, `legal_guard.py`), the version each order accepted
+(`LegalDocumentVersion`) and the content pages a new store is seeded with
+(`content_pages.py`; the non-legal ones seed unpublished). Pages and menus
+are the page builder's (`builder/`).
+
+### `builder/`
+
+The storefront page builder: `BuilderDocument` (theme, section groups,
+templates, pages, each with a draft), immutable `BuilderVersion` and
+`BuilderRelease`, and the derived `BuilderReference` index. The block
+catalogue is the storefront's; `builder/services.py` is the only writer and a
+release moves the cache generation and the `builder` surface. Flow page:
+[Page builder: documents and releases](/dev/flows/page-builder-data); reference:
+[Storefront page builder](/dev/django/reference/builder).
 
 ### `recommendation/`
 

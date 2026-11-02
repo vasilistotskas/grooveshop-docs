@@ -79,7 +79,7 @@ rotation needs it.
 ## Per-tenant credentials are rows, not env
 
 Viva Wallet, Stripe, ACS, BoxNow, Meta CAPI, analytics ids, chat and ACP
-tokens all live on the `Tenant` model and are read through
+tokens, and a store's Resend sending key and webhook secret all live on the `Tenant` model and are read through
 `tenant/credentials.py`, which has no platform-wide fallback: an empty
 field means the integration is off for that tenant. They were removed from
 the Secrets at the multi-tenant cutover, and their last plaintext values

@@ -55,5 +55,4 @@ The category page does not change products. In [Products](/admin/catalog/product
 
 - [Products](/admin/catalog/products)
 - [Images](/admin/catalog/images)
-- [Menus](/admin/content/menus)
-- [Page layouts](/admin/content/page-layouts)
+- [Page builder](/admin/content/page-builder)

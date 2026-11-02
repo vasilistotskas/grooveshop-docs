@@ -78,5 +78,5 @@ Untick **Is Published** and save, or select posts and choose **Unpublish selecte
 
 - [Categories, authors & tags](/admin/content/blog/categories-authors-tags)
 - [Comments](/admin/content/blog/comments)
-- [Page layouts](/admin/content/page-layouts)
+- [Page builder](/admin/content/page-builder)
 - [Cache](/admin/settings/cache)

@@ -101,13 +101,13 @@ The newest entry of each language is what the site shows now, so it has no **Res
 - **Length.** The counter turns red past the limit, and a text over it is not saved.
 - **When the storefront cannot be reached** for a moment, the page says so and nothing is saved, so nothing unchecked ever reaches your site. Nothing is lost: try again in a moment.
 - **"This text no longer exists in the storefront"** means a platform update removed or renamed that text. Your old wording for it no longer shows anywhere.
-- **Your menus, pages and products are not here.** Menu links are edited in [Menus](/admin/content/menus), your own pages in [Pages](/admin/content/pages), product texts on each product. The admin's own texts cannot be changed by a store.
+- **Your menus, pages and products are not here.** Menus and the pages built from sections are made in the [page builder](/admin/content/page-builder), plain text pages in [Pages](/admin/content/pages), product texts on each product. The admin's own texts cannot be changed by a store.
 - **If a change does not show** after a minute, clear **Storefront texts** on the [Cache](/admin/settings/cache) page.
 
 ## Related
 
 - [Pages](/admin/content/pages)
-- [Menus](/admin/content/menus)
+- [Page builder](/admin/content/page-builder)
 - [Languages & translations](/admin/settings/languages-and-translations)
 - [Roles & team](/admin/getting-started/roles-and-team)
 - [Cache](/admin/settings/cache)

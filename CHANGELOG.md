@@ -1,3 +1,29 @@
+## [1.2.151](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.150...v1.2.151) (2026-11-02)
+
+## [1.2.150](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.149...v1.2.150) (2026-11-02)
+
+## [1.2.149](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.148...v1.2.149) (2026-11-02)
+
+## [1.2.148](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.147...v1.2.148) (2026-11-02)
+
+## [1.2.147](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.146...v1.2.147) (2026-11-02)
+
+## [1.2.146](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.145...v1.2.146) (2026-11-02)
+
+## [1.2.145](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.144...v1.2.145) (2026-11-02)
+
+## [1.2.144](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.143...v1.2.144) (2026-11-02)
+
+## [1.2.143](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.142...v1.2.143) (2026-11-01)
+
+## [1.2.142](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.141...v1.2.142) (2026-11-01)
+
+## [1.2.141](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.140...v1.2.141) (2026-11-01)
+
+## [1.2.140](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.139...v1.2.140) (2026-11-01)
+
+## [1.2.139](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.138...v1.2.139) (2026-11-01)
+
 ## [1.2.138](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.137...v1.2.138) (2026-11-01)
 
 ## [1.2.137](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.136...v1.2.137) (2026-11-01)

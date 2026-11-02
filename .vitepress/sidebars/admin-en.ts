@@ -72,8 +72,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
     text: 'Content',
     items: [
       { text: 'Pages', link: '/admin/content/pages' },
-      { text: 'Menus', link: '/admin/content/menus' },
-      { text: 'Page layouts', link: '/admin/content/page-layouts' },
+      { text: 'Page builder', link: '/admin/content/page-builder' },
       { text: 'Storefront texts', link: '/admin/content/storefront-texts' },
       {
         text: 'Blog',
@@ -101,7 +100,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
       { text: 'Payment methods', link: '/admin/settings/payment-methods' },
       { text: 'Shipping providers', link: '/admin/settings/shipping-providers' },
       { text: 'VAT rates', link: '/admin/settings/vat-rates' },
-      { text: 'Email templates', link: '/admin/settings/email-templates' },
+      { text: 'Emails', link: '/admin/settings/emails' },
       { text: 'Languages & translations', link: '/admin/settings/languages-and-translations' },
       { text: 'Cache', link: '/admin/settings/cache' },
     ],
