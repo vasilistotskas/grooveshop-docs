@@ -139,7 +139,11 @@ opens that page. STAFF get none of this.
 The add-section library (`Builder/Library.vue`) opens from the "+" of each
 document in the outline (a section at its end), from the selection's toolbar
 ("Add below": a sibling right after it; "Add inside": a block at the end of a
-node that takes blocks), and later from the preview. Where it was opened is
+node that takes blocks), and from the preview: a "+" on the bottom edge of
+the section under the pointer and of the selected one adds a section right
+below it, and one on the top edge of the first section adds one above it, so
+every place between sections is one click away. The "+" stays while the
+pointer is on it, though the pointer has left the frame, and STAFF get none. Where it was opened is
 the library store's target (`useBuilderLibraryStore`: a document and a
 `BuilderInsertPoint`, a parent and an index).
 
@@ -280,8 +284,9 @@ every design draws the preview with its own components and chrome.
   in view when a move or a duplicate redraws the page. The canvas scrolls its
   own window only. The canvas
   reports where the section under the pointer and the selected one are drawn
-  (`boxes`, the box of each wrapper's contents, once per frame on every
-  scroll, resize or redraw), and the editor draws their outlines and, over
+  (`boxes`, the box of each wrapper's contents, clipped to the width the
+  frame shows so a row that scrolls sideways is outlined on screen, once per
+  frame on every scroll, resize or redraw), and the editor draws their outlines and, over
   the selected one, the same toolbar as the sidebar (`Builder/NodeActions`),
   scaled with the frame. The store's page is never painted on. A section
   group's nodes and a section that renders nothing are selected from the
