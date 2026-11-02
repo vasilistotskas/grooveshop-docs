@@ -15,9 +15,9 @@ routes that forward the staff token to Django
 It is built in slices. Today it opens a page with the store's section groups,
 shows their outline, changes their structure (move, duplicate, hide, remove)
 and the settings of any section or block with undo and redo, draws every
-change in a live preview of the store's real page, and saves every change as
-it goes. Selecting in the preview, publishing and history follow; each slice
-extends this page.
+change in a live preview of the store's real page, where a section is selected
+and changed in place, and saves every change as it goes. Publishing and
+history follow; each slice extends this page.
 
 ## Diagram
 
@@ -228,9 +228,24 @@ every design draws the preview with its own components and chrome.
   `useNavigation` read before the release. On the canvas a page the store has
   not published is drawn empty until the preview arrives, never answered as
   a 404.
-- **Links.** A link followed in the preview never navigates it: one to a page
-  the editor builds opens that page in the editor (`builderDocumentAt`); any
-  other says it is not built here.
+- **Selecting.** On the canvas each section of the page is wrapped in an
+  element that carries its node id (`BUILDER_CANVAS_NODE_ATTRIBUTE`,
+  `PageSection/Renderer.vue`). The wrapper is `display: contents`, so the
+  store's grids and gaps are unchanged, and it does not depend on a design
+  passing attributes to its root; a shopper's page has none. A click on a
+  section selects it (`pick`), whatever it was on; a selection made in the
+  outline is sent to the canvas (`select`), which brings it into view, and
+  keeps it in view when a move or a duplicate redraws the page. The canvas
+  reports where the section under the pointer and the selected one are drawn
+  (`boxes`, the box of each wrapper's contents, once per frame on every
+  scroll, resize or redraw), and the editor draws their outlines and, over
+  the selected one, the same toolbar as the sidebar (`Builder/NodeActions`),
+  scaled with the frame. The store's page is never painted on. A section
+  group's nodes and a section that renders nothing are selected from the
+  outline.
+- **Links.** A link outside the sections never navigates the preview: one to
+  a page the editor builds opens that page in the editor
+  (`builderDocumentAt`); any other says it is not built here.
 - **Widths.** Phone, tablet, desktop or the full pane
   (`BUILDER_PREVIEW_DEVICES`, `?device=`); a width wider than the pane is
   scaled down, so a desktop page keeps its desktop layout.
