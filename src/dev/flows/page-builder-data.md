@@ -1,6 +1,6 @@
 ---
 title: "Page builder: documents and releases"
-description: "How a store's pages are edited, versioned and published: documents and releases in Django, the block catalogue owned by the storefront, validation, the cache purge on publish, and the public read."
+description: "How a store's pages are edited, versioned and published: documents and releases in Django, the block catalogue owned by the storefront, validation, the cache purge on publish, the public read, the link pickers, the live preview, presence and share-preview links."
 ---
 
 # Page builder: documents and releases
@@ -116,6 +116,10 @@ never purged.
 
 `builder` is in `STORE_SETTINGS_APP_LABELS` and `STAFF_READ_ONLY_APP_LABELS`
 (`tenant/role_scopes.py`): Admin and Owner edit and publish, Staff only look.
+Staff can still open the editor (`Edit storefront` and the ticket ask for
+`builder.view_builderdocument`, not the change permission), and the session
+reports their `role`; every write is refused by the same role check, so the
+editor only has to read `role` to open read only.
 
 ### 8. Scheduled publishing
 
@@ -170,6 +174,70 @@ and refused outside the builder's routes
 request, so losing either ends a session at once. The storefront keeps the
 token in its own HttpOnly cookie, separate from the customer session.
 
+### 11. Publishing one stored version
+
+`POST /api/v1/builder/documents/<key>/versions/<n>/publish` (`services.publish_version`)
+makes one release that repoints **only that key** at version `n` and leaves
+every other document and the draft alone. It is not a rollback
+(`rolledBackFrom` stays empty). The version's references must still exist
+(`reference_not_found`), a version that is already the published one is
+`nothing_to_publish`, and the document counts as published only when its
+draft is exactly that version. It is not checked against the catalogue again:
+the version was valid when made, and the storefront upgrades an older block
+when it renders (`upgradeNode`), as it does for every old version a release
+keeps.
+
+### 12. Link pickers
+
+Two staff reads let the editor pick and name the target of a link
+(`builder/link_picker.py`). `GET link-search?q=&kinds=&locale=` finds
+products, categories, posts, blog categories, pages and content pages by
+label or slug; `GET link-labels?product=1,2&page=about&locale=` names the
+targets a stored reference points at, **including inactive and missing
+ones**, so a block can show a name and a "no longer available" warning. Both
+read the one existence rule, `builder/references.py: VISIBLE`, which the
+publish check and the public `link-targets` read share. Neither returns a
+path: the storefront builds it from the slug with its own route helpers.
+
+### 13. The live preview
+
+`POST /api/v1/builder/preview/resolve` takes the editor's **unsaved** working
+copies and answers what the public read would answer if they were released
+now: `{release, locale, theme, groups, page}`, the copies standing in for the
+release's documents of the same keys. It runs the same code as the public read
+(`builder/published.py: assemble`), validates each copy like a draft save and
+stores nothing; the answer is `Cache-Control: private, no-store`. Any store
+role may call it, so a read-only editor previews too.
+
+### 14. Who else has a page open
+
+`POST /api/v1/builder/presence {documents: [keys]}` is the editor's heartbeat
+(every ~15 s) and answers `{documents: {key: [{id, name, since}]}}`: who else
+sent one for each document, the caller left out; `DELETE` on sign-out. It is a
+hint, not a lock: `If-Match` still decides a save. The state is in Redis
+under the store's schema (a record per person and document that expires after
+`BUILDER_PRESENCE_TTL_SECONDS`, plus a set of ids per document so a read never
+scans), never in the database (`builder/presence.py`).
+
+### 15. Share-preview links
+
+`POST /api/v1/builder/preview-links {documents, note?}` (Admin and Owner)
+freezes the current drafts, validated like a save, in a `BuilderPreviewLink`
+**outside the version history** (no version is made) and answers a token once.
+The token is 256 random bits and only its SHA-256 is stored. Anyone opens the
+link with `GET /api/v1/builder/preview/<token>/<pageKey>?locale=`, which
+answers the public read's shape with the frozen documents over the current
+release (the same preview code as above): later edits and publishes do not
+change what was shared. An unknown, revoked or expired token is one
+`404 preview_link_expired`. The answer is `private, no-store` and
+`noindex`; the storefront page that shows it must also answer `private,
+no-store`, because the Cloudflare storefront-pages rule caches whatever else an
+origin marks cacheable. `GET preview-links` lists the open links (no token) and
+`DELETE preview-links/<id>` revokes one. A daily per-store sweep
+(`builder.tasks.purge_expired_preview_links`) deletes the expired ones (see
+[Data retention](/dev/operations/data-retention)), and the staging
+anonymiser deletes the table: a link is a credential.
+
 ## Invariants
 
 - **The storefront owns the block catalogue.** A new block or setting is one
@@ -183,6 +251,10 @@ token in its own HttpOnly cookie, separate from the customer session.
 - **A staff session is short and narrow**: one ticket spends once, the token
   is not renewed and works on the builder's routes only.
 - **A publish is atomic**: every document valid, one release, or nothing.
+- **A preview or a share link never changes stored state.** Both resolve through
+  the public read's code; neither creates a version, a release or a draft.
+- **A share-link token is never stored or listed**: the database holds its hash,
+  and every token that opens nothing answers identically.
 - **The published read is a pure function of the release number and the
   locale**, which is why its cache needs no purge.
 
@@ -208,11 +280,14 @@ token in its own HttpOnly cookie, separate from the customer session.
 | `grooveshop-django-api/builder/validation.py` | Every rule, as pointer and code |
 | `grooveshop-django-api/builder/storefront.py` | The catalogue client |
 | `grooveshop-django-api/builder/references.py` | Reference existence and the index |
-| `grooveshop-django-api/builder/published.py` | The public read, cached per release |
+| `grooveshop-django-api/builder/published.py` | The public read, cached per release; `assemble` and `preview` shared with the editor preview |
+| `grooveshop-django-api/builder/link_picker.py` | `link-search` and `link-labels` |
+| `grooveshop-django-api/builder/presence.py` | Who else has a document open (Redis) |
+| `grooveshop-django-api/builder/preview_links.py` | Share-preview links: create, revoke, open, sweep |
 | `grooveshop-django-api/builder/views.py` | Staff and public routes |
 | `grooveshop-django-api/builder/rendering.py` | Parser and renderer that leave document keys alone |
 | `grooveshop-django-api/builder/scheduling.py` | Schedule, move, cancel, the sweep, acknowledging a failure |
-| `grooveshop-django-api/builder/tasks.py` | `run_due_publishes`, the per-store sweep |
+| `grooveshop-django-api/builder/tasks.py` | `run_due_publishes`, the per-store sweep; `purge_expired_preview_links` |
 | `grooveshop-django-api/builder/emails.py` | `ops.builder_schedule_failed` |
 | `grooveshop-django-api/builder/media_services.py` | The media library's only writer |
 | `grooveshop-django-api/builder/media_api.py` | Library routes and the public resolve |
