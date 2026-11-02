@@ -53,5 +53,5 @@ If you untick it later, customers cannot request new alerts. Alerts already requ
 
 - [Favourites](/admin/customers/favourites)
 - [Products](/admin/catalog/products)
-- [Email templates](/admin/settings/email-templates)
+- [Emails](/admin/settings/emails)
 - [When to contact support](/admin/help/contact-support)
