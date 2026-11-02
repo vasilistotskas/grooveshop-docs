@@ -15,7 +15,8 @@ what exists in the storefront: the catalogue, the links of a block, the port of
 `page_config`'s sections and navigation menus to blocks, the converter Django's
 importer calls, how pages and menus are rendered from the builder, and the staff
 session. The Django side (documents, versions, releases) is in
-[Page builder data](/dev/flows/page-builder-data). The editor comes after it.
+[Page builder data](/dev/flows/page-builder-data). The editor is in
+[Page builder editor](/dev/flows/page-builder-editor).
 
 It follows the pattern of [Store-editable texts](/dev/flows/store-texts): a
 build-time collection, a public tenant-free endpoint whose content hash is its

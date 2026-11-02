@@ -60,6 +60,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'Store-editable texts', link: '/dev/flows/store-texts' },
       { text: 'Page builder foundation', link: '/dev/flows/page-builder' },
       { text: 'Page builder: documents and releases', link: '/dev/flows/page-builder-data' },
+      { text: 'Page builder editor', link: '/dev/flows/page-builder-editor' },
     ],
   },
   {
