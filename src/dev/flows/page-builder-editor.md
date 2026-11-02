@@ -225,7 +225,7 @@ the same JSON Schema Django validates with) and gives each setting a control
 | a reference (`refs`) | the record picker for its kind: a product, category, blog category, page or content page, saved as its id or key |
 | a list of strings | rows that can be added, reordered and removed, up to `maxItems` |
 | an object | a group of its own fields |
-| rich text | Nuxt UI's editor (`UEditor`, TipTap), writing HTML (`Builder/RichTextField`): bold, italic, underline, strikethrough, headings h2 to h4 (`BUILDER_RICH_TEXT_HEADING_LEVELS`), lists, quote, divider and links to an `https://` address or a store path (`builderRichTextLinkAllowed`); no code and no images. All of it is markup Django's sanitiser keeps, so a save never refuses it (`unsupported_markup`). An emptied field is no text (`builderRichTextIsEmpty`). It loads only when a rich text setting is shown (`LazyBuilderRichTextField`), and keeps its own undo while it has focus |
+| rich text | Nuxt UI's editor (`UEditor`, TipTap), writing HTML (`Builder/RichTextField`): bold, italic, underline, strikethrough, headings h2 to h4 (`BUILDER_RICH_TEXT_HEADING_LEVELS`), lists, quote, divider and links to an `https://` address or a store path (`builderRichTextLinkAllowed`); no code and no images. All of it is markup Django's sanitiser keeps, so a save never refuses it (`unsupported_markup`). An emptied field is no text (the editor's own `isEmpty`: no text and no divider). It loads only when a rich text setting is shown (`LazyBuilderRichTextField`), and keeps its own undo while it has focus |
 
 An optional setting offers Default, which takes it out of the node so the
 section component falls back to its own default (`setNodeSetting`; an empty
@@ -435,7 +435,7 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingField.vue` | One setting's control |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/LinkField.vue` | A link setting |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RichTextField.vue` | A rich text setting |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/builderRichText.ts` | Empty rich text, and the links it takes |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderRichText.ts` | The links rich text takes |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecordPicker.vue` | A record picked by name |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderRecordPicker.ts` | The picker's records, groups and labels |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/link-search.get.ts` | Records that match what is typed |
