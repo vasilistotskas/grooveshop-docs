@@ -143,6 +143,42 @@ where MapLibre's worker fetches the TileJSON and the tiles, and
 `worker-src 'self'` for that worker, a same-origin `/_nuxt/` file. No tile
 provider appears anywhere; see [Maps](/dev/operations/maps).
 
+### Framing
+
+No storefront page may be framed: `frame-ancestors 'none'` in the policy and
+`X-Frame-Options: DENY` (set by `server/middleware/3.csp.ts` on every
+response it sees, the API's included). The one exception is the page
+editor's preview (the editor itself is in [Page builder foundation](/dev/flows/page-builder)),
+which shows the store's real pages in an iframe of the editor. A request
+gets `frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN` only when
+both hold (`builderCanvasFraming`, `server/utils/builderSession.ts`):
+
+- it asks for the page as the preview: the `builder-canvas` query parameter
+  (`BUILDER_CANVAS_QUERY`), and
+- it carries a live staff session (the `__Host-` builder cookie,
+  SameSite=Strict).
+
+Why this is not a clickjacking opening:
+
+- **Only the store frames it.** `'self'` admits the store's own pages, the
+  editor among them. No other site can frame a store page, the preview
+  included, since its own origin is never `'self'`.
+- **Another site cannot make one.** The staff cookie is SameSite=Strict,
+  so a page on another site that frames or links the preview sends none,
+  and the answer is `'none'`.
+- **No framed copy is kept.** The decision is made on the request itself,
+  outside Nitro's page cache: a cached render is handed only the `varies`
+  headers, never the cookie, so no cache entry holds anyone's framing.
+  Every preview request, signed in or not and whatever its status, answers
+  `Cache-Control: private, no-store` with no edge directive
+  (`isBuilderCanvasResponse`, `server/utils/edgeCache.ts`). The
+  Cloudflare rule follows the origin, so nothing from it is stored at the
+  edge either.
+
+The ingress's `frameDeny` stays on the storefront until a storefront
+release carrying this is live. It then comes off the storefront routers, so
+the storefront owns the header; it stays on every other host.
+
 ## Ingress
 
 Traefik middlewares in `grooveshop-infrastructure/.../base/`:
@@ -198,6 +234,8 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
 - The agent surface never accepts Knox or session auth.
 - The control plane never serves storefront URLs and always sits behind
   basic auth in addition to Django auth.
+- No storefront page may be framed, except the editor's preview by the
+  store's own pages, for a live staff session; that answer is never cached.
 
 ## Failure modes
 
@@ -229,7 +267,9 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
 | `grooveshop-django-api/agent/views.py`, `agent/oidc.py` | Agent resources and OIDC adapter |
 | `grooveshop-django-api/docs/api-staff-identity.md` | Design record for staff identity |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | CSP builder |
-| `grooveshop-storefront-ui-node-nuxt/server/middleware/3.csp.ts`, `server/plugins/csp-nonce.ts` | Nonce policy |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderSession.ts` | `builderCanvasFraming`: who may frame the editor's preview |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/edgeCache.ts` | `isBuilderCanvasResponse`: the preview is never cached |
+| `grooveshop-storefront-ui-node-nuxt/server/middleware/3.csp.ts`, `server/plugins/csp-nonce.ts` | Nonce policy; framing headers |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/auth.ts` | Forwarded headers, client IP |
 | `grooveshop-storefront-ui-node-nuxt/.claude/rules/auth.md` | The two-token model in the storefront |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml` | Build-time secret handling |
