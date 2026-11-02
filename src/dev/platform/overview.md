@@ -43,7 +43,7 @@ Django app that owns each capability is named so you can find it.
 | Promotions, coupons, gift cards | `promotion/`, `giftcard/` | Rule-based promotions; stored-value gift cards with a ledger |
 | B2B / wholesale | `b2b/` | Business profiles, VIES validation, customer groups and price lists; invoice-at-checkout is a plain merchant setting on every plan |
 | Loyalty | `loyalty/` | Points, XP, tiers, rewards; one switch controls both earning and redeeming |
-| Blog and CMS | `blog/`, `page_config/` | Blog with categories and comments; merchant-editable page layouts, navigation and content pages |
+| Blog and CMS | `blog/`, `builder/`, `page_config/` | Blog with categories and comments; the page builder's pages and menus; content pages and the legal documents |
 | Recommendations | `recommendation/` | Typed product relations plus scored strategies; strategies are further gated by plan rank |
 | Agentic commerce | `grooveshop-agent-gateway`, `agent/` | MCP tools, UCP and ACP checkout, product feeds, chatbot — see [Agentic commerce](/dev/flows/agentic-commerce) |
 | Notifications and email | `notification/`, `core/templates/emails/` | WebSocket notifications and transactional email, branded per tenant |

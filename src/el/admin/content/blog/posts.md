@@ -78,5 +78,5 @@ description: Γράψιμο, μετάφραση, προγραμματισμός 
 
 - [Κατηγορίες, συντάκτες & ετικέτες](/el/admin/content/blog/categories-authors-tags)
 - [Σχόλια](/el/admin/content/blog/comments)
-- [Διατάξεις σελίδων](/el/admin/content/page-layouts)
+- [Δημιουργός σελίδων](/el/admin/content/page-builder)
 - [Cache](/el/admin/settings/cache)

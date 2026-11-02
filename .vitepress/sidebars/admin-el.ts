@@ -68,8 +68,7 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
     text: 'Περιεχόμενο',
     items: [
       { text: 'Σελίδες', link: '/el/admin/content/pages' },
-      { text: 'Μενού', link: '/el/admin/content/menus' },
-      { text: 'Διατάξεις σελίδων', link: '/el/admin/content/page-layouts' },
+      { text: 'Δημιουργός σελίδων', link: '/el/admin/content/page-builder' },
       { text: 'Κείμενα καταστήματος', link: '/el/admin/content/storefront-texts' },
       {
         text: 'Blog',
@@ -97,7 +96,7 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
       { text: 'Μέθοδοι πληρωμής', link: '/el/admin/settings/payment-methods' },
       { text: 'Πάροχοι αποστολών', link: '/el/admin/settings/shipping-providers' },
       { text: 'Συντελεστές ΦΠΑ', link: '/el/admin/settings/vat-rates' },
-      { text: 'Πρότυπα email', link: '/el/admin/settings/email-templates' },
+      { text: 'Email', link: '/el/admin/settings/emails' },
       { text: 'Γλώσσες & μεταφράσεις', link: '/el/admin/settings/languages-and-translations' },
       { text: 'Cache', link: '/el/admin/settings/cache' },
     ],

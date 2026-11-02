@@ -27,7 +27,8 @@ The **Cache Management** page shows one card for each area of the storefront, in
 | **Promotions** | promotions, the offers page and the offer badge on products. |
 | **Product recommendations** | the recommended products the storefront shows. |
 | **Blog** | blog posts, categories, tags and authors. |
-| **Pages & navigation** | content pages, page layouts, menus and the home page. |
+| **Content pages** | content pages (policies, FAQ, information pages) and the pages that show or link them. |
+| **Page builder** | the pages and menus made in the page builder, and every page that shows them. |
 | **Storefront pages** | every page of the storefront at once. |
 | **Sitemap & SEO** | the sitemap (the site map for search engines) and RSS. |
 | **Site settings** | values in Store Settings and the seller details at the bottom of the page. |
@@ -74,6 +75,5 @@ Click **Purge all** and confirm. Every area is cleared. Right after, the storefr
 
 - [Store settings](/admin/settings/store-settings)
 - [Products](/admin/catalog/products)
-- [Menus](/admin/content/menus)
-- [Page layouts](/admin/content/page-layouts)
+- [Page builder](/admin/content/page-builder)
 - [When to contact support](/admin/help/contact-support)

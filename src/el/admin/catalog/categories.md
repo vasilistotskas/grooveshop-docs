@@ -55,5 +55,4 @@ description: Το δέντρο κατηγοριών προϊόντων - προ�
 
 - [Προϊόντα](/el/admin/catalog/products)
 - [Εικόνες](/el/admin/catalog/images)
-- [Μενού](/el/admin/content/menus)
-- [Διατάξεις σελίδων](/el/admin/content/page-layouts)
+- [Δημιουργός σελίδων](/el/admin/content/page-builder)
