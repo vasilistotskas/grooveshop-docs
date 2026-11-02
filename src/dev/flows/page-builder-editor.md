@@ -196,7 +196,7 @@ the library store's target (`useBuilderLibraryStore`: a document and a
   (`parseDocument` skips it as `feature_disabled`, with a warning), so turning a
   feature off never leaves a dead section live. A draft that holds one is refused
   on save; the inspector says so on that node, with the feature's name and a
-  one-click "Remove". For ADMIN and OWNER it also offers "Turn on <feature>",
+  one-click "Remove". For ADMIN and OWNER it also offers "Turn on" and the feature's name,
   which opens the store admin's page for the first setting that is off in a new
   tab: `GET /api/builder/features` (Django's `builder/features`, staff only, never
   cached: `{ features: { <name>: { on, turnOnUrl } } }`), asked once a node is
