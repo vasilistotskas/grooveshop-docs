@@ -100,3 +100,7 @@ sources.lock.json   the source-repository commits a release publishes
 - [grooveshop-media-stream](https://github.com/vasilistotskas/grooveshop-media-stream): NestJS image processing and caching service
 - [grooveshop-agent-gateway](https://github.com/vasilistotskas/grooveshop-agent-gateway): Go gateway for AI agents (MCP, UCP, ACP), catalogue feeds and the storefront chat
 - grooveshop-infrastructure (private): Kubernetes manifests deployed by Argo CD
+
+## Licence
+
+Source-available under the [PolyForm Strict License 1.0.0](LICENSE.md): you may use it for noncommercial purposes; you may not distribute it or make changes or new works based on it. Commercial use needs a separate licence from the author.
