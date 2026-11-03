@@ -456,7 +456,7 @@ first, a page at a time (`BUILDER_VERSIONS_PAGE_SIZE`), grouped by calendar day
 | **Draft** (Current) | The document's own state, shown while it has unpublished changes (`hasUnpublishedChanges`). Not a stored version. |
 | **Saved version N** | A `checkpoint`: a named save (`POST documents/<key>/checkpoint`, the panel's "Save a named version" with an optional note). Autosaves never make one. |
 | **Published version N** | A `publish` version. The one the store serves now (`publishedVersion`) carries a **Live** badge. |
-| **Restored from version N** | A `restore` version: Django records one when a version is put back (`restoredFrom` names the source), unless the newest version already holds that content. |
+| **Version N: restored from version M** | A `restore` version: Django records one when a version is put back (`restoredFrom` names the source M), unless the newest version already holds that content. |
 
 A version is read when asked for (`GET .../versions/<number>`), made a working
 copy this build can draw (`readBuilderWorkingCopy`, the function that opens a
@@ -474,7 +474,9 @@ never as the live page; publishing is its own step. It asks first, then:
 2. when the draft differs from what is live, keeps it as a named version
    ("Before restoring version N"), so a restore costs no work;
 3. restores against the draft revision the editor holds (`If-Match`); a 409
-   `revision_conflict` restores nothing and is reported;
+   `revision_conflict` restores nothing and opens the same conflict dialog an
+   autosave conflict does (section 9: who saved, what differs, keep mine or
+   load theirs), through `useBuilderAutosaveStore().reportConflict`;
 4. takes the restored draft as the document's new base (`takeTheirs`): that
    document's undo history is dropped, because undoing into a copy that is no
    longer the base of anything would bring the old draft back as new changes.
@@ -577,7 +579,7 @@ once per streak; the editor works on.
 | "Offline, retrying" that does not clear | Django is unreachable, or cannot reach the storefront's catalogue (503 `storefront_unavailable`). |
 | "Someone else saved" | Another session saved the document in between; the dialog asks which version to keep. |
 | "The preview didn't update" | `POST /api/builder/preview` failed (logged by the route); the canvas shows the last version it drew. |
-| "Someone else saved this page" when restoring a version | The draft's revision moved since the editor read it (409 `revision_conflict`); nothing was restored. |
+| The conflict dialog opens when restoring a version | The draft's revision moved since the editor read it (409 `revision_conflict`); nothing was restored. Keep mine or load theirs, then restore again. |
 | "Your changes aren't saved yet" when restoring or sharing | The autosave has not stored the document (pending, retrying, refused); the action waits for it. |
 | A share link says "This link is no longer valid" | Expired, revoked or unknown token, or the page is in neither the link nor the release. |
 | No "is editing" notice though two people are in | The heartbeat fails (logged once as `presence heartbeat failed`), or Django's `BUILDER_PRESENCE_TTL_SECONDS` is below two beats. |
