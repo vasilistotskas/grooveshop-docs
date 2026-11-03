@@ -328,6 +328,8 @@ matter are listed at the top of `internal/feeds/rss.go`:
 - Availability is the enum `in stock` / `out of stock`; condition is `new`;
   `g:item_group_id` carries the variant group; `g:brand` falls back to the
   store name.
+- Every attribute that is not a variant option goes out as a
+  `g:product_detail`, so a specification is entered once.
 - A product with no default-locale name or no image is **skipped**, because
   the platforms would reject it anyway. A malformed money field is an error,
   because it would corrupt every consumer's feed.
