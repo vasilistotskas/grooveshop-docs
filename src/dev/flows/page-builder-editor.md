@@ -456,8 +456,7 @@ first, a page at a time (`BUILDER_VERSIONS_PAGE_SIZE`), grouped by calendar day
 | **Draft** (Current) | The document's own state, shown while it has unpublished changes (`hasUnpublishedChanges`). Not a stored version. |
 | **Saved version N** | A `checkpoint`: a named save (`POST documents/<key>/checkpoint`, the panel's "Save a named version" with an optional note). Autosaves never make one. |
 | **Published version N** | A `publish` version. The one the store serves now (`publishedVersion`) carries a **Live** badge. |
-
-Django records only those two kinds; there is no "restored" entry yet.
+| **Restored from version N** | A `restore` version: Django records one when a version is put back (`restoredFrom` names the source), unless the newest version already holds that content. |
 
 A version is read when asked for (`GET .../versions/<number>`), made a working
 copy this build can draw (`readBuilderWorkingCopy`, the function that opens a
