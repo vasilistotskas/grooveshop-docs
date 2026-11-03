@@ -77,6 +77,15 @@ The announcement bar is a line above the store's header. Open the setting `ANNOU
 
 To remove it, set `enabled` to `false`.
 
+### Tell search engines about new and changed pages
+
+Search engines such as Bing, Yandex and Naver learn about a changed product or blog post by visiting your store, which can take days. Switch this on and the store tells them itself.
+
+1. Open the setting `INDEXNOW_ENABLED`.
+2. Tick **Value (Boolean)** and click **Save**.
+
+From then on the store collects the products and blog posts that were added, changed or taken off the store, and every half hour sends the search engines one message with their addresses, in every language the store is available in. Only products that are **Active** and blog posts that are published are announced; a draft is never mentioned. A product or post you remove from the store is announced too, so the search engines drop it sooner. Nothing else is needed from you. Google does not take part in this, and a search engine may still decide not to visit a page. The setting is off until you switch it on.
+
 ### Set the same-day dispatch time
 
 1. Open the setting `DISPATCH_CUTOFF`.
@@ -228,6 +237,7 @@ See [Messages & feedback](/admin/customers/messages-and-feedback).
 | Setting | What it does | Default |
 |---|---|---|
 | `SEARCH_MAX_LIMIT` | The most results one search returns. Leave it as it is. | 100 |
+| `INDEXNOW_ENABLED` | The store tells search engines (Bing, Yandex, Naver and others, not Google) about new, changed and removed products and blog posts. See the task above. | off |
 
 ### Admin History
 
