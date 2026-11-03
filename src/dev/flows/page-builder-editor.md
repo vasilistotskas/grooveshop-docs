@@ -15,7 +15,8 @@ routes that forward the staff token to Django
 It is built in slices. Today it opens a page with the store's section groups,
 shows their outline, changes their structure (move, also by dragging a row of
 the outline, duplicate, hide, remove)
-and the settings of any section or block with undo and redo, draws every
+and the settings of any section or block, in any language the store serves,
+with undo and redo, draws every
 change in a live preview of the store's real page, where a section is selected
 and changed in place, and saves every change as it goes. Publishing and
 history follow; each slice extends this page.
@@ -249,8 +250,39 @@ left out when the page is published). Both routes are staff only, never
 cached, and ask in the editor's language: Django matches and names records
 in that language, else in the store's default.
 
-The settings are the draft's own values, in the store's default language;
-their translations follow with the translation slice.
+#### Another language of the store
+
+Every document is written in the platform's default language
+(`DEFAULT_LOCALE`, Django's `PARLER_DEFAULT_LANGUAGE_CODE`); its other
+languages live in the working copy's overlay, `i18n[locale][node id][pointer]`,
+one entry per translatable setting (each block's `translatable` pointers).
+A setting with no entry falls back to the draft's text, as the published pages
+read it.
+
+For a store that serves more than one language, the top bar's
+`Builder/LocaleSwitcher` chooses the language being edited
+(`useBuilderEditorView().locale`, `?locale=`, only a language the store
+serves). Each language other than the draft's says how many settings of the
+page still need translating into it (`builderMissingTranslations`: a
+translatable setting with text in the draft and none in that language). In
+another language:
+
+- a translatable field shows its translation, with the draft's text as its
+  placeholder and a "Not translated" badge until it has one; typing writes the
+  overlay (`setNodeTranslation`, `app/utils/builderTranslation.ts`) and never
+  the draft, and emptying it takes the entry out, so the setting falls back;
+- every other field shows the draft's value, read only, as "Same in every
+  language": layout is never per language;
+- the form checks what the language reads (`builderTranslatedSettings`: the
+  draft with its translations in place) against the block's schema, and a
+  save Django refuses shows each problem of that language's overlay
+  (`/i18n/<locale>/<id>/<pointer>`) on its field;
+- the settings pane names the language ("Translating: English");
+- the preview draws the store page in that language (`/en/…?builder-canvas`),
+  so the page asks for the preview in it (`X-Language`) and draws its own texts
+  in it too.
+
+The outline keeps naming nodes by their draft titles.
 
 ### 9. Saving
 
@@ -343,7 +375,8 @@ sign-in prompt, landing attribution or interaction timing, and never indexed.
 ### 11. The address keeps the view
 
 `useBuilderEditorView` keeps the document (`?doc=`), the selected node
-(`?node=`) and the preview's width (`?device=`) in the address, so a reload, a shared link or Back restores the
+(`?node=`), the language being edited (`?locale=`, absent for the draft's)
+and the preview's width (`?device=`) in the address, so a reload, a shared link or Back restores the
 view. Opening another page is a history step; selecting a node or a width
 replaces the current entry. A value that is not a document key or a node reference is read
 as absent.
@@ -430,6 +463,8 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderSchematics.ts` | The library's schematics |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/placement.ts` | Where a section may sit |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Inspector.vue` | The settings pane |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/LocaleSwitcher.vue` | The language being edited |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderTranslation.ts` | Translations: read, write, merge, count what is missing |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/features.get.ts` | Which features are on, and where this person turns one on |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingsForm.vue` | A node's settings form and its problems |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/SettingField.vue` | One setting's control |
