@@ -394,6 +394,97 @@ either language, a name is blank, or a name is left for something that no
 longer exists. The editor's own interface
 strings are its components' `<i18n>` blocks.
 
+### 13. Version history
+
+The top bar's history panel (`Builder/VersionHistory.vue`, store
+`useBuilderHistoryStore`) lists what Django keeps of the open document, newest
+first, a page at a time (`BUILDER_VERSIONS_PAGE_SIZE`), grouped by calendar day
+(`builderHistoryRows`, `groupBuilderHistoryByDay`):
+
+| Row | Where it comes from |
+|---|---|
+| **Draft** (Current) | The document's own state, shown while it has unpublished changes (`hasUnpublishedChanges`). Not a stored version. |
+| **Saved version N** | A `checkpoint`: a named save (`POST documents/<key>/checkpoint`, the panel's "Save a named version" with an optional note). Autosaves never make one. |
+| **Published version N** | A `publish` version. The one the store serves now (`publishedVersion`) carries a **Live** badge. |
+
+Django records only those two kinds; there is no "restored" entry yet.
+
+A version is read when asked for (`GET .../versions/<number>`), made a working
+copy this build can draw (`readBuilderWorkingCopy`, the function that opens a
+document) and **previewed** in a fullscreen modal (`Builder/VersionPreview.vue`)
+that mounts the editor's canvas with a read-only `preview` copy standing in for
+the page: the same preview pipeline, but nothing in it selects, adds or moves.
+A version this editor cannot read whole is not opened.
+
+**Restore** (`POST .../versions/<number>/restore`) always lands as the DRAFT,
+never as the live page; publishing is its own step. It asks first, then:
+
+1. saves what the editor holds (`useBuilderAutosaveStore().save`) and refuses
+   (`unsaved`) while that is not stored, because a restore over unsaved work
+   would lose it;
+2. when the draft differs from what is live, keeps it as a named version
+   ("Before restoring version N"), so a restore costs no work;
+3. restores against the draft revision the editor holds (`If-Match`); a 409
+   `revision_conflict` restores nothing and is reported;
+4. takes the restored draft as the document's new base (`takeTheirs`): that
+   document's undo history is dropped, because undoing into a copy that is no
+   longer the base of anything would bring the old draft back as new changes.
+
+Django does not check the version against today's catalogue (the storefront
+may have moved on); the editor upgrades old blocks when it opens the draft and
+publishing validates.
+
+### 14. Sharing a preview
+
+The top bar's share dialog (`Builder/ShareDialog.vue`, store
+`useBuilderShareStore`) makes a link that shows the SAVED drafts of the open
+page and its section groups to someone without an account. Making one first
+saves the editor's changes and refuses (`unsaved`) while they are not stored,
+since the link freezes what Django holds. The answer carries the token **once**
+(Django keeps only its hash); the dialog shows the address with a copy button
+and lists the open links (`GET preview-links`, no token) with a Revoke action.
+Only roles that edit see it.
+
+The address is `/_builder/preview/<token>?page=<slug>`
+(`builderSharePath`; the language prefix is the editor's):
+
+- `GET /api/builder/shared/<token>?page=<slug>` is **public**: the token is the
+  only credential and no staff session is read. It asks Django's
+  `builder/preview/<token>/<slug>` and answers the same `BuilderPreviewResponse`
+  the editor's preview does, through one function (`builderPreviewOf`): the
+  page under `page:<slug>`, the menus from the frozen groups.
+- `app/pages/_builder-preview/[token].vue` puts that answer in
+  `useBuilderCanvasPreview` (the seam `useBuilderPage` and `useNavigation`
+  read) and mounts the body the store serves that page with
+  (`builderShareBody`: a page type's own body, `brand-page` for the brand
+  pages, `custom-page` for a page the store made), so **every design draws
+  it**. The path is set with `definePageMeta` and the directory starts with an
+  underscore, so it is no custom-page slug.
+- The page is a `share` surface (`builderSurfaceOf`): no analytics, no consent
+  banner, `robots: false`, out of the sitemap, in no route rule so
+  `private, no-store` like the editor, and the data route adds
+  `X-Robots-Tag: noindex, nofollow`.
+- Django answers 404 `preview_link_expired` for a token that is unknown,
+  revoked or past its time (one answer, so a probe learns nothing) and
+  `page_not_published` for a page neither the link nor the release has; the
+  page says the link is no longer valid, with a 404.
+
+### 15. Who else is editing
+
+`Builder/PresenceNotice.vue` (store `useBuilderPresenceStore`) tells Django
+which documents the editor has open, the page and its section groups, at once,
+when they change, and every `BUILDER_PRESENCE_HEARTBEAT_MS` (a third of
+Django's `BUILDER_PRESENCE_TTL_SECONDS`, 45 s by default), through
+`POST /api/builder/presence`. The answer lists the other staff on each
+document; the notice (`role="status"`, so it is announced) names them per
+document. Leaving (`pagehide`, unmounting) lets go of the documents with
+`DELETE /api/builder/presence`; a person whose beats stop lapses on their own.
+Every staff role beats, because looking is a reason to be seen.
+
+It is a **hint, never a lock**: saving is still decided by the draft's
+revision (section 9). A heartbeat that fails clears the notice and is logged
+once per streak; the editor works on.
+
 ## Invariants
 
 - No editor code in the public bundle: the page renders inside `<ClientOnly>`,
@@ -420,6 +511,11 @@ strings are its components' `<i18n>` blocks.
 - The preview draws the working copy through the pipeline that draws a release,
   so what it shows is what publishing would serve.
 - No page of the page builder counts as a shopper's visit.
+- A restore lands as a draft, after the editor's own changes are saved and a
+  draft with changes is kept as a version; it never changes the live page.
+- A share link shows only what was saved when it was made, is read without any
+  staff session, and is never cached or indexed.
+- A presence heartbeat never blocks or changes a save.
 
 ## Failure modes
 
@@ -432,6 +528,10 @@ strings are its components' `<i18n>` blocks.
 | "Offline, retrying" that does not clear | Django is unreachable, or cannot reach the storefront's catalogue (503 `storefront_unavailable`). |
 | "Someone else saved" | Another session saved the document in between; the dialog asks which version to keep. |
 | "The preview didn't update" | `POST /api/builder/preview` failed (logged by the route); the canvas shows the last version it drew. |
+| "Someone else saved this page" when restoring a version | The draft's revision moved since the editor read it (409 `revision_conflict`); nothing was restored. |
+| "Your changes aren't saved yet" when restoring or sharing | The autosave has not stored the document (pending, retrying, refused); the action waits for it. |
+| A share link says "This link is no longer valid" | Expired, revoked or unknown token, or the page is in neither the link nor the release. |
+| No "is editing" notice though two people are in | The heartbeat fails (logged once as `presence heartbeat failed`), or Django's `BUILDER_PRESENCE_TTL_SECONDS` is below two beats. |
 | The preview stays on "Drawing the preview" | The framed page never said `ready`: framing refused (an expired staff session answers `frame-ancestors 'none'`) or its bridge did not start. |
 | A setting says it isn't valid | Its value fails the block's schema; the save that follows is refused by Django and the field names its problem. |
 
@@ -493,3 +593,20 @@ strings are its components' `<i18n>` blocks.
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/[key]/index.get.ts` | One document |
 | `grooveshop-storefront-ui-node-nuxt/shared/schemas/builderEditor.ts` | Key and working-copy schemas |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/builderEditor.ts` | `isBuilderEditorPath` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/VersionHistory.vue` | The history panel, restore and named save |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/VersionPreview.vue` | A version in the read-only canvas |
+| `grooveshop-storefront-ui-node-nuxt/app/stores/builderHistory.ts` | Reading, saving and restoring versions |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderHistory.ts` | The rows of a history and their days |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/[key]/versions/index.get.ts` | A page of the history |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/[key]/versions/[number]/restore.post.ts` | Restore as draft |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/documents/[key]/checkpoint.post.ts` | A named save |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/ShareDialog.vue` | Make, copy and revoke a share link |
+| `grooveshop-storefront-ui-node-nuxt/app/stores/builderShare.ts` | The links, made after a save |
+| `grooveshop-storefront-ui-node-nuxt/app/pages/_builder-preview/[token].vue` | The share link's page |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderShare.ts` | The body that draws each page of a link |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/shared/[token].get.ts` | The public read of a link |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/preview-links/index.post.ts` | Make a link |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderPreview.ts` | One preview pipeline for the editor and a link |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/PresenceNotice.vue` | The heartbeat and the notice |
+| `grooveshop-storefront-ui-node-nuxt/app/stores/builderPresence.ts` | Who else is on the documents |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/presence/index.post.ts` | The heartbeat |
