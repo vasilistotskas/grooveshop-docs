@@ -41,7 +41,7 @@ You can do this from the product itself or from the photo's own page.
 2. In the **Content** section, fill in **Alt Text** (and **Title**) in every language tab.
 3. Save.
 
-The **Alt Text** is what people using a screen reader hear and what search engines read to understand the photo. Describe what is in the picture in a short sentence; there is no need to start with "image of". If you leave it empty the store uses the **Title**, and if that is empty too, a generic description.
+The **Alt Text** is what people using a screen reader hear and what search engines read to understand the photo. Describe what is in the picture in a short sentence; there is no need to start with "image of". If you leave it empty the store uses the **Title**, and if that is empty too, the product name and the photo's place in the gallery, e.g. "Mini Power Bank – photo 2".
 
 Category images have a **Title** and an **Alt Text** per language, in the same section.
 
