@@ -18,8 +18,9 @@ the outline, duplicate, hide, remove)
 and the settings of any section or block, in any language the store serves,
 with undo and redo, draws every
 change in a live preview of the store's real page, where a section is selected
-and changed in place, and saves every change as it goes. Publishing and
-history follow; each slice extends this page.
+and changed in place, saves every change as it goes, and publishes the page
+and its section groups together. Scheduling follows; each slice extends this
+page.
 
 ## Diagram
 
@@ -307,6 +308,55 @@ document (what the running session keeps is never offered to itself), with a
 warning when the document has been saved since. The editor warns
 `BUILDER_SESSION_WARNING_MS` before the staff session ends.
 
+#### Publishing
+
+ADMIN and OWNER publish from the top bar (`Builder/Publish`; STAFF see no
+button, and a dot on it says something has changes). The dialog lists the
+page and the section groups drawn around it, each with whether it has changes
+to publish: a draft Django holds as unpublished (`hasUnpublishedChanges`) or a
+change not saved yet. Those with changes are picked to begin with; one without
+cannot be picked. An optional note goes with the release (as long as the
+generated `zPublishWriteRequest` allows).
+
+Publishing first saves the picked documents and waits for those saves
+(`useBuilderAutosaveStore().settle`): Django releases the drafts it holds, so a
+change still waiting out the autosave delay is saved now, and one that cannot
+be saved (refused, retrying, in conflict, signed out) stops the publish with
+nothing published, naming the documents. Then `POST /api/builder/publish`
+(Django's `builder/publish`, `{ documents, note }`) releases them together, or
+none of them:
+
+| Answer | What the editor does |
+|---|---|
+| 201 | Reads the list and each published document's envelope again (`useBuilderEditorStore().refresh`), closes the dialog and says which release went live. |
+| 400 `invalid_document` | Lists every problem by document (`ZodBuilderDocumentRefusal`, the one schema the autosave reads too: Django's OpenAPI types this body only as an error), each with "Show", which opens its document and selects the node its pointer names. |
+| any other | Says the publish did not happen, with Django's reason (`useApiError`). |
+
+Before that, as the dialog opens and whenever the picks change, the editor
+saves the picked documents the same way and asks `POST
+/api/builder/publish/check` (Django's `builder/publish/check`, which writes
+nothing): `{ ok, changed, problems }`. Its problems are listed like a refusal,
+and Publish stays disabled while there are any; a check overtaken by a newer
+one is dropped. Django answers `nothing_to_publish` (with no `document`) when
+the picks equal the live release.
+
+**At a set time.** "When" offers now or a time (`UInputDate`, to the minute,
+none in the past). The time is the staff member's wall clock in their own
+zone, named under the field, sent with an explicit offset
+(`toZoned(..).toAbsoluteString()`): the store's timezone is not exposed.
+`POST /api/builder/schedules` (`{ documents, scheduledFor, note }`) validates
+and freezes the drafts now; Django releases exactly that version then.
+
+**Scheduled publishes.** The dialog lists the store's pending schedules
+(`GET /api/builder/schedules?status=pending`: time, documents, note, author),
+each cancellable (`DELETE /api/builder/schedules/<id>`, 409
+`schedule_not_pending` once it ran), and the failed ones nobody has
+acknowledged yet (`?status=failed`, `acknowledgedAt` empty), each with the
+problems Django recorded (`failure`, untyped in the schema, read with
+`ZodBuilderScheduleFailure`) and "Got it" (`POST
+/api/builder/schedules/<id>/acknowledge`), which also takes it off the store
+dashboard.
+
 ### 10. The live preview
 
 The middle pane (`Builder/Canvas`) frames the store's real page for the open
@@ -563,6 +613,10 @@ once per streak; the editor works on.
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderSchematics.ts` | The library's schematics |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/placement.ts` | Where a section may sit |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Inspector.vue` | The settings pane |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Publish.vue` | Publishing the page and its groups |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/publish.post.ts` | The publish |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/publish/check.post.ts` | What a publish would do, writing nothing |
+| `grooveshop-storefront-ui-node-nuxt/server/api/builder/schedules/` | Scheduled publishes: list, create, cancel, acknowledge |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/LocaleSwitcher.vue` | The language being edited |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/builderTranslation.ts` | Translations: read, write, merge, count what is missing |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/features.get.ts` | Which features are on, and where this person turns one on |
