@@ -77,6 +77,15 @@ The announcement bar is a line above the store's header. Open the setting `ANNOU
 
 To remove it, set `enabled` to `false`.
 
+### Tell search engines about new and changed pages
+
+Search engines such as Bing, Yandex and Naver learn about a changed product or blog post by visiting your store, which can take days. Switch this on and the store tells them itself.
+
+1. Open the setting `INDEXNOW_ENABLED`.
+2. Tick **Value (Boolean)** and click **Save**.
+
+From then on the store collects the products and blog posts that were added, changed or taken off the store, and every half hour sends the search engines one message with their addresses, in every language the store is available in. Only products that are **Active** and blog posts that are published are announced; a draft is never mentioned. A product or post you remove from the store is announced too, so the search engines drop it sooner. Nothing else is needed from you. Google does not take part in this, and a search engine may still decide not to visit a page. The setting is off until you switch it on.
+
 ### Set the same-day dispatch time
 
 1. Open the setting `DISPATCH_CUTOFF`.
@@ -187,6 +196,7 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 | `ORDER_UNPAID_ONLINE_ALERT_THRESHOLD` | When this many online-payment orders wait for their payment at once, the platform team gets a warning: that many unpaid orders hold stock other shoppers cannot buy. 0 turns it off. | 25 |
 | `ORDER_FOLLOW_UP_DAYS` | After how many days without delivery an order goes into **Orders to follow up**. 0 turns it off. | 7 |
 | `CHECKOUT_ABANDONMENT_HOURS` | After how many hours an unfinished checkout gets a reminder email. | 2 |
+| `REVIEW_REQUEST_DELAY_DAYS` | After how many days from delivery a customer gets one email asking them to review the products they have not reviewed yet. 0 turns it off. See [Reviews](/admin/catalog/reviews). | 0 |
 | `CART_ABANDONED_HOURS` | After how many hours without activity a cart counts as abandoned in the **Carts** list. | 24 |
 | `ABANDONED_CART_CLEANUP_DAYS` | After how many days empty guest carts are deleted. | 7 |
 | `OLD_GUEST_CART_CLEANUP_DAYS` | After how many days guest carts are deleted. | 30 |
@@ -228,6 +238,7 @@ See [Messages & feedback](/admin/customers/messages-and-feedback).
 | Setting | What it does | Default |
 |---|---|---|
 | `SEARCH_MAX_LIMIT` | The most results one search returns. Leave it as it is. | 100 |
+| `INDEXNOW_ENABLED` | The store tells search engines (Bing, Yandex, Naver and others, not Google) about new, changed and removed products and blog posts. See the task above. | off |
 
 ### Admin History
 

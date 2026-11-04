@@ -83,7 +83,7 @@ Check in order: that **Promotions** does not say **Off** in the sidebar, the pro
 
 ### My change to the store's menu does not show
 
-The store updates by itself about ten seconds after you save. If it does not show, clear **Pages & navigation** on [Cache](/admin/settings/cache). See [Menus](/admin/content/menus).
+The store updates by itself about ten seconds after you save. If it does not show, clear **Page builder** on [Cache](/admin/settings/cache). See [Page builder](/admin/content/page-builder).
 
 ### A product's English page shows Greek text
 

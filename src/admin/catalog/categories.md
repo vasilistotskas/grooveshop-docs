@@ -38,6 +38,14 @@ Drag a row up or down in the list. The order changes only among categories with 
 
 The store shows only the **Main Image**, as long as it is **Active**. The other types (**Banner Image**, **Icon Image**, **Thumbnail Image**, **Hero Image**, **Feature Image** and so on) are stored but not shown in the store. Each category takes one image per type.
 
+### Add text below the products
+A category page can show text above and text below its products.
+
+1. Open the category.
+2. Under **Content**, write the text for the top of the page in **Description**. Shoppers read it before the products.
+3. Write the text for the bottom of the page in **Footer text**: buying tips, a longer guide or frequently asked questions. Shoppers read it after the products.
+4. Fill both in every language tab your store shows, then save.
+
 ### Hide a category
 Untick **Active** and save. The category and all its subcategories leave the menu, the filters and the sitemap. Its products are not deactivated.
 
@@ -49,11 +57,10 @@ The category page does not change products. In [Products](/admin/catalog/product
 - **Deleting a category also deletes its subcategories.** Their products are left without a category. To hide a category, prefer **Active**.
 - **Languages**: where the name is missing in a language, the store shows a blank in that language. Name every category in all your store's languages.
 - **Cache**: saving a category or its image reaches the store on its own within seconds. If something still does not show after a few minutes, clear **Categories** from [Cache](/admin/settings/cache).
-- The form also has a **Description** per language, an **SEO** section and an **Analytics** section with the product counts.
+- The form also has an **SEO** section and an **Analytics** section with the product counts.
 
 ## Related
 
 - [Products](/admin/catalog/products)
 - [Images](/admin/catalog/images)
-- [Menus](/admin/content/menus)
-- [Page layouts](/admin/content/page-layouts)
+- [Page builder](/admin/content/page-builder)

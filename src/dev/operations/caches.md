@@ -90,6 +90,7 @@ Django key patterns, Nuxt key patterns, an optional `invalidated_by` list
 of model labels and `related` surfaces. `core/cache/surfaces.py` registers
 the core set: `pay_way`, `recommendations`, `shipping`, `products`,
 `categories`, `blog`, `regions_countries`, `loyalty`, `page_config`,
+`store_texts`, `builder`,
 `promotions`, `tags`, `settings`, `store_pages`, `sitemap_seo`. Parler's
 translation cache is off (`PARLER_ENABLE_CACHING`), so there is no
 translations surface: translated lists prefetch their translations. Apps
@@ -108,7 +109,7 @@ can never wipe security state, and writes a `CachePurgeLog` row
 
 `core/cache/invalidation.py` connects `post_save` / `post_delete` for every
 model named in a surface's `invalidated_by`: the merchant-edited models of
-products, categories, blog, page layouts and content pages, navigation,
+products, categories, blog, content pages, the page builder's releases,
 promotions, tags, pay-ways and recommendations. User-generated rows
 (reviews, comments, favourites, stock alerts) are left out. A commit only
 adds its stale surfaces to a per-schema Redis set and queues one
@@ -117,10 +118,9 @@ that window rides, so a catalogue import costs one purge and an edit shows
 within about ten seconds (plus the edge purge that follows it). A save
 whose `update_fields` fall inside the surface's `ignored_update_fields` is
 skipped: every order's `save(update_fields=["stock", "updated_at"])` would
-otherwise empty the store's product cache on each sale. The `pageConfigNavigation` Nitro handler
-name is what the `page_config` surface must match; a shorter pattern
-purged zero keys and reported success, which is why the surface file
-carries the exact name.
+otherwise empty the store's product cache on each sale. A Nitro handler name in a surface must be
+the handler's exact `name:`; a shorter pattern once purged zero keys and
+reported success, which is why the surface file carries the exact names.
 
 A **store feature switch** purges `store_pages`: the storefront's
 settings read (`settingsPublic`) and every page it has rendered for the
@@ -284,7 +284,7 @@ const token = process.env.NUXT_CACHE_PURGE_TOKEN
 fetch('http://127.0.0.1:3000/api/admin/cache/purge', {
   method: 'POST',
   headers: { 'X-Cache-Purge-Token': token, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ patterns: ['*routes*', '*pageConfig*'], dryRun: true }),
+  body: JSON.stringify({ patterns: ['*routes*', '*builderPage*'], dryRun: true }),
 }).then(r => r.text()).then(console.log)
 JS
 ```
@@ -331,14 +331,23 @@ the patterns. That is why only a purge with `tenantConfig: true` moves it.
 ## Layer 4: media-stream image cache
 
 The media service keeps processed images in memory, Redis and on disk
-under the namespace `image:{tenantSchema}`. Django's
+under the namespace `image:{tenantSchema}`, and keeps every rendition in a
+Cloudflare R2 bucket (S3 API, EU jurisdiction) that every replica shares, so a
+restart or a deploy loses nothing; Redis is full by design and evicts, so it
+cannot be the durable copy. Every call to the bucket has a deadline and fails
+to a miss or to serving the image uncached, so an outage of the bucket costs a
+request an encode, never a broken image. What is stored is a finite set of
+presets, and the renditions of an upload are made ahead of time (see
+[Media stream reference: renditions](/dev/media/reference/renditions)).
+Django's
 `PROTECTED_FRAGMENTS` includes `image:` so a surface purge never touches
 it. The flush is per tenant: `POST /admin/cache/flush-tenant` with body
 `{"tenantSchema": "<schema>"}` and the `x-internal-secret` header
 (`src/MediaStream/Cache/controllers/admin-cache.controller.ts`, guarded by
 `InternalSecretGuard`, secret `INTERNAL_ADMIN_SECRET`). It invalidates
-every cache layer and sweeps the on-disk `.rsm` / `.rsc` pairs, because
-the disk tier is read directly and would otherwise resurrect the entry.
+every cache layer and deletes the tenant's objects from the rendition store
+(the R2 bucket, prefix `{schema}/`), because the store is read directly and
+would otherwise resurrect the entry.
 Django calls it from `tenant/media_flush.py` through
 `tenant.tasks.flush_tenant_media_task`, using `MEDIA_STREAM_INTERNAL_URL`
 and `MEDIA_STREAM_INTERNAL_SECRET`; suspending a tenant
@@ -359,13 +368,13 @@ same way (`Cache/services/tenant-flush.service.ts`). The response carries
 count when healthy. Pub/sub is fire-and-forget, so a pod that is down or
 reconnecting at that moment misses it.
 
-Each pod clears its tiers **bottom-up**: disk, then Redis, then memory. A
+Each pod clears its tiers **bottom-up**: the store, then Redis, then memory. A
 tier can only be refilled from the tiers below it (memory from Redis, both
-from disk), so a request arriving mid-flush cannot copy a stale entry into
+from the store), so a request arriving mid-flush cannot copy a stale entry into
 a tier that is already done. Before each tier the pod advances a
 per-tenant epoch (`TenantCacheEpochs`); a request records the epoch when
 it starts, and every write that could put an entry back (the processed
-result, a disk-hit backfill, the Redis-to-memory backfill, cache warming)
+result, a store-hit backfill, the Redis-to-memory backfill)
 is skipped when the epoch has moved and removed again when it moves during
 the write. A request already running still answers with its own result,
 and a request that starts after the flush never joins work that began
@@ -523,8 +532,8 @@ PageSpeed runs while Traefik's counters never moved.
 | Whole storefront 404 "Store not found" after a Django deploy that touched `TenantConfigSerializer` | Django `global:tenant_resolve` | fixed by shape keying; if still on an older tag, `clear_cache --prefixes global:tenant_resolve` |
 | Old HTML right after a green storefront deploy | Cloudflare, if the `backend-edge-purge` hook failed (Nitro has a namespace per build) | the hook's log; rerun `manage.py purge_edge_cache` from a backend pod |
 | Edit visible with `?cb=1` but not on the plain URL for over a minute | Cloudflare, the store's tag purge failed | Celery log for `purge_edge_cache_task`; the store's Cloudflare credentials |
-| Content edit not visible on a rendered page after ~40 s | Nitro `nitro:routes:` (the edit bypassed signals, or its model is not in the surface's `invalidated_by`) | the surface's Cache tool purge from the tenant admin (`page_config` covers `/`, `/about`, `/contact`, …), or the purge endpoint with `*routes*` |
-| Navigation menu edit not showing | Nitro handler `pageConfigNavigation` | `clear_cache page_config` (purges `*pageConfig*`) |
+| Content edit not visible on a rendered page after ~40 s | Nitro `nitro:routes:` (the edit bypassed signals, or its model is not in the surface's `invalidated_by`) | the surface's Cache tool purge from the tenant admin (`page_config` for a content page, `builder` for a page or a menu), or the purge endpoint with `*routes*` |
+| A published page or menu not showing | Nitro handlers `builderPage` / `builderChrome` (the release's purge failed) | `clear_cache builder` |
 | A switched-off feature still on a page | Nitro `nitro:routes:` or the pod's tenant config; after a plan-flag change, until `STOREFRONT_TENANT_CACHE_SECONDS` has passed | `clear_cache store_pages` (sends `tenantConfig: true`, so it also moves the store's epoch) |
 | One API route returns pre-edit data | Nitro `nitro:handlers:<name>` | purge endpoint with `*<handlerName>*` |
 | Replaced product image still served | media-stream `image:{schema}` | `flush-tenant` with the internal secret |
@@ -550,7 +559,8 @@ PageSpeed runs while Traefik's counters never moved.
   edge, and only a Nitro page-cache response carries it
   (`server/utils/edgeCache.ts`). Never `s-maxage` there: it disables the
   edge's stale-while-revalidate.
-- The Nitro navigation handler is `pageConfigNavigation`
+- The page builder's Nitro handlers are `builderPage` (a page) and
+  `builderChrome` (the menus), both purged by the `builder` surface
   (`core/cache/surfaces.py`).
 - Purge tokens and internal secrets never leave the cluster; run purges
   from inside a pod.

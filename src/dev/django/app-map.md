@@ -181,10 +181,12 @@ through `TaggedModel`), and `contact/` (`Contact`, `ContactAttachment`,
 
 ### `page_config/`
 
-Merchant-editable storefront layouts, `NavigationMenu` and translatable
-`ContentPage`. A saved navigation row shadows the storefront's code
-default, and its Nitro cache key is `pageConfigNavigation`
-(`core/cache/surfaces.py`). Content pages seed unpublished.
+Translatable `ContentPage` (policies, FAQ, information pages) and the
+legal documents: the platform's texts and their rollout
+(`legal_documents.py`, `legal_guard.py`), the version each order accepted
+(`LegalDocumentVersion`) and the content pages a new store is seeded with
+(`content_pages.py`; the non-legal ones seed unpublished). Pages and menus
+are the page builder's (`builder/`).
 
 ### `builder/`
 
@@ -237,6 +239,17 @@ the click-score task. Flow page: [Search](/dev/flows/search); reference:
 Meta Conversions API dispatch: `MetaCapiEventLog`, signal receivers on
 order and registration events, and `meta_capi/tasks.py` which posts the
 events. Flow page: [Analytics & consent](/dev/flows/analytics-and-consent).
+
+### `indexnow/`
+
+IndexNow notifications to search engines: signal receivers
+(`indexnow/signals.py`) queue a published product or blog post that was
+created, changed or unpublished as an `indexnow.PendingUrl` row, and
+`indexnow/tasks.py: submit_pending_urls` (beat, every 30 minutes, fanned
+out per store) sends one POST per store. The per-store switch is
+`INDEXNOW_ENABLED`; the key is `Tenant.indexnow_key`, served to the
+storefront on `tenant/resolve`. Reference: `docs/indexnow.md` in the Django
+repository.
 
 ### Payments
 
