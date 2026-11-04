@@ -17,7 +17,7 @@ In the store a value does up to three things:
 - It is offered as a filter on the product list, if the value and its attribute are active.
 - It becomes a button for choosing between variants, if its attribute has **Is Variant Axis**.
 
-The **Attributes** list shows for each attribute whether it is **Active**, whether it **Is Variant Axis**, how many **Values** it has and its **Usage** (on how many products). The **Attribute Values** list shows each value with its attribute, **Active** and **Usage**.
+The **Attributes** list shows for each attribute whether it is **Active**, whether it **Is Variant Axis**, its **Standard property**, how many **Values** it has and its **Usage** (on how many products). The **Attribute Values** list shows each value with its attribute, **Active** and **Usage**.
 
 ## Tasks
 
@@ -35,6 +35,14 @@ The **Attributes** list shows for each attribute whether it is **Active**, wheth
 ### Make an attribute a variant selector
 1. Open the attribute and tick **Is Variant Axis**.
 2. Put the products in one variant group and give each its own value. See [Variant groups](/admin/catalog/variant-groups).
+
+### Tell search engines what an attribute is
+Attribute names are your own words, so Google cannot know that "Colour" is the colour. Say it once and the store tells search engines for you, which helps your products show up properly in search results.
+1. Open the attribute.
+2. In **Standard property**, choose what it is: **Colour**, **Size**, **Material**, **Pattern**, **Suggested age** or **Suggested gender**.
+3. Save. Do this for your colour, size and material attributes. Leave it empty for any attribute that is none of these.
+
+Choose each property for one attribute only, and the one that matches its meaning: it is not about what the attribute is called.
 
 ### Stop offering a value as a filter
 Select it and choose **Deactivate selected values** (or, for a whole attribute, **Deactivate selected attributes**). The value stays on the products and in their specifications.

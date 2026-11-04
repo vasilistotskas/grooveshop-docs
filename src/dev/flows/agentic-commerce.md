@@ -322,12 +322,16 @@ matter are listed at the top of `internal/feeds/rss.go`:
   `regular = price + vat_value` and `sale = final_price`, and emits
   `g:sale_price` only when a markdown actually lowers it. Amounts are integer
   minor units internally and rendered as `12.34 EUR` at the edge.
-- **No `g:mpn` is emitted at all.** There is no manufacturer part number on
-  the product model, and a SKU is not one — putting a SKU there is a
-  merchant-identifier collision, not a part number.
+- **`g:gtin` and `g:mpn` go out only when the store entered them** (`Product.gtin`,
+  `Product.mpn`). A SKU is neither: putting one there is a merchant-identifier
+  collision, not a part number.
+- The title is the translation's `feedTitle` when the store wrote one, else
+  the name.
 - Availability is the enum `in stock` / `out of stock`; condition is `new`;
   `g:item_group_id` carries the variant group; `g:brand` falls back to the
   store name.
+- Every attribute that is not a variant option goes out as a
+  `g:product_detail`, so a specification is entered once.
 - A product with no default-locale name or no image is **skipped**, because
   the platforms would reject it anyway. A malformed money field is an error,
   because it would corrupt every consumer's feed.
