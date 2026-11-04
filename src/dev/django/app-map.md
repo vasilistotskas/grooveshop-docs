@@ -240,6 +240,17 @@ Meta Conversions API dispatch: `MetaCapiEventLog`, signal receivers on
 order and registration events, and `meta_capi/tasks.py` which posts the
 events. Flow page: [Analytics & consent](/dev/flows/analytics-and-consent).
 
+### `indexnow/`
+
+IndexNow notifications to search engines: signal receivers
+(`indexnow/signals.py`) queue a published product or blog post that was
+created, changed or unpublished as an `indexnow.PendingUrl` row, and
+`indexnow/tasks.py: submit_pending_urls` (beat, every 30 minutes, fanned
+out per store) sends one POST per store. The per-store switch is
+`INDEXNOW_ENABLED`; the key is `Tenant.indexnow_key`, served to the
+storefront on `tenant/resolve`. Reference: `docs/indexnow.md` in the Django
+repository.
+
 ### Payments
 
 There is no `payments/` app. Stripe is dj-stripe (`djstripe` in

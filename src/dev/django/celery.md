@@ -175,6 +175,7 @@ Most entries fall back to hourly when `DEBUG` is on.
 | `check-low-stock-products` | `tenant.tasks.fanout_check_low_stock_products` | hourly | |
 | `send-checkout-abandonment-emails` | `tenant.tasks.fanout_send_checkout_abandonment_emails` | daily 06:00 | |
 | `send-review-request-emails` | `tenant.tasks.fanout_send_review_request_emails` | daily 12:00 | one reminder per order `REVIEW_REQUEST_DELAY_DAYS` days after delivery (`order/review_request.py`) |
+| `submit-indexnow-urls` | `tenant.tasks.fanout_submit_indexnow_urls` | every 30 min | one IndexNow POST per store with the product and blog pages that changed (`indexnow/`, `docs/indexnow.md` in the Django repository) |
 | `sync-boxnow-lockers` | `tenant.tasks.fanout_sync_boxnow_lockers` | daily 02:00 | `expires: 300` |
 | `poll-boxnow-tracking` | `tenant.tasks.fanout_poll_boxnow_tracking_batch` | every 15 min | defence against a missed webhook |
 | `sync-acs-stations` | `tenant.tasks.fanout_sync_acs_stations` | daily 03:00 | |
