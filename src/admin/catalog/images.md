@@ -43,7 +43,7 @@ You can do this from the product itself or from the photo's own page.
 
 The **Alt Text** is what people using a screen reader hear and what search engines read to understand the photo. Describe what is in the picture in a short sentence; there is no need to start with "image of". If you leave it empty, the store describes the photo itself with the product name and the photo's number in the gallery, e.g. "Mini Power Bank – photo 2".
 
-Category images have an **Alt Text** per language, in the same section.
+Category images have an **Alt Text** per language, in the same section. On a category's **Main Image** it is the description the home page tile uses. If you leave it empty the photo gets no description of its own, which is fine: the category's name is written right below it.
 
 ## Things to know
 
