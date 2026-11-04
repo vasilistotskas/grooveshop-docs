@@ -19,8 +19,9 @@ and the settings of any section or block, in any language the store serves,
 with undo and redo, draws every
 change in a live preview of the store's real page, where a section is selected
 and changed in place, saves every change as it goes, and publishes the page
-and its section groups together. Scheduling follows; each slice extends this
-page.
+and its section groups together, now or at a time it schedules. It also edits
+the store's theme and the lists and records a block shows. Each slice extends
+this page.
 
 ## Diagram
 
@@ -329,7 +330,7 @@ none of them:
 | Answer | What the editor does |
 |---|---|
 | 201 | Reads the list and each published document's envelope again (`useBuilderEditorStore().refresh`), closes the dialog and says which release went live. |
-| 400 `invalid_document` | Lists every problem by document (`ZodBuilderDocumentRefusal`, the one schema the autosave reads too: Django's OpenAPI types this body only as an error), each with "Show", which opens its document and selects the node its pointer names. |
+| 400 `invalid_document` | Lists every problem by document (the generated `zBuilderDocumentInvalidError`, the one schema the autosave reads too: Django's OpenAPI types this body only as an error), each with "Show", which opens its document and selects the node its pointer names. |
 | any other | Says the publish did not happen, with Django's reason (`useApiError`). |
 
 Before that, as the dialog opens and whenever the picks change, the editor
@@ -353,7 +354,7 @@ each cancellable (`DELETE /api/builder/schedules/<id>`, 409
 `schedule_not_pending` once it ran), and the failed ones nobody has
 acknowledged yet (`?status=failed`, `acknowledgedAt` empty), each with the
 problems Django recorded (`failure`, untyped in the schema, read with
-`ZodBuilderScheduleFailure`) and "Got it" (`POST
+the generated `Schedule.failure`) and "Got it" (`POST
 /api/builder/schedules/<id>/acknowledge`), which also takes it off the store
 dashboard.
 
@@ -536,6 +537,34 @@ It is a **hint, never a lock**: saving is still decided by the draft's
 revision (section 9). A heartbeat that fails clears the notice and is logged
 once per streak; the editor works on.
 
+### 16. The theme
+
+The theme is a builder document like a page. The outline's theme button opens it
+in the settings pane (`panel === 'theme'` in `BuilderInspector`, kept in the
+address as `?panel=theme`), and `BuilderThemePanel` edits it: each colour scheme,
+light and dark, with its colours, then the corners, the page width and the three
+faces. A colour with a scale makes its eleven shades as it is picked. The action
+colour follows the primary while `actionLinked` is on.
+
+Every change goes through the editor store, so it is undone, saved and drawn in
+the preview like any other. The panel lists the contrast each pair of the store's
+design must keep (`themeContrastRulesFor`), with a Fix on every rule that fails
+(`fixContrast`). On Groove Volt the neutral colour paints borders and badges, not
+text, so only the action and accent colours have rules.
+
+### 17. Data settings
+
+A block's lists and records are data settings (`builderField.query` and
+`builderField.ref`), which `BuilderSettingField` draws by their kind. A `query` is
+`BuilderQueryField`: the mode the source allows, then the filters and the size,
+capped by the field. It writes the whole descriptor, which is closed, so a key
+left out is a key the list does not have. A hand-picked list and a single record
+use `BuilderRecordList` and `BuilderRecordPicker`.
+
+The editor stores only the descriptor or the id. The page route reads the data
+(`resolveBuilderData`), and the canvas keeps a node the published page would hide
+so it can still be selected.
+
 ## Invariants
 
 - No editor code in the public bundle: the page renders inside `<ClientOnly>`,
@@ -597,6 +626,9 @@ once per streak; the editor works on.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/TopBar.vue` | Exit, page switcher, view-only notice, account |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/DocumentSwitcher.vue` | The page switcher |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Outline.vue` | The outline |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/ThemePanel.vue` | The theme |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/QueryField.vue` | A list setting |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecordList.vue` | A hand-picked list |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/OutlineTree.vue` | One document's rows, dragged to reorder |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/NodeActions.vue` | The selection's toolbar |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Canvas.vue` | The preview frame, widths, link following |
