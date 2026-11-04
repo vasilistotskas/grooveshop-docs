@@ -64,7 +64,7 @@ The delivery email already invites the customer to review what arrived. A few da
 
 | Setting | What it does | Starts as |
 |---|---|---|
-| `REVIEW_REQUEST_DELAY_DAYS` | How many days after delivery the reminder is sent. 0 turns it off. A whole number up to 365. | 8 |
+| `REVIEW_REQUEST_DELAY_DAYS` | How many days after delivery the reminder is sent. 0 keeps it off, and no reminder goes out until you enter a number; 8 is a good start. A whole number up to 365. | 0 |
 
 - It is sent once per order, never again, even if you change the setting.
 - It is not sent when the customer has already reviewed every product of the order, when reviews are off, or for an order that was returned, cancelled or refunded after delivery.
