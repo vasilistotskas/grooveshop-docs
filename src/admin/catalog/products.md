@@ -59,6 +59,18 @@ The very first save of a new product is not recorded there; later changes are.
 - **For now**: untick **Active**, or select it in the list and choose **Deactivate selected products**. The product keeps its reviews, history and links, and comes back when you activate it.
 - **For good**: the **Delete** button on the product's page removes it from the store but keeps the record and everything linked to it.
 
+### Fill in the product's barcode number for Google
+Google Merchant Center recognises a product by its barcode number or by its manufacturer's part number. Both are on the **Product Information** tab.
+
+1. In **GTIN** enter the number printed under the product's barcode (EAN, UPC or ISBN). It has 8, 12, 13 or 14 digits and nothing else: no spaces or dashes. The store checks the last digit and refuses a number that was mistyped.
+2. In **MPN** enter the manufacturer's part number, as the manufacturer prints it. It is most useful for a product without a barcode.
+3. Save.
+
+Leave a field empty when the product has none. Do not copy the SKU into either: the SKU is your own code, and Google disapproves products whose numbers do not belong to the manufacturer.
+
+### Give the product a different title in Google and other feeds
+By default the product feeds use the product's name. To use another title there, write it in **Feed title** (up to 150 characters) in each language tab, then save. This changes only the feeds; the store keeps showing the name. Leave it empty to use the name.
+
 ### Download a product list
 Select products and choose **Export selected to CSV** (for Excel) or **Export selected to XML**.
 
@@ -66,7 +78,7 @@ Select products and choose **Export selected to CSV** (for Excel) or **Export se
 
 | Tab | What it holds |
 |---|---|
-| **Product Information** | Category, variant group, brand, **Active**, name and description per language. The SKU is filled in automatically. |
+| **Product Information** | Category, variant group, brand, **GTIN**, **MPN**, **Active**, name, **Feed title** and description per language. The SKU is filled in automatically. |
 | **Pricing & Inventory** | Price, discount, VAT, stock, weight and **Low Stock Threshold**. Also, read-only, **Effective Price**, **Prior Price** and **Reduction Started At** (see below). The **Owner** also sees **Cost price** here (see below). |
 | **Loyalty Points** | **Points Coefficient** (multiplies the points the product earns; 0 = none) and **Bonus Points** (fixed points per purchase). |
 | **Customer Alerts** | **Price-drop Alerts Enabled**: tick it so customers can ask for an email when the price drops. Off by default. |

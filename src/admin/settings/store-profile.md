@@ -19,7 +19,7 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 | **Plan & Billing** | Nothing. It shows your plan and until when it is paid. |
 | **Branding** | Name, description, language, logos, colours and social links. |
 | **Features** | Nothing. It shows which features your plan includes. |
-| **Marketing** | The IDs for Google Analytics, Google Ads, Meta and TikTok. |
+| **Marketing** | The site verification codes for Google, **Bing site verification** and Pinterest, and the IDs for Google Analytics, Google Ads, Meta and TikTok. |
 | **Email & Security** | **Contact Email**, **From Email** and **TOTP Issuer**. |
 | **Payments** | Your Viva Wallet and Stripe credentials. |
 | **Shipping** | Your ACS and BoxNow credentials. |
@@ -33,6 +33,14 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 2. In **Logo (Light)** and **Logo (Dark)** enter the address (URL) of the image. The light logo is for light backgrounds, the dark one for dark backgrounds.
 3. Choose a **Primary Color** and a **Neutral Color**. In **Accent Hex** enter a colour code, for example `#003DFF`.
 4. Click **Save**.
+
+### Verify the store with Bing
+1. In Bing Webmaster Tools, add your store and choose to verify it with an HTML tag. Copy only the code from the tag's `content` part.
+2. Open the **Marketing** tab.
+3. Paste the code in **Bing site verification** and click **Save**.
+4. Back in Bing Webmaster Tools, click Verify.
+
+The store adds the tag to its pages by itself. Leave the field empty if you do not use Bing. The **Google site verification** field next to it works the same way for Google Search Console.
 
 ### Set the contact email
 
