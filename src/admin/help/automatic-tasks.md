@@ -75,6 +75,7 @@ While gift cards are off, no card expires and no card or reminder is sent.
 |---|---|
 | The storefront search is updated again for every product and blog post. | every day 02:00 |
 | When a promotion starts or ends, search shows the new price. | within 5 minutes |
+| Bing, Yandex, Naver and other search engines are told about the products and blog posts that were added, changed or taken off the store. Nothing is sent when nothing changed. | every 30 minutes, if `INDEXNOW_ENABLED` is on (off) |
 
 ## Tasks
 
