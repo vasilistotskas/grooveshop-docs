@@ -59,6 +59,35 @@ The very first save of a new product is not recorded there; later changes are.
 - **For now**: untick **Active**, or select it in the list and choose **Deactivate selected products**. The product keeps its reviews, history and links, and comes back when you activate it.
 - **For good**: the **Delete** button on the product's page removes it from the store but keeps the record and everything linked to it.
 
+### Fill in the product's barcode number for Google
+Google Merchant Center recognises a product by its barcode number or by its manufacturer's part number. Both are on the **Product Information** tab.
+
+1. In **GTIN** enter the number printed under the product's barcode (EAN, UPC or ISBN). It has 8, 12, 13 or 14 digits and nothing else: no spaces or dashes. The store checks the last digit and refuses a number that was mistyped.
+2. In **MPN** enter the manufacturer's part number, as the manufacturer prints it. It is most useful for a product without a barcode.
+3. Save.
+
+Leave a field empty when the product has none. Do not copy the SKU into either: the SKU is your own code, and Google disapproves products whose numbers do not belong to the manufacturer.
+
+### Give the product a different title in Google and other feeds
+By default the product feeds use the product's name. To use another title there, write it in **Feed title** (up to 150 characters) in each language tab, then save. This changes only the feeds; the store keeps showing the name. Leave it empty to use the name.
+
+### Add the product's highlights for Google
+Highlights are the short selling points Google Shopping can show under a product. They are optional, and they reach Google through the product feed.
+
+1. Open the product and go to the **Product Highlights** tab.
+2. Click **Add another Product Highlight** and write one benefit in **Highlight**. Pick the language tab first: write each highlight in every language your feed uses.
+3. Add 4 to 6 highlights. Drag a row to change the order.
+4. Save.
+
+Google's rules:
+- Add at least 2 highlights. Google ignores a product that has only one.
+- Each highlight is at most 150 characters. Short is better.
+- Write what the product gives the customer, for example "Washable at 40 degrees" or "Fits phones up to 6.7 inches".
+- Do not put in the price, shipping, a date, your store's name or a link.
+- Do not write in capital letters, do not stuff in search words, and do not repeat the product's title or description.
+
+A highlight is sent in the language it is written in. A highlight that has no text in a language is left out of that language's feed; it is never replaced by another language's text.
+
 ### Download a product list
 Select products and choose **Export selected to CSV** (for Excel) or **Export selected to XML**.
 
@@ -66,7 +95,7 @@ Select products and choose **Export selected to CSV** (for Excel) or **Export se
 
 | Tab | What it holds |
 |---|---|
-| **Product Information** | Category, variant group, brand, **Active**, name and description per language. The SKU is filled in automatically. |
+| **Product Information** | Category, variant group, brand, **GTIN**, **MPN**, **Active**, name, **Feed title** and description per language. The SKU is filled in automatically. |
 | **Pricing & Inventory** | Price, discount, VAT, stock, weight and **Low Stock Threshold**. Also, read-only, **Effective Price**, **Prior Price** and **Reduction Started At** (see below). The **Owner** also sees **Cost price** here (see below). |
 | **Loyalty Points** | **Points Coefficient** (multiplies the points the product earns; 0 = none) and **Bonus Points** (fixed points per purchase). |
 | **Customer Alerts** | **Price-drop Alerts Enabled**: tick it so customers can ask for an email when the price drops. Off by default. |
@@ -75,7 +104,7 @@ Select products and choose **Export selected to CSV** (for Excel) or **Export se
 | **Performance** | **View Count** and how many customers have the product in their favourites. |
 | **System Information** | **Created At**, **Updated At** and **Changed By** (who saved last). |
 
-Below the form there are also the **Product Attributes**, **Product Images**, **Active Stock Reservations**, **Product price spells** (the price history, read-only), **Tags**, **Related products** and **Stock activity** tabs.
+Below the form there are also the **Product Attributes**, **Product Images**, **Product Highlights**, **Active Stock Reservations**, **Product price spells** (the price history, read-only), **Tags**, **Related products** and **Stock activity** tabs.
 
 ## Cost price
 

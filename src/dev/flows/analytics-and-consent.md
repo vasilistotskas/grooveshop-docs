@@ -95,6 +95,23 @@ All three setups are **client-only**. Since `@nuxt/scripts` 1.2 the registry's
 throwing during prerender, so each returns early on the server and the
 consumer composables fall back to a no-op proxy.
 
+### Pixels' automatic click tracking
+
+`setupMetaPixelConsent` calls `fbq('set', 'autoConfig', false, pixelId)`
+through the proxy, which replays it once the pixel loads. That opts the pixel
+out of Meta's automatic setup. Its `document` click listener read the tapped
+element's text and features on every tap: 120–196 ms of each tap on a
+6x-slowed phone profile, and the longest script in 9 of 140 slow-tap reports
+on webside (30 days to 2026-11-01). The store's own events, with their
+Conversions API event ids, are unaffected. Only the clicks Meta infers by
+itself (`SubscribedButtonClick`) stop.
+
+TikTok's equivalent cannot be turned off from code. Its `AutoClick` and
+`AutoConfig` plugins arrive enabled in the pixel's own configuration, set in
+TikTok Events Manager. Their `window` click listener cost 201–387 ms of each
+tap on the same profile, and was the longest script in 14 of those 140
+reports.
+
 ### The `trigger: 'manual'` re-arm rule
 
 This one is load-bearing and easy to undo.
@@ -148,8 +165,14 @@ GA is consent-**mode**, not consent-triggered: `setupGoogleAnalyticsConsent`
 registers `useScriptGoogleAnalytics` with `wait_for_update: 500` and every
 storage denied by default **except `functionality_storage`, which starts
 `granted`** — it is a necessary category, so there is nothing to ask for. The
-composable then watches `cookiesEnabledIds` and calls `consent.update(...)`
-mapping each of the seven categories to `granted` or `denied`.
+composable calls `consent.update(...)`, mapping each of the seven categories
+to `granted` or `denied`: at once for the decision the visitor arrived with,
+and, for a decision made on the page, after the next paint (`afterNextPaint()`
+in `app/utils/scheduling.ts`). Once gtag has loaded, a consent update runs its
+listeners and sends the hits it held back synchronously. Inside the banner's
+Accept that was ~260 ms of a 360–550 ms tap at a 6x-slowed CPU, and the
+commonest slow interaction in webside's INP reports; deferred, the tap
+measures 72–80 ms (2026-11-01).
 
 The script is skipped entirely when the tenant has no measurement id, when it
 does not match `/^G-[A-Z0-9]{8,}$/`, or when it is the placeholder
@@ -419,7 +442,7 @@ The script refuses to run unless the tenant's primary domain carries the
 |---|---|
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | Consent categories, scripts registry, evlog sampling and keep list |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/setups.ts` | Consent triggers, GA consent mode, banner telemetry |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/scheduling.ts` | `afterLoadWhenIdle`, the gtag load trigger |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/scheduling.ts` | `afterLoadWhenIdle`, the gtag load trigger; `afterNextPaint`, the deferred consent update |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCookieControl.ts` | Banner state accessor |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useMetaPixel.ts` | Meta events, `event_id` minting, the manual-trigger rule |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useTikTokPixel.ts` | TikTok events and `CompletePayment` |

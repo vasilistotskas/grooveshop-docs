@@ -176,7 +176,7 @@ strings stays a setting. Settings are camelCase, the shared shapes in
 `shared/builder/fields.ts: builderField`; `title` is a translatable setting only
 where the component reads it. Image URLs are bare strings at version 1.
 
-Section components never read blocks. `server/utils/builderProps.ts:
+Section components never read blocks. `shared/builder/props.ts:
 sectionProps(node)` turns a parsed node into the component's props: its
 settings, plus each list of child blocks (a disabled one left out) under the
 prop `childList` names. The same function feeds the page-heading rules
@@ -228,7 +228,7 @@ deep. A link names exactly one target, never a typed path: `page` (a page type),
 none or two; `page` and `contentPage` are references Django checks. A link's label
 is the effective one per language, strict.
 
-`server/utils/builderNavigation.ts: navigationItems` turns a parsed group document
+`shared/builder/navigation.ts: navigationItems` turns a parsed group document
 into the `NavLink` / `NavColumn` shapes the chrome reads (`useNavigation`,
 `shared/types/navigation.ts`). **A link whose page or content page is not
 published is hidden, and a footer column left with no visible link goes with it**;
@@ -359,7 +359,7 @@ a sign-out button); the editor replaces it.
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/fields.ts` | `builderField`: the setting shapes the blocks share |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/documentRoots.ts` | What a page and a template carry at their root (SEO copy) |
 | `grooveshop-storefront-ui-node-nuxt/app/blocks/` | The blocks: one `<type>.block.ts` per section or child block |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/builderProps.ts` | `sectionProps`: a parsed node as the props of the unchanged component |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/props.ts` | `sectionProps`: a parsed node as the props of the unchanged component |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/linkPointers.ts` | `linkPointers`: the link settings of a schema, as `linkRefs` |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/linkSettings.ts` | `mapLinkSettings`: rewrite the link settings of a node |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/entityPaths.ts` | The routes of the records a link names |
@@ -368,7 +368,7 @@ a sign-out button); the editor replaces it.
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/pages/[pageKey].get.ts` | `GET /api/builder/pages/<pageKey>`: a published page, links resolved |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/navigation.get.ts` | `GET /api/builder/navigation`: the menus |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderPage.ts` | The page bodies' one data composable |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/builderNavigation.ts` | `navigationItems`: the menus the chrome reads, hidden links dropped |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/navigation.ts` | `navigationItems`: the menus the chrome reads, hidden links dropped |
 | `grooveshop-storefront-ui-node-nuxt/shared/types/navigation.ts` | `NavLink`, `NavColumn` |
 | `grooveshop-storefront-ui-node-nuxt/test/unit/server/utils/builderRealBlocks.spec.ts` | The rules every real block keeps |
 | `grooveshop-storefront-ui-node-nuxt/test/fixtures/builder/seeds/` | The documents a new store starts with (`{key, document, i18n}`), vendored by Django |

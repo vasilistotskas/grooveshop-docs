@@ -143,9 +143,10 @@ flush_tenant_media_task`, which POSTs media-stream's
 `x-internal-secret` header (`tenant/media_flush.py`). On the media-stream
 side (`src/MediaStream/Cache/controllers/admin-cache.controller.ts`) it
 invalidates the `image:{schema}:*` namespace across every active cache
-layer — memory and Redis — and sweeps the on-disk tier for matching
-`.rsm`/`.rsc` pairs, which the serve path reads directly and which would
-otherwise resurrect a flushed resource on the next request.
+layer — memory and Redis — and deletes the tenant's objects from the
+rendition store (the R2 bucket, prefix `{schema}/`), which the serve path
+reads directly and which would otherwise resurrect a flushed resource on the
+next request.
 
 Every replica first re-reads Django's tenant feed
 (`TenantDomainsService.refresh`), so from that moment it refuses the

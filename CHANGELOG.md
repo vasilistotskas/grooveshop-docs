@@ -1,3 +1,39 @@
+## [1.2.167](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.166...v1.2.167) (2026-11-04)
+
+## [1.2.166](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.165...v1.2.166) (2026-11-04)
+
+## [1.2.165](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.164...v1.2.165) (2026-11-04)
+
+## [1.2.164](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.163...v1.2.164) (2026-11-04)
+
+## [1.2.163](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.162...v1.2.163) (2026-11-04)
+
+## [1.2.162](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.161...v1.2.162) (2026-11-04)
+
+## [1.2.161](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.160...v1.2.161) (2026-11-04)
+
+## [1.2.160](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.159...v1.2.160) (2026-11-04)
+
+## [1.2.159](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.158...v1.2.159) (2026-11-04)
+
+## [1.2.158](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.157...v1.2.158) (2026-11-04)
+
+## [1.2.157](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.156...v1.2.157) (2026-11-03)
+
+## [1.2.156](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.155...v1.2.156) (2026-11-03)
+
+## [1.2.155](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.154...v1.2.155) (2026-11-03)
+
+## [1.2.154](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.153...v1.2.154) (2026-11-02)
+
+## [1.2.153](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.152...v1.2.153) (2026-11-02)
+
+## [1.2.152](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.151...v1.2.152) (2026-11-02)
+
+## [1.2.151](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.150...v1.2.151) (2026-11-02)
+
+## [1.2.150](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.149...v1.2.150) (2026-11-02)
+
 ## [1.2.149](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.148...v1.2.149) (2026-11-02)
 
 ## [1.2.148](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.147...v1.2.148) (2026-11-02)

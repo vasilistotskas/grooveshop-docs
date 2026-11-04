@@ -29,10 +29,18 @@ through Nuxt.
 - Process synchronously with admission control, per-resource
   deduplication and a per-pipeline timeout; overload answers 503 with
   `Retry-After` rather than the default image (`Processing/`).
+- Answer every request with a bounded rendition preset (the storefront's own
+  sizes exactly, any other size snapped up to a ladder; no URL is refused for
+  its size),
+  keep the renditions in an R2 bucket every replica shares (bounded calls
+  that fail to a miss), and render an
+  upload's renditions before anyone asks, as background work that yields to
+  requests (`Renditions/`, `common/utils/rendition.util.ts`; see
+  [renditions](/dev/media/reference/renditions)).
 - Cache under the `image:{schema}:…` namespace in memory and Redis, with
-  `.rsc`/`.rsm` pairs on disk, and flush one tenant on every replica on
+  every rendition in an R2 bucket (the rendition store), and flush one tenant on every replica on
   request (`POST /admin/cache/flush-tenant` with `x-internal-secret`; the
-  pod that takes it broadcasts over Redis pub/sub) (`Cache/`, `Storage/`).
+  pod that takes it broadcasts over Redis pub/sub) (`Cache/`).
   Originals are read only here: the static host redirects every public
   request for one to the media-stream URL of the same image. Cloudflare's
   copies of a suspended tenant's images are purged by Django; see
@@ -44,7 +52,7 @@ through Nuxt.
 
 All source lives under `src/MediaStream/`, one NestJS module per domain:
 `API`, `Cache`, `Config`, `Correlation`, `Health`, `HTTP`, `Metrics`,
-`Processing`, `RateLimit`, `Storage`, `Validation`, plus `common/` helpers.
+`Processing`, `RateLimit`, `Renditions`, `Validation`, plus `common/` helpers.
 `common/utils/config-schema.util.ts` is the single source of truth for
 every configuration key and its environment variable.
 
@@ -66,7 +74,8 @@ pnpm run cache:clear    # Redis + file system cache
 The repository's own `docs/` folder is copied in at build time under
 [Media stream reference](/dev/media/reference/): the per-request log line,
 the metrics and the LogsQL / PromQL queries that use them
-(`docs/observability.md` in `grooveshop-media-stream`). The repository's
+(`docs/observability.md` in `grooveshop-media-stream`), and how renditions are
+bounded, stored and pre-generated (`docs/renditions.md`). The repository's
 `CLAUDE.md` covers the rest until more of it is written; the URL contract
 with the storefront is described under
 [Architecture](/dev/platform/architecture).
