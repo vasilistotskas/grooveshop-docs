@@ -268,7 +268,7 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
 | `grooveshop-django-api/docs/api-staff-identity.md` | Design record for staff identity |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | CSP builder |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderSession.ts` | `builderCanvasFraming`: who may frame the editor's preview |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/edgeCache.ts` | `isBuilderCanvasResponse`: the preview is never cached |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/edgeCache.ts`, `server/plugins/edge-cache.ts` | `isBuilderCanvasResponse` detects the preview; the plugin sets `private, no-store` on it |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/3.csp.ts`, `server/plugins/csp-nonce.ts` | Nonce policy; framing headers |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/auth.ts` | Forwarded headers, client IP |
 | `grooveshop-storefront-ui-node-nuxt/.claude/rules/auth.md` | The two-token model in the storefront |
