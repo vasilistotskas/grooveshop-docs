@@ -247,8 +247,9 @@ the last key, through `GET /api/builder/link-search` (Django's
 `builder/link-search`: only what a link may point at, grouped by kind, at most
 `BUILDER_LINK_SEARCH_LIMIT` of each). It names the record a setting already
 holds through `GET /api/builder/link-labels` (Django's `builder/link-labels`)
-and warns when that record can no longer be linked (`active: false`: it is
-left out when the page is published). Both routes are staff only, never
+and warns when that record can no longer be linked (`active: false`: a
+publish refuses the page with `reference_not_found` until the link is changed,
+and a page already published drops the link when it is drawn). Both routes are staff only, never
 cached, and ask in the editor's language: Django matches and names records
 in that language, else in the store's default.
 
@@ -588,8 +589,10 @@ so it can still be selected.
 - No change is lost silently: it is saved, kept in this browser, or waits on the
   staff member's choice (a conflict, a refusal, a failed save).
 - A save always names the revision it was made on; Django refuses a stale one.
-- The preview draws the working copy through the pipeline that draws a release,
-  so what it shows is what publishing would serve.
+- The preview draws every open working copy through the pipeline that draws a
+  release, so it shows what publishing all of them would serve. A publish
+  releases only the documents picked in its dialog, so a change left unpicked
+  is in the preview and not in the release.
 - No page of the page builder counts as a shopper's visit.
 - A restore lands as a draft, after the editor's own changes are saved and a
   draft with changes is kept as a version; it never changes the live page.
