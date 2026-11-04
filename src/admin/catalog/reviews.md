@@ -58,6 +58,19 @@ Open <span class="sidebar-path">Settings → Store Settings</span> and the **Sto
 
 Turn `PRODUCT_REVIEWS_PURCHASE_REQUIRED` off if you have few purchases and want more reviews. With it off, a review from a buyer still shows the "Verified purchase" badge in the store.
 
+### Ask customers for a review
+
+The delivery email already invites the customer to review what arrived. A few days later the store sends one more email, a reminder, for the products the customer has not reviewed yet. It links straight to each product's review form.
+
+| Setting | What it does | Starts as |
+|---|---|---|
+| `REVIEW_REQUEST_DELAY_DAYS` | How many days after delivery the reminder is sent. 0 keeps it off, and no reminder goes out until you enter a number; 8 is a good start. A whole number up to 365. | 0 |
+
+- It is sent once per order, never again, even if you change the setting.
+- It is not sent when the customer has already reviewed every product of the order, when reviews are off, or for an order that was returned, cancelled or refunded after delivery.
+- It counts as a marketing email: a customer who unsubscribed from marketing emails does not get it. You can also switch it off for everyone on <span class="sidebar-path">Settings → Emails</span>, under **To customers**.
+- Changing the number does not send a reminder for orders delivered long ago: only orders that reach their day in the last few days are reminded.
+
 ## Things to know
 
 - **When a customer changes their review**: if they change the rating or comment of an approved or rejected review, it goes back to **Waiting for approval**. It leaves the store until you approve it again.

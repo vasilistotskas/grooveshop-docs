@@ -196,6 +196,7 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 | `ORDER_UNPAID_ONLINE_ALERT_THRESHOLD` | When this many online-payment orders wait for their payment at once, the platform team gets a warning: that many unpaid orders hold stock other shoppers cannot buy. 0 turns it off. | 25 |
 | `ORDER_FOLLOW_UP_DAYS` | After how many days without delivery an order goes into **Orders to follow up**. 0 turns it off. | 7 |
 | `CHECKOUT_ABANDONMENT_HOURS` | After how many hours an unfinished checkout gets a reminder email. | 2 |
+| `REVIEW_REQUEST_DELAY_DAYS` | After how many days from delivery a customer gets one email asking them to review the products they have not reviewed yet. 0 turns it off. See [Reviews](/admin/catalog/reviews). | 0 |
 | `CART_ABANDONED_HOURS` | After how many hours without activity a cart counts as abandoned in the **Carts** list. | 24 |
 | `ABANDONED_CART_CLEANUP_DAYS` | After how many days empty guest carts are deleted. | 7 |
 | `OLD_GUEST_CART_CLEANUP_DAYS` | After how many days guest carts are deleted. | 30 |
