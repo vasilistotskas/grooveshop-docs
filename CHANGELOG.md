@@ -1,3 +1,10 @@
+## [1.2.171](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.170...v1.2.171) (2026-11-04)
+
+
+### Bug Fixes
+
+* **deps:** take the patched releases of the site's dependencies ([#120](https://github.com/vasilistotskas/grooveshop-docs/issues/120)) ([f211c71](https://github.com/vasilistotskas/grooveshop-docs/commit/f211c7196865926924c509b78cd748878a234c80))
+
 ## [1.2.170](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.169...v1.2.170) (2026-11-04)
 
 ## [1.2.169](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.168...v1.2.169) (2026-11-04)
