@@ -332,6 +332,8 @@ matter are listed at the top of `internal/feeds/rss.go`:
   store name.
 - Every attribute that is not a variant option goes out as a
   `g:product_detail`, so a specification is entered once.
+- The store's highlights go out as `g:product_highlight`, from `/product/feed`'s
+  `highlights` in the feed's language. Fewer than two send none: Google's minimum.
 - A product with no default-locale name or no image is **skipped**, because
   the platforms would reject it anyway. A malformed money field is an error,
   because it would corrupt every consumer's feed.
