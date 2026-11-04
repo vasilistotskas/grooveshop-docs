@@ -33,17 +33,17 @@ You can do this from the product itself or from the photo's own page.
 **From the product:**
 1. Open the product and go to the **Product Images** tab.
 2. Pick the language tab at the top of the page (for example Greek, then English).
-3. In the row of each photo, fill in **Alt Text**, e.g. "Black USB-C cable, 2 metres". The **Title** field is there too.
+3. In the row of each photo, fill in **Alt Text**, e.g. "Black USB-C cable, 2 metres".
 4. Save, then repeat for each language you sell in.
 
 **From the photo's page:**
 1. Open <span class="sidebar-path">Catalog → Images → Product Images</span> and open the photo.
-2. In the **Content** section, fill in **Alt Text** (and **Title**) in every language tab.
+2. In the **Content** section, fill in **Alt Text** in every language tab.
 3. Save.
 
-The **Alt Text** is what people using a screen reader hear and what search engines read to understand the photo. Describe what is in the picture in a short sentence; there is no need to start with "image of". If you leave it empty the store uses the **Title**, and if that is empty too, the product name and the photo's place in the gallery, e.g. "Mini Power Bank – photo 2".
+The **Alt Text** is what people using a screen reader hear and what search engines read to understand the photo. Describe what is in the picture in a short sentence; there is no need to start with "image of". If you leave it empty, the store describes the photo itself with the product name and the photo's number in the gallery, e.g. "Mini Power Bank – photo 2".
 
-Category images have a **Title** and an **Alt Text** per language, in the same section.
+Category images have an **Alt Text** per language, in the same section.
 
 ## Things to know
 
