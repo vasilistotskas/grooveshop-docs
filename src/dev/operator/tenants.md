@@ -457,6 +457,7 @@ a common bug:
 |---|---|
 | `grooveshop-django-api/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
 | `grooveshop-django-api/tenant/validators.py` | `validate_reserved_schema_name`, `validate_store_hostname`, `RESERVED_SCHEMA_NAMES` |
+| `grooveshop-django-api/tenant/json_schemas.py` | The JSON schemas of `available_locales`, `store_description_i18n` and `allowed_csp_sources` |
 | `grooveshop-django-api/tenant/credentials.py` | The credential helpers and the no-fallback rule |
 | `grooveshop-django-api/emails/sender.py` | `from_address`, which reads `from_email` and `from_email_verified` |
 | `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, `PLATFORM_ONLY_APP_LABELS` |
