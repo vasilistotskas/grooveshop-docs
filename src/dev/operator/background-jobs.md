@@ -22,8 +22,10 @@ screens.
 
 <span class="sidebar-path">Background Jobs → Periodic Tasks</span> is `django_celery_beat`'s
 `PeriodicTask` changelist, re-registered through
-`core/admin.py: PeriodicTaskAdmin` so it renders in Unfold with
-`UnfoldPeriodicTaskForm`.
+`core/admin.py: PeriodicTaskAdmin` so it renders in Unfold. It is for reading
+the schedule, switching an entry off or on, and running one by hand: a row
+cannot be added or deleted, and **Enabled** is the only field that can be
+edited.
 
 The scheduler is `django_celery_beat.schedulers:DatabaseScheduler`
 (`CELERY_BEAT_SCHEDULER` in `settings.py`), so the rows on this screen are
@@ -49,25 +51,43 @@ def setup_schedule(self):
 declared entry through `ModelEntry.from_entry`, which is a
 `PeriodicTask.objects.update_or_create(name=name, defaults=...)`.
 
-**So yes — editing a beat-managed row in the console is overwritten.**
-Verified in the installed `django_celery_beat/schedulers.py`: the
-`defaults` come from `_unpack_fields()`, which rewrites the row's `task`,
-its schedule relation, `args`, `kwargs` and the unpacked `options`
-(`queue`, `exchange`, `routing_key`, `priority`, `headers`,
-`expire_seconds`) from the Python declaration every time the beat process
-starts. Change a crontab here and the next beat restart — a deploy, a pod
-reschedule — silently puts it back.
+That is why the console offers no other edit. In the installed
+`django_celery_beat/schedulers.py`, the `defaults` come from
+`_unpack_fields()`, which rewrites the row's `task`, its schedule relation,
+`args`, `kwargs` and the unpacked `options` (`queue`, `exchange`,
+`routing_key`, `priority`, `headers`, `expire_seconds`) from the Python
+declaration every time the beat process starts, which is several times a day.
 
 One field is **not** in that set: `enabled`. `_unpack_fields` never writes
 it, and `update_from_dict` skips a disabled row when building the in-memory
-schedule (`if entry.model.enabled`). Unticking **Enabled** on a row is
-therefore the one console edit that survives a restart, which makes it the
-correct way to stop a job in an incident. To change *when* a job runs, edit
-`get_celery_beat_schedule()` and deploy.
+schedule (`if entry.model.enabled`). Unticking **Enabled** survives a restart,
+which makes it the correct way to stop a job in an incident. To change *when*
+a job runs, edit `get_celery_beat_schedule()` and deploy.
 
-Rows that are not in the declaration are left alone entirely — nothing
-prunes them — so a hand-added `PeriodicTask` keeps running until someone
-deletes it.
+**A row the declaration does not name is deleted.** The library never removes
+a row whose entry is gone, so `core/beat.py` does, on `beat_init`
+(`core/celery.py`): every row except the declared ones and
+`celery.backend_cleanup`. Removing an entry from the declaration is therefore
+all it takes, and a database cloned from production sheds production's extra
+entries at the next beat start.
+
+### When it fires
+
+Times follow Celery's crontab calculation, which reads `last_run_at` from the
+row:
+
+- **A restart loses nothing.** Beat runs as one pod with the `Recreate`
+  strategy (`base/backend.yaml` in `grooveshop-infrastructure`), so each deploy
+  leaves a short gap. The new pod finds any entry overdue and sends it once,
+  however many ticks passed.
+- **The hour repeated when the clocks go back is skipped.** Every sub-daily job
+  goes quiet: on 2026-10-25 a `*/5` job had a 65-minute gap, a `*/15` job 75 and
+  an hourly job 120. No job ran twice. Nothing here needs that hour.
+
+`GrooveShopBeatSilent` (`victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml`
+in `grooveshop-infrastructure`) fires when beat sends nothing for 15 minutes,
+because the liveness probe only checks that the process exists. It fires once
+a year for that repeated hour, and that one needs no action.
 
 ### Running one by hand
 
@@ -78,18 +98,17 @@ kwargs and queue, and the only header it sets is `periodic_task_name` —
 in from `connection.schema_name`, which on the control plane is `public`,
 so the task runs there.
 
-That is correct for every row this platform declares, because every
-store-touching job is scheduled as a `fanout_*` wrapper that runs in
-`public` and dispatches into each tenant schema itself. It is *not* correct
-for a hand-added row pointing at the underlying per-tenant task: that would
-run against the empty public schema and report success. See the fan-out
-section of [Celery and background jobs](/dev/django/celery).
+That is correct for every row, because every store-touching job is
+scheduled as a `fanout_*` wrapper that runs in `public` and dispatches into
+each tenant schema itself. See the fan-out section of
+[Celery and background jobs](/dev/django/celery).
 
 ### The four schedule types
 
 Beat stores a schedule as a foreign key to one of four tables, each with
-its own sidebar entry under **Background Jobs**
-(`django_celery_beat/models.py`).
+its own read-only sidebar entry under **Background Jobs**
+(`django_celery_beat/models.py`). Beat points an entry back at the row matching
+its declaration when it starts, so these screens only show what it derived.
 
 | Screen | Model | What it expresses |
 |---|---|---|
@@ -100,9 +119,9 @@ its own sidebar entry under **Background Jobs**
 
 **Every entry in `get_celery_beat_schedule()` uses a crontab** — either a
 `SCHEDULE_PRESETS` value or an inline `crontab(...)`. Nothing in this
-platform declares an interval, solar or clocked schedule, so those three
-changelists are empty unless someone adds a row by hand. The tables exist
-because the library ships them, not because anything needs them.
+platform declares an interval, solar or clocked schedule, so no task uses
+those three. The tables exist because the library ships them, not because
+anything needs them.
 
 Times are Athens local: `core/celery.py` sets
 `timezone=os.getenv("TIME_ZONE", "Europe/Athens")` with `enable_utc=True`.
@@ -328,12 +347,11 @@ half.
 
 ## Failure modes
 
-- **A schedule edit disappeared after a deploy.** It was a beat-managed
-  row; `update_from_dict` rewrote it at beat start-up. Edit
-  `get_celery_beat_schedule()` instead.
-- **A job was disabled in the console and still ran.** Check you unticked
-  `enabled` on the row rather than clearing its schedule — a cleared
-  schedule is rewritten, the flag is not.
+- **A job was disabled in the console and still ran.** A message already
+  queued still runs. Beat reloads the change at its next wake-up, about a minute
+  at most with the every-minute entries, and sends nothing more for that entry.
+- **A row disappeared.** Its name is not in `get_celery_beat_schedule()` for
+  this environment, so `core/beat.py` deleted it when beat started.
 - **Task Results is empty and you expected history.** It only ever holds
   failures, for 30 days. Read `last_run_at` for "did it run".
 - **Task Results is empty on a tenant host.** You are looking in the wrong
@@ -359,6 +377,7 @@ half.
 
 | File | Role |
 |---|---|
+| `grooveshop-django-api/core/beat.py` | deletes every row the schedule does not declare, on `beat_init` |
 | `grooveshop-django-api/settings.py` | `get_celery_beat_schedule()`, `SCHEDULE_PRESETS`, `CELERY_BEAT_SCHEDULER`, `CELERY_TASK_IGNORE_RESULT`, `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED`, `CELERY_RESULT_EXPIRES`, `CELERY_RESULT_EXTENDED`, `SHARED_APPS`/`TENANT_APPS`, `UNFOLD_PLATFORM["SIDEBAR"]`, `SITE_ID` |
 | `grooveshop-django-api/core/admin.py` | `PeriodicTaskAdmin`, the schedule admins, `CachePurgeLogAdmin`, `override_third_party_admins()` |
 | `grooveshop-django-api/core/celery.py` | App factory, timezone, the inert `task_ignore_result` line |

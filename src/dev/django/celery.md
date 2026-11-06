@@ -117,8 +117,10 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   what the value it sets would mean. Treat the line as dead, not as the
   effective policy, and check `app.conf` before believing either.
 - Scheduler: `django_celery_beat.schedulers:DatabaseScheduler`. The
-  `CELERY_BEAT_SCHEDULE` dict is seeded into `PeriodicTask` rows, visible
-  in the platform admin under Background Jobs.
+  `CELERY_BEAT_SCHEDULE` dict is the whole schedule: it is written to
+  `PeriodicTask` rows at beat start, and `core/beat.py` deletes any other row.
+  They are visible in the platform admin under Background Jobs, where only
+  **Enabled** can be edited.
 
 Flower runs as its own Deployment (`backend.yaml`, port 5555) and refuses
 to start without `FLOWER_BASIC_AUTH`; the admin's site dropdown links to
