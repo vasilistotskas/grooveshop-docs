@@ -123,8 +123,8 @@ platform declares an interval, solar or clocked schedule, so no task uses
 those three. The tables exist because the library ships them, not because
 anything needs them.
 
-Times are Athens local: `core/celery.py` sets
-`timezone=os.getenv("TIME_ZONE", "Europe/Athens")` with `enable_utc=True`.
+Times are Athens local: `CELERY_TIMEZONE` in `settings.py` reads `TIME_ZONE`,
+default `Europe/Athens`, with `CELERY_ENABLE_UTC = True`.
 
 ## Task Results
 
@@ -152,34 +152,20 @@ task name and arguments because `CELERY_RESULT_EXTENDED = True`.
 The reason is stated in `settings.py`: nothing in this codebase reads a
 task's return value — no `AsyncResult`, no `.get()`, no chord, no group —
 so every stored success was write amplification nobody consumed, 2,937 rows
-a day. Failures are worth keeping durably and queryably, because this
-platform has no metrics or alerting stack and a silent failure here is an
-order confirmation nobody receives or a courier voucher that never mints.
+a day. Failures are worth keeping durably and queryably, because a silent
+failure here is an order confirmation nobody receives or a courier voucher that
+never mints.
 
 `tests/integration/core/test_celery_result_storage.py` pins both halves by
 driving `build_tracer(..., eager=False)` — the worker's own path — rather
 than `.apply()`, which hard-codes `ignore_result: False` and so could never
 observe the behaviour.
 
-#### A note for anyone reading `core/celery.py`
-
-`create_celery_app()` passes `task_ignore_result=False` in its
-`conf.update()`, under a comment reading "Don't store task results in
-database". That line is inert. Under `namespace="CELERY"`,
-`ConfigurationView.__getitem__` tries the **prefixed** key across every
-map before the bare one, so `CELERY_TASK_IGNORE_RESULT` from Django
-settings is found first and wins, whichever order the two were set in. The
-integration test asserting `_succeeds.ignore_result is True` is the
-authority; the `conf.update()` value never reaches a task.
-
-The result backend is `django-db` — `CELERY_RESULT_BACKEND` defaults to it
-in `settings.py` and **no worker Deployment overrides it**. All four
-backend containers in
+The result backend is `core.result_backend.TenantDatabaseBackend`, fixed by
+`CELERY_RESULT_BACKEND` in `settings.py`, and **no Deployment overrides it**.
+All four backend containers in
 `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`
-carry an explicit comment saying so. The one place still pointing at Redis
-is the PreSync `backend-prepare` Job
-(`manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml`),
-which sets Redis DB 1 for its own short life.
+carry an explicit comment saying so.
 
 ### The rows live in `public`, so one list covers every store
 
@@ -380,7 +366,8 @@ half.
 | `grooveshop-django-api/core/beat.py` | deletes every row the schedule does not declare, on `beat_init` |
 | `grooveshop-django-api/settings.py` | `get_celery_beat_schedule()`, `SCHEDULE_PRESETS`, `CELERY_BEAT_SCHEDULER`, `CELERY_TASK_IGNORE_RESULT`, `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED`, `CELERY_RESULT_EXPIRES`, `CELERY_RESULT_EXTENDED`, `SHARED_APPS`/`TENANT_APPS`, `UNFOLD_PLATFORM["SIDEBAR"]`, `SITE_ID` |
 | `grooveshop-django-api/core/admin.py` | `PeriodicTaskAdmin`, the schedule admins, `CachePurgeLogAdmin`, `override_third_party_admins()` |
-| `grooveshop-django-api/core/celery.py` | App factory, timezone, the inert `task_ignore_result` line |
+| `grooveshop-django-api/core/celery.py` | App factory, the `beat_init` handler |
+| `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | `GrooveShopBeatSilent` |
 | `grooveshop-django-api/core/cache/models.py` | `CachePurgeLog` |
 | `grooveshop-django-api/core/cache/service.py` | `CacheService.purge`, `_log_audit` |
 | `grooveshop-django-api/admin/admin.py` | `clear_cache_view` (**Cache Management**) and its recent-log panel |
