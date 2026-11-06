@@ -109,8 +109,10 @@ differs from the pixels in three ways, all from Microsoft's documentation:
 - **The decision is sent as `consentv2`.** Clarity has required a consent signal
   for visits from the EEA, the UK and Switzerland since 31 October 2025. The
   `defaultConsent` and `consent.set` of `useScriptClarity` wrap the deprecated
-  first API, so the setup calls `clarity('consentv2', …)` through the proxy,
-  with `ad_Storage` following the shopper's `ad_storage` choice.
+  first API, so the setup calls `clarity('consentv2', …)` through the proxy.
+  Microsoft requires both fields: `analytics_Storage` is `granted`, since the
+  tag loads only then, and `ad_Storage` follows the shopper's `ad_storage`
+  choice.
 - **Withdrawing has its own call.** `consentv2` with `denied` keeps Clarity
   running without cookies. `clarity('consent', false)` is the documented call
   that erases its cookies and stops tracking until consent returns.

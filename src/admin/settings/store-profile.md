@@ -19,7 +19,7 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 | **Plan & Billing** | Nothing. It shows your plan and until when it is paid. |
 | **Branding** | Name, description, language, logos, colours and social links. |
 | **Features** | Nothing. It shows which features your plan includes. |
-| **Marketing** | The site verification codes for Google, **Bing site verification** and Pinterest, and the IDs for Google Analytics, Google Ads, Meta, TikTok and Microsoft Clarity. Clarity records how visitors use the store once they accept analytics cookies, and hides checkout and account pages. Before you enter its project ID, add Clarity to your cookie and privacy pages. |
+| **Marketing** | The site verification codes for Google, **Bing site verification** and Pinterest, and the IDs for Google Analytics, Google Ads, Meta, TikTok and Microsoft Clarity. Clarity records how visitors use the store once they accept analytics cookies. On checkout and account pages it records the actions but masks the content. Before you enter its project ID, add Clarity to your cookie and privacy pages. |
 | **Email & Security** | **Contact Email**, **From Email** and **TOTP Issuer**. |
 | **Payments** | Your Viva Wallet and Stripe credentials. |
 | **Shipping** | Your ACS and BoxNow credentials. |

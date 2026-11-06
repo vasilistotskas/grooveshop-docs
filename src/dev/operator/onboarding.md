@@ -410,7 +410,8 @@ kubectl -n grooveshop get certificate | grep "<store-slug>"
 | Social OAuth providers | The allauth callback on the store's **API** host, `https://api.example.com/accounts/<provider>/login/callback/` (allauth is mounted at `accounts/`, `core/urls.py`). The browser flow POSTs to the tenant's own API origin — `app/composables/useAllAuthAuthentication.ts` — precisely so the OAuth flow runs in that store's schema | No, if the store offers social login |
 | Stripe | Nothing by hand; step 4 creates the endpoint on the merchant's own account | — |
 | Viva Wallet | The webhook URL on the store's API host, subscribed to events 1796, 1797, 1798 and 2054 (step 4); without 2054 card disputes are not followed | No, if Viva is enabled |
-| Google Analytics / Meta / TikTok / Microsoft Clarity | The merchant's own property, pixel or project, then the id on the tenant row | Yes |
+| Google Analytics / Meta / TikTok | The merchant's own property or pixel, then the id on the tenant row | Yes |
+| Microsoft Clarity | The merchant's own project and its mention in the store's cookie and privacy pages, then the id on the tenant row | Yes |
 
 Two related facts, because the infrastructure runbook still says
 otherwise: per-tenant OAuth applications **are** supported — a `SocialApp`
