@@ -252,6 +252,7 @@ allowed to be".
 | `meta_pixel_id` | digits only | The browser pixel is off for this store |
 | `tiktok_pixel_id` | alphanumeric | TikTok pixel off |
 | `openai_pixel_id` | alphanumeric | ChatGPT Ads pixel off, **and its origin is left out of the CSP** |
+| `clarity_project_id` | alphanumeric | Microsoft Clarity off, **and its origins are left out of the CSP** |
 | `ga_tracking_id` | must start `G-` or `UA-` | GA off |
 
 Each has its own `_validate_*` method on the model. The alphanumeric rule
