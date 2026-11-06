@@ -88,6 +88,16 @@ once consent flips true. It gates the load and nothing after it:
 `useScriptTriggerConsent` resolves one promise, so withdrawing consent removes
 no tag and stops no script that has already loaded.
 
+### When a store adds a service
+
+A consent covers the services it was given for, the ones the banner named. The
+`ncc_s` cookie keeps which those were, and `setupConsentRenewal`, first among
+the setups in `app.vue`, asks again when the store now uses one the visitor did
+not answer for. Removing a service asks nobody. A decision with no `ncc_s`
+predates it and is asked again once. Only the state is reset, so the trackers'
+gates stay closed until the visitor answers. Both designs' banners name the
+services.
+
 ### Withdrawing consent
 
 `setupConsentWithdrawal` reloads the page when an optional category that was on
