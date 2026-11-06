@@ -190,10 +190,13 @@ under capability names.
 A delivery region is part of the address whenever the country has regions,
 because Django refuses the order without one. `checkout.ResolveRegion`
 (`internal/checkout/region.go`) settles it for UCP and ACP alike, from a code
-or a name, ignoring case and accents, and it runs before any cart write. UCP
-takes it as `fulfillment.regionId` and ACP as the address's `state`. A checkout
-stays `incomplete` until one is chosen, and its message lists the codes,
-because a store may hold its region names in one language only.
+or a name, ignoring case and accents. An update resolves it before any cart
+write, so a failed lookup leaves the cart as it was. A create fills a new cart
+first, so a failed lookup there leaves that cart unused and saves no session.
+UCP takes the region as `fulfillment.regionId` and ACP as the address's `state`.
+Until one is chosen a checkout stays `incomplete` on UCP and
+`not_ready_for_payment` on ACP, and its message lists the codes, because a
+store may hold its region names in one language only.
 
 Every canonical tool **negotiates** before it acts
 (`internal/ucp/negotiate.go`, `internal/ucp/profiles.go`). The platform
