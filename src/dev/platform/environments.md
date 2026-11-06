@@ -25,8 +25,7 @@ uv sync --locked --all-extras --dev
 uv run python manage.py migrate     # django-tenants' migrate: every schema
 uv run uvicorn asgi:application --reload
 uv run celery --app core worker --queues celery,meilisearch --loglevel=info
-uv run celery --app core beat --loglevel=info \
-  --scheduler django_celery_beat.schedulers:DatabaseScheduler
+uv run celery --app core beat --loglevel=info
 ```
 
 The API is an ASGI application (`asgi/__init__.py`): uvicorn serves HTTP

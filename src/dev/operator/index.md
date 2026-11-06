@@ -84,7 +84,7 @@ inlines change. It is idempotent, which matters because `ready()` can run
 more than once under the autoreloader.
 
 `PLATFORM_APP_LABELS` is `tenant`, `user`, `auth`, `sites`, `usersessions`,
-`country`, `region`, `django_celery_beat`, `django_celery_results` and
+`country`, `region`, `scheduler`, `django_celery_results` and
 `core`. Two absences are deliberate and documented in the file:
 
 - **`extra_settings`** — every knob in `EXTRA_SETTINGS` is store-scoped and
@@ -143,9 +143,8 @@ questions: `PLATFORM_ONLY_APP_LABELS` is "may a role hold permissions here",
 `shared_only_app_labels()` is "does this store have its own copy of the
 table".
 
-The tenant-host mixin has to be applied at four places that share no base
-class — `BaseModelAdmin`, the five celery-beat admins in `core/admin.py`,
-`CachePurgeLogAdmin`, and the `override_third_party_admins()` factory, where
+The tenant-host mixin has to be applied at three places that share no base
+class — `BaseModelAdmin`, `CachePurgeLogAdmin`, and the `override_third_party_admins()` factory, where
 it goes first in the bases so its permission overrides win the MRO. "Did we
 miss one" is therefore answered against the live registry rather than by
 reading the code:
@@ -224,14 +223,13 @@ in settings, so an unpinned link turns any local error into
 
 ### Background Jobs
 
-Collapsed by default. `django_celery_beat` and `django_celery_results`
+Collapsed by default. `scheduler` and `django_celery_results`
 tables live in the public schema and drive every store's fan-out tasks, so
 they are platform operations and never one store's.
 
 | Entry | Model |
 |---|---|
-| **Periodic Tasks** | `django_celery_beat.PeriodicTask` |
-| **Crontab / Interval / Clocked / Solar Schedules** | the four `django_celery_beat` schedule models |
+| **Periodic Tasks** | `scheduler.PeriodicTask` |
 | **Task Results** | `django_celery_results.TaskResult` |
 | **Group Results** | `django_celery_results.GroupResult` |
 
@@ -339,7 +337,7 @@ through `tenant/provisioning.py` — see
 | `grooveshop-django-api/admin/apps.py` | Calls `register_platform_models()` after autodiscovery |
 | `grooveshop-django-api/tenant/app_labels.py` | `tenant_only_app_labels`, `shared_only_app_labels` |
 | `grooveshop-django-api/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS` — role scope, not the withhold set |
-| `grooveshop-django-api/core/admin.py` | `override_third_party_admins()`, the celery-beat admins and `CachePurgeLogAdmin` — three of the four mixin application points |
+| `grooveshop-django-api/core/admin.py` | `override_third_party_admins()` and `CachePurgeLogAdmin` — two of the three mixin application points |
 | `grooveshop-django-api/tests/integration/admin/test_tenant_host_model_visibility.py` | Registry-walking coverage for the tenant-host guard |
 | `grooveshop-django-api/tests/integration/admin/test_platform_console.py` | Pins the store/control-plane sidebar split |
 | `grooveshop-django-api/tenant/urls_public.py` | Mounts the site and the platform API on `PUBLIC_SCHEMA_URLCONF` |

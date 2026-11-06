@@ -25,8 +25,7 @@ Signal handlers in the same function are connected with `weak=False`, because
 closures defined inside a function are otherwise garbage-collected before they
 ever fire. They: close stale DB connections at worker start, apply the
 DB-backed translation overlay so workers see Rosetta edits, refresh it when
-another pod bumps the version tick, delete undeclared beat rows when beat
-starts, and propagate the request's correlation id into task headers and back
+another pod bumps the version tick, and propagate the request's correlation id into task headers and back
 into the worker's log context.
 
 ## Base task classes
@@ -92,11 +91,11 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   written: `CELERY_TASK_IGNORE_RESULT` with
   `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` keeps failures and drops
   successes.
-- Scheduler: `django_celery_beat.schedulers:DatabaseScheduler`. The
-  `CELERY_BEAT_SCHEDULE` dict is the whole schedule: it is written to
-  `PeriodicTask` rows at beat start, and `core/beat.py` deletes any other row.
-  They are visible in the platform admin under Background Jobs, where only
-  **Enabled** can be edited.
+- Scheduler: `scheduler.beat:CodeOwnedScheduler`. The `CELERY_BEAT_SCHEDULE`
+  dict is the whole schedule, and a `scheduler.PeriodicTask` row holds only its
+  state. Beat deletes any row the dict does not declare when it starts. The rows
+  are in the platform admin under Background Jobs. See the Django repository's
+  `docs/scheduler.md`.
 
 Flower runs as its own Deployment (`backend.yaml`, port 5555) and refuses
 to start without `FLOWER_BASIC_AUTH`; the admin's site dropdown links to
@@ -255,7 +254,7 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 | File | Role |
 |---|---|
 | `grooveshop-django-api/core/celery.py` | App factory, signal handlers |
-| `grooveshop-django-api/core/beat.py` | Deletes every beat row the schedule does not declare |
+| `grooveshop-django-api/scheduler/beat.py` | The beat scheduler |
 | `grooveshop-django-api/core/retry.py` | The transient error sets `autoretry_for` names |
 | `grooveshop-django-api/settings.py` | `CELERY_*`, `SCHEDULE_PRESETS`, `get_celery_beat_schedule()` |
 | `grooveshop-django-api/tenant/celery.py` | `TenantTask`, `run_for_all_tenants`, `dispatch_on_commit` |
