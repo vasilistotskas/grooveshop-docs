@@ -70,8 +70,7 @@ store's brand, so the editor sets its own palette from `appConfig.builder`
 (`app/layouts/builder.vue`, `updateAppConfig`), and the store's design, theme
 tokens and font faces are left off its page: `isBuilderEditorPath`
 (`shared/utils/builderEditor.ts`) is checked by `app/plugins/design.ts`,
-`app/plugins/tenant-theme.ts`, `server/plugins/tenant-theme.ts` and
-`server/plugins/tenant-fonts.ts`. It matches `/_builder` in every language
+`server/plugins/tenant-theme.ts` and `server/plugins/tenant-fonts.ts`. It matches `/_builder` in every language
 and nothing else. Staff leave the editor by a full page load, which gives the
 storefront its own look back. The store's design is what the preview shows.
 
