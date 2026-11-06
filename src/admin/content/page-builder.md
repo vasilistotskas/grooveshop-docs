@@ -37,7 +37,7 @@ Your store's look is its theme, and you change it in the editor.
 
 ## Choose what a section lists
 
-Some sections show things from your store rather than words you type: **Product carousel**, **Product grid**, **Featured products**, **Blog post grid**, **Blog post list**, **Blog post carousel**, **Product categories**, **Blog categories** and **Offers**. Under **What it lists** you say what they show. The page reads the items when a visitor opens it, so names, prices and pictures are always the current ones.
+Some sections show things from your store rather than words you type: **Product carousel**, **Product grid**, **Featured products**, **Blog post grid**, **Blog post list**, **Blog post carousel**, **Product categories**, **Blog categories** and **Offers**. Under **What it lists** you say what they show. The page reads the items for itself, so names, prices and pictures follow your catalogue within moments, with nothing to publish.
 
 1. Open **Content → Edit storefront** and click the section in the outline.
 2. Under **What it lists**, choose how the items are found, and fill in what it asks for (see the table).
