@@ -187,6 +187,18 @@ The canonical tools take the wire shapes from the OpenRPC document: `meta`
 snake_case members. Extensions compose **flat** onto `checkout`, never nested
 under capability names.
 
+A delivery region is part of the address whenever the country has regions,
+because Django refuses the order without one. `checkout.ResolveRegion`
+(`internal/checkout/region.go`) settles it for UCP and ACP alike, from a code
+or a name, ignoring case and accents. An update resolves it before any cart
+write, so a failed lookup leaves the cart as it was. A create fills its cart
+first, so a failed lookup there leaves the lines in the cart and saves no
+session.
+UCP takes the region as `fulfillment.regionId` and ACP as the address's `state`.
+Until one is chosen a checkout stays `incomplete` on UCP and
+`not_ready_for_payment` on ACP, and its message lists the codes, because a
+store may hold its region names in one language only.
+
 Every canonical tool **negotiates** before it acts
 (`internal/ucp/negotiate.go`, `internal/ucp/profiles.go`). The platform
 profile named in `meta.ucp-agent.profile` is fetched under the spec's fetch
@@ -248,6 +260,13 @@ books it the same way with `agentProtocol: "mcp"`
 reads "AI agent (MCP)". The chat assistant serves the same tool but never
 sends a protocol; see the chatbot's request below.
 
+A checkout with an order renders from that order, not from the cart.
+`checkout.ComputePricing` reads `GET /order/uuid/{uuid}` once the session has an
+order, because Django deletes the cart with the order (on payment, for an online
+method) and a cart read would answer a new one. Lines are then named by product,
+as `get_order` names them, and an ACP session's `continue_url` leads to the
+order.
+
 ### An ONLINE payment method is not an instrument
 
 This is the sharpest rule in the gateway, and it fails closed.
@@ -300,6 +319,12 @@ with one store can never drive another's checkout by switching `Host`. An
 empty token means ACP is disabled for that tenant and every bearer gets the
 same 401 as a wrong one. Idempotency keys are namespaced per schema and
 operation at `ag:{schema}:acp:idem:{op}:{key}`.
+
+Create answers 400 at `$.currency` for any currency but the store's, rather than
+quoting amounts a platform would read as its own. A line's `quantity` is
+optional, because the spec's request item has none, and an omitted one buys one.
+A value below 1 is Django's to refuse, as it is on `add_to_cart` and on UCP line
+items. Completing a session that still misses data answers 400 `missing`.
 
 A session declares the discount extension in `capabilities.extensions` only
 while the store has promotions on (`internal/acp/render.go:
@@ -495,11 +520,28 @@ why: a bearer valid for tenant A, replayed against tenant B inside the TTL,
 was admitted with A's shopper profile attached, and every tenant's ingress
 targets the same pod pool.
 
+An anonymous call to an account tool gets the same challenge
+(`internal/mcpsrv/account_challenge.go: RequireLinkedAccount`), because a client
+starts OAuth on a 401 and on nothing else: a tool error reaches the model as
+text, which cannot link an account. Its `scope` lists `profile` and every
+account tool the store serves. Tokens are opaque to the gateway, so it could not
+step a narrower grant up later, and the shopper can still narrow it on the
+consent screen. The rest of `/mcp` stays open.
+
 Account tools forward the bearer to `/api/v1/agent/*` and **Django enforces
 the scopes**. `agent/views.py` accepts OIDC bearer tokens only — never Knox,
 never session auth — and tenant scoping is structural rather than a
 permission: the OIDC token tables live in the tenant schema, so a token
 issued by one store cannot be found on another's host.
+
+A client binds its token to the store's MCP server, as MCP requires (RFC 8707),
+and the gateway forwards that token to an API with a different URL. So
+`agent/views.py: AgentTokenAuthentication` compares the token's resources with
+`<store>/mcp`, not with the URL it reached, and still refuses a token bound to
+anything else.
+
+`openid` needs `IDP_OIDC_PRIVATE_KEY` to sign the ID token, and clients request
+it because the protected-resource metadata lists it.
 
 ### Agent discovery
 
@@ -671,6 +713,14 @@ yourself, then bumping the pin in the infrastructure repo.
   secrets middleware for exactly that reason.
 - **Every ACP bearer gets 401.** The tenant has no `acpBearerToken`, which is
   how ACP is disabled. It is not a credential mismatch.
+- **The token endpoint answers 500 after consent.** The client asked for
+  `openid` and the environment has no `IDP_OIDC_PRIVATE_KEY`: Django logs
+  `No active private key`, and `/.well-known/jwks.json` serves no keys.
+- **A `my_*` tool says the token lacks a scope it holds.** The gateway reports
+  every 403 from `/api/v1/agent/*` that way. Read Django's access log: the token
+  may be bound to another resource.
+- **Staging refuses a real OAuth client.** Only the demo store exempts the OAuth
+  paths from basic auth; see `docs/staging.md` in the infrastructure repository.
 - **The assistant says it cannot update a signed-in shopper's cart.**
   Expected until the cart-scoped token (gateway issue #24, part 2). The
   gateway calls Django anonymously, so the shopper's own cart is
@@ -730,6 +780,9 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/ucp/profiles.go` | Platform profile fetch, validation and cache |
 | `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
 | `grooveshop-agent-gateway/internal/acp/handler.go` | ACP routes and bearer auth |
+| `grooveshop-agent-gateway/internal/checkout/region.go` | `ResolveRegion`, shared by UCP and ACP |
+| `grooveshop-agent-gateway/internal/checkout/pricing.go` | `ComputePricing`, from the cart or, once placed, the order |
+| `grooveshop-agent-gateway/internal/mcpsrv/account_challenge.go` | `RequireLinkedAccount`, the challenge on an anonymous account tool |
 | `grooveshop-agent-gateway/internal/acp/render.go` | Session rendering, `capabilitiesOf` |
 | `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, VAT-inclusive prices, skip rules |
 | `grooveshop-agent-gateway/internal/feeds/acp.go` | ACP feed shape |
