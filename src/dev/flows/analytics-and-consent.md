@@ -15,7 +15,7 @@ Every tracker id is **per tenant** with no platform or environment fallback —
 a shared id would mix ad accounts and analytics properties across merchants.
 
 The banner is asked only where the store uses something optional: a Google
-(Analytics or Ads), Meta, TikTok or OpenAI id on the tenant
+(Analytics or Ads), Meta, TikTok, OpenAI or Microsoft Clarity id on the tenant
 (`useTenantStore().hasOptionalServices`). A store with none sets no optional
 cookie and loads no third-party script, so there is nothing to ask. One rule for
 every design: the platform's banner and webside's both stay away, the footer
@@ -39,6 +39,9 @@ flowchart TD
   Trig --> TT["TikTok Pixel"]
   Trig --> OAI["OpenAI pixel"]
   Banner --> GA["gtag consent.update"]
+  Banner --> Clar{"analytics_storage granted?"}
+  Clar -- "yes" --> Clarity["Microsoft Clarity, told through consentv2"]
+  Clar -- "withdrawn" --> Erase["clarity consent false"]
 
   Checkout["Checkout submit"] --> Build["buildMetaPayload"]
   Build -- "no consent" --> Null["meta omitted"]
@@ -81,8 +84,28 @@ every advertising pixel, and it requires **both** conditions:
 `setupOpenAIPixelConsent` each pass that computed boolean to
 `useScriptTriggerConsent({ consent })` and use the result as the script's
 `trigger`. That is the documented binary load gate: the tag is injected only
-once consent flips true, and if it later flips false the trigger revokes and
-the script is unloaded.
+once consent flips true. It gates the load and nothing after it:
+`useScriptTriggerConsent` resolves one promise, so withdrawing consent removes
+no tag and stops no script that has already loaded.
+
+### When a store adds a service
+
+A consent covers the services it was given for, the ones the banner named. The
+`ncc_s` cookie keeps which those were, and `setupConsentRenewal`, first among
+the setups in `app.vue`, asks again when the store now uses one the visitor did
+not answer for. Removing a service asks nobody. A decision with no `ncc_s`
+predates it and is asked again once. Only the state is reset, so the trackers'
+gates stay closed until the visitor answers. Both designs' banners name the
+services.
+
+### Withdrawing consent
+
+`setupConsentWithdrawal` reloads the page when an optional category that was on
+is turned off. The store moves between pages without leaving the document, so a
+loaded pixel would otherwise keep running for the rest of the visit. A new
+document is what stops it: the gates are closed, so no tag is injected. It waits
+for the next paint, by when the decision is in its cookies. A visitor answering
+the banner for the first time, or adding a category, is not reloaded.
 
 The comment records the pattern that was replaced and why. Combining
 `defaultConsent: 'denied'` with a manual `consent.grant()` watcher left the
@@ -94,6 +117,35 @@ All three setups are **client-only**. Since `@nuxt/scripts` 1.2 the registry's
 `use()` is invoked eagerly, dereferencing `window.fbq` or `window.ttq` and
 throwing during prerender, so each returns early on the server and the
 consumer composables fall back to a no-op proxy.
+
+### Microsoft Clarity
+
+`setupClarityConsent` loads the store's project (`Tenant.clarity_project_id`)
+once the shopper grants `analytics_storage`, through the same load trigger. It
+differs from the pixels in three ways, all from Microsoft's documentation:
+
+- **The decision is sent as `consentv2`.** Clarity has required a consent signal
+  for visits from the EEA, the UK and Switzerland since 31 October 2025. The
+  `defaultConsent` and `consent.set` of `useScriptClarity` wrap the deprecated
+  first API, so the setup calls `clarity('consentv2', …)` through the proxy.
+  Microsoft requires both fields: `analytics_Storage` is `granted`, since the
+  tag loads only then, and `ad_Storage` follows the shopper's `ad_storage`
+  choice.
+- **Withdrawing erases its cookies, and the reload stops it.**
+  `clarity('consent', false)` deletes `_clck` and `_clsk`, but contrary to
+  Microsoft's documentation it does not stop tracking: clarity-js restarts
+  without cookies and keeps uploading, measured on webside at 8 uploads in the
+  40 s after withdrawing. `setupConsentWithdrawal` is what stops it.
+- **It records the page, so private content is masked.** Clarity's default
+  Balanced mode hides inputs, numbers and email addresses and uploads other
+  text, a name or a street address included. `data-clarity-mask` masks an
+  element and all it contains in the browser, so the content is never uploaded.
+  It is on the checkout layout, the account shell, the checkout success page and
+  the signed-in identity in the account menus, in every design.
+  `test/unit/source-rules/clarity-masks-private-surfaces.spec.ts` holds the list.
+
+A store that turns Clarity on names it in its own cookie and privacy pages,
+which are the store's legal text and do not change with this id.
 
 ### Pixels' automatic click tracking
 
@@ -448,6 +500,7 @@ The script refuses to run unless the tenant's primary domain carries the
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useTikTokPixel.ts` | TikTok events and `CompletePayment` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useGA4.ts` | GA4 recommended events |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOpenAIPixel.ts` | ChatGPT Ads conversion pixel |
+| `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/clarity-masks-private-surfaces.spec.ts` | What a Clarity recording must not read |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | `buildMetaPayload` and its consent short-circuit |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Order acquisition capture, outside the consent gate |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Server-side enrichment of the meta context |
