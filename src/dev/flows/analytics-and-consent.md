@@ -88,11 +88,22 @@ once consent flips true. It gates the load and nothing after it:
 `useScriptTriggerConsent` resolves one promise, so withdrawing consent removes
 no tag and stops no script that has already loaded.
 
+The comment records the pattern that was replaced and why. Combining
+`defaultConsent: 'denied'` with a manual `consent.grant()` watcher left the
+registry in a loaded-but-empty state — registered with no DOM tag and an
+`fbq` queue that never drained — because `defaultConsent` is a vendor-side
+flag that never gates injection.
+
+All three setups are **client-only**. Since `@nuxt/scripts` 1.2 the registry's
+`use()` is invoked eagerly, dereferencing `window.fbq` or `window.ttq` and
+throwing during prerender, so each returns early on the server and the
+consumer composables fall back to a no-op proxy.
+
 ### When a store adds a service
 
 A consent covers the services it was given for, the ones the banner named. The
-`ncc_s` cookie keeps which those were, and `setupConsentRenewal`, first among
-the setups in `app.vue`, asks again when the store now uses one the visitor did
+`ncc_s` cookie keeps which those were, and `setupConsentRenewal`, before the
+tracker setups in `app.vue`, asks again when the store now uses one the visitor did
 not answer for. Removing a service asks nobody. A decision with no `ncc_s`
 predates it and is asked again once. Only the state is reset, so the trackers'
 gates stay closed until the visitor answers. Both designs' banners name the
@@ -107,22 +118,12 @@ document is what stops it: the gates are closed, so no tag is injected. It waits
 for the next paint, by when the decision is in its cookies. A visitor answering
 the banner for the first time, or adding a category, is not reloaded.
 
-The comment records the pattern that was replaced and why. Combining
-`defaultConsent: 'denied'` with a manual `consent.grant()` watcher left the
-registry in a loaded-but-empty state — registered with no DOM tag and an
-`fbq` queue that never drained — because `defaultConsent` is a vendor-side
-flag that never gates injection.
-
-All three setups are **client-only**. Since `@nuxt/scripts` 1.2 the registry's
-`use()` is invoked eagerly, dereferencing `window.fbq` or `window.ttq` and
-throwing during prerender, so each returns early on the server and the
-consumer composables fall back to a no-op proxy.
-
 ### Microsoft Clarity
 
 `setupClarityConsent` loads the store's project (`Tenant.clarity_project_id`)
 once the shopper grants `analytics_storage`, through the same load trigger. It
-differs from the pixels in three ways, all from Microsoft's documentation:
+differs from the pixels in three ways, from Microsoft's documentation and from
+measuring it on webside:
 
 - **The decision is sent as `consentv2`.** Clarity has required a consent signal
   for visits from the EEA, the UK and Switzerland since 31 October 2025. The
