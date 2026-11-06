@@ -51,7 +51,8 @@ Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `settings.py` rea
 - **A failed publish is sent again** rather than waiting for the next slot, so a
   broker restart does not cost a daily job its day.
 - **`expires` in an entry's `options` applies.** A message waiting longer than that
-  is discarded rather than run.
+  is discarded rather than run, so only the frequent polls set it. A daily job
+  discarded because a worker was down would lose its day.
 - **The hour repeated when the clocks go back is skipped.** Every sub-daily job
   goes quiet: on 2026-10-25 a `*/5` job had a 65-minute gap, a `*/15` job 75 and
   an hourly job 120. No job ran twice. Nothing here needs that hour.
