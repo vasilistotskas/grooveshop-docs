@@ -205,7 +205,7 @@ Entry points:
 
 | Caller | Route | `customer_initiated` |
 |---|---|---|
-| Customer or guest | `POST /api/v1/order/{id}/cancel` (`OrderViewSet.cancel`; guests authorise with `?uuid=`) | `True` |
+| Customer or guest | `POST /api/v1/order/{id}/cancel` (`OrderViewSet.cancel`; guests authorise with `?uuid=`, for `GUEST_ORDER_ACCESS_DAYS` after the order) | `True` |
 | Store staff | The same action (the view passes `not is_store_staff(user)`), or the `mark_as_canceled` bulk action in `order/admin.py` | `False` |
 | Automatic | `auto_cancel_stuck_pending_orders`, always with `refund_payment=False` | `False` |
 | Carrier-driven | `AcsService._cancel_order_for_dead_shipment`, for a voucher already retired | `False` |
