@@ -13,14 +13,27 @@ The Owner and the Administrator edit and publish. Staff can look at everything h
 
 ## Editing
 
-**Content → Edit storefront** opens the editor on your own store, already signed in as you. The editor is still being finished: until it opens, the page says so, and your pages and menus stay exactly as they are.
+**Content → Edit storefront** opens the editor on your own store, already signed in as you.
 
-What the editor will let you do:
+In the editor you can:
 
 - change the text, pictures and links of a section, in every language your store serves;
 - add, move, hide and remove sections, and build new pages;
 - save your work as you go, and publish a page and its menus together when it is ready, or schedule the publish for a later time;
 - go back to any earlier version.
+
+## Change the colours, corners and fonts
+
+Your store's look is its theme, and you change it in the editor.
+
+1. Open **Content → Edit storefront**.
+2. In the outline, click **Theme: colours, corners, fonts**.
+3. Change the **Colours**, for the light and the dark scheme. **Same colours as light** copies the light colours to the dark scheme.
+4. Under **Shape and fonts**, set the **Corners**, the **Page width** and the fonts.
+5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before you can publish.
+6. Publish. The new look shows on every page, and your emails use the new primary colour.
+
+**Button colour** can keep its own colour or, with **Follows the primary colour** on, change along with the primary colour.
 
 ## What the lists show
 

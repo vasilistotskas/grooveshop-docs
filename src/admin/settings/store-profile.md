@@ -17,7 +17,7 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 |---|---|
 | **Store** | Nothing. It shows the store's details on the platform. |
 | **Plan & Billing** | Nothing. It shows your plan and until when it is paid. |
-| **Branding** | Name, description, language, logos, colours and social links. |
+| **Branding** | Name, description, language, logos and social links. |
 | **Features** | Nothing. It shows which features your plan includes. |
 | **Marketing** | The site verification codes for Google, **Bing site verification** and Pinterest, and the IDs for Google Analytics, Google Ads, Meta and TikTok. |
 | **Email & Security** | **Contact Email**, **From Email** and **TOTP Issuer**. |
@@ -27,12 +27,13 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 
 ## Tasks
 
-### Change the logo and colours
+### Change the logo
 
 1. Open the **Branding** tab.
 2. In **Logo (Light)** and **Logo (Dark)** enter the address (URL) of the image. The light logo is for light backgrounds, the dark one for dark backgrounds.
-3. Choose a **Primary Color** and a **Neutral Color**. In **Accent Hex** enter a colour code, for example `#003DFF`.
-4. Click **Save**.
+3. Click **Save**.
+
+Your store's colours, corners and fonts are its theme, which you change in the [page builder](/admin/content/page-builder#change-the-colours-corners-and-fonts).
 
 ### Verify the store with Bing
 1. In Bing Webmaster Tools, add your store and choose to verify it with an HTML tag. Copy only the code from the tag's `content` part.

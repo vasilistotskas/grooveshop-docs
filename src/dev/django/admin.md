@@ -195,11 +195,11 @@ A structured `JSONField` names its schema with
 built from runtime data (the storefront locales, strategy codes) is built
 when used. The one schema validates writes (`full_clean`, the admin form,
 DRF serializers, which copy model validators) and drives Unfold's editor.
-Errors name the offending entry (`colors.primaryScale.500: ...`).
+Errors name the offending entry (`[0]: ...` for the first item of a list, `en: ...` for a key).
 
 Schemas are self-contained, with no `$ref`: Unfold creates its editor
-without a reference resolver. Fields covered: `Tenant.theme_metadata`,
-`available_locales`, `allowed_csp_sources` (`tenant/json_schemas.py`),
+without a reference resolver. Fields covered: `Tenant.available_locales`,
+`store_description_i18n`, `allowed_csp_sources` (`tenant/json_schemas.py`),
 `RecommendationSlot.strategy_chain` and `weights`
 (`recommendation/json_schemas.py`).
 
