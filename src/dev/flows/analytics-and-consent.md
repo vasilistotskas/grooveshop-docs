@@ -38,7 +38,9 @@ flowchart TD
   Trig --> Meta["Meta Pixel"]
   Trig --> TT["TikTok Pixel"]
   Trig --> OAI["OpenAI pixel"]
-  Banner --> GA["gtag consent.update"]
+  Banner --> GDec{"analytics_storage or ad_storage granted?"}
+  GDec -- "no" --> NoG["gtag never loads"]
+  GDec -- "yes" --> GA["gtag, told through consent.update"]
   Banner --> Clar{"analytics_storage granted?"}
   Clar -- "yes" --> Clarity["Microsoft Clarity, told through consentv2"]
   Clar -- "withdrawn" --> Erase["clarity consent false"]
@@ -98,6 +100,35 @@ All three setups are **client-only**. Since `@nuxt/scripts` 1.2 the registry's
 `use()` is invoked eagerly, dereferencing `window.fbq` or `window.ttq` and
 throwing during prerender, so each returns early on the server and the
 consumer composables fall back to a no-op proxy.
+
+### Addresses that hold a secret
+
+Every tracker sends the page's address with its hits, and most offer no way to
+change it. Some addresses are keys: a password reset, an email confirmation, an
+unsubscribe link, a data export, and a guest order's uuid, which opens the order
+without a login. `isPrivateUrl` (`shared/utils/privateUrls.ts`) names them,
+by path and by query, following a `next` or `redirect` that points at one.
+`useTrackingAllowed` in `setups.ts` closes every consent gate while one is the
+address, so no tag loads on it, whatever the visitor chose. Those pages are
+reached from outside in a new document, so nothing has loaded yet, and the
+trackers load once the visitor moves on. A new page with a secret in its address
+goes in that list, and `test/unit/source-rules/private-urls.spec.ts` fails for a
+dynamic page that names itself as one and is not listed.
+
+The checkout's own success page cannot be listed away, because it is where a
+purchase is reported. So `/checkout/success/{uuid}` keeps the order in the
+browser (`app/utils/checkoutArrival.ts`) and replaces itself with the plain
+`/checkout/success`, where the trackers run and the address holds nothing. The
+order is read from `sessionStorage`, so a reload and a language switch keep it;
+the same plain address in a new tab has no order and answers 404. Whether a
+purchase has been reported is kept per order in `localStorage`, so opening the
+old link again does not report it twice. Meta's server events name the same
+plain address as `event_source_url`.
+
+A guest's uuid is also limited on the server: `Order.opens_for_guest` opens the
+order for `GUEST_ORDER_ACCESS_DAYS` after it was placed (14 by default), so a link
+that was seen somewhere stops working by itself. Store staff and a signed-in
+owner are not limited.
 
 ### When a store adds a service
 
@@ -214,9 +245,14 @@ entry carries `trigger: false` and `proxy: false`.
 
 ### Google Analytics
 
-GA is consent-**mode**, not consent-triggered: `setupGoogleAnalyticsConsent`
-registers `useScriptGoogleAnalytics` with `wait_for_update: 500` and every
-storage denied by default **except `functionality_storage`, which starts
+GA uses Consent Mode's **basic** implementation: the tag loads only once the
+visitor grants `analytics_storage` or `ad_storage`, the two categories it
+serves, so nothing reaches Google before that or after a refusal. The advanced
+implementation, used until 2026-11-06, sent cookieless hits with the page's
+address for every visitor. The cost is that Google no longer models the visitors
+who refuse, so Analytics and Ads count fewer of them. Once loaded,
+`setupGoogleAnalyticsConsent` registers `useScriptGoogleAnalytics` with
+`wait_for_update: 500` and every storage denied by default **except `functionality_storage`, which starts
 `granted`** — it is a necessary category, so there is nothing to ask for. The
 composable calls `consent.update(...)`, mapping each of the seven categories
 to `granted` or `denied`: at once for the decision the visitor arrived with,
@@ -232,8 +268,8 @@ does not match `/^G-[A-Z0-9]{8,}$/`, or when it is the placeholder
 `G-XXXXXXXXXX` — otherwise gtag is preloaded for every visitor and sits
 unused.
 
-Its load trigger is `afterLoadWhenIdle()` (`app/utils/scheduling.ts`): it
-resolves after the window `load` event, at the next idle moment
+After consent, its load trigger is `afterLoadWhenIdle()`
+(`app/utils/scheduling.ts`): it resolves after the window `load` event, at the next idle moment
 (`requestIdleCallback`, at most five seconds later), with
 `warmupStrategy: false`. gtag's evaluation is one ~150–180 ms task on a
 phone-class CPU, followed by timer tasks of its own. Loading it on the visitor's first
@@ -432,6 +468,8 @@ The script refuses to run unless the tenant's primary domain carries the
   re-arms the script with the module default and the consent gate is bypassed.
 - **Ad pixels need both `isConsentGiven` and `ad_storage`.** Either alone is
   insufficient.
+- **No tracker runs on an address that holds a secret.** `isPrivateUrl` names
+  them, and a new one goes on its list.
 - **Every tracker id is per tenant.** No platform or env fallback, anywhere.
 - **`proxy: false` on every registry entry**, and `bundle: false` on the
   Google Analytics entry and every pixel composable call site.

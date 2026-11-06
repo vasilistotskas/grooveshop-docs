@@ -161,7 +161,7 @@ A customer can cancel an order from their account while it is **Pending** or **P
 
 ## Things to know
 
-- **Guest orders** work like any other: the customer gets every email and opens the order from the link in them. Guests get no notifications inside the store.
+- **Guest orders** work like any other: the customer gets every email. A guest can open their order from the page they reach at the end of checkout for 14 days after ordering, and after that only you can: send a guest their invoice yourself if they ask for it later. Guests get no notifications inside the store.
 - **Editing money fields moves no money.** Changing **Amount Due** only changes what the screen shows. To give money back, use **Refund (amount, reason)**.
 - **Payment Method and Payment Gateway are different.** **Payment Method** is what the customer chose. **Payment Gateway** is filled in by the platform to match the provider's messages: leave it alone.
 - **Wholesale orders** keep the customer group and discount they were priced with. Changing the customer's group later does not change old orders.
