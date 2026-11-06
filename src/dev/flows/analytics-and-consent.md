@@ -86,8 +86,16 @@ every advertising pixel, and it requires **both** conditions:
 `trigger`. That is the documented binary load gate: the tag is injected only
 once consent flips true. It gates the load and nothing after it:
 `useScriptTriggerConsent` resolves one promise, so withdrawing consent removes
-no tag and stops no script that has already loaded. A later page load in a new
-document is what leaves the tag out.
+no tag and stops no script that has already loaded.
+
+### Withdrawing consent
+
+`setupConsentWithdrawal` reloads the page when an optional category that was on
+is turned off. The store moves between pages without leaving the document, so a
+loaded pixel would otherwise keep running for the rest of the visit. A new
+document is what stops it: the gates are closed, so no tag is injected. It waits
+for the next paint, by when the decision is in its cookies. A visitor answering
+the banner for the first time, or adding a category, is not reloaded.
 
 The comment records the pattern that was replaced and why. Combining
 `defaultConsent: 'denied'` with a manual `consent.grant()` watcher left the
@@ -113,9 +121,11 @@ differs from the pixels in three ways, all from Microsoft's documentation:
   Microsoft requires both fields: `analytics_Storage` is `granted`, since the
   tag loads only then, and `ad_Storage` follows the shopper's `ad_storage`
   choice.
-- **Withdrawing has its own call.** `consentv2` with `denied` keeps Clarity
-  running without cookies. `clarity('consent', false)` is the documented call
-  that erases its cookies and stops tracking until consent returns.
+- **Withdrawing erases its cookies, and the reload stops it.**
+  `clarity('consent', false)` deletes `_clck` and `_clsk`, but contrary to
+  Microsoft's documentation it does not stop tracking: clarity-js restarts
+  without cookies and keeps uploading, measured on webside at 8 uploads in the
+  40 s after withdrawing. `setupConsentWithdrawal` is what stops it.
 - **It records the page, so private content is masked.** Clarity's default
   Balanced mode hides inputs, numbers and email addresses and uploads other
   text, a name or a street address included. `data-clarity-mask` masks an

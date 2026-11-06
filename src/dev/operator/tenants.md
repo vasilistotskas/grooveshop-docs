@@ -492,4 +492,5 @@ a common bug:
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | The 404 for an unlisted locale prefix |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.locale.ts` | Locale detection clamped to the tenant's set |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The five-minute in-memory config cache |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | Which tracker origins a store's CSP lists, each gated on its id |
 | `grooveshop-storefront-ui-node-nuxt/shared/theme/metadataSchema.ts` | The render-time theme schema the validator mirrors |
