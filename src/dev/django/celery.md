@@ -18,8 +18,7 @@ namespace from `settings.py`, where every Celery option lives. Add options
 there, because a `conf.update()` here would not win: `config_from_object` with
 `namespace="CELERY"` resolves the prefixed key from every configuration source
 before a bare lowercase one, whatever the call order. The task time limits are
-`CELERY_TASK_SOFT_TIME_LIMIT` and `CELERY_TASK_TIME_LIMIT`, **1500/1800
-seconds**.
+`CELERY_TASK_SOFT_TIME_LIMIT` and `CELERY_TASK_TIME_LIMIT`.
 
 Signal handlers in the same function are connected with `weak=False`, because
 closures defined inside a function are otherwise garbage-collected before they
@@ -92,8 +91,9 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` keeps failures and drops
   successes.
 - Scheduler: `scheduler.beat:CodeOwnedScheduler`. The `CELERY_BEAT_SCHEDULE`
-  dict is the whole schedule, and a `scheduler.PeriodicTask` row holds only its
-  state. Beat deletes any row the dict does not declare when it starts. The rows
+  dict is the whole schedule, plus the `celery.backend_cleanup` entry Celery
+  adds itself, and a `scheduler.PeriodicTask` row holds only its state. Beat
+  deletes any row neither declares when it starts. The rows
   are in the platform admin under Background Jobs. See the Django repository's
   `docs/scheduler.md`.
 

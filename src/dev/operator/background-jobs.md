@@ -97,8 +97,7 @@ task name and arguments because `CELERY_RESULT_EXTENDED = True`.
 
 The reason is stated in `settings.py`: nothing in this codebase reads a
 task's return value — no `AsyncResult`, no `.get()`, no chord, no group —
-so every stored success was write amplification nobody consumed, 2,937 rows
-a day. Failures are worth keeping durably and queryably, because a silent
+so every stored success was write amplification nobody consumed. Failures are worth keeping durably and queryably, because a silent
 failure here is an order confirmation nobody receives or a courier voucher that
 never mints.
 
@@ -327,4 +326,3 @@ half.
 | `grooveshop-django-api/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app()` |
 | `grooveshop-django-api/tests/integration/core/test_celery_result_storage.py` | Pins failures-only storage |
 | `grooveshop-infrastructure/.../base/backend.yaml` | The four "no `CELERY_RESULT_BACKEND` override" comments |
-| `grooveshop-infrastructure/.../prepare-helm/templates/job.yaml` | The PreSync Job's Redis result backend |
