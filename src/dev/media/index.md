@@ -20,8 +20,8 @@ through Nuxt.
 - Serve a YouTube video's poster at `youtube/:videoId/…`, fetched here so that a
   visitor's browser contacts nobody but the store until they press play. Its host
   is allowed in code (`src/MediaStream/common/utils/third-party-image-host.util.ts`)
-  and stays out of the backend's circuit breaker, so a YouTube outage costs posters
-  and nothing else.
+  and stays out of the backend's circuit breaker, so a YouTube outage never takes
+  the store's own images with it.
 - Fetch originals only from an allowlist of hosts: the static list in
   `VALIDATION_ALLOWED_DOMAINS`, which in the cluster holds the in-cluster
   Service names, plus the tenant domains polled from Django's

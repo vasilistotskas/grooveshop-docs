@@ -155,8 +155,9 @@ An iframe contacts its host as soon as it loads, so `sanitizeRichHtml` turns
 every allowed embed into a button (`shared/utils/html.ts`), and
 `app/plugins/embed-facade.client.ts` loads the player when it is pressed. A
 YouTube video's poster is served by the store's own media host (`youtube/<id>/…`
-on Media Stream), so a visitor's browser contacts nobody else until they press
-play, and YouTube's image host is not in the CSP. Other embeds have a plain
+on Media Stream), so an embed contacts YouTube only once its button is pressed,
+and YouTube's image host is not in the CSP. What else loads after consent is
+set out above. Other embeds have a plain
 button.
 
 ### When a store adds a service
