@@ -529,6 +529,12 @@ account tool the store serves. Tokens are opaque to the gateway, so it could not
 step a narrower grant up later, and the shopper can still narrow it on the
 consent screen. The rest of `/mcp` stays open.
 
+A client may register with no `scope`. allauth would store `openid` alone for
+it and refuse the account scopes at sign-in, so
+`agent/oidc.py: AgentOIDCAdapter.validate_client_registration` registers it for
+`LINKING_SCOPES`, and `populate_server_metadata` lists the same scopes in the
+OAuth metadata.
+
 Account tools forward the bearer to `/api/v1/agent/*` and **Django enforces
 the scopes**. `agent/views.py` accepts OIDC bearer tokens only — never Knox,
 never session auth — and tenant scoping is structural rather than a
