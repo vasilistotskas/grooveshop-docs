@@ -1,6 +1,6 @@
 ---
 title: Scheduled work & platform data
-description: The control plane's remaining screens — Periodic Tasks and the four schedule types, why Task Results holds only failures, what the Cache Purge Log records, and the Countries, Regions and Sites reference tables every store shares.
+description: The control plane's remaining screens — Periodic Tasks, why Task Results holds only failures, what the Cache Purge Log records, and the Countries, Regions and Sites reference tables every store shares.
 ---
 
 # Scheduled work & platform data
@@ -20,92 +20,57 @@ screens.
 
 ## Periodic Tasks
 
-<span class="sidebar-path">Background Jobs → Periodic Tasks</span> is `django_celery_beat`'s
-`PeriodicTask` changelist, re-registered through
-`core/admin.py: PeriodicTaskAdmin` so it renders in Unfold with
-`UnfoldPeriodicTaskForm`.
+<span class="sidebar-path">Background Jobs → Periodic Tasks</span> is
+`scheduler/admin.py: PeriodicTaskAdmin`. It is for reading the schedule,
+switching an entry off or on, and running one by hand. Nothing else can be
+edited, and a row cannot be added or deleted.
 
-The scheduler is `django_celery_beat.schedulers:DatabaseScheduler`
-(`CELERY_BEAT_SCHEDULER` in `settings.py`), so the rows on this screen are
-what beat actually reads at run time. What they are *derived from* is a
-different question, and it is the one that matters.
+The full reference is the Django repository's `docs/scheduler.md`. In short:
 
-### Where the real schedule is declared
+- **The schedule is code.** `get_celery_beat_schedule()` in `settings.py` declares
+  every entry, and most fall back to hourly when `DEBUG` is on. To change when a
+  job runs, change it there and deploy. To remove a job, remove its entry.
+- **A row is state.** `scheduler.PeriodicTask` holds whether an entry is on, when
+  it last ran and how many times. `scheduler/beat.py: CodeOwnedScheduler`, a
+  `celery.beat.Scheduler` subclass and the value of `CELERY_BEAT_SCHEDULER`,
+  deletes every row the declaration does not name when it starts. So a database
+  cloned from production sheds production's extra entries at the next beat start.
+- **Switching off is how to stop a job in an incident.** It survives a restart and
+  reaches the running process at its next wake-up, about a minute at most with the
+  every-minute entries. Switching on sends no slot missed while off.
 
-`get_celery_beat_schedule()` in `settings.py` is the source of truth. It
-returns a dict of roughly forty entries — each a task path, a schedule and
-optional `options` — and most fall back to hourly when `DEBUG` is on.
+### When it fires
 
-At beat start-up, `DatabaseScheduler.setup_schedule()` does two things:
+Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `settings.py` reads
+`TIME_ZONE`, default `Europe/Athens`, with `CELERY_ENABLE_UTC = True`.
 
-```python
-def setup_schedule(self):
-    self.install_default_entries(self.schedule)
-    self.update_from_dict(self.app.conf.beat_schedule)
-```
+- **A restart loses nothing.** Beat runs as one pod with the `Recreate` strategy
+  (`base/backend.yaml` in `grooveshop-infrastructure`), so each deploy leaves a
+  short gap. A run is saved as soon as it is sent, and the new pod sends an overdue
+  entry once, however many slots passed.
+- **A failed publish is sent again** rather than waiting for the next slot, so a
+  broker restart does not cost a daily job its day.
+- **`expires` in an entry's `options` applies.** A message waiting longer than that
+  is discarded rather than run, so only the frequent polls set it. A daily job
+  discarded because a worker was down would lose its day.
+- **The hour repeated when the clocks go back is skipped.** Every sub-daily job
+  goes quiet: on 2026-10-25 a `*/5` job had a 65-minute gap, a `*/15` job 75 and
+  an hourly job 120. No job ran twice. Nothing here needs that hour.
 
-`install_default_entries` adds `celery.backend_cleanup` (it does so because
-`result_expires` is set — see below), and `update_from_dict` walks every
-declared entry through `ModelEntry.from_entry`, which is a
-`PeriodicTask.objects.update_or_create(name=name, defaults=...)`.
-
-**So yes — editing a beat-managed row in the console is overwritten.**
-Verified in the installed `django_celery_beat/schedulers.py`: the
-`defaults` come from `_unpack_fields()`, which rewrites the row's `task`,
-its schedule relation, `args`, `kwargs` and the unpacked `options`
-(`queue`, `exchange`, `routing_key`, `priority`, `headers`,
-`expire_seconds`) from the Python declaration every time the beat process
-starts. Change a crontab here and the next beat restart — a deploy, a pod
-reschedule — silently puts it back.
-
-One field is **not** in that set: `enabled`. `_unpack_fields` never writes
-it, and `update_from_dict` skips a disabled row when building the in-memory
-schedule (`if entry.model.enabled`). Unticking **Enabled** on a row is
-therefore the one console edit that survives a restart, which makes it the
-correct way to stop a job in an incident. To change *when* a job runs, edit
-`get_celery_beat_schedule()` and deploy.
-
-Rows that are not in the declaration are left alone entirely — nothing
-prunes them — so a hand-added `PeriodicTask` keeps running until someone
-deletes it.
+`GrooveShopBeatSilent` (`victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml`
+in `grooveshop-infrastructure`) fires when beat sends nothing for 15 minutes,
+because the liveness probe only checks that the process exists. It fires once
+a year for that repeated hour, and that one needs no action.
 
 ### Running one by hand
 
-The upstream admin ships four actions: **enable**, **disable**, **toggle**
-and **run**. `run_tasks` calls `apply_async()` with the row's own args,
-kwargs and queue, and the only header it sets is `periodic_task_name` —
-**never `_schema_name`**. `TenantTask.apply_async` then fills that header
-in from `connection.schema_name`, which on the control plane is `public`,
-so the task runs there.
-
-That is correct for every row this platform declares, because every
-store-touching job is scheduled as a `fanout_*` wrapper that runs in
-`public` and dispatches into each tenant schema itself. It is *not* correct
-for a hand-added row pointing at the underlying per-tenant task: that would
-run against the empty public schema and report success. See the fan-out
-section of [Celery and background jobs](/dev/django/celery).
-
-### The four schedule types
-
-Beat stores a schedule as a foreign key to one of four tables, each with
-its own sidebar entry under **Background Jobs**
-(`django_celery_beat/models.py`).
-
-| Screen | Model | What it expresses |
-|---|---|---|
-| Crontab Schedules | `CrontabSchedule` | minute / hour / day-of-week / day-of-month / month-of-year, plus a timezone |
-| Interval Schedules | `IntervalSchedule` | "every N seconds / minutes / hours / days" |
-| Solar Schedules | `SolarSchedule` | an event relative to sunrise or sunset at a latitude and longitude |
-| Clocked Schedules | `ClockedSchedule` | a single wall-clock instant; the model's own `clean()` requires the task to be `one_off` |
-
-**Every entry in `get_celery_beat_schedule()` uses a crontab** — either a
-`SCHEDULE_PRESETS` value or an inline `crontab(...)`. Nothing in this
-platform declares an interval, solar or clocked schedule, so those three
-changelists are empty unless someone adds a row by hand. The tables exist
-because the library ships them, not because anything needs them.
-
-Times are Athens local: `core/celery.py` sets
-`timezone=os.getenv("TIME_ZONE", "Europe/Athens")` with `enable_utc=True`.
+**Run now** queues the declared task with its own arguments and options, with the
+schema header set to `public`. That is correct for every entry, because every
+store-touching job is scheduled as a `fanout_*` wrapper that runs in `public` and
+dispatches into each tenant schema itself. See the fan-out section of
+[Celery and background jobs](/dev/django/celery). A run by hand is not recorded as
+a run, so it does not move the next slot, and `celery.backend_cleanup` is refused
+because the settings do not declare it.
 
 ## Task Results
 
@@ -132,35 +97,20 @@ task name and arguments because `CELERY_RESULT_EXTENDED = True`.
 
 The reason is stated in `settings.py`: nothing in this codebase reads a
 task's return value — no `AsyncResult`, no `.get()`, no chord, no group —
-so every stored success was write amplification nobody consumed, 2,937 rows
-a day. Failures are worth keeping durably and queryably, because this
-platform has no metrics or alerting stack and a silent failure here is an
-order confirmation nobody receives or a courier voucher that never mints.
+so every stored success was write amplification nobody consumed. Failures are worth keeping durably and queryably, because a silent
+failure here is an order confirmation nobody receives or a courier voucher that
+never mints.
 
 `tests/integration/core/test_celery_result_storage.py` pins both halves by
 driving `build_tracer(..., eager=False)` — the worker's own path — rather
 than `.apply()`, which hard-codes `ignore_result: False` and so could never
 observe the behaviour.
 
-#### A note for anyone reading `core/celery.py`
-
-`create_celery_app()` passes `task_ignore_result=False` in its
-`conf.update()`, under a comment reading "Don't store task results in
-database". That line is inert. Under `namespace="CELERY"`,
-`ConfigurationView.__getitem__` tries the **prefixed** key across every
-map before the bare one, so `CELERY_TASK_IGNORE_RESULT` from Django
-settings is found first and wins, whichever order the two were set in. The
-integration test asserting `_succeeds.ignore_result is True` is the
-authority; the `conf.update()` value never reaches a task.
-
-The result backend is `django-db` — `CELERY_RESULT_BACKEND` defaults to it
-in `settings.py` and **no worker Deployment overrides it**. All four
-backend containers in
+The result backend is `core.result_backend.TenantDatabaseBackend`, fixed by
+`CELERY_RESULT_BACKEND` in `settings.py`, and **no Deployment overrides it**.
+All four backend containers in
 `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`
-carry an explicit comment saying so. The one place still pointing at Redis
-is the PreSync `backend-prepare` Job
-(`manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml`),
-which sets Redis DB 1 for its own short life.
+carry an explicit comment saying so.
 
 ### The rows live in `public`, so one list covers every store
 
@@ -185,7 +135,7 @@ were never written. "Did the nightly job run at all?" is answered by
 `MonitoredTask`'s own success log line (`core/tasks.py`) — never from this
 table.
 
-Pruning is `celery.backend_cleanup`, which `DatabaseScheduler` installs on
+Pruning is `celery.backend_cleanup`, which Celery's scheduler installs on
 its own whenever `result_expires` is set, at 04:00 daily. You will see it
 on the Periodic Tasks screen even though it is not in
 `get_celery_beat_schedule()`.
@@ -328,12 +278,11 @@ half.
 
 ## Failure modes
 
-- **A schedule edit disappeared after a deploy.** It was a beat-managed
-  row; `update_from_dict` rewrote it at beat start-up. Edit
-  `get_celery_beat_schedule()` instead.
-- **A job was disabled in the console and still ran.** Check you unticked
-  `enabled` on the row rather than clearing its schedule — a cleared
-  schedule is rewritten, the flag is not.
+- **A job was disabled in the console and still ran.** A message already
+  queued still runs. Beat reloads the change at its next wake-up, about a minute
+  at most with the every-minute entries, and sends nothing more for that entry.
+- **A row disappeared.** Its name is not in `get_celery_beat_schedule()` for
+  this environment, so `scheduler/beat.py` deleted it when beat started.
 - **Task Results is empty and you expected history.** It only ever holds
   failures, for 30 days. Read `last_run_at` for "did it run".
 - **Task Results is empty on a tenant host.** You are looking in the wrong
@@ -359,9 +308,13 @@ half.
 
 | File | Role |
 |---|---|
+| `grooveshop-django-api/scheduler/beat.py` | The scheduler: deletes undeclared rows, saves runs, follows the switches |
+| `grooveshop-django-api/scheduler/models.py` | `PeriodicTask`, `switch_on`, `switch_off` |
+| `grooveshop-django-api/scheduler/admin.py` | `PeriodicTaskAdmin` and its actions |
 | `grooveshop-django-api/settings.py` | `get_celery_beat_schedule()`, `SCHEDULE_PRESETS`, `CELERY_BEAT_SCHEDULER`, `CELERY_TASK_IGNORE_RESULT`, `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED`, `CELERY_RESULT_EXPIRES`, `CELERY_RESULT_EXTENDED`, `SHARED_APPS`/`TENANT_APPS`, `UNFOLD_PLATFORM["SIDEBAR"]`, `SITE_ID` |
-| `grooveshop-django-api/core/admin.py` | `PeriodicTaskAdmin`, the schedule admins, `CachePurgeLogAdmin`, `override_third_party_admins()` |
-| `grooveshop-django-api/core/celery.py` | App factory, timezone, the inert `task_ignore_result` line |
+| `grooveshop-django-api/core/admin.py` | `CachePurgeLogAdmin`, `override_third_party_admins()` |
+| `grooveshop-django-api/core/celery.py` | App factory |
+| `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | `GrooveShopBeatSilent` |
 | `grooveshop-django-api/core/cache/models.py` | `CachePurgeLog` |
 | `grooveshop-django-api/core/cache/service.py` | `CacheService.purge`, `_log_audit` |
 | `grooveshop-django-api/admin/admin.py` | `clear_cache_view` (**Cache Management**) and its recent-log panel |
@@ -373,4 +326,3 @@ half.
 | `grooveshop-django-api/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app()` |
 | `grooveshop-django-api/tests/integration/core/test_celery_result_storage.py` | Pins failures-only storage |
 | `grooveshop-infrastructure/.../base/backend.yaml` | The four "no `CELERY_RESULT_BACKEND` override" comments |
-| `grooveshop-infrastructure/.../prepare-helm/templates/job.yaml` | The PreSync Job's Redis result backend |

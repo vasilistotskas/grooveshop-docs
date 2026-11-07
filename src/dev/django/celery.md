@@ -13,38 +13,19 @@ data is dispatched into each tenant schema by a fan-out wrapper.
 
 ## The app (`core/celery.py`)
 
-`create_celery_app()` builds `Celery("core")`, loads the `CELERY_*`
-namespace from `settings.py`, then overrides a few values explicitly:
+`create_celery_app()` builds `Celery("core")` and loads the `CELERY_*`
+namespace from `settings.py`, where every Celery option lives. Add options
+there, because a `conf.update()` here would not win: `config_from_object` with
+`namespace="CELERY"` resolves the prefixed key from every configuration source
+before a bare lowercase one, whatever the call order. The task time limits are
+`CELERY_TASK_SOFT_TIME_LIMIT` and `CELERY_TASK_TIME_LIMIT`.
 
-```python
-tasker.conf.update(
-    enable_utc=True,
-    timezone=os.getenv("TIME_ZONE", "Europe/Athens"),
-    worker_pool_restarts=True,
-    task_ignore_result=False,
-    task_acks_late=True,
-    worker_prefetch_multiplier=1,
-    task_soft_time_limit=300,
-    task_time_limit=600,
-)
-```
-
-Note the time limits, because the comment above that `conf.update()` claims
-the opposite of what happens. Django's settings win, so the effective limits
-are **1500/1800 seconds**, not the 300/600 passed here. `config_from_object`
-with `namespace="CELERY"` resolves the PREFIXED key from every configuration
-source before falling back to a bare lowercase one, so
-`CELERY_TASK_SOFT_TIME_LIMIT` and `CELERY_TASK_TIME_LIMIT` in `settings.py`
-outrank the values this call passes afterwards. Verified by resolving
-`app.conf` from the real application rather than by reading the call order.
-The same precedence makes `task_ignore_result=False` here inert — see the
-result backend below. Signal handlers in the same function
-are connected with `weak=False`, because closures defined inside a function
-are otherwise garbage-collected before they ever fire. They: close stale DB
-connections at worker start, apply the DB-backed translation overlay so
-workers see Rosetta edits, refresh it when another pod bumps the version
-tick, and propagate the request's correlation id into task headers and
-back into the worker's log context.
+Signal handlers in the same function are connected with `weak=False`, because
+closures defined inside a function are otherwise garbage-collected before they
+ever fire. They: close stale DB connections at worker start, apply the
+DB-backed translation overlay so workers see Rosetta edits, refresh it when
+another pod bumps the version tick, and propagate the request's correlation id into task headers and back
+into the worker's log context.
 
 ## Base task classes
 
@@ -73,15 +54,15 @@ or `@shared_task(base=MonitoredTask, ...)`.
 
 ## Retry policy
 
-`settings.py` sets the defaults every task inherits:
-`CELERY_TASK_AUTORETRY_FOR = (Exception,)`, exponential backoff
-(`CELERY_TASK_RETRY_BACKOFF = True`, max 600 seconds), jitter on, and
-`CELERY_TASK_MAX_RETRIES = 5`. Individual tasks tighten this where a retry
-would be wrong, for example `max_retries=3` on the system tasks in
-`core/tasks.py`, and some narrow `autoretry_for` instead (the ACS pickup
-list retries only `AcsRetryableError`: an unprinted-voucher refusal
-returns `blocked_unprinted` and notes the orders, and any other ACS
-refusal fails the task without a retry; `shipping_acs/tasks.py`).
+Retry policy is per task, never global: Celery has no setting for
+`autoretry_for`, backoff or `max_retries`, so each decorator sets its own.
+`autoretry_for` names a transient set from `core/retry.py`, never `Exception`,
+because a deterministic failure retried only repeats itself, and
+`tests/unit/core/test_celery_tasks_do_not_retry_everything.py` fails for a task
+that breaks this. The ACS pickup list, for example, retries only
+`AcsRetryableError`: an unprinted-voucher refusal returns `blocked_unprinted`
+and notes the orders, and any other ACS refusal fails the task without a retry
+(`shipping_acs/tasks.py`).
 `task_acks_late=True` plus `CELERY_TASK_REJECT_ON_WORKER_LOST = True` means
 a task killed mid-run is redelivered, so bodies must be idempotent.
 
@@ -93,32 +74,28 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   the operator-generated `backend-message-broker-default-user` secret
   (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`).
   Workers consume the `celery` and `meilisearch` queues.
-- Results: `CELERY_RESULT_BACKEND` defaults to `django-db`.
-  `django_celery_results` is in `SHARED_APPS` **only**, and `TENANT_APPS`
+- Results: `CELERY_RESULT_BACKEND` is fixed in `settings.py` to
+  `core.result_backend.TenantDatabaseBackend`, the database backend plus the
+  store a failure belongs to. `django_celery_results` is in `SHARED_APPS` **only**, and `TENANT_APPS`
   carries a comment saying it is deliberately absent: task results are
   platform operations rather than one store's data, and
   `celery.backend_cleanup` is dispatched by beat with no tenant header, so
   it runs in `public` and could never prune per-tenant tables.
   `tenant/migrations/0039` drops the ones an earlier `TENANT_APPS` entry
   created.
-  **No worker Deployment overrides the backend** — `base/backend.yaml` carries an
+  **No Deployment overrides the backend** — `base/backend.yaml` carries an
   explicit comment saying so on all four backend containers, because the
   results used to go to Redis DB 1 and shared one `allkeys-lru` budget
-  with the Django cache. The one place that still points at Redis is the
-  PreSync `backend-prepare` Job, which sets `CELERY_RESULT_BACKEND` to
-  Redis DB 1 for its own short life. `settings.py` then narrows what gets
+  with the Django cache. `settings.py` then narrows what gets
   written: `CELERY_TASK_IGNORE_RESULT` with
   `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` keeps failures and drops
-  successes, and that intent is what actually takes effect.
-  `core/celery.py` passes `task_ignore_result=False`, which looks like it
-  reverses the decision and does not: the namespaced Django setting outranks
-  it, so `app.conf.task_ignore_result` resolves to `True`. Its comment
-  ("Don't store task results in database") also describes the opposite of
-  what the value it sets would mean. Treat the line as dead, not as the
-  effective policy, and check `app.conf` before believing either.
-- Scheduler: `django_celery_beat.schedulers:DatabaseScheduler`. The
-  `CELERY_BEAT_SCHEDULE` dict is seeded into `PeriodicTask` rows, visible
-  in the platform admin under Background Jobs.
+  successes.
+- Scheduler: `scheduler.beat:CodeOwnedScheduler`. The `CELERY_BEAT_SCHEDULE`
+  dict is the whole schedule, plus the `celery.backend_cleanup` entry Celery
+  adds itself, and a `scheduler.PeriodicTask` row holds only its state. Beat
+  deletes any row neither declares when it starts. The rows
+  are in the platform admin under Background Jobs. See the Django repository's
+  `docs/scheduler.md`.
 
 Flower runs as its own Deployment (`backend.yaml`, port 5555) and refuses
 to start without `FLOWER_BASIC_AUTH`; the admin's site dropdown links to
@@ -276,7 +253,9 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/core/celery.py` | App factory, signal handlers, time limits |
+| `grooveshop-django-api/core/celery.py` | App factory, signal handlers |
+| `grooveshop-django-api/scheduler/beat.py` | The beat scheduler |
+| `grooveshop-django-api/core/retry.py` | The transient error sets `autoretry_for` names |
 | `grooveshop-django-api/settings.py` | `CELERY_*`, `SCHEDULE_PRESETS`, `get_celery_beat_schedule()` |
 | `grooveshop-django-api/tenant/celery.py` | `TenantTask`, `run_for_all_tenants`, `dispatch_on_commit` |
 | `grooveshop-django-api/tenant/tasks.py` | Fan-out wrappers |
