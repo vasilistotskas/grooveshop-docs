@@ -1,3 +1,10 @@
+## [1.2.189](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.188...v1.2.189) (2026-11-07)
+
+
+### Bug Fixes
+
+* **deps:** Node 26 LTS, pnpm 12.18, nginx 1.30.6 and current Vue tooling ([#136](https://github.com/vasilistotskas/grooveshop-docs/issues/136)) ([faf6bf3](https://github.com/vasilistotskas/grooveshop-docs/commit/faf6bf359b117cc3d6949d00723965ee444059da))
+
 ## [1.2.188](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.187...v1.2.188) (2026-11-07)
 
 ## [1.2.187](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.186...v1.2.187) (2026-11-07)
