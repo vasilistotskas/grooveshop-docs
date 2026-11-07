@@ -290,7 +290,10 @@ and everything else runs in the browser:
   its lockers, or of its three-digit area when it has none), until the
   shopper shares their position. Rows are sorted by distance from the
   origin; with no search the list shows the nearest and the map frames
-  them around it.
+  them around it. A postcode whose area has no placed locker gives no
+  origin (`postcodeCentre` returns `null`): with no position and no
+  search, the list asks the shopper to search and the map shows the whole
+  catalogue.
 - **Location** (`useShopperLocation`) is one coarse fix on the
   shopper's click on "My location". Opening the picker never asks, except
   when the browser already reports the permission as granted, where it
@@ -732,6 +735,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/settings.py` | Beat cadences for every carrier task |
 | `grooveshop-storefront-ui-node-nuxt/shared/shipping/index.ts` | Checkout method to carrier mapping |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step, over-cap and error states, locker pickers |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/GenericLockerPicker.vue`, `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Checkout/GenericLockerPicker.vue` | The picker modal, default and webside designs: search, location button, map and list |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useLockerPicker.ts` | The ACS picker's logic: catalogue load, search, origin, distances, map focus |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useShopperLocation.ts` | The shopper's position, asked for on a click or with a granted permission |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/lockerSearch.ts` | Search folding (accents, Greeklish), matching, distance, a postcode's centre |

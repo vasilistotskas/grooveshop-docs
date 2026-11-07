@@ -127,7 +127,7 @@ If you receive an email that ACS paid money matching none of your parcels (usual
 
 The list of ACS shops and Smartpoints refreshes by itself every night at 03:00, for the countries that have an active ACS rate. There is no button to refresh it now. Customers are offered only **Smartpoint (no locker)** and **Smartpoint locker**, never plain shops. A point that ACS removes becomes inactive; it is not deleted. How to open Smartpoints at checkout is in [Shipping providers](/admin/settings/shipping-providers).
 
-At checkout the customer chooses a Smartpoint on a map that starts near the postcode of their address. They can search by area, street or postcode, in Greek or Latin letters, or tap **My location** to see the points nearest to them. The browser asks for their location only when they tap it.
+At checkout the customer chooses a Smartpoint on a map that starts near the postcode of their address. They can search by area, street or postcode, in Greek or Latin letters, or tap **My location** (on a phone, the target icon beside the search box) to see the points nearest to them. The browser asks for their location only when they tap it. A customer who has already allowed your store to use their location sees the map open on it straight away.
 
 When BoxNow is switched off, the menu shows **ACS Stations** directly under **Shipping**.
 
