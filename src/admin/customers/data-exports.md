@@ -24,7 +24,7 @@ There is no screen for this in your admin. Everything happens in the customer's 
 
 1. Tell them to sign in to the store and open **Privacy** in their account menu.
 2. They click **Request an export**.
-3. Within a few minutes they get an email titled "Your data export is ready". They download the file from the same page, with the **Download file** button.
+3. Within a few minutes they get an email titled "Your data export is ready". They download the file from the same page, with the **Download file** button, signed in to their account. The email holds no link that opens the file.
 
 You cannot request an export on their behalf.
 
@@ -64,7 +64,7 @@ Other people's data is never included.
 
 ## Things to know
 
-- **The download link is valid for 7 days.** After that the file is deleted automatically. The customer simply requests a new export.
+- **The file stays available for 7 days.** After that it is deleted automatically. The customer simply requests a new export.
 - **One request at a time.** Clicking again while the file is being prepared does not start a second one.
 - **The file is not public.** Only the customer downloads it, from their account.
 - **What deletion does:** orders stay for tax reasons, but without name, email, phone and address. Everything else linked to the account is erased. Contact-form messages, and product alerts they asked for as a visitor, are not linked to the account and stay; delete the messages under <span class="sidebar-path">Customers → Messages</span>. The customer is signed out of every device at once.

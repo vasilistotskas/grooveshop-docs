@@ -13,14 +13,50 @@ The Owner and the Administrator edit and publish. Staff can look at everything h
 
 ## Editing
 
-**Content → Edit storefront** opens the editor on your own store, already signed in as you. The editor is still being finished: until it opens, the page says so, and your pages and menus stay exactly as they are.
+**Content → Edit storefront** opens the editor on your own store, already signed in as you.
 
-What the editor will let you do:
+In the editor you can:
 
 - change the text, pictures and links of a section, in every language your store serves;
 - add, move, hide and remove sections, and build new pages;
 - save your work as you go, and publish a page and its menus together when it is ready, or schedule the publish for a later time;
 - go back to any earlier version.
+
+## Change the colours, corners and fonts
+
+Your store's look is its theme, and you change it in the editor.
+
+1. Open **Content → Edit storefront**.
+2. In the outline, click **Theme: colours, corners, fonts**.
+3. Change the **Colours**, for the light and the dark scheme. **Same colours as light** copies the light colours to the dark scheme.
+4. Under **Shape and fonts**, set the **Corners**, the **Page width** and the fonts.
+5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before you can publish.
+6. Publish. The new look shows on every page, and your emails use the new primary colour.
+
+**Button colour** can keep its own colour or, with **Follows the primary colour** on, change along with the primary colour.
+
+## Choose what a section lists
+
+Some sections show things from your store rather than words you type: **Product carousel**, **Product grid**, **Featured products**, **Blog post grid**, **Blog post list**, **Blog post carousel**, **Product categories**, **Blog categories** and **Offers**. Under **What it lists** you say what they show. The page reads the items for itself, so names, prices and pictures follow your catalogue within moments, with nothing to publish.
+
+1. Open **Content → Edit storefront** and click the section in the outline.
+2. Under **What it lists**, choose how the items are found, and fill in what it asks for (see the table).
+3. Publish.
+
+| Section | What you can set |
+|---|---|
+| **Product carousel**, **Product grid**, **Featured products** | **By a rule**: **Categories** (all of them if you choose none; subcategories are included), **Order** and **How many**. **Hand-picked**: the **Items**, shown in the order you put them. |
+| **Blog post grid**, **Blog post list**, **Blog post carousel** | **By a rule**: **Category**, **Featured** (**All**, **Featured only** or **Not featured**), **Order** and **How many**. **Hand-picked**: the **Items**, shown in the order you put them. |
+| **Product categories** | **Main categories**, or the **Subcategories** of a **Parent category**, and **How many**. |
+| **Blog categories**, **Offers** | **How many**. |
+
+**Order** for products can be **Newest**, **Most viewed**, **Most liked**, **Best rated**, **Biggest discount**, **Price, lowest first** or **Price, highest first**. For blog posts it can be **Newest** or **Most viewed**.
+
+**By a rule** keeps up by itself: a new product in those categories joins the list with nothing to publish. **Hand-picked** shows exactly what you chose, and an item that is deleted or hidden simply drops out.
+
+### Let visitors load more posts
+
+A **Blog post list** can go on past the posts it first shows. Turn on **Load more button**, and publish. Visitors get a button under the posts that adds the next ones of the same list, for as long as it has more.
 
 ## What the lists show
 
@@ -44,6 +80,8 @@ To take the warning away, open **Content → Page builder → Scheduled publishe
 ## Good to know
 
 - **A deleted product or category leaves an empty section, not a broken page.** If you delete something a published page shows, that section shows nothing until you change it. A publish is refused while a page points at something that no longer exists.
+- **A section with nothing to list disappears**, heading included, and comes back by itself when it has something.
+- **Stock alone can take a little while to show.** A change to a product's name, price or category reaches your pages within moments. A change only to its stock does not refresh a page straight away, so a page can show the old stock state for a while. The checkout always checks the real stock.
 - **Plain text pages are separate.** The terms, the privacy and cookie policies, the return policy, the FAQ and shipping information are written in [Pages](/admin/content/pages), not here.
 - **Words on buttons and labels are separate too.** They are changed in [Storefront texts](/admin/content/storefront-texts).
 - **A publish shows on the store within moments.** If it does not, purge **Page builder** on the [Cache](/admin/settings/cache) page.

@@ -190,7 +190,8 @@ under capability names.
 A delivery region is part of the address whenever the country has regions,
 because Django refuses the order without one. `checkout.ResolveRegion`
 (`internal/checkout/region.go`) settles it for UCP and ACP alike, from a code
-or a name, ignoring case and accents. An update resolves it before any cart
+or a name, ignoring case and accents, and upper-cases the country code, the
+only form Django knows. An update resolves it before any cart
 write, so a failed lookup leaves the cart as it was. A create fills its cart
 first, so a failed lookup there leaves the lines in the cart and saves no
 session.
@@ -226,7 +227,8 @@ negotiating platform never calls them.
 link (`ag:{schema}:orderlink:{uuid}` — checkout id, storefront domain and
 webhook target — retained a year, because the link must outlive the session
 itself: `internal/checkout/store.go` holds an active session for 30 minutes
-and a terminal one for 24 hours). An order placed on the web has no checkout to
+and a terminal one for 24 hours, and `internal/checkout/session.go` ends a
+placed one 24 hours after placement however often it is saved since). An order placed on the web has no checkout to
 name and is refused with that explanation, never a fabricated id.
 `order.fulfillment` stays `{}`: an expectation needs a destination the order
 detail deliberately does not decode, and an event needs a shipment timestamp
@@ -261,11 +263,20 @@ reads "AI agent (MCP)". The chat assistant serves the same tool but never
 sends a protocol; see the chatbot's request below.
 
 A checkout with an order renders from that order, not from the cart.
-`checkout.ComputePricing` reads `GET /order/uuid/{uuid}` once the session has an
-order, because Django deletes the cart with the order (on payment, for an online
-method) and a cart read would answer a new one. Lines are then named by product,
-as `get_order` names them, and an ACP session's `continue_url` leads to the
-order.
+`checkout.ComputePricing` reads the order once the session has one, because
+Django deletes the cart with the order (on payment, for an online method) and a
+cart read would answer a new one. Lines are then named by product, as
+`get_order` names them, and an ACP session's `continue_url` leads to the order.
+
+The gateway reads its own orders through Django's private route
+`GET /api/v1/agent/internal/order/{uuid}` (`PlacedOrder` in
+`internal/django/client_cart.go`; `agent/urls.py` in Django), which takes
+`X-Internal-Token` and opens only orders an agent placed. The guest route
+`GET /order/uuid/{uuid}` stops opening an order `GUEST_ORDER_ACCESS_DAYS`
+after it was placed, and the gateway works on its orders for longer. `get_order`
+and `track_order` read a UUID the client hands them, so they keep the guest
+route and its limit, and answer an order past it with the same words as an
+unknown id (`internal/mcpsrv/order.go`).
 
 ### An ONLINE payment method is not an instrument
 
@@ -528,6 +539,12 @@ account tool the store serves. Tokens are opaque to the gateway, so it could not
 step a narrower grant up later, and the shopper can still narrow it on the
 consent screen. The rest of `/mcp` stays open.
 
+A client may register with no `scope`. allauth would store `openid` alone for
+it and refuse the account scopes at sign-in, so
+`agent/oidc.py: AgentOIDCAdapter.validate_client_registration` registers it for
+`LINKING_SCOPES`, and `populate_server_metadata` lists the same scopes in the
+OAuth metadata.
+
 Account tools forward the bearer to `/api/v1/agent/*` and **Django enforces
 the scopes**. `agent/views.py` accepts OIDC bearer tokens only — never Knox,
 never session auth — and tenant scoping is structural rather than a
@@ -537,8 +554,10 @@ issued by one store cannot be found on another's host.
 A client binds its token to the store's MCP server, as MCP requires (RFC 8707),
 and the gateway forwards that token to an API with a different URL. So
 `agent/views.py: AgentTokenAuthentication` compares the token's resources with
-`<store>/mcp`, not with the URL it reached, and still refuses a token bound to
-anything else.
+`<store>/mcp`, on the store's primary domain, not with the URL it reached. A
+token bound to anything else gets 401, so the client links again.
+`agent/oidc.py: AgentOIDCAdapter` applies the same comparison when a token is
+requested, so such a token is normally never issued.
 
 `openid` needs `IDP_OIDC_PRIVATE_KEY` to sign the ID token, and clients request
 it because the protected-resource metadata lists it.
@@ -564,8 +583,11 @@ tool is advertised the moment it is served and a switched-off one is not; the fo
 next to the tool definitions in `internal/mcpsrv/server.go`. `identifier`
 is `urn:air:<primary domain>:mcp:store`, the primary domain lower-cased in
 ASCII (IDNA) because the ARD URN admits no internationalised form, and
-`url` is the Server Card on the request's own store host
-(`internal/storefront/urls.go: MCPServerCard`). The envelope carries
+`url` is the Server Card on the primary domain too
+(`internal/storefront/urls.go: MCPServerCard`), as is the card's own endpoint,
+because a client refuses to link an account on a host other than the resource
+the OAuth metadata names. `/mcp` still answers on a store's other hosts, for
+shopping without an account. The envelope carries
 `specVersion` and a `host` naming the store and its primary domain.
 
 All three sit behind the same gate as `/mcp` (`describeMCP` in
@@ -595,7 +617,7 @@ malformed body from a valid one. It routes the event through the **order
 link**, not the checkout session — the session is gone within a day, while
 shipment and delivery events arrive for weeks — applies it to the session if
 one still exists, and, when the checkout registered a webhook target, fetches
-the order and queues the full UCP order entity for delivery.
+the order through the private route above and queues the full UCP order entity for delivery.
 
 Deliveries follow the UCP order-event rules: the body is the order entity,
 headers follow Standard Webhooks (`Webhook-Id`, `Webhook-Timestamp`) with
@@ -716,9 +738,13 @@ yourself, then bumping the pin in the infrastructure repo.
 - **The token endpoint answers 500 after consent.** The client asked for
   `openid` and the environment has no `IDP_OIDC_PRIVATE_KEY`: Django logs
   `No active private key`, and `/.well-known/jwks.json` serves no keys.
-- **A `my_*` tool says the token lacks a scope it holds.** The gateway reports
-  every 403 from `/api/v1/agent/*` that way. Read Django's access log: the token
-  may be bound to another resource.
+- **A client is sent to link again right after linking.** Its token is bound to
+  a resource other than the store's MCP server on the primary domain, so
+  `/api/v1/agent/*` answers 401. A token issued before the store's primary
+  domain changed does this too.
+- **A client refuses to link: `Protected resource ... does not match expected`.**
+  It connected on a host that is not the store's primary domain. Connect on the
+  URL the Server Card names.
 - **Staging refuses a real OAuth client.** Only the demo store exempts the OAuth
   paths from basic auth; see `docs/staging.md` in the infrastructure repository.
 - **The assistant says it cannot update a signed-in shopper's cart.**

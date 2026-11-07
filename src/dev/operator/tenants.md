@@ -96,35 +96,16 @@ only by the lifecycle actions and the billing task. `is_active`, `plan` and
 | `store_description` | `TextField`, blank |
 | `store_description_i18n` | `JSONField`, `{locale: text}` for the store's other storefront locales (`el`, `en`); never the tenant's `default_locale`, whose text is `store_description`. Served on the resolve payload as `storeDescriptionI18n`; the storefront prints `storeDescriptionI18n[locale]`, else `store_description` |
 | `logo_light_url`, `logo_dark_url`, `favicon_url` | `URLField`, blank |
-| `primary_color`, `neutral_color` | Tailwind colour **names** from `TailwindColor` (22 choices, Nuxt UI compatible), not hex |
-| `accent_hex`, `success_hex`, `warning_hex`, `error_hex`, `info_hex` | `CharField(max_length=7)` validated against `^#[0-9a-fA-F]{6}$` |
-| `theme_preset` | `ThemePreset`: `default`, `minimal`, `bold`, `custom` |
-| `theme_metadata` | `JSONField`, per-token overrides on top of the preset |
 | `socials_*` | Nine `URLField`s (discord, facebook, instagram, pinterest, reddit, tiktok, linkedin, twitter, youtube). `Tenant._validate_social_urls` requires `https://` on every non-empty one; empty hides the footer link |
 
-`theme_metadata` is validated write-side by
-`tenant/validators.py: validate_theme_metadata`, a plain-Python mirror of
-the storefront's render-time schema (`shared/theme/metadataSchema.ts`).
-The validator — not the field's `help_text`, which is out of date — is the
-authority. It accepts exactly:
-
-- `radius` from a six-value allowlist;
-- `fontSans`, `fontDisplay`, `fontMono` from a named font allowlist;
-- `container`: `narrow`, `default`, `wide`;
-- `colors` and `darkColors`, each an object of `primaryScale`,
-  `neutralScale` or `secondaryScale` mapping Tailwind shade → `#RRGGBB`;
-- `likedHex`, `accentDarkHex` as `#RRGGBB`.
-
-Anything else is rejected with a readable error. The Nuxt parse stays the
-render-time authority, so historical bad data degrades to preset values
-there rather than breaking a page.
+A store's colours, corners and fonts are not on this row: they are its theme document in the page builder ([`builder`](/dev/django/reference/builder)).
 
 ### Locales and currency
 
 | Field | Shape |
 |---|---|
 | `default_locale` | `CharField(max_length=10)`, default `el` |
-| `available_locales` | `JSONField(default=list)`, validated by `validate_available_locales` |
+| `available_locales` | `JSONField(default=list)`, validated by `tenant/json_schemas.py: available_locales` |
 | `default_currency` | `CharField(max_length=3)`, default `EUR` |
 
 `available_locales` is an allow-list on top of the platform-wide locale
@@ -252,6 +233,7 @@ allowed to be".
 | `meta_pixel_id` | digits only | The browser pixel is off for this store |
 | `tiktok_pixel_id` | alphanumeric | TikTok pixel off |
 | `openai_pixel_id` | alphanumeric | ChatGPT Ads pixel off, **and its origin is left out of the CSP** |
+| `clarity_project_id` | alphanumeric | Microsoft Clarity off, **and its origins are left out of the CSP** |
 | `ga_tracking_id` | must start `G-` or `UA-` | GA off |
 
 Each has its own `_validate_*` method on the model. The alphanumeric rule
@@ -474,8 +456,9 @@ a common bug:
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, `ThemePreset`, `TailwindColor`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
-| `grooveshop-django-api/tenant/validators.py` | `validate_theme_metadata`, `validate_available_locales`, `validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES` |
+| `grooveshop-django-api/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
+| `grooveshop-django-api/tenant/validators.py` | `validate_reserved_schema_name`, `validate_store_hostname`, `RESERVED_SCHEMA_NAMES` |
+| `grooveshop-django-api/tenant/json_schemas.py` | The JSON schemas of `available_locales`, `store_description_i18n` and `allowed_csp_sources` |
 | `grooveshop-django-api/tenant/credentials.py` | The credential helpers and the no-fallback rule |
 | `grooveshop-django-api/emails/sender.py` | `from_address`, which reads `from_email` and `from_email_verified` |
 | `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, `PLATFORM_ONLY_APP_LABELS` |
@@ -491,4 +474,4 @@ a common bug:
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | The 404 for an unlisted locale prefix |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.locale.ts` | Locale detection clamped to the tenant's set |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The five-minute in-memory config cache |
-| `grooveshop-storefront-ui-node-nuxt/shared/theme/metadataSchema.ts` | The render-time theme schema the validator mirrors |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | Which tracker origins a store's CSP lists, each gated on its id |

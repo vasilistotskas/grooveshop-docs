@@ -256,7 +256,7 @@ naming convention:
 
 | Class | Examples | Served where |
 |---|---|---|
-| Public-safe | `store_name`, `accent_hex`, `favicon_url`, `logo_light_url`/`logo_dark_url`, `default_locale`, `available_locales`, `ga_tracking_id`, `meta_pixel_id`, `tiktok_pixel_id`, `box_now_partner_id`, the `socials_*` fields, `seo_author`, `google_site_verification` | `GET /api/v1/tenant/resolve` — in every browser (`tenant/views.py: tenant_resolve`) |
+| Public-safe | `store_name`, `favicon_url`, `logo_light_url`/`logo_dark_url`, `default_locale`, `available_locales`, `ga_tracking_id`, `meta_pixel_id`, `tiktok_pixel_id`, `clarity_project_id`, `box_now_partner_id`, the `socials_*` fields, `seo_author`, `google_site_verification` | `GET /api/v1/tenant/resolve` — in every browser (`tenant/views.py: tenant_resolve`) |
 | Internal-only | `chat_api_key`, `acp_bearer_token` | Only on a resolve response authenticated with the internal token, never cached (`Cache-Control: private, no-store`) |
 | Secret | Viva Wallet, Stripe, ACS and BoxNow credentials, `meta_capi_access_token`, webhook secrets | Never serialised to any API response; read server-side through `tenant/credentials.py` |
 
@@ -411,6 +411,7 @@ kubectl -n grooveshop get certificate | grep "<store-slug>"
 | Stripe | Nothing by hand; step 4 creates the endpoint on the merchant's own account | — |
 | Viva Wallet | The webhook URL on the store's API host, subscribed to events 1796, 1797, 1798 and 2054 (step 4); without 2054 card disputes are not followed | No, if Viva is enabled |
 | Google Analytics / Meta / TikTok | The merchant's own property or pixel, then the id on the tenant row | Yes |
+| Microsoft Clarity | The merchant's own project and its mention in the store's cookie and privacy pages, then the id on the tenant row | Yes |
 
 Two related facts, because the infrastructure runbook still says
 otherwise: per-tenant OAuth applications **are** supported — a `SocialApp`
