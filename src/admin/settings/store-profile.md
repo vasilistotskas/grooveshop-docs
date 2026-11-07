@@ -33,6 +33,8 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 2. In **Logo (Light)** and **Logo (Dark)** enter the address (URL) of the image. The light logo is for light backgrounds, the dark one for dark backgrounds.
 3. Click **Save**.
 
+The logo also appears on the sign-in and permission pages a customer sees when connecting an AI assistant (Claude, ChatGPT and others) to their account at your store. Without a logo, those pages show your store's name.
+
 Your store's colours, corners and fonts are its theme, which you change in the [page builder](/admin/content/page-builder#change-the-colours-corners-and-fonts).
 
 ### Verify the store with Bing

@@ -539,6 +539,17 @@ account tool the store serves. Tokens are opaque to the gateway, so it could not
 step a narrower grant up later, and the shopper can still narrow it on the
 consent screen. The rest of `/mcp` stays open.
 
+The sign-in (`/accounts/login/`) and the consent (`/identity/o/authorize`)
+are allauth pages Django serves on the store's API host. Every allauth page
+there renders in `core/templates/allauth/layouts/base.html`, which wears the
+store's name, logo, favicon and primary colour (`core/templatetags/store_brand.py`,
+through the same helpers email and the admin use) and follows the visitor's
+light or dark scheme; the styles are the `account-*` components in
+`tailwind/input.css`. The consent page and the social-account sign-up name the
+store (`core/templates/idp/oidc/authorization_form.html`,
+`core/templates/socialaccount/signup.html`), never `django.contrib.sites`'
+`SITE_ID` site, which is one row for every store.
+
 A client may register with no `scope`. allauth would store `openid` alone for
 it and refuse the account scopes at sign-in, so
 `agent/oidc.py: AgentOIDCAdapter.validate_client_registration` registers it for
