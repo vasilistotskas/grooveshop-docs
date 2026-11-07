@@ -286,6 +286,13 @@ and everything else runs in the browser:
   common Greeklish spellings meet («Πειραιάς», «peiraias», «pireas»). The
   list shows the matches (30 at most, then "type more") and the map frames
   them.
+- **An address.** A search that names no locker («Καλαμά 25») is placed
+  by the carrier's own geocoder (`ShippingCarrier.geocode`; ACS through
+  its address validation, `POST /api/shipping/acs/address-validation`),
+  after a 700 ms pause: as typed, then with the checkout's city, since ACS
+  places a street only with its city or postcode. The address becomes
+  the origin, with a dot on the map. A search that still finds nothing
+  leaves the map where it was.
 - **Origin.** The checkout postcode is the starting point (the middle of
   its lockers, or of its three-digit area when it has none), until the
   shopper shares their position. Rows are sorted by distance from the
@@ -295,7 +302,7 @@ and everything else runs in the browser:
   search, the list asks the shopper to search and the map shows the whole
   catalogue.
 - **Location** (`useShopperLocation`) is one coarse fix on the
-  shopper's click on "My location". Opening the picker never asks, except
+  shopper's click on "My location", which clears the search first. Opening the picker never asks, except
   when the browser already reports the permission as granted, where it
   asks nothing and the map centres by itself. Denied and no fix in time
   each leave a line under the search, and a browser without geolocation
