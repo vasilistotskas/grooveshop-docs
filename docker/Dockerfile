@@ -1,11 +1,18 @@
-ARG NODE_VERSION=24.19.0
+ARG NODE_VERSION=26.13.0
+# Keep in step with "packageManager" in package.json.
+ARG PNPM_VERSION=12.18.0
+
+FROM ghcr.io/pnpm/pnpm:${PNPM_VERSION} AS pnpm
 
 FROM node:${NODE_VERSION}-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-RUN corepack enable
+# Node 25 stopped bundling corepack, so pnpm comes from its official image
+# (pnpm.io/docker). The whole directory is copied: it carries node-gyp.
+COPY --from=pnpm /opt/pnpm /opt/pnpm
+RUN for bin in pnpm pnpx pnx; do ln -s "/opt/pnpm/$bin" "/usr/local/bin/$bin"; done
 
 WORKDIR /usr/src/app
 
@@ -29,7 +36,7 @@ RUN pnpm run build
 
 # Same base image as the platform's static asset server
 # (grooveshop-infrastructure base/static.yaml).
-FROM nginxinc/nginx-unprivileged:1.30.0-alpine3.23 AS production
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine3.24 AS production
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /usr/src/app/dist /usr/share/nginx/html
