@@ -842,6 +842,10 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
 | `grooveshop-django-api/tenant/views.py`, `tenant/serializers.py` | `tenant_resolve` and the folded gates |
 | `grooveshop-django-api/agent/views.py`, `agent/oidc.py` | Agent resources and scopes |
+| `grooveshop-django-api/core/templates/allauth/layouts/base.html`, `core/templates/allauth/elements/` | The store's frame for every allauth page: sign-in, consent, device flow |
+| `grooveshop-django-api/core/templates/idp/oidc/authorization_form.html`, `core/templates/socialaccount/signup.html` | Consent and social sign-up naming the store |
+| `grooveshop-django-api/core/templatetags/store_brand.py` | The store's name, logo, favicon and colour for those pages |
+| `grooveshop-django-api/tailwind/input.css` | The `account-*` styles |
 | `grooveshop-django-api/order/tasks.py` | Order-event push |
 | `grooveshop-django-api/core/cache/gateway.py` | Feed invalidation call |
 | `grooveshop-storefront-ui-node-nuxt/server/routes/.well-known/oauth-protected-resource/mcp.get.ts` | OAuth protected-resource metadata for `/mcp` |
