@@ -36,7 +36,9 @@ flowchart LR
   visible.
 - `app/components/Checkout/SmartpointMap.client.vue` clusters the carrier's
   lockers into HTML `<button>` markers (keyboard and screen-reader reachable);
-  a locker's popup emits it by `key`. `app/components/PageSection/LocationCanvas.client.vue`
+  a locker's popup emits it by `key`. The picker steers its camera (`focus`:
+  the search's matches or the shopper's area) and passes the shopper's
+  position, drawn as a dot; the map has no locate control of its own. `app/components/PageSection/LocationCanvas.client.vue`
   pins the store's location with cooperative gestures.
 - `NUXT_PUBLIC_MAPS_TILE_JSON_URL` (`runtimeConfig.public.mapsTileJsonUrl`)
   names the TileJSON; empty means no map renders and an error is logged.
@@ -85,7 +87,7 @@ are cached with the store host's own rules.
 | `basemap.json` answers 404 | The archive is missing: the `seed` init container's log, then run a refresh |
 | A refresh Job failed | Its log. Nothing is renamed before `verify` passes, so the old archive keeps serving |
 | Tiles blank when zoomed in somewhere | Outside the region; add it to `region.geojson` and refresh |
-| "Find my location" does nothing | The storefront's `Permissions-Policy` must allow `geolocation=(self)` (`base/ingress-traefik.yaml`, `security-headers`) |
+| "My location" in the locker picker always says access is not allowed | The storefront's `Permissions-Policy` must allow `geolocation=(self)` (`base/ingress-traefik.yaml`, `security-headers`) |
 
 ## Source
 
