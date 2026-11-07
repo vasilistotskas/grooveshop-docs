@@ -39,6 +39,36 @@ Some sections have more than one place for a picture:
 
 **Decorative image** is for a picture that adds nothing a screen reader user needs. Set it to **On**, and the picture is left out for them. Leaving the alt text empty does not do this: with no alt text the page describes the picture with the section's heading, a badge's label or the person's name.
 
+## Choose what a button does
+
+The main button of a **Call to action**, a **Hero banner** or an **Image with text** can do more than open a page.
+
+1. Open **Content → Edit storefront** and click the section in the outline.
+2. Fill in **Button text**. With no text there is no button.
+3. Under **What the button does**, choose the **Action**, then what it acts on:
+
+| Action | What you choose | What the visitor gets |
+|---|---|---|
+| **Open a link** | **Link to**: a page, a product, a category or an address | Goes there |
+| **Add to cart** | **Product** | The product goes in the cart |
+| **Add to favourites** | **Product** | The product is saved to their favourites, once they are signed in |
+| **Copy a code** | **Offer** | The offer's code is copied, and the page says which |
+
+4. Publish.
+
+Choosing an action saves nothing until you have also chosen what it acts on, and **No action** takes the button away. Moving between **Add to cart** and **Add to favourites** keeps the product.
+
+The button looks after itself on the live page:
+
+- A product that cannot be added shows the button greyed out, saying **Unavailable**.
+- A product that is deleted or hidden, or an offer that has ended or holds no code, takes the button away and leaves the rest of the section.
+- **Copy a code** offers only offers you may advertise: running, public, with a code anyone can use. So a personal or single-use code cannot reach a page by this route.
+- If you turn off the cart, favourites or offers for your store, the buttons that need them go too.
+
+### Sign visitors up to a particular newsletter
+
+A **Newsletter sign-up** signs visitors up to your store's default newsletter. To use another, choose it under **Newsletter**. Only active newsletters are offered, and visitors still confirm by email.
+
 ## Change the colours, corners and fonts
 
 Your store's look is its theme, and you change it in the editor.
