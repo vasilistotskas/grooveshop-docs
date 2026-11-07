@@ -305,6 +305,11 @@ and everything else runs in the browser:
 A catalogue that fails to load is an error with a retry. The bulk route
 refuses to cache an empty answer (503), so a store whose stations have not
 synced yet recovers on the first request after the sync.
+A store without ACS credentials has no stations at all (the sync skips it
+and its checkout never offers ACS): Django's station routes answer it a
+plain 404 (`AcsStationViewSet.initial`,
+`grooveshop-django-api/shipping_acs/views/station.py`), which the bulk
+route forwards, so a stray request there is a warning, not a server error.
 
 ### Labels and the pickup list
 
@@ -725,6 +730,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs` and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |
 | `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
+| `grooveshop-django-api/shipping_acs/views/station.py` | The station routes the picker and the gateway read; 404 for a store without ACS credentials |
 | `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
 | `grooveshop-django-api/shipping_boxnow/webhook.py` | Raw-bytes `data` extraction and HMAC verification |
 | `grooveshop-django-api/shipping_boxnow/views/webhook.py` | Tenant resolution and the response contract |
