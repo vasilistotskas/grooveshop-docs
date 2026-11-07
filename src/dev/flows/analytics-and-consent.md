@@ -130,6 +130,35 @@ order for `GUEST_ORDER_ACCESS_DAYS` after it was placed (14 by default), so a li
 that was seen somewhere stops working by itself. Store staff and a signed-in
 owner are not limited.
 
+### What the browser keeps for personalisation
+
+The products a visitor viewed (`grooveshop:recently-viewed`) and what they
+searched for (`search:recent:<locale>`) are kept in `localStorage` only under
+`personalization_storage` (`usePersonalizationConsent`). Storing them is not
+needed for the page asked for, and `functionality_storage` is no home for them:
+it is necessary, so on after a rejection too. Without that answer the two
+composables read and write nothing, and
+`app/plugins/personalization-storage.client.ts` removes what an earlier visit
+left, on load and on a withdrawal. A store with no optional service asks nothing
+(above), so its visitors cannot agree: it keeps neither list, and its "Recently
+viewed" strip and recent searches stay empty until it has a banner.
+
+Still kept without consent, as decisions rather than gaps: the visitor's own
+accessibility choices and a dismissed announcement, which they asked for; the
+per-order flags that stop a purchase being counted twice; and the per-tab
+`order-attribution` and `recommendation-attribution` in `sessionStorage`,
+sent only to our own order and add-to-cart calls.
+
+### Embedded players
+
+An iframe contacts its host as soon as it loads, so `sanitizeRichHtml` turns
+every allowed embed into a button (`shared/utils/html.ts`), and
+`app/plugins/embed-facade.client.ts` loads the player when it is pressed. A
+YouTube video's poster is served by the store's own media host (`youtube/<id>/…`
+on Media Stream), so a visitor's browser contacts nobody else until they press
+play, and YouTube's image host is not in the CSP. Other embeds have a plain
+button.
+
 ### When a store adds a service
 
 A consent covers the services it was given for, the ones the banner named. The
@@ -535,6 +564,9 @@ The script refuses to run unless the tenant's primary domain carries the
 | `grooveshop-storefront-ui-node-nuxt/app/composables/setups.ts` | Consent triggers, GA consent mode, banner telemetry |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/scheduling.ts` | `afterLoadWhenIdle`, the gtag load trigger; `afterNextPaint`, the deferred consent update |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCookieControl.ts` | Banner state accessor |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/usePersonalizationConsent.ts` | The gate on what the browser keeps for personalisation |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/personalization-storage.client.ts` | Removes it without consent |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/embed-facade.client.ts` | Loads an embedded player when its button is pressed |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useMetaPixel.ts` | Meta events, `event_id` minting, the manual-trigger rule |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useTikTokPixel.ts` | TikTok events and `CompletePayment` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useGA4.ts` | GA4 recommended events |
