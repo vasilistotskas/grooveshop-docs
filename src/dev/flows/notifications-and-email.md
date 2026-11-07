@@ -83,7 +83,9 @@ messages on a shared Redis channel layer. Every sender and the consumer
 use the same helper; nothing builds the string by hand.
 
 `notification/consumers.py: NotificationConsumer` joins that group on
-connect and is server-push only — client frames are read and discarded.
+connect and is server-push only, with one exception: it answers the
+storefront's heartbeat `ping` with `pong` (`HEARTBEAT_PING`,
+`HEARTBEAT_PONG`), and reads and discards every other client frame.
 An anonymous scope is accepted and then closed with code 4003, because
 Channels requires the handshake to complete before an application close
 code can be delivered. `force_logout` is a second handler on the same
@@ -124,6 +126,17 @@ ticket through `server/api/websocket/user/ticket.get.ts`, connects to
 reconnect (the ticket is spent) and reconnects manually with exponential
 backoff, fetching a fresh ticket each time. A `BroadcastChannel` keeps
 tabs in step.
+
+**The heartbeat.** The plugin sends `ping` every 30 seconds and closes a
+socket that does not answer within 5 seconds, which is how a connection a
+proxy dropped without a word is found; the reconnect above then opens a new
+one. The consumer's `pong` is the plugin's `responseMessage`, so VueUse's
+`useWebSocket` takes it as the answer and never hands it to the
+notification handler, which reads JSON only. Both sides must change
+together, storefront first: a client that does not expect `pong` parses it
+as a notification and logs `ws:parse` every 30 seconds. Until the consumer
+answered, every signed-in tab reconnected about every 36 seconds (storefront
+#414).
 
 ### The email system
 
@@ -681,7 +694,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/notification/signals.py` | Post-save fan-out and the translation cache |
 | `grooveshop-django-api/notification/tasks.py` | `send_notification_task`, `group_send` |
 | `grooveshop-django-api/notification/groups.py` | `user_group` name format |
-| `grooveshop-django-api/notification/consumers.py` | `NotificationConsumer`, `force_logout`, close codes |
+| `grooveshop-django-api/notification/consumers.py` | `NotificationConsumer`, `force_logout`, close codes, the heartbeat answer |
 | `grooveshop-django-api/notification/views/websocket.py` | Ticket minting, TTL, Knox liveness check |
 | `grooveshop-django-api/core/middleware/channels.py` | `GETDEL` ticket consumption, tenant binding |
 | `grooveshop-django-api/asgi/__init__.py` | WebSocket routing and middleware stack |
@@ -719,6 +732,6 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask` |
 | `grooveshop-django-api/tenant/celery.py` | `TenantTask`, `dispatch_on_commit` |
 | `grooveshop-django-api/core/templates/emails/` | Every template pair and `base/email_base.html` |
-| `grooveshop-storefront-ui-node-nuxt/app/plugins/websocket.client.ts` | Connect, reconnect, cross-tab broadcast |
+| `grooveshop-storefront-ui-node-nuxt/app/plugins/websocket.client.ts` | Connect, heartbeat, reconnect, cross-tab broadcast |
 | `grooveshop-storefront-ui-node-nuxt/server/api/websocket/user/ticket.get.ts` | Ticket proxy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/` | Mailpit patches |
