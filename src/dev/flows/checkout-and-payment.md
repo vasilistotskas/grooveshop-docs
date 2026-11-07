@@ -360,7 +360,9 @@ merchant portal. It lands on the Nitro route
 (order code) to an order UUID, and redirects to
 `/checkout/success/{uuid}`. Resolving by `s` is what wins the
 browser-versus-webhook race, because the code was recorded at session
-creation.
+creation. That page keeps the order in the browser and replaces itself with the
+plain `/checkout/success`, so the uuid never reaches a tracker: see
+[Addresses that hold a secret](/dev/flows/analytics-and-consent#addresses-that-hold-a-secret).
 
 **Stripe — secondary, intent-first.** `POST /api/v1/cart/create-payment-intent`
 computes the charge with exactly the inputs order creation will
@@ -435,11 +437,11 @@ field, which the confirmation email renders.
 | Step | Surface |
 |---|---|
 | Enters checkout | Three steps in `app/pages/checkout/index.vue`; stock is reserved on submit, not on arrival |
-| Places a COD order | Success toast, then `/checkout/success/{uuid}?placed=1`; order-received email |
+| Places a COD order | Success toast, then `/checkout/success` with the order in `sessionStorage`; order-received email |
 | Places a Stripe order | Order created, card form mounts, then `onPaymentSuccess` navigates to the success page |
 | Places a Viva order | "Order created, complete payment" toast, then the hosted page, then back through `viva-return` |
 | Lands on success unpaid | The page polls `GET /api/orders/uuid/{uuid}` every 2s — 15 attempts for Viva, 5 for Stripe — and stops on a settled status |
-| Lands on success with COD | No polling at all: `placed=1` means legitimately unpaid |
+| Lands on success with COD | No polling at all: the kept order says it was placed, which means legitimately unpaid |
 
 The purchase pixels fire once per order from the success page, keyed on
 the Meta event id Django minted at creation, and only when the shopper
@@ -683,4 +685,5 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-storefront-ui-node-nuxt/server/api/cart/items/index.post.ts`, `server/api/cart/items/[id]/index.put.ts` | Add and change proxies; they return the cart |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Order proxy, Meta context injection, shopper identity headers, upstream error forwarding |
 | `grooveshop-storefront-ui-node-nuxt/server/routes/checkout/viva-return.get.ts` | Viva redirect translation |
-| `grooveshop-storefront-ui-node-nuxt/app/pages/checkout/success/[uuid].vue` | Success page, payment-status polling, purchase pixels |
+| `grooveshop-storefront-ui-node-nuxt/app/pages/checkout/success/[uuid].vue` | Keeps the order in the browser, then replaces itself with the plain address |
+| `grooveshop-storefront-ui-node-nuxt/app/pages/checkout/success/index.vue` | Success page: payment-status polling, purchase pixels |

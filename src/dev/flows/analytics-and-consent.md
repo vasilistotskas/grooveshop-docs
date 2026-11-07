@@ -15,7 +15,7 @@ Every tracker id is **per tenant** with no platform or environment fallback —
 a shared id would mix ad accounts and analytics properties across merchants.
 
 The banner is asked only where the store uses something optional: a Google
-(Analytics or Ads), Meta, TikTok or OpenAI id on the tenant
+(Analytics or Ads), Meta, TikTok, OpenAI or Microsoft Clarity id on the tenant
 (`useTenantStore().hasOptionalServices`). A store with none sets no optional
 cookie and loads no third-party script, so there is nothing to ask. One rule for
 every design: the platform's banner and webside's both stay away, the footer
@@ -38,7 +38,12 @@ flowchart TD
   Trig --> Meta["Meta Pixel"]
   Trig --> TT["TikTok Pixel"]
   Trig --> OAI["OpenAI pixel"]
-  Banner --> GA["gtag consent.update"]
+  Banner --> GDec{"analytics_storage or ad_storage granted?"}
+  GDec -- "no" --> NoG["gtag never loads"]
+  GDec -- "yes" --> GA["gtag, told through consent.update"]
+  Banner --> Clar{"analytics_storage granted?"}
+  Clar -- "yes" --> Clarity["Microsoft Clarity, told through consentv2"]
+  Clar -- "withdrawn" --> Erase["clarity consent false"]
 
   Checkout["Checkout submit"] --> Build["buildMetaPayload"]
   Build -- "no consent" --> Null["meta omitted"]
@@ -81,8 +86,9 @@ every advertising pixel, and it requires **both** conditions:
 `setupOpenAIPixelConsent` each pass that computed boolean to
 `useScriptTriggerConsent({ consent })` and use the result as the script's
 `trigger`. That is the documented binary load gate: the tag is injected only
-once consent flips true, and if it later flips false the trigger revokes and
-the script is unloaded.
+once consent flips true. It gates the load and nothing after it:
+`useScriptTriggerConsent` resolves one promise, so withdrawing consent removes
+no tag and stops no script that has already loaded.
 
 The comment records the pattern that was replaced and why. Combining
 `defaultConsent: 'denied'` with a manual `consent.grant()` watcher left the
@@ -94,6 +100,84 @@ All three setups are **client-only**. Since `@nuxt/scripts` 1.2 the registry's
 `use()` is invoked eagerly, dereferencing `window.fbq` or `window.ttq` and
 throwing during prerender, so each returns early on the server and the
 consumer composables fall back to a no-op proxy.
+
+### Addresses that hold a secret
+
+Every tracker sends the page's address with its hits, and most offer no way to
+change it. Some addresses are keys: a password reset, an email confirmation, an
+unsubscribe link, a data export, and a guest order's uuid, which opens the order
+without a login. `isPrivateUrl` (`shared/utils/privateUrls.ts`) names them,
+by path and by query, following a `next` or `redirect` that points at one.
+`useTrackingAllowed` in `setups.ts` closes every consent gate while one is the
+address, so no tag loads on it, whatever the visitor chose. Those pages are
+reached from outside in a new document, so nothing has loaded yet, and the
+trackers load once the visitor moves on. A new page with a secret in its address
+goes in that list, and `test/unit/source-rules/private-urls.spec.ts` fails for a
+dynamic page that names itself as one and is not listed.
+
+The checkout's own success page cannot be listed away, because it is where a
+purchase is reported. So `/checkout/success/{uuid}` keeps the order in the
+browser (`app/utils/checkoutArrival.ts`) and replaces itself with the plain
+`/checkout/success`, where the trackers run and the address holds nothing. The
+order is read from `sessionStorage`, so a reload and a language switch keep it;
+the same plain address in a new tab has no order and answers 404. Whether a
+purchase has been reported is kept per order in `localStorage`, so opening the
+old link again does not report it twice. Meta's server events name the same
+plain address as `event_source_url`.
+
+A guest's uuid is also limited on the server: `Order.opens_for_guest` opens the
+order for `GUEST_ORDER_ACCESS_DAYS` after it was placed (14 by default), so a link
+that was seen somewhere stops working by itself. Store staff and a signed-in
+owner are not limited.
+
+### When a store adds a service
+
+A consent covers the services it was given for, the ones the banner named. The
+`ncc_s` cookie keeps which those were, and `setupConsentRenewal`, before the
+tracker setups in `app.vue`, asks again when the store now uses one the visitor did
+not answer for. Removing a service asks nobody. A decision with no `ncc_s`
+predates it and is asked again once. Only the state is reset, so the trackers'
+gates stay closed until the visitor answers. Both designs' banners name the
+services.
+
+### Withdrawing consent
+
+`setupConsentWithdrawal` reloads the page when an optional category that was on
+is turned off. The store moves between pages without leaving the document, so a
+loaded pixel would otherwise keep running for the rest of the visit. A new
+document is what stops it: the gates are closed, so no tag is injected. It waits
+for the next paint, by when the decision is in its cookies. A visitor answering
+the banner for the first time, or adding a category, is not reloaded.
+
+### Microsoft Clarity
+
+`setupClarityConsent` loads the store's project (`Tenant.clarity_project_id`)
+once the shopper grants `analytics_storage`, through the same load trigger. It
+differs from the pixels in three ways, from Microsoft's documentation and from
+measuring it on webside:
+
+- **The decision is sent as `consentv2`.** Clarity has required a consent signal
+  for visits from the EEA, the UK and Switzerland since 31 October 2025. The
+  `defaultConsent` and `consent.set` of `useScriptClarity` wrap the deprecated
+  first API, so the setup calls `clarity('consentv2', …)` through the proxy.
+  Microsoft requires both fields: `analytics_Storage` is `granted`, since the
+  tag loads only then, and `ad_Storage` follows the shopper's `ad_storage`
+  choice.
+- **Withdrawing erases its cookies, and the reload stops it.**
+  `clarity('consent', false)` deletes `_clck` and `_clsk`, but contrary to
+  Microsoft's documentation it does not stop tracking: clarity-js restarts
+  without cookies and keeps uploading, measured on webside at 8 uploads in the
+  40 s after withdrawing. `setupConsentWithdrawal` is what stops it.
+- **It records the page, so private content is masked.** Clarity's default
+  Balanced mode hides inputs, numbers and email addresses and uploads other
+  text, a name or a street address included. `data-clarity-mask` masks an
+  element and all it contains in the browser, so the content is never uploaded.
+  It is on the checkout layout, the account shell, the checkout success page and
+  the signed-in identity in the account menus, in every design.
+  `test/unit/source-rules/clarity-masks-private-surfaces.spec.ts` holds the list.
+
+A store that turns Clarity on names it in its own cookie and privacy pages,
+which are the store's legal text and do not change with this id.
 
 ### Pixels' automatic click tracking
 
@@ -161,9 +245,14 @@ entry carries `trigger: false` and `proxy: false`.
 
 ### Google Analytics
 
-GA is consent-**mode**, not consent-triggered: `setupGoogleAnalyticsConsent`
-registers `useScriptGoogleAnalytics` with `wait_for_update: 500` and every
-storage denied by default **except `functionality_storage`, which starts
+GA uses Consent Mode's **basic** implementation: the tag loads only once the
+visitor grants `analytics_storage` or `ad_storage`, the two categories it
+serves, so nothing reaches Google before that or after a refusal. The advanced
+implementation, used until 2026-11-06, sent cookieless hits with the page's
+address for every visitor. The cost is that Google no longer models the visitors
+who refuse, so Analytics and Ads count fewer of them. Once loaded,
+`setupGoogleAnalyticsConsent` registers `useScriptGoogleAnalytics` with
+`wait_for_update: 500` and every storage denied by default **except `functionality_storage`, which starts
 `granted`** — it is a necessary category, so there is nothing to ask for. The
 composable calls `consent.update(...)`, mapping each of the seven categories
 to `granted` or `denied`: at once for the decision the visitor arrived with,
@@ -179,8 +268,8 @@ does not match `/^G-[A-Z0-9]{8,}$/`, or when it is the placeholder
 `G-XXXXXXXXXX` — otherwise gtag is preloaded for every visitor and sits
 unused.
 
-Its load trigger is `afterLoadWhenIdle()` (`app/utils/scheduling.ts`): it
-resolves after the window `load` event, at the next idle moment
+After consent, its load trigger is `afterLoadWhenIdle()`
+(`app/utils/scheduling.ts`): it resolves after the window `load` event, at the next idle moment
 (`requestIdleCallback`, at most five seconds later), with
 `warmupStrategy: false`. gtag's evaluation is one ~150–180 ms task on a
 phone-class CPU, followed by timer tasks of its own. Loading it on the visitor's first
@@ -379,6 +468,8 @@ The script refuses to run unless the tenant's primary domain carries the
   re-arms the script with the module default and the consent gate is bypassed.
 - **Ad pixels need both `isConsentGiven` and `ad_storage`.** Either alone is
   insufficient.
+- **No tracker runs on an address that holds a secret.** `isPrivateUrl` names
+  them, and a new one goes on its list.
 - **Every tracker id is per tenant.** No platform or env fallback, anywhere.
 - **`proxy: false` on every registry entry**, and `bundle: false` on the
   Google Analytics entry and every pixel composable call site.
@@ -448,6 +539,7 @@ The script refuses to run unless the tenant's primary domain carries the
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useTikTokPixel.ts` | TikTok events and `CompletePayment` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useGA4.ts` | GA4 recommended events |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOpenAIPixel.ts` | ChatGPT Ads conversion pixel |
+| `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/clarity-masks-private-surfaces.spec.ts` | What a Clarity recording must not read |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | `buildMetaPayload` and its consent short-circuit |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Order acquisition capture, outside the consent gate |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Server-side enrichment of the meta context |

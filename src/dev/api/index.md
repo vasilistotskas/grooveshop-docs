@@ -95,7 +95,9 @@ inside the cluster). There is no tenant parameter.
   `400 idempotency_key_too_long`, and each caller has a key budget
   (`MAX_KEYS_PER_CALLER`).
 - **Guest access.** Anonymous carts identify themselves with the
-  `X-Cart-Id` header; a guest reads their order with `?uuid=<order uuid>`.
+  `X-Cart-Id` header; a guest reads their order with `?uuid=<order uuid>`, for
+  `GUEST_ORDER_ACCESS_DAYS` after it was placed (`403 guest_order_requires_uuid`
+  afterwards).
 - **Currency** is EUR throughout; there is no per-request currency.
 - **Health.** `GET /api/v1/health` checks the database, Redis and Celery;
   `GET /api/v1/health/live` is dependency-free and is what the probes use.

@@ -233,6 +233,7 @@ allowed to be".
 | `meta_pixel_id` | digits only | The browser pixel is off for this store |
 | `tiktok_pixel_id` | alphanumeric | TikTok pixel off |
 | `openai_pixel_id` | alphanumeric | ChatGPT Ads pixel off, **and its origin is left out of the CSP** |
+| `clarity_project_id` | alphanumeric | Microsoft Clarity off, **and its origins are left out of the CSP** |
 | `ga_tracking_id` | must start `G-` or `UA-` | GA off |
 
 Each has its own `_validate_*` method on the model. The alphanumeric rule
@@ -473,4 +474,4 @@ a common bug:
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | The 404 for an unlisted locale prefix |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.locale.ts` | Locale detection clamped to the tenant's set |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The five-minute in-memory config cache |
-| `grooveshop-storefront-ui-node-nuxt/shared/theme/metadataSchema.ts` | The render-time theme schema the validator mirrors |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | Which tracker origins a store's CSP lists, each gated on its id |
