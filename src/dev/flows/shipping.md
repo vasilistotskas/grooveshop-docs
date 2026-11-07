@@ -269,6 +269,43 @@ no ACS path assumes Greece: which countries ACS serves is rate data.
 The `ACS_SUPPORTED_COUNTRIES` setting and `shipping_acs/config.py:
 default_country` are gone.
 
+### The storefront's pickup-point picker
+
+A carrier whose adapter sets `usesGenericPicker: true` (ACS) is picked in
+one modal, `Checkout/GenericLockerPicker.vue` and webside's copy, whose
+logic is `useLockerPicker`. It reads only the carrier's whole catalogue
+(`carrier.fetchAll`, `GET /api/shipping/lockers/acs?country=`: every
+active Smartpoint of the country, cached an hour with six hours of
+stale-while-revalidate), loaded once per country while the modal is open,
+and everything else runs in the browser:
+
+- **Search** sits above the map and the list, so the first screen (the
+  map) is searchable. Each word the shopper types must start a word of the
+  locker's name, address, city or postcode, compared in one folded form
+  (`app/utils/lockerSearch.ts`): case, Greek accents, final sigma and the
+  common Greeklish spellings meet («Πειραιάς», «peiraias», «pireas»). The
+  list shows the matches (30 at most, then "type more") and the map frames
+  them.
+- **Origin.** The checkout postcode is the starting point (the middle of
+  its lockers, or of its three-digit area when it has none), until the
+  shopper shares their position. Rows are sorted by distance from the
+  origin; with no search the list shows the nearest and the map frames
+  them around it. A postcode whose area has no placed locker gives no
+  origin (`postcodeCentre` returns `null`): with no position and no
+  search, the list asks the shopper to search and the map shows the whole
+  catalogue.
+- **Location** (`useShopperLocation`) is one coarse fix on the
+  shopper's click on "My location". Opening the picker never asks, except
+  when the browser already reports the permission as granted, where it
+  asks nothing and the map centres by itself. Denied and no fix in time
+  each leave a line under the search, and a browser without geolocation
+  shows no button; the search works in every case. The storefront's
+  `Permissions-Policy` must allow `geolocation=(self)`.
+
+A catalogue that fails to load is an error with a retry. The bulk route
+refuses to cache an empty answer (503), so a store whose stations have not
+synced yet recovers on the first request after the sync.
+
 ### Labels and the pickup list
 
 `Print_Type` defaults to **1, thermal/roll** (`shipping_acs/config.py:
@@ -698,6 +735,11 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/settings.py` | Beat cadences for every carrier task |
 | `grooveshop-storefront-ui-node-nuxt/shared/shipping/index.ts` | Checkout method to carrier mapping |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step, over-cap and error states, locker pickers |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/GenericLockerPicker.vue`, `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Checkout/GenericLockerPicker.vue` | The picker modal, default and webside designs: search, location button, map and list |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useLockerPicker.ts` | The ACS picker's logic: catalogue load, search, origin, distances, map focus |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useShopperLocation.ts` | The shopper's position, asked for on a click or with a granted permission |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/lockerSearch.ts` | Search folding (accents, Greeklish), matching, distance, a postcode's centre |
+| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/lockers/[provider].get.ts` | The bulk catalogue route, cached, refusing to cache an empty answer |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/boxnow-widget.ts` | `BOXNOW_WIDGET_COUNTRIES`, `BOXNOW_FRAME_ORIGINS`, `BOXNOW_ALLOWED_ORIGINS`, `boxNowWidgetCountry`, `buildBoxNowIframeUrl`, `parseBoxNowSelectedLocker` |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | `frame-src`, built from `BOXNOW_FRAME_ORIGINS` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/BoxNowLockerPicker.vue` | The widget iframe per delivery country and locale; ignores a locker from another country's map |
