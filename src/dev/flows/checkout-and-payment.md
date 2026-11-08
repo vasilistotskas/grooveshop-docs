@@ -30,7 +30,7 @@ sequenceDiagram
 
   S->>N: Enter checkout
   N->>D: POST cart/reserve-stock
-  D-->>N: reservation ids
+  D-->>N: cart holds replaced
   S->>N: Address, shipping method, pay way
   N->>D: GET pay_way (provider + kind)
   alt Intent-first (Stripe)
@@ -94,15 +94,31 @@ recorded on the order cannot drift; the detail lives in
 ### 2. Stock is reserved, then consumed
 
 `POST /api/v1/cart/reserve-stock` (`cart/views/cart.py: reserve_stock`)
-creates one `StockReservation` per cart line, keyed on the cart UUID as
-`session_id`, with a TTL from `STOCK_RESERVATION_TTL_MINUTES` (default 15,
-`order/stock.py: StockManager.get_reservation_ttl_minutes`). If any line
-fails the whole batch is rolled back and the endpoint answers 409 with
-`failed_items`. The storefront calls it as step 1 of
+makes the cart's holds exactly its current quantities, through
+`order/stock.py: StockManager.reserve_cart_stock`. One transaction locks the
+`Cart` row first (`select_for_update`, the lock checkout takes first), then
+every product the old or the new set touches in pk order, releases **all**
+of the cart's unconsumed holds (expired ones included, each with its
+`StockLog` line) and reserves one `StockReservation` per product, keyed on
+the cart UUID as `session_id`, with a TTL from the store setting
+`STOCK_RESERVATION_TTL_MINUTES` (default 30,
+`StockManager.get_reservation_ttl_minutes`). The holds are replaced, never
+stacked: the cart's own earlier holds never count against it, a retry is
+idempotent, and a line that changed or left the cart is freed in the same
+step. Holds of other carts still count, so two carts exclude each other for
+the last unit. Because the cart row lock serialises this call with a
+checkout of the same cart and with the login merge that rehomes its holds,
+a checkout never reads a hold set half replaced. If any line is short the
+transaction rolls back, the cart keeps the holds it had, and the endpoint
+answers 409 `insufficient_stock` with every short line in `failed_items`.
+The `reservation_ids` in the answer are informational: the ids from an
+earlier answer are already released. The storefront calls it as step 1 of
 `app/composables/useCheckoutSubmit.ts: onSubmit`.
 
-At order creation `OrderService._consume_stock_for_order` reconciles the
-reservations against the cart rather than converting them blindly: a
+At order creation `OrderService._consume_stock_for_order` takes the cart's
+holds by cart (every unconsumed reservation whose `session_id` is the cart
+UUID), never by id, and reconciles them against the cart rather than
+converting them blindly: a
 surplus hold is released, an expired hold is released and the shortfall
 decremented directly, and the remainder is converted to a sale linked to
 the order. This is what guards against double-decrement, a missed
@@ -668,7 +684,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 | `grooveshop-django-api/order/enum/attribution.py` | `OrderSourceType` |
 | `grooveshop-django-api/order/serializers/order.py` | `OrderAttributionInputSerializer` (write), `OrderAttributionSerializer` (read) |
 | `grooveshop-django-api/order/filters.py` | `source` and `sourceType` order filters |
-| `grooveshop-django-api/order/stock.py` | `StockManager` reserve, convert, decrement, increment, cleanup, `lock_products` |
+| `grooveshop-django-api/order/stock.py` | `StockManager.reserve_cart_stock` (a cart's holds replaced under the cart lock), convert, decrement, increment, cleanup, `lock_products` |
 | `grooveshop-django-api/pay_way/services.py` | `is_provider_configured`, `filter_by_carrier`, `filter_by_shipping_kind`, `process_payment` |
 | `grooveshop-django-api/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
 | `grooveshop-django-api/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |

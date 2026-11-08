@@ -32,13 +32,59 @@ flowchart LR
 | Customer session in the storefront | `nuxt-auth-utils` sealed cookie holding the allauth session token and the Knox access token | `nuxt.config.ts: runtimeConfig.session`, `shared/auth.d.ts` |
 | WebSocket | A single-use ticket minted by `POST /api/v1/websocket/ticket` (valid sixty seconds, passed as `?ticket=`) and consumed atomically from Redis with GETDEL in the connecting tenant's schema; Knox tokens and cookies are not accepted on the socket, and a user with no live Knox token is refused at both minting and connect | `notification/views/websocket.py`, `core/middleware/channels.py` |
 | Admin session | Django session auth. The admin login form calls `PlatformStaffBackend.authenticate_staff`, which resolves against the **public** schema only and requires `is_staff`; the backend's ordinary `authenticate()` returns `None` so the storefront login can never produce a platform identity. A platform superuser then needs a second factor in the same form: an authenticator (TOTP) or recovery code checked with allauth's own helpers, or, with no authenticator yet, enrolment in place (secret, a first code, ten recovery codes shown once). Five wrong codes refuse further tries for fifteen minutes; `manage.py reset_staff_mfa <email>` removes a lost authenticator. Store roles (Owner, Admin, Staff) sign in with a password only. A forgotten staff password is reset from the login page with Django's `PasswordResetView` / `PasswordResetConfirmView` pinned to the public schema: one task per request finds the eligible accounts (no enumeration), budgets per client address (429) and per target address (silently dropped), the email in the store's `default_locale`, a one-use token valid `PASSWORD_RESET_TIMEOUT` (3600 s); the reset signs nobody in, leaves authenticators alone and ends the account's staff API tokens | `tenant/auth_backends.py`, `admin/forms.py`, `admin/staff_mfa.py`, `admin/password_reset.py`, `core/management/commands/reset_staff_mfa.py`, `settings.py: STAFF_PASSWORD_RESET` |
-| Store-scoped API for operators | `StaffBearer` tokens (`PlatformStaffToken`, a Knox subclass in the shared-only `tenant` app) minted on the platform host at `/api/v1/platform/auth/login`; the authenticator engages only on its own keyword so it composes with the customer authenticator | `tenant/staff_api.py`, `tenant/api_tokens.py`, `docs/api-staff-identity.md` |
+| Store-scoped API for operators | `StaffBearer` tokens (`PlatformStaffToken`, a Knox subclass in the shared-only `tenant` app) minted on the platform host at `/api/v1/platform/auth/login`; the authenticator engages only on its own keyword so it composes with the customer authenticator. The login asks the same second factor as the admin of every user `requires_mfa` covers (a platform superuser) in a `code` field, checked by the same helper with the same five-try lockout (`401 mfa_code_required` / `mfa_wrong_code`, `429 mfa_locked`); it never enrols, so a superuser with no authenticator gets `403 mfa_enrolment_required` until they have signed in to the admin once | `tenant/staff_api.py`, `tenant/api_tokens.py`, `admin/staff_mfa.py`, `docs/api-staff-identity.md` |
 | AI agents | Django is an OAuth 2.1 authorisation server (`allauth.idp`): authorisation code with PKCE at `/identity/o/authorize`, discovery at `/.well-known/openid-configuration` and `/.well-known/oauth-authorization-server`, open dynamic client registration. Resources under `/api/v1/agent/*` accept **only** these bearers (`AgentTokenAuthentication`), never Knox or sessions, and answer 401 with a `Bearer` challenge. The gateway verifies a presented bearer against `/api/v1/agent/me`, answers invalid tokens with the RFC 9728 `WWW-Authenticate` challenge, and lets anonymous requests through | `settings.py: IDP_OIDC_*`, `agent/views.py`, `grooveshop-agent-gateway/internal/identity`, Nuxt `server/routes/.well-known/oauth-protected-resource.get.ts` |
 | Internal services | A shared secret compared in constant time. `X-Internal-Token` on tenant resolve (unlocks the ACP token and chat key) and on the domains feed; the gateway's `/internal/*` routes for order events and feed invalidation; `x-internal-secret` on the media stream's admin endpoints, and a separate read-only bearer token (`METRICS_BEARER_TOKEN`) on its `/metrics`; `NUXT_CACHE_PURGE_TOKEN` on the Nuxt purge route | `tenant/views.py: _is_gateway`, `tenant/internal.py`, `internal/server/internalapi.go`, media `InternalSecretGuard` and `MetricsTokenGuard` |
 
 Rate limiting on the auth endpoints is Django-side as well:
 `core/middleware/allauth_ratelimit.py` keys on `X-Real-IP`, and allauth's
 own limits apply to dynamic client registration.
+
+### Staff sign-in attempts
+
+allauth's limiter covers `/_allauth/` only, so the admin login and the staff
+token login count wrong passwords themselves. Both reach the password through
+`PlatformStaffBackend.authenticate_staff`, which calls
+`tenant/staff_login_limits.py`, so the two share one count. Each attempt is
+counted **before** the password is checked (an atomic `add` then `incr`, using
+the value it returns), and an attempt over any budget is refused without
+looking at the password; counting afterwards would let every request in
+flight read a count below the limit while Argon2 runs. Three counters, each
+over a `WINDOW_SECONDS` window (default 900 s) in `settings.STAFF_LOGIN_LIMITS`:
+
+| Counter | Default budget | Scope of the lock |
+|---|---|---|
+| Account and proven address (`MAX_FAILURES_PER_ACCOUNT_ADDRESS`) | 5 | That address only, so someone who knows a staff email cannot lock the owner out of the owner's own address |
+| Account-wide ceiling (`MAX_FAILURES_PER_ACCOUNT`) | 50 | The account, for everyone: bounds a run spread over many addresses |
+| Proven address (`MAX_FAILURES_PER_IP`) | 20 | That address, across accounts; a success does not clear it |
+
+A proven address is `trusted_client_ip`: the request carried the edge's
+`X-Origin-Verify`. IPv6 counts on its /64, IPv4 on the full address. Without
+that proof the only address known is a shared Cloudflare edge node or SNAT
+gateway, so no address counter applies and the account ceiling alone bounds
+the attacker. The identifier is the submitted one, lower-cased and hashed,
+whether or not it names an account. A lock lasts until the window that began
+with the first attempt ends; refused attempts do not extend it. The admin
+answers "Too many failed sign-in attempts. Try again later.", the token
+endpoint `429 login_locked`. A right password clears the account's counters
+for that address; a password reset from the login page or
+`manage.py reset_staff_mfa <email>` clears every count of the account. The
+keys are `global:` (one budget across every store host) and `strict:`.
+
+**If the cache is down**, staff sign-in is refused on purpose
+(`StaffLoginUnavailable`), with the password never checked; otherwise
+overloading Redis would lift the limits. The admin form shows "Sign-in is
+temporarily unavailable, try again shortly." with one ERROR line per attempt.
+The token endpoint normally answers `429 throttled` before its view runs:
+`StaffLoginThrottle` (`core/api/throttling.py`, rate `staff_login` in
+`settings.py: REST_FRAMEWORK`, off under `DEBUG`) is `fail_closed`, so its
+strict-key cache error denies the request. Only where that rate is off does
+the view itself answer `503 staff_login_unavailable`. Nothing signs a staff
+member in while Redis is down: `manage.py changepassword <email>` (through
+`kubectl --context grooveshop exec` in a backend pod) sets a password without
+the cache, but the next sign-in is still refused, and `reset_staff_mfa`
+needs the cache to clear the counters. Restore Redis first. The full design is in
+[Staff identity](/dev/django/reference/api-staff-identity).
 
 ## Authorisation
 
@@ -239,6 +285,9 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
 
 ## Failure modes
 
+- Redis is unreachable: staff sign-in is refused until it is back (the admin
+  says "temporarily unavailable", the token endpoint answers `429 throttled`
+  from its fail-closed throttle), rather than lifting the attempt limits.
 - An operator's `is_staff` is unticked: `PlatformStaffBackend.get_user`
   refuses the session on the next request and the token validator refuses
   the token; the admin UI and the API close together.
@@ -262,6 +311,10 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
 | `grooveshop-django-api/tenant/auth_backends.py` | `PlatformStaffBackend`, `TenantRolePermissionBackend`, `PLATFORM_IDENTITY_ATTR` |
 | `grooveshop-django-api/tenant/membership.py` | `is_store_staff`, `is_platform_superuser`, `get_membership` |
 | `grooveshop-django-api/tenant/api_tokens.py`, `tenant/staff_api.py` | Staff tokens |
+| `grooveshop-django-api/core/api/throttling.py` | `StaffLoginThrottle`, `ResilientThrottleMixin`: the token endpoint's fail-closed throttle |
+| `grooveshop-django-api/tenant/staff_login_limits.py` | Staff sign-in attempt counters, `StaffLoginLocked`, `StaffLoginUnavailable` |
+| `grooveshop-django-api/admin/staff_mfa.py` | `requires_mfa`, second-factor check and its lockout, shared by the admin and the token login |
+| `grooveshop-django-api/core/management/commands/reset_staff_mfa.py` | Removes a lost authenticator and clears the account's attempt counts |
 | `grooveshop-django-api/tenant/middleware.py`, `tenant/signals.py` | CSRF and CORS origin rule, cookie domains |
 | `grooveshop-django-api/tenant/views.py`, `tenant/internal.py` | Internal-token checks |
 | `grooveshop-django-api/agent/views.py`, `agent/oidc.py` | Agent resources and OIDC adapter |

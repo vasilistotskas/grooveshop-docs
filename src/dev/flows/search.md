@@ -121,6 +121,29 @@ differences are the variant bags' job, not the typo budget's.
 A model that declares no `typo_tolerance` gets the client default in
 `meili/_client.py` instead, which is `{5, 9}` — so silence is not agreement.
 
+### What a product is searched by
+
+`ProductTranslation.MeiliMeta.searchable_fields`
+(`product/models/product.py`) is ordered, and the `attribute` ranking rule
+prefers a match in an earlier field: `master_id` (the product's id), the
+product codes `sku`, `gtin` and `mpn`, then `name`, `brand_name`,
+`category_name`, `description`, the attribute names and the attribute
+values. A code sits ahead of the name because a shopper who types one means
+that product; the brand and category names sit above the description
+because a word in a department's name is a stronger signal than the same
+word in prose. Every text field except the codes carries its Greeklish
+shadows; `description` has no `_variants` bag. The codes come from the
+product (`obj.master`), the brand name is `Brand.name` (not translated) and
+the category name is read in the document's language
+(`get_additional_meili_fields`).
+
+`typo_tolerance["disableOnAttributes"]` is `sku`, `gtin`, `mpn`: a code
+matches exactly or not at all, so a barcode one digit off finds nothing
+instead of a different product. `disableOnNumbers` stays off, because it
+would also stop typo matching on the numbers inside names and attribute
+values. The rationale is in
+[Index settings](/dev/django/reference/search/index-settings).
+
 ### The two read endpoints
 
 `search/urls.py` registers five paths. Two of them run queries:
@@ -242,6 +265,20 @@ base class, carries the tenant schema on the message. Task waits are bounded at 
 engine cannot pin a worker slot; the timeout raises and the task retries
 with backoff.
 
+A product document also carries text saved on other rows: the brand name,
+the category name, attribute names and attribute values. Those rows are
+saved on their own, so the product receivers never run for them, and
+`product/signals.py: _watch_search_text` watches them instead. Renaming a
+brand, a category, an attribute or an attribute value, and adding or
+deleting a translation of a category, attribute or attribute value, queues
+`product/tasks.py: reindex_products_for_search_text` on commit, which finds
+the affected products and queues one document each; only a changed name or
+value queues it, so editing a category's description reindexes nothing.
+Deleting a brand or a category nulls `Product.brand` / `Product.category`
+with one UPDATE and no signal, so `reindex_products_of_deleted_brand` and
+`reindex_products_of_deleted_category` collect the products before the
+delete, the category's whole subtree included (its children CASCADE).
+
 ### Analytics
 
 `search/middleware.py: SearchAnalyticsMiddleware` records a `SearchQuery`
@@ -307,8 +344,8 @@ contract.
 The sync and settings commands live in `meili/management/commands/` and are
 covered in depth at
 [Meilisearch management commands](/dev/django/reference/search/management-commands).
-The one to know here is `meilisearch_apply_settings`, which the Argo CD
-PreSync job runs as step 3 of 4 on every deploy
+The one to know here is `meilisearch_apply_settings --all-tenants`, which
+the Argo CD PreSync job runs on every deploy, after the migrations
 (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml`).
 Index settings are a convergence step, not a one-off.
 
@@ -397,6 +434,12 @@ every failure — tracking must never affect the shopper. It no-ops without a
   `meilisearch_sync_index` for one model or `meilisearch_sync_all_indexes`
   for everything, per tenant. `meilisearch_apply_settings` converges
   settings without touching documents.
+- **A newly indexed field is empty on existing products after a deploy.**
+  The PreSync hook applies the new settings to every store's index, but the
+  documents gain the field only when they are rewritten: by the nightly full
+  sync, or at once with `manage.py meilisearch_sync_index
+  product.ProductTranslation --tenant <schema>` per store (or
+  `--all-tenants`). Run it after any deploy that changes the indexed fields.
 - **A store passes ten tenants and indexes start vanishing.** Meilisearch
   paginates `GET /indexes` at twenty by default. `Client.get_indexes` pages
   explicitly for exactly this reason; the un-paged version left departed
@@ -437,6 +480,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 | File | Role |
 |---|---|
 | `grooveshop-django-api/meili/models.py` | `IndexMixin`, `MeiliMeta`, `get_meili_index_name`, serialization |
+| `grooveshop-django-api/product/signals.py`, `product/tasks.py` | `_watch_search_text`, the brand and category delete receivers, `reindex_products_for_search_text` |
 | `grooveshop-django-api/meili/_client.py` | Master and search clients, tenant tokens, index settings, paged `get_indexes` |
 | `grooveshop-django-api/meili/querysets.py` | `IndexQuerySet.search`, `filter_facet_group` and the disjunctive-facet `multi-search`, hit hydration through each model's `get_search_result_queryset` |
 | `grooveshop-django-api/product/attribute_selection.py` | `AttributeSelection`: grouping, `filter_search`, `filter_products` |
@@ -451,7 +495,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 | `grooveshop-django-api/search/tasks.py` | Query and click persistence, `update_click_scores`, anonymisation |
 | `grooveshop-django-api/core/sessions.py` | `persisted_session_key`, the session key of a stored session only |
 | `grooveshop-django-api/search/models.py` | `SearchQuery`, `SearchClick` |
-| `grooveshop-django-api/product/models/product.py` | `ProductTranslation.MeiliMeta`, Greeklish fields, ranking rules |
+| `grooveshop-django-api/product/models/product.py` | `ProductTranslation.MeiliMeta` (searchable order, typo tolerance, ranking rules), Greeklish, code, brand and category fields |
 | `grooveshop-django-api/blog/models/post.py` | `BlogPostTranslation.MeiliMeta`, `meili_filter` |
 | `grooveshop-django-api/blog/managers/post.py` | `published()` — the schedule gate search does not apply |
 | `grooveshop-storefront-ui-node-nuxt/server/api/search/` | Storefront proxies |

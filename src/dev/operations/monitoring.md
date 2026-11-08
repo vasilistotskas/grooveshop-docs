@@ -179,8 +179,13 @@ by a namespace regex.
 - Django logs one access line per request it handles
   (`core/middleware/access_log.py`): `log.method`, `log.route` (the URL
   pattern, never the raw path or query string; `unmatched` for a path no
-  pattern matches), `log.status`, `log.duration_ms`, `log.schema` and
-  `log.correlation_id`. A 4xx or 5xx API response also carries
+  pattern matches), `log.status`, `log.duration_ms`, `log.db_queries`,
+  `log.db_ms`, `log.schema` and `log.correlation_id`. `log.db_queries` and
+  `log.db_ms` are the queries the request ran on any database alias and the
+  time spent in them (`core/db_cost.py: measure`), so `log.duration_ms` minus
+  `log.db_ms` is Python, Redis and outbound calls. A query a view hands to
+  another thread is not counted, and the time is a floor for a query that
+  streams a large result. A 4xx or 5xx API response also carries
   `log.code`, the stable code of the API error contract
   (`docs/error-contract.md` in the Django repository); Django's own error
   pages and 2xx responses have none. The line is WARNING for a 5xx and
@@ -188,10 +193,19 @@ by a namespace regex.
   the traceback when an exception caused it. Kubelet's probes are
   answered before it and are not logged. Count codes with
   `_time:1h kubernetes.pod_namespace:="grooveshop" log.code:* | stats by (log.code, log.route, log.status) count()`.
+  The routes that cost the database most over the last hour:
+
+  ```
+  _time:1h kubernetes.pod_namespace:="grooveshop" log.route:* log.db_queries:* | stats by (log.route) count() requests, avg(log.db_queries) avg_queries, max(log.db_queries) max_queries, sum(log.db_ms) total_db_ms, avg(log.db_ms) avg_db_ms | sort by (total_db_ms desc) | limit 20
+  ```
+
 - A failed Celery task logs one ERROR line from `MonitoredTask.on_failure`
   with the traceback in `log.exception` and redacted arguments
   (`core/tasks.py`); Celery's own `celery.app.trace` line also carries
-  one.
+  one. The `MonitoredTask.on_failure` line, not Celery's, and the success line
+  from `MonitoredTask.on_success` carry
+  `log.duration_ms`, `log.db_queries` and `log.db_ms`, measured around the
+  task body by `MonitoredTask.__call__`.
 - Browser errors (uncaught Vue, startup and window errors, unhandled
   rejections) reach the logs as `log.source:client` with
   `log.action:client:*`, each distinct error once per page load
@@ -257,8 +271,9 @@ by a namespace regex.
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/web-vitals.client.ts` | Reports a page's slow interaction (INP) with its attribution |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/clientEventRedaction.ts` | The allowlists browser events are cut back to before they are printed |
 | `grooveshop-django-api/core/middleware/correlation_id.py` | Binds and echoes the correlation id |
-| `grooveshop-django-api/core/middleware/access_log.py` | Django's per-request access line, with the error code of an error response |
+| `grooveshop-django-api/core/middleware/access_log.py` | Django's per-request access line, with the error code of an error response and the request's database cost |
+| `grooveshop-django-api/core/db_cost.py` | `measure`: counts and times every query on every alias, as `db_queries` and `db_ms` |
 | `grooveshop-django-api/core/api/exception_handler.py` | Puts the `code` on every raised API error |
-| `grooveshop-django-api/core/tasks.py` | `MonitoredTask`: the task failure line with its traceback |
+| `grooveshop-django-api/core/tasks.py` | `MonitoredTask`: the task completion and failure lines, with the task's duration and database cost, and the failure's traceback |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |

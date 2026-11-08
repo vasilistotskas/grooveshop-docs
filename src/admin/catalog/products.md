@@ -30,7 +30,7 @@ Search finds products by SKU, name, description, category or brand. The filters 
 1. Click **Add**.
 2. On the **Product Information** tab pick a **Category** and, if you like, a **Brand**. Write the **Name** and **Description** in every language tab your store shows.
 3. If the product is not ready to be seen, untick **Active**. A new product is active by default.
-4. On the **Pricing & Inventory** tab fill in **Price** (before VAT), **VAT** and **Stock**.
+4. On the **Pricing & Inventory** tab fill in **Price** (before VAT), **VAT** and **Stock**. **VAT** is required: the product cannot be saved without a rate, and the field cannot be cleared later. See [VAT rates](/admin/settings/vat-rates).
 5. Save. Then upload photos on the **Product Images** tab and tick **Is Main** on one.
 6. If the product needs filters or specifications (colour, size), add values on the **Product Attributes** tab.
 7. When everything is right, tick **Active** and save.
@@ -121,7 +121,7 @@ Only the **Owner** role sees **Cost price**, under **Price** on the **Pricing & 
 - **The box under the buy button** lists up to three lines: the delivery time (the **Delivery Days** on your [shipping providers](/admin/settings/shipping-providers), with the free-shipping amount under it), how the customer can pay (the active [payment methods](/admin/settings/payment-methods), worded by how the money is collected, for example "Card or cash on delivery") and the return period (`RETURN_WINDOW_DAYS`). A line shows only when the store has that information, and the box follows `PRODUCT_ASSURANCES_ENABLED`. When the box is on, it states the free-shipping amount instead of the separate free-shipping message on the product page; the cart keeps that message.
 - **What hides a product from customers**: only **Active** turned off, or deletion. An out-of-stock product still shows.
 - **Languages**: where the name or description is missing in a language, the store shows the store's default language instead.
-- **Search**: saving a product updates the store's search shortly after. So do the bulk activate and deactivate actions.
+- **Search**: customers find a product in the store's search by its codes (**SKU**, **GTIN**, **MPN**), its name, brand, category, description and attributes. A code matches only when typed exactly, so a barcode with one wrong digit never matches another product's code; the search may still find products whose name or description contains similar words. Saving a product updates the search shortly after. So do the bulk activate and deactivate actions, and renaming the product's brand, category or attributes.
 - **Cache**: a change you save to text, price, stock, images or attributes reaches the store on its own within seconds. Stock that moves with orders (sales, cancellations) can take a few minutes to show on the page; checkout always checks the real stock.
 - **Stock reservations**: while a customer completes a purchase, their units are held for a while. The length is the `STOCK_RESERVATION_TTL_MINUTES` setting under <span class="sidebar-path">Settings → Store Settings</span> (category **Orders & Checkout**), 30 minutes to start with.
 - **Low-stock email**: once an hour, the store's contact email receives one message listing the active products that reached their **Low Stock Threshold** or fell below it (10 to start with). Each product is listed once, until it rises above the threshold again. Set 0 to stop alerts for a product.

@@ -78,7 +78,10 @@ other kubectl context, then:
 6. Runs `manage.py meilisearch_sync_all_indexes --all-tenants` to rebuild
    the search indexes from the restored rows.
 7. Runs `manage.py seed_demo_store --schema demo` to refresh the demo
-   tenant.
+   tenant. Its products take the store's 24% VAT row
+   (`Vat.objects.get(value=STANDARD_VAT_RATE)` in `devtools/demo_store.py`),
+   and the seed fails without that row rather than seeding unrated products;
+   every store gets it from its `vat` migrations.
 8. Pipes `scripts/staging-arm-features.py` into `manage.py shell` against
    the first store's clone: every plan flag and `extra_settings` row on,
    Viva forced to demo mode, Meta CAPI off, one promotion of each kind, a
@@ -180,4 +183,6 @@ PreSync hook runs the same steps as production. Watch it with
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/tenants/` | Per-tenant Ingress overlays |
 | `grooveshop-infrastructure/scripts/staging-refresh.sh` | Refresh script |
 | `grooveshop-infrastructure/scripts/staging-arm-features.py` | Feature arming, step 8 |
+| `grooveshop-django-api/devtools/demo_store.py` | The demo seed, step 7, and its standard VAT row |
+| `grooveshop-django-api/vat/migrations/0007_seed_default_vat_rates.py` | Seeds every store's VAT rows, the 24% one included |
 | `grooveshop-infrastructure/docs/staging.md` | The runbook this page distils |
