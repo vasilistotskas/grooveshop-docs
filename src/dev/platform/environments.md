@@ -143,7 +143,7 @@ catch-all that redirects to HTTPS and forwards to the storefront
 | Secrets | Sealed Secrets committed under `overlays/<env>/sealed-*.yaml`; plaintext stays in the gitignored `untracked/secrets/unsealed/` and is sealed with `seal.sh` | `base/` carries no secrets. Reloader restarts pods on change |
 | Per-tenant values | The `Tenant` row, edited in the platform admin | Payment and carrier credentials, pixel ids, socials, chat and ACP tokens, branding, locales. An empty field means the integration is off for that store |
 | Storefront public config | `NUXT_PUBLIC_*` (`runtimeConfig.public` in `nuxt.config.ts`) | Serialised into every tenant's HTML, so it may hold only platform-neutral values: the platform Django host name, media and static origins, the site defaults used when no tenant resolves |
-| Storefront private config | `NUXT_*` without `PUBLIC` | `NUXT_API_BASE_URL` (in-cluster), `NUXT_SESSION_PASSWORD`, `NUXT_CACHE_PURGE_TOKEN`, OAuth client secrets, Redis |
+| Storefront private config | `NUXT_*` without `PUBLIC` | `NUXT_API_BASE_URL` (in-cluster), `NUXT_APP_SECRET`, `NUXT_CACHE_PURGE_TOKEN`, OAuth client secrets, Redis |
 | Environment switch | `SYSTEM_ENV` (Django), `ENV` (gateway), `NODE_ENV` (media stream) | Environment differences are config values, not conditionals; the gateway refuses to boot on an unknown `ENV` |
 
 Build-time and runtime are kept apart in the storefront image: the CI
