@@ -71,8 +71,10 @@ is the single trusted hop.
 
 Default paginator: `PageNumberPaginator`, `PAGE_SIZE` 12, `page_size` up to
 100. `?pagination_type=` selects `pageNumber` (default), `cursor` or
-`limitOffset`; `?pagination=false` disables it. Every paginated response is
-the same envelope:
+`limitOffset`. `?pagination=false` returns an unpaginated array only for the
+country list and `/giftcard/mine` (the viewset's `unpaginated_actions`);
+every other list ignores it and keeps the envelope. Every paginated response
+is the same envelope:
 
 ```json
 {
@@ -227,5 +229,5 @@ not a second prefix.
 | `grooveshop-django-api/core/api/exception_handler.py` | The one DRF exception handler: `code` and `fields` |
 | `grooveshop-django-api/core/api/schema.py` | `ERROR_SCHEMAS`, `publish_error_schemas` |
 | `grooveshop-django-api/core/api/serializers.py` | `ErrorResponseSerializer`, `HealthCheckResponseSerializer` |
-| `grooveshop-django-api/core/api/views.py` | `health_check`, `health_live` |
+| `grooveshop-django-api/core/api/views.py` | `health_check`, `health_live`, `unpaginated_actions` |
 | `grooveshop-django-api/notification/views/websocket.py`, `core/middleware/channels.py` | WebSocket ticket and auth |

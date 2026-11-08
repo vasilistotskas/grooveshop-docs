@@ -149,7 +149,7 @@ by a namespace regex.
   restart the single-member database and receive the superuser's
   credentials. It logs in as `postgres_exporter`, a member of `pg_monitor`
   only, which the operator creates on every cluster as an infrastructure
-  role (`postgres-op/v2.0.2/configmap.yaml`). One password is sealed three
+  role (`postgres-op/v2.0.3/configmap.yaml`). One password is sealed three
   times: for the operator and for each app namespace.
 - The storefront's evlog events have no message key. VictoriaLogs'
   `VL-Msg-Field` list (`victoria-logs/values.yaml`) falls back to their
@@ -259,7 +259,7 @@ by a namespace regex.
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/scrapes/` | Traefik and cluster-component scrapes |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/metrics-scrapes.yaml` | Scrapes for the app's own components |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/postgres-exporter.yaml` | The PostgreSQL exporter and its collectors |
-| `grooveshop-infrastructure/manifests/app-constructs/postgres-op/v2.0.2/configmap.yaml` | `infrastructure_roles_secrets`: the exporter's role |
+| `grooveshop-infrastructure/manifests/app-constructs/postgres-op/v2.0.3/configmap.yaml` | `infrastructure_roles_secrets`: the exporter's role |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis.yaml` | The Redis exporter sidecar |
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-logs/values.yaml` | `VL-Msg-Field`: which field becomes a log line's message |
 | `grooveshop-infrastructure/manifests/app-constructs/traefik/helmchartconfig.yaml` | Router metrics and latency buckets |

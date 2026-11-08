@@ -71,6 +71,11 @@ inside the cluster). There is no tenant parameter.
 
   Default page size is 12, maximum 100. `links.next` is absolute and built
   from `X-Forwarded-Host`.
+
+  `?pagination=false` returns the whole list as a plain array only where an
+  operation documents the parameter: the country list and
+  `/giftcard/mine`, the actions their views name in `unpaginated_actions`.
+  Every other list ignores it and keeps the envelope and the maximum.
 - **Translations.** Translatable models expose a `translations` object
   keyed by language code. In multipart requests (uploads) send them as
   dotted form fields, `translations.el.name`, which
@@ -119,7 +124,8 @@ a Django change followed by a regeneration; see
 | `grooveshop-django-api/core/urls.py` | Schema, Swagger UI, ReDoc, health, every `/api/v1/` mount |
 | `grooveshop-django-api/settings.py` | `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK`, `REST_KNOX` |
 | `grooveshop-django-api/core/pagination/` | The three paginators and the envelope |
-| `grooveshop-django-api/core/api/views.py` | `BaseModelViewSet`, settings endpoints |
+| `grooveshop-django-api/core/api/views.py` | `BaseModelViewSet`, `paginate_and_serialize` and `unpaginated_actions`, settings endpoints |
+| `grooveshop-django-api/core/utils/serializers.py` | `create_schema_view_config`, `PAGINATION_PARAMETER` |
 | `grooveshop-django-api/core/utils/views.py` | `process_translations_data` for multipart translations |
 | `grooveshop-django-api/core/api/serializers.py` | `ErrorResponseSerializer`, `RequiredDefaultTranslationMixin` |
 | `grooveshop-django-api/core/middleware/idempotency.py` | `Idempotency-Key` replay |
