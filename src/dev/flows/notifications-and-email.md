@@ -565,8 +565,10 @@ which cost a production incident:
   socket timeout at all: a relay that accepts the connection and then goes
   quiet blocks the Celery worker that ran the send, forever, with nothing
   in the logs and no failed task result. `settings.py` defaults it to 20s
-  so no deployment can inherit the `None`, and the same value
-  (`EMAIL_SEND_TIMEOUT`) bounds the Resend request.
+  so no deployment can inherit the `None`. The Resend request uses the same
+  value (`EMAIL_SEND_TIMEOUT`) as its connect and read timeout. Both bound
+  each wait, not the whole message: a relay that keeps sending bytes slowly
+  can run past it.
 - **The relay credential is a boot dependency of every management
   command.** `settings.py` raises `ImproperlyConfigured` when
   `EMAIL_HOST_PASSWORD` is still `changeme` under

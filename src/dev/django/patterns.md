@@ -135,7 +135,9 @@ self._paginator = paginator_mapping.get(
 ```
 
 `?pagination=false` returns an unpaginated array from
-`paginate_and_serialize()`.
+`paginate_and_serialize()` only for an action the viewset lists in
+`unpaginated_actions` (today the country list and `/giftcard/mine`); every
+other list ignores it and keeps the pagination envelope.
 
 ## `ActionConfig`, `crud_config`, `create_schema_view_config` (`core/utils/serializers.py`)
 
