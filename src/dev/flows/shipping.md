@@ -286,6 +286,14 @@ and everything else runs in the browser:
   common Greeklish spellings meet («Πειραιάς», «peiraias», «pireas»). The
   list shows the matches (30 at most, then "type more") and the map frames
   them.
+- **An address.** A search that names no locker («Καλαμά 25») is placed
+  by the carrier's own geocoder (`ShippingCarrier.geocode`; ACS through
+  its address validation, `POST /api/shipping/acs/address-validation`),
+  after a 700 ms pause: as typed, then with the checkout's city, since ACS
+  places a street only with its city or postcode. The address becomes
+  the origin, with a dot on the map. A search that still finds nothing
+  frames the origin (the postcode or the shopper's position); with no
+  origin at all, the map keeps the view it had.
 - **Origin.** The checkout postcode is the starting point (the middle of
   its lockers, or of its three-digit area when it has none), until the
   shopper shares their position. Rows are sorted by distance from the
@@ -295,7 +303,8 @@ and everything else runs in the browser:
   search, the list asks the shopper to search and the map shows the whole
   catalogue.
 - **Location** (`useShopperLocation`) is one coarse fix on the
-  shopper's click on "My location". Opening the picker never asks, except
+  shopper's click on "My location", which clears the search first.
+  Opening the picker never asks, except
   when the browser already reports the permission as granted, where it
   asks nothing and the map centres by itself. Denied and no fix in time
   each leave a line under the search, and a browser without geolocation
@@ -305,6 +314,14 @@ and everything else runs in the browser:
 A catalogue that fails to load is an error with a retry. The bulk route
 refuses to cache an empty answer (503), so a store whose stations have not
 synced yet recovers on the first request after the sync.
+A store without ACS credentials is skipped by the sync (rows an earlier
+sync left stay, but nothing refreshes them) and its checkout never offers
+ACS. Django's station routes answer it a plain 404
+(`AcsStationViewSet.initial`,
+`grooveshop-django-api/shipping_acs/views/station.py`), which the bulk
+route forwards when it asks Django, so a stray request there is a warning,
+not a server error. A catalogue the bulk route cached before the
+credentials were removed is served until that entry expires.
 
 ### Labels and the pickup list
 
@@ -725,6 +742,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs` and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |
 | `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
+| `grooveshop-django-api/shipping_acs/views/station.py` | The station routes the picker and the gateway read; 404 for a store without ACS credentials |
 | `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
 | `grooveshop-django-api/shipping_boxnow/webhook.py` | Raw-bytes `data` extraction and HMAC verification |
 | `grooveshop-django-api/shipping_boxnow/views/webhook.py` | Tenant resolution and the response contract |
