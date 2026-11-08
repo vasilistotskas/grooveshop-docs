@@ -486,7 +486,9 @@ arrived through a real checkout — see
   `order_payment_id_unique` index (section 5).
 - **Stripe webhooks.** `metadata["webhook_processed_<event_id>"]`,
   written under `select_for_update` before processing, except the
-  refund events, which the ledger guards by the Stripe refund id.
+  fee events, which write the fee onto the CHARGE row and are safe to
+  repeat, and the refund events, which the ledger guards by the Stripe
+  refund id.
 - **Money movements.** The payment ledger's
   `UNIQUE (provider, provider_reference, kind)` records each charge,
   cash collection and refund once, whichever webhook or caller reports

@@ -30,7 +30,7 @@ Owners and Admins see the last two. Once you fill the details in, the alert goes
 When a refund needs a person, these appear too. Each lists up to five orders, with links, and an **Open the orders** link to the list. Everyone who can edit orders sees the first three:
 
 - **Refunds with an unknown outcome**: refunds sent to Viva Wallet or Stripe that have had no result for more than an hour. The platform asks the provider about them every hour, and what it cannot settle stays here. Each keeps its money aside until resolved. Check the provider's account, then use **Record refund outcome** on the order. See [A refund's result is unknown](/admin/sales/refunds-and-disputes#a-refund-s-result-is-unknown).
-- **Gift card and points refunds left unfinished**: the part of a refund going back onto gift cards and points stopped half-way. It blocks the order's receipt and any new refund. Refund the same amount again on the order to finish it.
+- **Gift card and points refunds left unfinished**: the part of a refund going back onto gift cards and points stopped half-way. Its amount stays aside until it is finished. Press **Refund (amount, reason)** on the order: the amount of the part that stopped is filled in, and confirming finishes it.
 - **Receipts waiting for a refund**: orders that have shipped but whose receipt waits for a refund to be settled, each named with the refund it waits for. Resolve that refund, and the receipt is issued on its own. See [A receipt is waiting for a refund](/admin/sales/receipts#a-receipt-is-waiting-for-a-refund).
 
 Everyone who can see credit documents sees the other three, which are for your accountant:

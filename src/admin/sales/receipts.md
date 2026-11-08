@@ -91,10 +91,10 @@ Once the receipt has a MARK, **VAT Rate** is read-only.
 Use **Cancel receipt in myDATA (issued in error)** on the order, or **Cancel in myDATA (issued in error)** on the credit documents list. AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, so in practice the right tool is almost always a credit document.
 
 ### A receipt is waiting for a refund
-A receipt is due when the order ships. If a refund of the order is still waiting for the provider's answer, the receipt cannot know how much to show, so it waits. The [Dashboard](/admin/getting-started/dashboard#alerts) lists these orders as **Receipts waiting for a refund**, each with the refund it waits for.
+A receipt is due when the order ships. A refund still waiting for the provider's answer does not hold the receipt back on its own: its place on the receipt was fixed when you made it. The receipt waits only when another refund reached the order meanwhile, for example one made in your Viva Wallet or Stripe account, whose share depends on that answer: until the first refund is settled, the receipt cannot know how much to show. The [Dashboard](/admin/getting-started/dashboard#alerts) lists these orders as **Receipts waiting for a refund**, each with the refund it waits for.
 
 1. Open the order from that alert, or filter the order list with **Refund books → Receipt waiting for a refund**.
-2. Settle the refund it waits for: record its outcome with **Record refund outcome**, or, for a gift card and points refund that stopped, refund the same amount again (see [Refunds and disputes](/admin/sales/refunds-and-disputes#a-refund-s-result-is-unknown)).
+2. Settle the refund it waits for: record its outcome with **Record refund outcome**, or finish a gift card and points refund that stopped (see [Refunds and disputes](/admin/sales/refunds-and-disputes#finish-a-gift-card-and-points-refund-that-stopped)).
 3. Within five minutes the receipt is issued on its own and the order leaves the alert.
 
 On such an order, **Issue receipt (myDATA)** does not schedule anything: it tells you the receipt is deferred and which refund it waits for.
