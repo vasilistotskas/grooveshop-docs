@@ -27,6 +27,20 @@ They appear under the greeting, only when something needs fixing:
 
 Owners and Admins see the last two. Once you fill the details in, the alert goes away.
 
+When a refund needs a person, these appear too. Each lists up to five orders, with links, and an **Open the orders** link to the list. Everyone who can edit orders sees the first three:
+
+- **Refunds with an unknown outcome**: refunds sent to Viva Wallet or Stripe that have had no result for more than an hour. The platform asks the provider about them every hour, and what it cannot settle stays here. Each keeps its money aside until resolved. Check the provider's account, then use **Record refund outcome** on the order. See [A refund's result is unknown](/admin/sales/refunds-and-disputes#a-refund-s-result-is-unknown).
+- **Gift card and points refunds left unfinished**: the part of a refund going back onto gift cards and points stopped half-way. It blocks the order's receipt and any new refund. Refund the same amount again on the order to finish it.
+- **Receipts waiting for a refund**: orders that have shipped but whose receipt waits for a refund to be settled, each named with the refund it waits for. Resolve that refund, and the receipt is issued on its own. See [A receipt is waiting for a refund](/admin/sales/receipts#a-receipt-is-waiting-for-a-refund).
+
+Everyone who can see credit documents sees the other three, which are for your accountant:
+
+- **A refunded credit document was reversed**: the provider reported a refund failed after its credit document was issued. The money did not reach the customer. **Open the credit documents** leads to the list. See [A refund failed after its credit document](/admin/sales/receipts#a-refund-failed-after-its-credit-document).
+- **Refunded money beyond the receipt**: orders refunded more for goods than their receipt holds, so the rest has no credit document.
+- **Receipts short of goods the customer kept**: a refund a receipt was issued without failed afterwards, so the receipt needs correcting.
+
+The last two clear when you press **Acknowledge receipt differences** on the order. See [Clear a receipt difference](/admin/sales/receipts#clear-a-receipt-difference). Every other alert goes away by itself once its cause is resolved.
+
 ### Headline figures
 
 Four cards for the period. Each shows the change against the previous period and a small line with its trend.
@@ -52,6 +66,7 @@ Work that is waiting. Each row opens its list already filtered to those records.
 | **Orders to follow up** | Orders placed `ORDER_FOLLOW_UP_DAYS` or more calendar days ago that are still **Pending**, **Processing** or **Shipped**: the customer is still waiting for the parcel. |
 | **Canceled orders to refund** | Paid, then canceled, and the customer has not had the money back. |
 | **Orders paid twice** | The customer paid more than the order is for: refund the extra payment. See [A customer paid twice](/admin/sales/orders#a-customer-paid-twice). |
+| **Lost disputes to settle** | You lost a card dispute and have not said yet whether the goods came back, so the receipt is not credited. See [Settle a lost dispute](/admin/sales/refunds-and-disputes#settle-a-lost-dispute). |
 | **COD cash ACS has not paid out** | Cash-on-delivery parcels delivered more than 10 days ago with no payout from ACS. |
 | **Stale ACS shipments** | Parcels with no movement for three days, or orders still without a voucher (the courier's shipping label) one day on. |
 | **Running low on stock** | Active products with 1 to 9 in stock. |

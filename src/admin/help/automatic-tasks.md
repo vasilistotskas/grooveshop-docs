@@ -28,6 +28,13 @@ Automatic tasks have no screen of their own. You see their result on orders, on 
 
 Cash on delivery and other offline payments are never cancelled automatically. No unpaid order gets a reminder email.
 
+### Refunds and receipts
+
+| What happens | When | Setting |
+|---|---|---|
+| Viva Wallet or Stripe is asked about each refund that has had no answer for more than an hour. A refund the provider made is recorded; one it reports failed is released, so its amount can be refunded again. A refund it cannot account for stays open, on the Dashboard as **Refunds with an unknown outcome**, for you to [record its outcome](/admin/sales/refunds-and-disputes#a-refund-s-result-is-unknown). | every hour | — |
+| Refunds that waited for another refund to be settled are placed on the receipt. Receipts that waited for a refund are issued, and the credit documents that follow are requested. | every 5 minutes | — |
+
 ### Shipping
 
 | What happens | When | Setting or action |

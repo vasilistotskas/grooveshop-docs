@@ -113,8 +113,10 @@ def fanout_cleanup_abandoned_carts():
 ```
 
 `run_for_all_tenants()` (`tenant/celery.py`) iterates active,
-non-suspended tenants (suspended ones are skipped except for retention
-sweeps passed `include_suspended=True`) and calls `send_task` with a
+non-suspended tenants (suspended ones are skipped except for the wrappers
+passed `include_suspended=True`: the retention sweeps, and the money jobs
+`reconcile-pending-refunds` and `allocate-credit-sources`, because a
+suspended store's open refunds still hold its customers' money) and calls `send_task` with a
 `_schema_name` header per tenant. It returns plain dicts, not
 `AsyncResult` objects, because the JSON result serializer cannot encode
 those. Calling the underlying task directly from beat would run it against
@@ -147,6 +149,8 @@ Most entries fall back to hourly when `DEBUG` is on.
 | `purge-expired-tenant-archives` | `tenant.tasks.purge_expired_tenant_archives` | daily 03:00 | public schema, not a fan-out |
 | `process-tenant-billing` | `tenant.tasks.process_tenant_billing` | daily 06:00 | public schema, not a fan-out |
 | `auto-cancel-stuck-pending-orders` | `tenant.tasks.fanout_auto_cancel_stuck_pending_orders` | every 15 min | the only place failed-payment stock is released |
+| `reconcile-pending-refunds` | `tenant.tasks.fanout_reconcile_pending_refunds` | hourly | suspended stores included; asks the provider about every refund attempt `PENDING` past `REFUND_RECONCILE_AFTER_MINUTES` and settles or declines only on an unambiguous answer (`order/refund_reconciliation.py`; see [Order lifecycle](/dev/flows/order-lifecycle#unknown-outcomes)) |
+| `allocate-credit-sources` | `tenant.tasks.fanout_allocate_credit_sources` | every 5 min | suspended stores included; decides every credit source with no allocation and issues receipts deferred on them (`order/credit_allocation_backfill.py`; see [Order lifecycle](/dev/flows/order-lifecycle#credit-allocation)) |
 | `process-loyalty-points-expiration` | `tenant.tasks.fanout_process_points_expiration` | daily 03:00 | |
 | `expire-gift-cards` / `deliver-scheduled-gift-cards` / `send-gift-card-expiry-reminders` | `tenant.tasks.fanout_*` | 03:00 / 06:00 / 06:00 | |
 | `check-low-stock-products` | `tenant.tasks.fanout_check_low_stock_products` | hourly | |
@@ -169,7 +173,7 @@ Most entries fall back to hourly when `DEBUG` is on.
 |---|---|
 | `core/tasks.py` | health monitor, backups, cache clear, session and history cleanup, abandoned carts, Meilisearch sync, inactive-user mail |
 | `tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
-| `order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, checkout abandonment, `push_order_event_to_gateway` |
+| `order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment, `push_order_event_to_gateway` |
 | `order/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
 | `shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list (and the order notes for a refused one), COD reconciliation and alerts, arrival notification |
 | `shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, arrival notification |

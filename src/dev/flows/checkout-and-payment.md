@@ -389,16 +389,23 @@ endpoint, so django-tenants selects the schema and dj-stripe verifies
 against that schema's `WebhookEndpoint` secret. Handlers live in
 `order/signals/handlers.py`: `payment_intent.succeeded`,
 `payment_intent.payment_failed`, `payment_intent.requires_action`,
-`charge.refunded`, `refund.failed` / `refund.updated` / `charge.refund.updated`
-(one handler, `handle_stripe_refund_failed`), `charge.dispute.created`,
-`charge.dispute.closed`, `checkout.session.completed` and
-`checkout.session.expired`. Each except the refund handlers marks
+`charge.succeeded` / `charge.updated` (the fee, `handle_stripe_charge_fee`),
+`refund.created` / `refund.updated` (one handler, `handle_stripe_refund_made`),
+`refund.failed` / `refund.updated` / `charge.refund.updated`
+(one handler, `handle_stripe_refund_failed`), `charge.refunded` (gift card
+purchases only), `charge.dispute.created`, `charge.dispute.closed`,
+`checkout.session.completed` and `checkout.session.expired`. The endpoint
+the platform provisions subscribes every event (`tenant/provisioning.py`,
+`enabled_events=["*"]`); an endpoint created by hand must deliver at least
+`refund.created` and `refund.updated`, or no Stripe refund reaches an
+order's ledger, because `charge.refunded` books none. Each except
+the fee and refund handlers marks
 `metadata["webhook_processed_<event_id>"]` under a row lock before doing
-any work; `charge.refunded` is guarded by the payment ledger instead,
-because it carries the charge's cumulative refunded amount and the ledger
-records only what it does not hold yet, and a failed refund is one
-`REFUND_REVERSAL` row keyed on the refund id, which the three event types
-and redeliveries book once. `payment_intent.succeeded` and
+any work. The refund handlers are guarded by the payment ledger instead:
+a refund is one REFUND row and a failed refund one `REFUND_REVERSAL` row,
+both keyed on the Stripe refund id, so every event type and redelivery
+books once, and both read the refund's current status from Stripe rather
+than the event's snapshot, because Stripe does not order its events. `payment_intent.succeeded` and
 `checkout.session.completed` record the charge on the ledger (the
 event's `amount_received`, or the session's `amount_total`, keyed on the
 PaymentIntent id), so the second of the two adds nothing.
@@ -478,8 +485,8 @@ arrived through a real checkout — see
   repeat for the same cart returns the first order, backed by the
   `order_payment_id_unique` index (section 5).
 - **Stripe webhooks.** `metadata["webhook_processed_<event_id>"]`,
-  written under `select_for_update` before processing, except
-  `charge.refunded`, which the ledger guards.
+  written under `select_for_update` before processing, except the
+  refund events, which the ledger guards by the Stripe refund id.
 - **Money movements.** The payment ledger's
   `UNIQUE (provider, provider_reference, kind)` records each charge,
   cash collection and refund once, whichever webhook or caller reports
