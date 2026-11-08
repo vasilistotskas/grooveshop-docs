@@ -52,7 +52,7 @@ Select it and choose **Deactivate selected values** (or, for a whole attribute, 
 - **How filters combine.** Two values of the same attribute mean "or": Black and White shows products that are black or white. Values of different attributes mean "and": Black and 2 metres shows only products that are both.
 - **Languages**: a value shows in the visitor's language. If the translation is missing, the product page shows it in another language that has it, Greek first.
 - **Deleting cannot be undone.** Deleting an attribute erases all its values and removes them from every product. Deleting a value removes it from every product. Check the **Usage** column first.
-- **Search**: attribute names and values help the store's search find products, Greeklish spellings included. Adding or removing a value on a product updates search at once. Renaming a value reaches search with the nightly update.
+- **Search**: attribute names and values help the store's search find products, Greeklish spellings included. Adding or removing a value on a product updates search at once. Renaming an attribute or a value updates search shortly after.
 - Values are ordered per attribute: reordering sizes never moves colours.
 
 ## Related

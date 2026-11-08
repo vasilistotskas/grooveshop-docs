@@ -15,6 +15,7 @@ You give money back from the order itself: for a return, a goodwill gesture, or 
 - The refund form: **Amount**, **Reason** and, only for cash on delivery or a bank transfer you confirmed, **How it was paid back**.
 - The **Payment Transactions** tab of the order: every charge, refund and chargeback, with its amount and reason.
 - The **Refund → Cancelled but still paid** filter in the order list, and **Canceled orders to refund** on the [Dashboard](/admin/getting-started/dashboard).
+- The **Overcharge → Paid more than the order is for** filter, and **Orders paid twice** on the Dashboard: orders the customer paid twice. See [A customer paid twice](/admin/sales/orders#a-customer-paid-twice).
 
 ## Tasks
 

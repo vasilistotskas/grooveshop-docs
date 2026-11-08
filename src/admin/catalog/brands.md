@@ -32,7 +32,7 @@ Open the brand, change the **Name** and save. The change shows on all its produc
 
 - **The name is the same in every language.** Brands are not translated.
 - **Each name exists once.** You cannot create a second brand with the same name.
-- **In the store**: the brand shows on the product card and page, and the product list has a brand filter. The store's search does not look in the brand name; put it in the product name too if customers should find it that way.
+- **In the store**: the brand shows on the product card and page, and the product list has a brand filter. The store's search also finds products by their brand name, and renaming a brand updates the search shortly after.
 - **In the feeds**: a product without a brand is sent to Meta, TikTok and Google with your store's name as the brand.
 - **Deleting a brand does not delete products.** Its products are simply left without a brand.
 

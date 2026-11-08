@@ -495,7 +495,10 @@ Every order line stores the VAT rate it was sold at
 rate the cart priced the line with, and `OrderItem.save()` snapshots the
 product's current rate for any other writer; lines older than the column
 were backfilled from their product (`order/migrations/0065_backfill_orderitem_vat_rate.py`).
-Nothing reads `product.vat` for an order again, so editing, re-pointing or
+Every product has a rate: `Product.vat` is NOT NULL in the database and
+`on_delete=PROTECT` (`product/models/product.py`), so no line is ever
+snapshotted from a missing rate and there is no 0% fallback anywhere on the
+path. Nothing reads `product.vat` for an order again, so editing, re-pointing or
 deleting a `Vat` row leaves existing orders' documents alone.
 
 Every line also stores the part of the order's discount it carries
@@ -539,23 +542,84 @@ points: `refunded_before_receipt`) and what is refunded later is credited,
 so recomputing would count a later refund twice. Correcting a line's
 `vat_rate` therefore changes only a receipt not yet issued. For the same reason the order item
 admin offers `vat_rate` for correction only until the order's invoice
-carries a MARK, and hides it on the add page, where `save()` snapshots the
-product's rate. The full rationale, with the legal references, is in
+carries a MARK; a correction rewrites the order's `OrderVatLine` rows
+(`order/vat_snapshot.py: write_vat_lines`), which the turnover report reads.
+The admin cannot add a line (see below). The full rationale, with the legal references, is in
 [Order system](/dev/django/reference/order-system).
 
-### Staff-added order lines
+### A placed order's lines are a record
 
-`POST /api/v1/order-items` is staff-only, and the line price is never a
-request field: `OrderItemViewSet.perform_create` stores
-`_line_price(order, product)` (`order/views/item.py`). That is the figure
-checkout stores, VAT included and after the product discount: the
-product's `final_price`, never its net `price`, which left a staff-added
-line under-priced by its VAT on the invoice and in myDATA. An order priced
-for a wholesale group at checkout (`metadata["b2b_pricing"]`) prices the
-new line for that same group, through `B2BPricingService.resolve_single`,
-not for the buyer's group today. If that group no longer exists the line
-is refused with a 400 on `order` rather than sold at retail. See
-[B2B](/dev/flows/b2b).
+A line's product, quantity and price decide `amount_due`, the VAT lines
+(`OrderVatLine`, written once at checkout by `order/vat_snapshot.py`), the
+invoice and the stock taken, and nothing recomputes those when a line is
+edited. So no surface edits one:
+
+- **The admin.** `OrderItemInline` is read-only with no add or delete;
+  `OrderItemAdmin` shows the product, quantity, price and restock counters
+  read-only and offers neither add nor delete (staff can still annotate a
+  line and correct its `vat_rate`, above). `OrderAdmin.has_add_permission` is
+  false, so there is no "Add order": an order is placed by checkout, which
+  prices it, takes the stock, reserves the discounts and writes the VAT
+  lines. `shipping_price` and `amount_due` are read-only on the order form,
+  like the discounts and the gift-card amount (`order/admin.py`).
+- **The API.** The staff write routes of `order-items` (`POST`, `PUT`,
+  `PATCH`, `DELETE`) were removed; `order/urls.py` mounts only `GET` list and
+  detail and `POST order-items/{id}/restock`. The one change made to a line
+  after checkout is a restock.
+- **The snapshot.** `OrderItem.product_name` (the product's name in the
+  order's `language_code`, then its parler fallback chain, then any language:
+  `order/models/item.py: product_name_for`) and `OrderItem.sku` are written
+  when the line is created, like `vat_rate`; `save()` fills them for any
+  writer that does not, and `bulk_create` callers pass them. The invoice, the
+  order emails (the `item.product_name` template variable), the admin, the order-item API
+  (`productName`, `sku`) and its `product__name` / `product__sku` filters read
+  the snapshot, so renaming or re-coding a product cannot rewrite a receipt,
+  an email or a history already issued. The nested `product` object of the
+  order API is still the live product (the storefront links to it); a
+  consumer that prints a placed line's name reads `productName`. The
+  storefront's order detail and checkout success pages do, in every design
+  (`app/components/Storefront/Account/OrderDetail.vue`,
+  `app/components/Storefront/CheckoutSuccess.vue` and their copies under
+  `app/components/variants/webside/`).
+- **The rollout.** Both columns are NOT NULL with `db_default=''`
+  (`order/migrations/0100_order_overcharged_at_and_line_snapshot.py`);
+  migration 0101 copies the current product into every existing line. The
+  previous release keeps inserting lines with `''` while it still serves, so
+  run `manage.py backfill_line_snapshots --all-tenants`
+  (`order/line_snapshot.py`, idempotent) immediately after the rollout of a
+  deploy that ships the columns. Until it has run, such a line prints a blank
+  name in its emails and a blank name and SKU on its invoice; nothing falls
+  back to the live product.
+
+### An order paid twice
+
+`order/payment_ledger.py: PaymentLedger.sync_overcharge` runs for every new
+ledger row, under the order lock. It sets `Order.overcharged_at` while what
+the ledger holds (captured, less refunded, less charged back) exceeds
+`calculate_order_total_amount()` by more than `PAYMENT_AMOUNT_TOLERANCE`, and
+clears it when a refund, a reversal or a chargeback brings the sums back. On
+the change from clear to set it logs ERROR, writes a note on the order and
+sends the `ops.overcharged` operational email once (`order/emails.py`); a
+redelivered provider row is not new and never reaches it. Both CHARGE rows
+stay, the order keeps its first `payment_id` (Viva `_handle_payment_created`
+and Stripe `checkout.session.completed` stop after booking the second
+payment, so there is no second confirmation email), and nothing is refunded
+automatically: which payment to give back is a person's call. Staff see the
+"Orders paid twice" dashboard row (`admin/dashboard/store/widgets.py`), the
+order list's **Overcharge** filter (`?overcharged=yes`,
+`OrderQuerySet.overcharged`) and the read-only **Overcharged at** field, and
+clear the flag by refunding the excess with the order's Refund action.
+
+A second Stripe intent is booked through its order binding:
+`payment_intent.succeeded` finds the order by `payment_id`, and an intent the
+order no longer names (a second tab, or an older intent paid after a retry
+opened a newer one) is found by the binding metadata the server wrote on it
+(`OrderService._bound_order_uuid`: purpose `order`, this order's uuid, this
+tenant), so it is booked and flagged like any second payment. The refund and
+dispute events find the order through the ledger's CHARGE row for the intent
+(`order/signals/handlers.py: _locked_order_for_stripe_intent`), so an event on
+the second intent reaches the ledger and moves the flag. The full rule is §7.3
+of [Order system](/dev/django/reference/order-system).
 
 ### Auto-cancel of stuck pending orders
 
@@ -656,6 +720,11 @@ customer racing can overshoot by the number in flight. See
   `RefundNotification` before the send, never decided by comparing counts.
 - **Restocking moves no money.** `restock` is stock only; money is decided
   at order level.
+- **A placed order's lines and amounts are a record.** No admin surface or
+  API route edits a line's product, quantity or price, or the order's
+  `amount_due`; the name and SKU printed for a line are its own snapshot.
+- **A second payment is flagged, never silently booked or refunded.**
+  `Order.overcharged_at` follows the ledger in both directions.
 - **An order's tax documents never re-read the catalogue's VAT.** The
   invoice and myDATA split each line at `OrderItem.vat_rate` and tax
   shipping and the fee at the goods' rates (`order/taxation.py`).
@@ -773,7 +842,7 @@ customer racing can overshoot by the number in flight. See
 | File | Role |
 |---|---|
 | `grooveshop-django-api/order/enum/status.py` | `OrderStatus`, `PaymentStatus`, `SETTLED_PAYMENT_STATUSES`, `RETURN_HANDLING_STATUSES` |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `stored_value`, `stored_value_refundable`, `refundable_value`, `refund_open`, `refund_status`, `plan_refund`, `record_charge`, `record_cod_collection`, `record_refund`, `record_cod_refund`, `record_refund_reversal`, `settle_attempt`, `ensure_charge` |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `stored_value`, `stored_value_refundable`, `refundable_value`, `refund_open`, `refund_status`, `sync_overcharge`, `plan_refund`, `record_charge`, `record_cod_collection`, `record_refund`, `record_cod_refund`, `record_refund_reversal`, `settle_attempt`, `ensure_charge` |
 | `grooveshop-django-api/order/models/refund_attempt.py` | `RefundAttempt` (kinds `PROVIDER`, `STORED_VALUE`; `PENDING`, `SETTLED`, `DECLINED`), `ATTEMPT_RESERVATION` |
 | `grooveshop-django-api/order/models/payment_transaction.py` | `PaymentTransaction`, its unique and check constraints |
 | `grooveshop-django-api/order/enum/payment_transaction.py` | `PaymentTransactionKind` |
@@ -791,9 +860,11 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email` |
 | `grooveshop-django-api/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
-| `grooveshop-django-api/order/views/item.py` | `restock`, and `_line_price` for a staff-added line |
-| `grooveshop-django-api/order/admin.py` | `refund_payment`, `RefundOrderForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK |
-| `grooveshop-django-api/order/models/item.py` | `OrderItem.vat_rate` and the snapshot in `save()` |
+| `grooveshop-django-api/order/views/item.py`, `order/urls.py` | `OrderItemViewSet`: read-only list and detail, and `restock` |
+| `grooveshop-django-api/order/line_snapshot.py`, `order/management/commands/backfill_line_snapshots.py` | The line name and SKU backfill |
+| `grooveshop-django-api/admin/dashboard/store/widgets.py` | The "Orders paid twice" row |
+| `grooveshop-django-api/order/admin.py` | `refund_payment`, `RefundOrderForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK; `OverchargedFilter`; no add on `OrderAdmin`, read-only `OrderItemInline` and `OrderItemAdmin` |
+| `grooveshop-django-api/order/models/item.py` | `OrderItem.vat_rate`, `product_name`, `sku` and their snapshot in `save()`; `product_name_for` |
 | `grooveshop-django-api/order/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
 | `grooveshop-django-api/order/discounts.py` | `allocate_capped`, `discounted_line_gross`, `spread_by_remaining_value` |
 | `grooveshop-django-api/order/discount_snapshot.py` | `heal_discount_allocation` |
@@ -814,4 +885,5 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-agent-gateway/internal/server/internalapi.go` | `POST /internal/events/order-status` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/[id]/cancel.post.ts` | Cancel proxy that returns the typed refusal body |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/error.ts` | `forwardUpstreamClientError`, `forwardUpstreamDocumentedError` |
-| `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/Account/OrderDetail.vue` | Cancel button gated on `canBeCanceled`, `CANCEL_REFUSAL_KEYS` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/Account/OrderDetail.vue` | Cancel button gated on `canBeCanceled`, `CANCEL_REFUSAL_KEYS`; each line printed by its `productName` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/CheckoutSuccess.vue`, `app/components/variants/webside/Storefront/` | The checkout success lines and the webside copies, by `productName` |

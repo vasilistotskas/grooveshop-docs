@@ -39,6 +39,7 @@ The filters panel lets you combine:
 - **Status** and **Payment Status** (you may pick several values)
 - **Document Type** (receipt or invoice) and **Wholesale**
 - **Refund**: **Cancelled but still paid** (see [Refunds and disputes](/admin/sales/refunds-and-disputes))
+- **Overcharge**: **Paid more than the order is for** (see [A customer paid twice](#a-customer-paid-twice))
 - **Needs follow-up** and **Recent Orders**
 - the order source and cart source filters
 - dates, country, region, payment method, shipping provider and shipping kind
@@ -49,7 +50,7 @@ Press the apply button once you have chosen. The search box finds an order by nu
 
 Cards at the top show **Status**, **Payment**, **Total**, **Customer**, **Shipment** and **Receipt** (or **Invoice** for an invoice order). Below them are tabs: **Order Information**, **Billing / Invoice** (only when business invoices are switched on, or on an order that asked for an invoice), **Customer Information**, **Shipping Address**, **Payment Information**, **Shipping & Tracking** and **Additional Information**.
 
-Further down: the order lines, **Payment Transactions** (every charge, refund and chargeback), the receipt and credit documents, the order's history, and an ACS or BoxNow tab when a courier is attached.
+Further down: the order lines (read-only, see [Things to know](#things-to-know)), **Payment Transactions** (every charge, refund and chargeback), the receipt and credit documents, the order's history, and an ACS or BoxNow tab when a courier is attached.
 
 The header holds **Refund (amount, reason)** while money can still be refunded, **Download shipping voucher (PDF)** and, if the platform issues your receipts, the **Invoicing & myDATA** menu.
 
@@ -127,6 +128,25 @@ A **Completed** order cannot be marked **Returned**. A card order usually become
 
 A late or repeated message from Viva Wallet or Stripe never moves a paid, refunded or cancelled payment back to **Pending** or **Failed**.
 
+## A customer paid twice
+
+Sometimes a customer pays the same order twice, for example from two browser tabs, or by paying an older payment link after opening a new one. Both payments stay on the order and the order is flagged:
+
+- on the [Dashboard](/admin/getting-started/dashboard) as **Orders paid twice**;
+- in the order list filter **Overcharge → Paid more than the order is for**;
+- on the order's **Payment Information** tab, as **Overcharged at**;
+- in the order's history, and by an email to your team (**Customer charged more than the order is for**, under **To your team** in [Emails](/admin/settings/emails)).
+
+Nothing is refunded automatically, because which payment to give back is your call. The customer does not get a second confirmation email.
+
+### Refund the extra payment
+
+1. Open the order from the **Orders paid twice** row or the filter.
+2. On **Payment Transactions**, compare what was charged with the order's **Total**.
+3. Press **Refund (amount, reason)**, enter the extra amount, fill in **Reason** and confirm.
+
+Once the refunds bring what you hold back to the order's total, the flag clears by itself and the order leaves the dashboard row. There is nothing to tick off.
+
 ## Orders to follow up
 
 A customer who ordered a week ago and still has no parcel is about to contact you. The platform flags those orders so you can contact them first.
@@ -162,7 +182,8 @@ A customer can cancel an order from their account while it is **Pending** or **P
 ## Things to know
 
 - **Guest orders** work like any other: the customer gets every email. A guest can open their order from the page they reach at the end of checkout for 14 days after ordering, and after that only you can: send a guest their invoice yourself if they ask for it later. Guests get no notifications inside the store.
-- **Editing money fields moves no money.** Changing **Amount Due** only changes what the screen shows. To give money back, use **Refund (amount, reason)**.
+- **There is no Add order.** Every order is placed by checkout on the store, which prices it, holds the stock and applies the discounts.
+- **A placed order's lines and amounts cannot be changed.** The products, quantities and prices of its lines, **Amount Due** and **Shipping Price** are read-only, on the order page and under **Order Items**: they are what the customer was charged and what the receipt shows. To give money back, use **Refund (amount, reason)**; to put returned goods back in stock, see [Refunds and disputes](/admin/sales/refunds-and-disputes). Each line also keeps the product name and SKU it was sold under, so renaming a product later does not change old orders, emails or receipts.
 - **Payment Method and Payment Gateway are different.** **Payment Method** is what the customer chose. **Payment Gateway** is filled in by the platform to match the provider's messages: leave it alone.
 - **Wholesale orders** keep the customer group and discount they were priced with. Changing the customer's group later does not change old orders.
 - **An empty Shipment column** means no voucher has been created yet. The voucher button will say so.

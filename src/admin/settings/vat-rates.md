@@ -34,7 +34,7 @@ The **Usage Status** filter shows rates that are **Currently in Use**, **Not in 
 
 1. Create the new rate, if it does not exist.
 2. Change the rate on the products, one by one.
-3. When the old rate shows **0 products** under **Usage**, delete it.
+3. When the old rate shows **0 products** under **Usage**, delete it. A rate that still has products cannot be deleted.
 
 Do not change the **Value** of a rate in use unless the law changed: all its products change their final price at once.
 
@@ -47,8 +47,9 @@ If the new rate is not one myDATA accepts, saving is refused. Get in touch with 
 ## Things to know
 
 - **Orders do not change.** Each order line keeps the price and the rate it was sold at. Changing or deleting a rate does not touch orders and receipts already made.
-- **Deleting a rate in use.** Its products are left without a rate, which means 0% VAT and a lower final price. Check **Usage** first.
-- **A new product** has no rate until you pick one. Without a rate it sells at 0%.
+- **A rate in use cannot be deleted.** The delete page lists the products that still have it and does not let you confirm. Move those products to another rate first, then delete it.
+- **Each rate exists once.** Adding a rate that already exists is refused with **A VAT rate with this value already exists.**
+- **Every product has a rate.** The **VAT** field on a product is required and cannot be left empty, so no product ever sells without VAT.
 - **One rate per product**, whatever the destination country.
 - **Shipping and the payment fee** have no rate of their own. They are taxed at the rate of the order's products. If the order mixes rates, they are split by value. For example, with €60 of products at 24% and €40 at 13%, €5 shipping splits into €3 at 24% and €2 at 13%.
 - **Discounts and gift cards.** A promotion's discount lowers the value of the products it covers, and so their VAT. A gift card is a payment and does not change the VAT.

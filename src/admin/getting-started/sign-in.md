@@ -41,6 +41,22 @@ The page says the same thing whether or not the address has an account, so it re
 
 The reset does not sign you in. Platform team accounts are still asked for their authenticator code afterwards.
 
+### Too many wrong passwords
+
+Wrong passwords are counted, and after too many the sign-in page answers **Too many failed sign-in attempts. Try again later.** Even the right password is refused while that message shows.
+
+- Five wrong passwords for one account from the same place (the same internet connection) within 15 minutes lock that account from that place only. You and your colleagues can still sign in from anywhere else.
+- Wrong passwords for one account from many places add up too: after 50 within 15 minutes the account is locked everywhere.
+- Many wrong passwords from one place, whatever the accounts, lock that place for every account.
+
+The lock ends 15 minutes after the first wrong attempt. Trying again while it lasts does not make it longer.
+
+To get back in at once, reset your password with **Forgotten your password or username?** (see above). The reset unlocks the account. Your platform team can also unlock it for you.
+
+### "Sign-in is temporarily unavailable"
+
+If the page says **Sign-in is temporarily unavailable, try again shortly.**, the platform cannot count sign-in attempts for a moment and refuses every sign-in on purpose, so nobody can guess passwords while the count is down. Wait a few minutes and try again. If it lasts, [contact support](/admin/help/contact-support).
+
 ### Sign out
 
 Click your name at the bottom of the sidebar, then **Log out**.
@@ -53,7 +69,7 @@ Change your password. That signs out every other device.
 
 - A session ends two weeks after you sign in, even if you keep working in the admin.
 - The store's sign-in asks your team (Owner, Admin, Staff) only for email and password. Use a strong password you do not use anywhere else, and give every person their own account.
-- Platform team accounts, which can open every store, also need a second step: after the password, the same page asks for a six-digit code from an authenticator app, or a recovery code. If the sign-in page asks you for a code, the account you used is a platform team account, not a store account.
+- Platform team accounts, which can open every store, also need a second step: after the password, the same page asks for a six-digit code from an authenticator app, or a recovery code. If the sign-in page asks you for a code, the account you used is a platform team account, not a store account. Five wrong codes refuse further tries for 15 minutes (**Too many wrong codes. Try again in a few minutes.**). A platform team account that signs in to the API with a token gives the same code there, and must first set up its authenticator by signing in to the admin once.
 - A customer account cannot get into the admin, even with the same email as yours.
 - When a colleague leaves, untick **Active** on their membership. They lose access on their next click.
 - You change the admin language from your account menu (Greek, English, German). It changes only your own view.

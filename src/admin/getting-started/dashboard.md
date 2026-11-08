@@ -51,6 +51,7 @@ Work that is waiting. Each row opens its list already filtered to those records.
 | **Orders to process** | Orders in **Pending**. |
 | **Orders to follow up** | Orders placed `ORDER_FOLLOW_UP_DAYS` or more calendar days ago that are still **Pending**, **Processing** or **Shipped**: the customer is still waiting for the parcel. |
 | **Canceled orders to refund** | Paid, then canceled, and the customer has not had the money back. |
+| **Orders paid twice** | The customer paid more than the order is for: refund the extra payment. See [A customer paid twice](/admin/sales/orders#a-customer-paid-twice). |
 | **COD cash ACS has not paid out** | Cash-on-delivery parcels delivered more than 10 days ago with no payout from ACS. |
 | **Stale ACS shipments** | Parcels with no movement for three days, or orders still without a voucher (the courier's shipping label) one day on. |
 | **Running low on stock** | Active products with 1 to 9 in stock. |
