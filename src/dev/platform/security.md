@@ -72,14 +72,18 @@ for that address; a password reset from the login page or
 keys are `global:` (one budget across every store host) and `strict:`.
 
 **If the cache is down**, staff sign-in is refused on purpose
-(`StaffLoginUnavailable`): the admin shows "Sign-in is temporarily
-unavailable, try again shortly." and the token endpoint answers
-`503 staff_login_unavailable`, with one ERROR line per attempt and the
-password never checked; otherwise overloading Redis would lift the limits.
-The way in during a Redis incident is the cluster:
-`manage.py changepassword <email>` through `kubectl --context grooveshop exec` in a backend pod sets a
-staff password without the cache. `reset_staff_mfa` clears the counters, so it
-needs Redis back first. The full design is in
+(`StaffLoginUnavailable`), with the password never checked; otherwise
+overloading Redis would lift the limits. The admin form shows "Sign-in is
+temporarily unavailable, try again shortly." with one ERROR line per attempt.
+The token endpoint normally answers `429 throttled` before its view runs:
+`StaffLoginThrottle` (`core/api/throttling.py`, rate `staff_login` in
+`settings.py: REST_FRAMEWORK`, off under `DEBUG`) is `fail_closed`, so its
+strict-key cache error denies the request. Only where that rate is off does
+the view itself answer `503 staff_login_unavailable`. Nothing signs a staff
+member in while Redis is down: `manage.py changepassword <email>` (through
+`kubectl --context grooveshop exec` in a backend pod) sets a password without
+the cache, but the next sign-in is still refused, and `reset_staff_mfa`
+needs the cache to clear the counters. Restore Redis first. The full design is in
 [Staff identity](/dev/django/reference/api-staff-identity).
 
 ## Authorisation
@@ -281,9 +285,9 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
 
 ## Failure modes
 
-- Redis is unreachable: staff sign-in, admin and API alike, answers
-  "temporarily unavailable" (`503 staff_login_unavailable`) until it is back,
-  rather than lifting the attempt limits.
+- Redis is unreachable: staff sign-in is refused until it is back (the admin
+  says "temporarily unavailable", the token endpoint answers `429 throttled`
+  from its fail-closed throttle), rather than lifting the attempt limits.
 - An operator's `is_staff` is unticked: `PlatformStaffBackend.get_user`
   refuses the session on the next request and the token validator refuses
   the token; the admin UI and the API close together.
@@ -307,6 +311,7 @@ views (`settings.py: DEFAULT_THROTTLE_RATES`).
 | `grooveshop-django-api/tenant/auth_backends.py` | `PlatformStaffBackend`, `TenantRolePermissionBackend`, `PLATFORM_IDENTITY_ATTR` |
 | `grooveshop-django-api/tenant/membership.py` | `is_store_staff`, `is_platform_superuser`, `get_membership` |
 | `grooveshop-django-api/tenant/api_tokens.py`, `tenant/staff_api.py` | Staff tokens |
+| `grooveshop-django-api/core/api/throttling.py` | `StaffLoginThrottle`, `ResilientThrottleMixin`: the token endpoint's fail-closed throttle |
 | `grooveshop-django-api/tenant/staff_login_limits.py` | Staff sign-in attempt counters, `StaffLoginLocked`, `StaffLoginUnavailable` |
 | `grooveshop-django-api/admin/staff_mfa.py` | `requires_mfa`, second-factor check and its lockout, shared by the admin and the token login |
 | `grooveshop-django-api/core/management/commands/reset_staff_mfa.py` | Removes a lost authenticator and clears the account's attempt counts |

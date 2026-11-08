@@ -142,8 +142,10 @@ Nothing is refunded automatically, because which payment to give back is your ca
 ### Refund the extra payment
 
 1. Open the order from the **Orders paid twice** row or the filter.
-2. On **Payment Transactions**, compare what was charged with the order's **Total**.
+2. Work out the extra amount on **Payment Transactions**: everything charged, less what was already refunded or charged back, minus the order's **Total**.
 3. Press **Refund (amount, reason)**, enter the extra amount, fill in **Reason** and confirm.
+
+The refund goes back against the order's payments oldest first; you cannot choose which payment it goes to. To give back one particular payment, refund it in your Viva Wallet or Stripe account instead: such a refund reaches the order on its own (see [Refunds and disputes](/admin/sales/refunds-and-disputes)).
 
 Once the refunds bring what you hold back to the order's total, the flag clears by itself and the order leaves the dashboard row. There is nothing to tick off.
 

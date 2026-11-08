@@ -184,4 +184,5 @@ PreSync hook runs the same steps as production. Watch it with
 | `grooveshop-infrastructure/scripts/staging-refresh.sh` | Refresh script |
 | `grooveshop-infrastructure/scripts/staging-arm-features.py` | Feature arming, step 8 |
 | `grooveshop-django-api/devtools/demo_store.py` | The demo seed, step 7, and its standard VAT row |
+| `grooveshop-django-api/vat/migrations/0007_seed_default_vat_rates.py` | Seeds every store's VAT rows, the 24% one included |
 | `grooveshop-infrastructure/docs/staging.md` | The runbook this page distils |

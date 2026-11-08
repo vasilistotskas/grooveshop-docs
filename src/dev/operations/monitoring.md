@@ -202,7 +202,8 @@ by a namespace regex.
 - A failed Celery task logs one ERROR line from `MonitoredTask.on_failure`
   with the traceback in `log.exception` and redacted arguments
   (`core/tasks.py`); Celery's own `celery.app.trace` line also carries
-  one. That line and the success line from `MonitoredTask.on_success` carry
+  one. The `MonitoredTask.on_failure` line, not Celery's, and the success line
+  from `MonitoredTask.on_success` carry
   `log.duration_ms`, `log.db_queries` and `log.db_ms`, measured around the
   task body by `MonitoredTask.__call__`.
 - Browser errors (uncaught Vue, startup and window errors, unhandled

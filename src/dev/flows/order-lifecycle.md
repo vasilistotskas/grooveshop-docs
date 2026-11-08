@@ -615,7 +615,9 @@ A second Stripe intent is booked through its order binding:
 order no longer names (a second tab, or an older intent paid after a retry
 opened a newer one) is found by the binding metadata the server wrote on it
 (`OrderService._bound_order_uuid`: purpose `order`, this order's uuid, this
-tenant), so it is booked and flagged like any second payment. The refund and
+tenant), so it is booked and flagged like any second payment. The staff Refund action plans a refund against the order's payments oldest
+first (`PaymentLedger.plan_refund`), so it cannot target the second payment
+by itself. The refund and
 dispute events find the order through the ledger's CHARGE row for the intent
 (`order/signals/handlers.py: _locked_order_for_stripe_intent`), so an event on
 the second intent reaches the ledger and moves the flag. The full rule is §7.3
@@ -723,8 +725,10 @@ customer racing can overshoot by the number in flight. See
 - **A placed order's lines and amounts are a record.** No admin surface or
   API route edits a line's product, quantity or price, or the order's
   `amount_due`; the name and SKU printed for a line are its own snapshot.
-- **A second payment is flagged, never silently booked or refunded.**
-  `Order.overcharged_at` follows the ledger in both directions.
+- **A net overpayment is flagged, never silently booked or refunded.**
+  `Order.overcharged_at` is set only while captured, less refunded, less
+  charged back exceeds the order total by more than
+  `PAYMENT_AMOUNT_TOLERANCE`, and follows the ledger in both directions.
 - **An order's tax documents never re-read the catalogue's VAT.** The
   invoice and myDATA split each line at `OrderItem.vat_rate` and tax
   shipping and the fee at the goods' rates (`order/taxation.py`).
@@ -861,6 +865,7 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
 | `grooveshop-django-api/order/views/item.py`, `order/urls.py` | `OrderItemViewSet`: read-only list and detail, and `restock` |
+| `grooveshop-django-api/product/models/product.py` | `Product.vat`: NOT NULL, `on_delete=PROTECT` |
 | `grooveshop-django-api/order/line_snapshot.py`, `order/management/commands/backfill_line_snapshots.py` | The line name and SKU backfill |
 | `grooveshop-django-api/admin/dashboard/store/widgets.py` | The "Orders paid twice" row |
 | `grooveshop-django-api/order/admin.py` | `refund_payment`, `RefundOrderForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK; `OverchargedFilter`; no add on `OrderAdmin`, read-only `OrderItemInline` and `OrderItemAdmin` |
