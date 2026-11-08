@@ -292,7 +292,8 @@ and everything else runs in the browser:
   after a 700 ms pause: as typed, then with the checkout's city, since ACS
   places a street only with its city or postcode. The address becomes
   the origin, with a dot on the map. A search that still finds nothing
-  leaves the map where it was.
+  frames the origin (the postcode or the shopper's position); with no
+  origin at all, the map keeps the view it had.
 - **Origin.** The checkout postcode is the starting point (the middle of
   its lockers, or of its three-digit area when it has none), until the
   shopper shares their position. Rows are sorted by distance from the
@@ -302,7 +303,8 @@ and everything else runs in the browser:
   search, the list asks the shopper to search and the map shows the whole
   catalogue.
 - **Location** (`useShopperLocation`) is one coarse fix on the
-  shopper's click on "My location", which clears the search first. Opening the picker never asks, except
+  shopper's click on "My location", which clears the search first.
+  Opening the picker never asks, except
   when the browser already reports the permission as granted, where it
   asks nothing and the map centres by itself. Denied and no fix in time
   each leave a line under the search, and a browser without geolocation
@@ -312,11 +314,14 @@ and everything else runs in the browser:
 A catalogue that fails to load is an error with a retry. The bulk route
 refuses to cache an empty answer (503), so a store whose stations have not
 synced yet recovers on the first request after the sync.
-A store without ACS credentials has no stations at all (the sync skips it
-and its checkout never offers ACS): Django's station routes answer it a
-plain 404 (`AcsStationViewSet.initial`,
+A store without ACS credentials is skipped by the sync (rows an earlier
+sync left stay, but nothing refreshes them) and its checkout never offers
+ACS. Django's station routes answer it a plain 404
+(`AcsStationViewSet.initial`,
 `grooveshop-django-api/shipping_acs/views/station.py`), which the bulk
-route forwards, so a stray request there is a warning, not a server error.
+route forwards when it asks Django, so a stray request there is a warning,
+not a server error. A catalogue the bulk route cached before the
+credentials were removed is served until that entry expires.
 
 ### Labels and the pickup list
 
