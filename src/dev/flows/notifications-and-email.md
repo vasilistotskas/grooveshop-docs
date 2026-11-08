@@ -543,7 +543,11 @@ explicit `env` entries on all four Django containers (backend,
 celery-worker, celery-beat, flower) in
 `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`.
 `env` beats every `envFrom`, so the relay configuration cannot be shadowed
-by a key that drifts back into `backend-secrets`.
+by a key that drifts back into `backend-secrets`. Since Django 6.1 those
+`EMAIL_*` variables fill `settings.MAILERS` rather than Django's `EMAIL_*`
+settings: the `default` mailer, `core.mail.DemoRecipientSuppressingBackend`,
+hands every send to the `relay` mailer, whose options they set
+(`settings.py`). The variable names did not change.
 
 Three details are counter-intuitive enough to be worth stating, each of
 which cost a production incident:
@@ -561,7 +565,8 @@ which cost a production incident:
   socket timeout at all: a relay that accepts the connection and then goes
   quiet blocks the Celery worker that ran the send, forever, with nothing
   in the logs and no failed task result. `settings.py` defaults it to 20s
-  so no deployment can inherit the `None`.
+  so no deployment can inherit the `None`, and the same value
+  (`EMAIL_SEND_TIMEOUT`) bounds the Resend request.
 - **The relay credential is a boot dependency of every management
   command.** `settings.py` raises `ImproperlyConfigured` when
   `EMAIL_HOST_PASSWORD` is still `changeme` under
@@ -688,6 +693,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/emails/types.py`, `emails/registry.py` | `EmailType` and the catalogue of every email |
 | `grooveshop-django-api/emails/send.py`, `emails/render.py`, `emails/transport.py` | `send_email`, `render`, the one sender |
 | `grooveshop-django-api/emails/resend.py` | The Resend HTTP client: which team's key, the request, the error text |
+| `grooveshop-django-api/settings.py` (`MAILERS`), `core/mail.py` | The `default` and `relay` mailers built from the `EMAIL_*` environment variables, and the demo-recipient filter every send passes |
 | `grooveshop-django-api/emails/log.py`, `emails/status.py`, `emails/tasks.py` | The `EmailLog` writes, the status enum, the retention sweep and the event task |
 | `grooveshop-django-api/emails/webhooks.py`, `emails/events.py`, `emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
 | `grooveshop-django-api/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
