@@ -16,7 +16,7 @@ You give money back from the order itself: for a return, a goodwill gesture, or 
 - The **Payment Transactions** tab of the order: every charge, refund and chargeback, with its amount and reason.
 - The **Refund → Cancelled but still paid** filter in the order list, and **Canceled orders to refund** on the [Dashboard](/admin/getting-started/dashboard).
 - The **Overcharge → Paid more than the order is for** filter, and **Orders paid twice** on the Dashboard: orders the customer paid twice. See [A customer paid twice](/admin/sales/orders#a-customer-paid-twice).
-- **Record refund outcome**, a button on the order page while a refund has had no answer from Viva Wallet or Stripe for more than an hour. See [A refund's result is unknown](#a-refund-s-result-is-unknown).
+- **Record refund outcome**, a button on the order page once a refund has had no answer from Viva Wallet or Stripe and the hourly check could not settle it. See [A refund's result is unknown](#a-refund-s-result-is-unknown).
 - **Settle chargeback (goods)**, a button on the order page after you lost a card dispute, and the **Chargeback → Goods not yet settled** filter. See [Card disputes](#card-disputes).
 - Alerts on the [Dashboard](/admin/getting-started/dashboard#alerts) when a refund needs you: **Refunds with an unknown outcome**, **Gift card and points refunds left unfinished**, **Receipts waiting for a refund** and the receipt and credit document alerts.
 
