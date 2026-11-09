@@ -9,6 +9,7 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
       { text: 'Πρώτα βήματα', link: '/el/admin/getting-started/first-steps' },
       { text: 'Σύνδεση & κωδικός', link: '/el/admin/getting-started/sign-in' },
       { text: 'Ρόλοι & ομάδα', link: '/el/admin/getting-started/roles-and-team' },
+      { text: 'Σύνδεση εφαρμογής AI', link: '/el/admin/getting-started/ai-apps' },
       { text: 'Πίνακας ελέγχου', link: '/el/admin/getting-started/dashboard' },
       { text: 'Αναζήτηση & παλέτα εντολών', link: '/el/admin/getting-started/search-and-command-palette' },
     ],

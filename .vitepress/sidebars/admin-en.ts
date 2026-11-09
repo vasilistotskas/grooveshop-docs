@@ -13,6 +13,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
       { text: 'First steps', link: '/admin/getting-started/first-steps' },
       { text: 'Sign-in & password', link: '/admin/getting-started/sign-in' },
       { text: 'Roles & team', link: '/admin/getting-started/roles-and-team' },
+      { text: 'Connect your AI app', link: '/admin/getting-started/ai-apps' },
       { text: 'Dashboard', link: '/admin/getting-started/dashboard' },
       { text: 'Search & command palette', link: '/admin/getting-started/search-and-command-palette' },
     ],
