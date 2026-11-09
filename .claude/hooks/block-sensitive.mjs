@@ -30,7 +30,8 @@ catch {
 const filePath = input.tool_input?.file_path || ''
 if (!filePath) process.exit(0)
 
-const p = filePath.split('\\').join('/')
+// Matched in lower case: on a case-insensitive disk `UV.LOCK` opens `uv.lock`.
+const p = filePath.split('\\').join('/').toLowerCase()
 const base = p.split('/').pop()
 
 /** [test, reason] pairs. First match wins. */
@@ -50,7 +51,7 @@ const RULES = [
     '.vitepress/generated/ is written by the sync and build scripts. Change the script or its source, then re-run pnpm dev or pnpm build:full.'],
   [() => base === 'sources.lock.json',
     'sources.lock.json pins the synced docs and is written by scripts/source-lock.mjs. Run node scripts/source-lock.mjs resolve (or the sources.yml workflow) and commit the result.'],
-  [() => base === 'CHANGELOG.md',
+  [() => base === 'changelog.md',
     'CHANGELOG.md is written by semantic-release. Never hand-edit it; the commit messages drive it.'],
   [() => base === 'pnpm-lock.yaml',
     'pnpm-lock.yaml is written by pnpm. Edit package.json and run pnpm install.'],
