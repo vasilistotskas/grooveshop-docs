@@ -54,7 +54,7 @@ Cards at the top show **Status**, **Payment**, **Total**, **Customer**, **Shipme
 
 Further down: the order lines (read-only, see [Things to know](#things-to-know)), **Payment Transactions** (every charge, refund and chargeback), the receipt and credit documents, the order's history, and an ACS or BoxNow tab when a courier is attached.
 
-The header holds **Refund (amount, reason)** while money can still be refunded, **Download shipping voucher (PDF)** and, if the platform issues your receipts, the **Invoicing & myDATA** menu. **Record refund outcome**, **Settle chargeback (goods)** and **Acknowledge receipt differences** appear only on an order that needs them; see [Refunds and disputes](/admin/sales/refunds-and-disputes) and [Receipts and credit documents](/admin/sales/receipts).
+The header holds **Return and refund** while money can still be refunded, **Restock returned items** on a **Delivered**, **Completed** or **Returned** order with units not back in stock, **Download shipping voucher (PDF)** and, if the platform issues your receipts, the **Invoicing & myDATA** menu. **Record refund outcome**, **Settle chargeback (goods)** and **Acknowledge receipt differences** appear only on an order that needs them; see [Refunds and disputes](/admin/sales/refunds-and-disputes) and [Receipts and credit documents](/admin/sales/receipts).
 
 ## Tasks
 
@@ -80,7 +80,7 @@ If the courier does not cancel the parcel (for example, it is already on a picku
 If the refund does not go through, the order stays cancelled and the money stays with you. See [Refunds and disputes](/admin/sales/refunds-and-disputes#an-order-was-cancelled-but-is-still-paid).
 
 ### Refund a customer
-Use **Refund (amount, reason)** on the order page. The whole process, including cash on delivery and card disputes, is on [Refunds and disputes](/admin/sales/refunds-and-disputes).
+Use **Return and refund** on the order page: choose the products that came back, or a goodwill amount, and put the units back in stock in the same step. The whole process, including cash on delivery and card disputes, is on [Refunds and disputes](/admin/sales/refunds-and-disputes).
 
 ### A bank transfer has arrived
 When the money for a bank-transfer order is in your account:
@@ -114,7 +114,7 @@ The order's history keeps who confirmed it, when, and how much. Card payments ar
 | **Returned** | The parcel came back to you. Stock does not go back by itself. | Refunded |
 | **Refunded** | A returned order whose money has all gone back. Final. | — |
 
-A **Completed** order cannot be marked **Returned**. A card order usually becomes **Completed** as soon as it is delivered, so for a return you simply refund it and put the goods back in stock by hand.
+A **Completed** order cannot be marked **Returned**. A card order usually becomes **Completed** as soon as it is delivered, so for a return you simply refund it with **Return and refund** and switch on **Put the returned units back in stock**.
 
 ## Payment statuses
 
@@ -145,9 +145,9 @@ Nothing is refunded automatically, because which payment to give back is your ca
 
 1. Open the order from the **Orders paid twice** row or the filter.
 2. Work out the extra amount on **Payment Transactions**: everything charged, less what was already refunded or charged back, minus the order's **Total**. If goods already came back on this order (refunded, or a lost dispute you settled as returned), take their value off the **Total** too: the order is no longer for those goods.
-3. Press **Refund (amount, reason)**, enter the extra amount, fill in **Reason** and confirm.
+3. Press **Return and refund**, enter the extra amount in **Goodwill amount**, choose the reason **Charged twice** and confirm.
 
-A refund always gives back the extra payment first. That part does not undo the sale, so it gets no credit document and does not reduce the receipt; only what you refund beyond it counts as goods returned. See [How a refund is judged](/admin/sales/refunds-and-disputes#how-a-refund-is-judged).
+A goodwill refund always gives back the extra payment first. A refund of products never does: the extra stays, to be refunded as a goodwill amount. That part does not undo the sale, so it gets no credit document and does not reduce the receipt; only what you refund beyond it counts as goods returned. See [How a refund is judged](/admin/sales/refunds-and-disputes#how-a-refund-is-judged).
 
 The refund goes back against the order's payments oldest first; you cannot choose which payment it goes to. To give back one particular payment, refund it in your Viva Wallet or Stripe account instead: such a refund reaches the order on its own (see [Refunds and disputes](/admin/sales/refunds-and-disputes)).
 
@@ -189,7 +189,7 @@ A customer can cancel an order from their account while it is **Pending** or **P
 
 - **Guest orders** work like any other: the customer gets every email. A guest can open their order from the page they reach at the end of checkout for 14 days after ordering, and after that only you can: send a guest their invoice yourself if they ask for it later. Guests get no notifications inside the store.
 - **There is no Add order.** Every order is placed by checkout on the store, which prices it, holds the stock and applies the discounts.
-- **A placed order's lines and amounts cannot be changed.** The products, quantities and prices of its lines, **Amount Due** and **Shipping Price** are read-only, on the order page and under **Order Items**: they are what the customer was charged and what the receipt shows. To give money back, use **Refund (amount, reason)**; to put returned goods back in stock, see [Refunds and disputes](/admin/sales/refunds-and-disputes). Each line also keeps the product name and SKU it was sold under, so renaming a product later does not change old orders, emails or receipts.
+- **A placed order's lines and amounts cannot be changed.** The products, quantities and prices of its lines, **Amount Due** and **Shipping Price** are read-only, on the order page and under **Order Items**: they are what the customer was charged and what the receipt shows. To give money back and put returned goods back in stock, use **Return and refund**; see [Refunds and disputes](/admin/sales/refunds-and-disputes). Each line also keeps the product name and SKU it was sold under, so renaming a product later does not change old orders, emails or receipts.
 - **Payment Method and Payment Gateway are different.** **Payment Method** is what the customer chose. **Payment Gateway** is filled in by the platform to match the provider's messages: leave it alone.
 - **Wholesale orders** keep the customer group and discount they were priced with. Changing the customer's group later does not change old orders.
 - **An empty Shipment column** means no voucher has been created yet. The voucher button will say so.
