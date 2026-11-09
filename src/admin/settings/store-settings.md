@@ -226,6 +226,7 @@ See [Messages & feedback](/admin/customers/messages-and-feedback).
 | `AGENT_COMMERCE_ENABLED` | AI shopping assistants can see the catalogue and place orders, and the store's own shopping assistant works. Your plan must include it too. | on |
 | `AGENT_HOSTED_PAYMENT_ENABLED` | An AI assistant can choose an online payment, and the customer pays on Viva Wallet's or Stripe's page. | on |
 | `PRODUCT_FEEDS_ENABLED` | The feeds (product files for Meta, TikTok and Google). They stop when `AGENT_COMMERCE_ENABLED` is off. | on |
+| `STAFF_AI_ACCESS_ENABLED` | Your team can [connect their own AI app](/admin/getting-started/ai-apps) to read the store, each with what their role allows. What the app reads goes to its provider. Turning it off disconnects every app at once. | off |
 
 ### Analytics
 

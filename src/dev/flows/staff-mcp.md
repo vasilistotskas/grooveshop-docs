@@ -7,6 +7,15 @@ description: "How a store's owner and staff connect their own AI app to /mcp/adm
 
 A store's owner and staff connect their own AI app (Claude, ChatGPT, Gemini and other MCP clients) to `https://<store>/mcp/admin` and ask it about the store: orders, sales, profit, products and stock, customers, reviews and contact messages. What they see follows their role in the store. **Every tool only reads.** Write tools are proposed below and wait for the owner's approval.
 
+**The store turns it on.** `STAFF_AI_ACCESS_ENABLED` is a store feature, `staff_ai_access` (`tenant/features.py`, `IsStaffAiAccessEnabled` in `tenant/permissions.py`). It is declared off, because what the app reads goes to its provider and the store, as controller, decides that. It is served as `TenantConfig.features.staffAiAccess`.
+
+While it is off:
+- every `/api/v1/agent/staff/*` route answers a bare 404, a connected app's token included;
+- the consent refuses (`agent/staff_connect.py`);
+- the gateway answers 404 on `/mcp/admin` and its metadata (`internal/adminmcp/identity.go`, `metadata.go`).
+
+Turning it off cuts connected apps at their next call: Django refuses at once, and the gateway passes Django's 404 on even while its tenant cache still says on. Turning it on reaches the gateway within that cache's lifetime.
+
 This is a different surface from the shoppers' `/mcp` ([Agentic commerce](/dev/flows/agentic-commerce)), with a different identity:
 
 | | Shoppers, `/mcp` | Staff, `/mcp/admin` |
@@ -77,6 +86,7 @@ The scope table is `STAFF_SCOPE_PERMISSIONS` (`agent/staff.py`). The role column
 
 | What happens | Answer |
 |---|---|
+| The store has not turned `staff_ai_access` on | 404 on `/mcp/admin`, its metadata and `/api/v1/agent/staff/*`; the consent refuses |
 | No bearer on `/mcp/admin` | 401, `scope="admin:orders:read …"`, `resource_metadata` |
 | Unknown, expired, revoked or refresh token; another store's token; not on the team; `is_staff` cleared | 401 `error="invalid_token"`: the client connects again |
 | Scope not granted at consent | Tool error `not_granted`: disconnect and connect again, approving it |

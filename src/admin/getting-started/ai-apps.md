@@ -9,6 +9,10 @@ You and your team can connect your own AI app (Claude, ChatGPT and others that s
 
 The app can **only look**. It cannot change an order, a price, stock or anything else in your store.
 
+It is **off until your store turns it on**, because what the app reads goes to the company behind it.
+
+<span class="sidebar-path">Settings → Store Settings</span> → `STAFF_AI_ACCESS_ENABLED`
+
 ## What the app can see
 
 Each person sees only what their [role](/admin/getting-started/roles-and-team) allows, and only the areas they approve when they connect:
@@ -25,6 +29,12 @@ Each person sees only what their [role](/admin/getting-started/roles-and-team) a
 
 A customer's street address and phone number are never shown to the app.
 
+## Turn it on for your store
+
+An Owner or Admin opens <span class="sidebar-path">Settings → Store Settings</span>, finds `STAFF_AI_ACCESS_ENABLED` (under **Agent Commerce**), ticks it and saves. It can take up to five minutes before the first app can connect.
+
+Turning it off again disconnects every app at once: their next question is refused.
+
 ## Connect
 
 You need the address of your store's admin connector. It is your store's web address followed by `/mcp/admin`, for example `https://your-store.gr/mcp/admin`.
@@ -39,6 +49,7 @@ Every person on your team connects with their own account, so each one sees only
 ## Disconnect
 
 - Remove the connector in your AI app. That person's app can no longer read anything.
+- To stop every app at once, turn `STAFF_AI_ACCESS_ENABLED` off.
 - To cut off someone else, untick **Active** for them or remove them in <span class="sidebar-path">Settings → Team</span>. Their app stops reading your store from its next question. Lowering their role takes effect from the next question too.
 
 ## Good to know
