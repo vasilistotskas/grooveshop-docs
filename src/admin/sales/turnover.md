@@ -24,7 +24,7 @@ The figure your accountant asks for: what you sold without VAT, shipping and pay
 | **Goods** | What the products sold in the period are worth, without VAT. |
 | **Shipping** | The shipping you charged, without VAT. |
 | **Fees** | The payment fees you charged (for example cash on delivery), without VAT. |
-| **Returns** | What went back to customers in the period, without VAT. |
+| **Returns** | What went back to customers for the goods in the period, without VAT. A duplicate payment given back is not a return. |
 | **Net turnover** | **Goods** plus **Shipping** plus **Fees**, minus **Returns**. It is negative in a period when more went back than was sold. |
 | **VAT** | The VAT on that turnover, after the VAT of returns. |
 | **Gross** | **Net turnover** plus **VAT**: what customers paid, after returns. |
@@ -57,14 +57,16 @@ The figure your accountant asks for: what you sold without VAT, shipping and pay
 ## How the figures are counted
 
 - **When an order counts.** An order is a sale in the period it **left your store**, whatever the payment method. A cash-on-delivery order counts when the parcel is sent, not when the courier pays you. An order that is paid but still being prepared is not a sale yet. An order cancelled before it was sent never is.
-- **Past periods stay put.** Because an order counts when it is sent, a period that is over does not grow when a courier pays you late. It changes only when something goes back, in the period that happens.
+- **Past periods stay put.** Because an order counts when it is sent, a period that is over does not grow when a courier pays you late. It changes only when something goes back, in the period that happens. A refund that fails later does not change the month of the refund either: it is added back in the month it failed.
 - **Without VAT.** VAT is taken out of each product at the rate it was sold at, so a basket with 24% and 13% products is exact. Shipping and fees are taxed the way your receipt taxes them, in proportion to the products in the order. Changing a VAT rate later changes nothing in past periods.
 - **Shipping and fees are turnover.** They appear on your receipt as separate lines and are part of what you invoice, so they are part of the figure, in their own columns.
 - **Discounts reduce it.** Coupons, promotions and loyalty points redeemed lower the sale to what the customer was actually charged for the products.
 - **Gift cards.** Selling a gift card is not turnover. When a customer pays with it, the order counts in full, because the gift card is only the way they paid.
 - **Returns are counted when they happen.** A refund counts in the period you gave the money back, not in the period of the sale. Value returned to a customer's gift card counts too. A card dispute you lost counts only after you have said that the goods came back (see [Refunds and disputes](/admin/sales/refunds-and-disputes)).
+- **A duplicate payment given back is not a return.** When a refund gives back money the customer paid twice, that part is not taken off your turnover: the sale stands, and that part gets no credit document either. Only the rest of the refund, the goods, counts as a return. One exception moves a past month: a refund made while another refund of the same order still waits for its answer counts whole at first, and once the waiting refund is settled, any duplicate payment it gave back is taken out of the month it was made. See [How a refund is judged](/admin/sales/refunds-and-disputes#how-a-refund-is-judged).
+- **A refund that failed.** When Viva Wallet or Stripe reports a refund failed, its goods part is added back to the turnover in the month it failed. A refund that gave back a duplicate payment loses that part first.
 - **A refused parcel.** When a customer refuses cash on delivery and the parcel comes back, the sale is taken out in the period it came back.
-- **Refunds are split in proportion.** A refund is spread over the products, the shipping and the fees in proportion to the receipt, so refunding a whole order takes out the whole sale.
+- **Refunds are split in proportion.** The goods part of a refund is spread over the products, the shipping and the fees in proportion to the receipt, so refunding a whole order takes out the whole sale. This holds for a refund of products too: here it is spread over the whole order, even though its credit document carries only those products' VAT rates.
 
 ## Things to know
 
@@ -72,7 +74,7 @@ The figure your accountant asks for: what you sold without VAT, shipping and pay
 - **Awaiting collection is today's picture.** It shows what is still owed now on the orders sent in each period, and it falls as couriers pay you.
 - **A breakdown has no returns.** A refund is not split by product, category or VAT rate, so a breakdown shows sales before returns. The first table has the returns.
 - **Very long ranges by day.** The page shows at most 400 rows. For more, choose longer periods, or export the file, which has no limit.
-- **It is not your tax return.** The figures follow the same VAT split as your receipts, but a refund is spread across the order in proportion, so a single refund can differ by a cent from the credit document. Your accountant's books decide.
+- **It is not your tax return.** The figures follow the same VAT split as your receipts, but a refund is spread across the order in proportion. A goodwill refund can differ by a cent from its credit document. A refund of products from an order that mixes VAT rates can differ more, in how its total splits into net and VAT, because its credit document uses those products' own rates. Your accountant's books decide.
 - **Nothing here can be edited.** If a figure looks wrong, open the order and check it under [Orders](/admin/sales/orders).
 
 ## Related

@@ -69,7 +69,7 @@ The voucher keeps the address it was issued with. If you change the **Shipping A
 
 Then:
 
-1. Stock does not come back automatically, because the parcel may return damaged. When you receive it, correct the stock on the [product](/admin/catalog/products).
+1. Stock does not come back automatically, because the parcel may return damaged. When you receive it, check it and press **Restock returned items** on the order for what can be sold again. The order records the units that came back, so they can never be added to the stock twice. Do not raise the stock on the product by hand. For a card order you refund, you can instead switch on **Put the returned units back in stock** in **Return and refund** (see [Refunds and disputes](/admin/sales/refunds-and-disputes#put-returned-goods-back-in-stock)).
 2. With cash on delivery no money was collected, so there is nothing to give back. If the customer paid by card, see [Refunds and disputes](/admin/sales/refunds-and-disputes).
 
 ### An order that does not fit in one parcel
