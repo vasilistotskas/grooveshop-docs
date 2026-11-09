@@ -80,7 +80,7 @@ If the courier does not cancel the parcel (for example, it is already on a picku
 If the refund does not go through, the order stays cancelled and the money stays with you. See [Refunds and disputes](/admin/sales/refunds-and-disputes#an-order-was-cancelled-but-is-still-paid).
 
 ### Refund a customer
-Use **Return and refund** on the order page: choose the products that came back, or a goodwill amount, and put the units back in stock in the same step. The whole process, including cash on delivery and card disputes, is on [Refunds and disputes](/admin/sales/refunds-and-disputes).
+Use **Return and refund** on the order page: choose the products that came back and put their units back in stock in the same step, or give a goodwill amount. A goodwill amount cannot restock: put the units back with **Restock returned items**. The whole process, including cash on delivery and card disputes, is on [Refunds and disputes](/admin/sales/refunds-and-disputes).
 
 ### A bank transfer has arrived
 When the money for a bank-transfer order is in your account:

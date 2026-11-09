@@ -69,7 +69,7 @@ For money back that is not for a product: a gesture after a complaint, a price m
 3. In **Goodwill amount**, enter the amount. Its help text says how much can still be refunded and, when the order was paid partly with gift cards or points, how much of it goes back to each.
 4. Choose a **Reason**, for example **Goodwill**, write a **Note** if you like, and confirm.
 
-A goodwill refund is credited over the receipt's VAT rates in proportion to what each rate still holds. It is not taken off any product: the products stay on offer for their full value, as long as the order still has that much to refund.
+A goodwill refund is credited over the receipt's VAT rates in proportion to what each rate still holds. It is not taken off any product: the products stay on offer for their full value, but a refund of products can never be more than the order still has to refund. A goodwill amount cannot put units back in stock: use **Restock returned items** for that.
 
 ### Refund the whole order
 1. Open the order and press **Return and refund**.
@@ -78,6 +78,8 @@ A goodwill refund is credited over the receipt's VAT rates in proportion to what
 4. If the order also charged a payment-method fee, refund it afterwards as a **Goodwill amount**.
 
 Refunding by products adds up to exactly what the order was sold for, with no cents left over. If you refund the whole order with a **Goodwill amount** instead, enter exactly the amount its help text gives, not a rounded figure.
+
+**After an earlier goodwill refund.** The products still offer their full value, so they can add up to more than is left. On a €100 order with €20 already given back as goodwill, choosing the €100 product asks for €100 while only €80 is left, and the dialog refuses it ("cannot exceed the refundable amount"). Refund the rest as a **Goodwill amount** of the €80 its help text gives, then put the units back in stock with **Restock returned items**. That refund's credit document is split over the receipt's VAT rates in proportion, like every goodwill refund.
 
 ### Refund a cash-on-delivery order
 No payment provider holds this money, so you pay the customer back yourself and the platform records it. The same goes for a bank-transfer order you confirmed with **Confirm payment received**.
@@ -102,7 +104,7 @@ A refund changes the stock only when you ask it to, and marking the order **Retu
 
 - **With the refund.** Switch on **Put the returned units back in stock** in the **Return and refund** dialog. The units you refund go back in stock, each in its own product, and the stock log records them with your name. They go back only once the whole refund has been made: if any part of it was declined or got no answer, nothing goes back, and a message says so. Restock them once the refund is made.
 - **Without a refund, or later.** Press **Restock returned items** on the order, enter how many units of each product came back and a **Reason**, and confirm. Use it for goods that came back with no money to return, such as a cash-on-delivery parcel that was never paid for, or after a refund made without the switch. It is shown on a **Delivered**, **Completed** or **Returned** order while some units are not back in stock yet.
-- **A free product** (a gift worth nothing) has nothing to refund. Enter its units in **Return and refund** with **Put the returned units back in stock** switched on: it goes back in stock and no money moves. Without the switch the dialog refuses it.
+- **A free product** (a gift worth nothing) has nothing to refund. Enter its units in **Return and refund** with **Put the returned units back in stock** switched on: it goes back in stock and no money moves. Without the switch the dialog refuses it. Once everything paid has been refunded and no refund waits, **Return and refund** is no longer on the order: put the gift back with **Restock returned items**.
 
 A unit is never put back twice: both ways offer only the units not back in stock yet. Use them rather than raising **Stock** on the product by hand, which leaves the order's products with no record of the return.
 
