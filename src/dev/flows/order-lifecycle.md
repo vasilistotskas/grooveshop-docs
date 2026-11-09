@@ -339,8 +339,13 @@ from the receipt rows (CHARGE, COD_COLLECTION and OFFLINE_COLLECTION, `_RECEIPT_
 and what live refund attempts hold; `stored_value_refundable` is what can
 still go back onto gift cards and points; `refundable_value` is both.
 `refund_open` adds the order paid through a registered provider whose
-capture the ledger never recorded, without a provider call, so it is cheap
-enough to decide whether the admin draws the **Return and refund** button.
+capture the ledger never recorded, and any order with a live (`PENDING`)
+refund attempt of either kind, even one that holds everything that was
+left, without a provider call, so it is cheap enough to decide whether the
+admin draws the **Return and refund** button (where such an attempt is
+retried or pointed to **Record refund outcome**) and whether the order may
+be closed as REFUNDED; `RefundOutstandingError` then reports the refundable
+value plus what the live attempts hold.
 `Order.amount_due` is what the customer owes and is never consulted for a
 refund; `Order.remaining_amount` is 0 once the payment is settled, so a
 refund never creates an amount owed (`order/models/order.py`).
@@ -1142,8 +1147,8 @@ customer racing can overshoot by the number in flight. See
 - **Retry the pending refund is disabled.** `unresumable_reason` refused it:
   Viva (no idempotency key), an overdue attempt, or a PENDING cash share.
   The webhook, `reconcile_pending_refunds` or **Record refund outcome**
-  resolves it. While the PENDING request holds everything that was left,
-  `refund_open` is false and the dialog is not offered at all.
+  resolves it. The dialog stays offered while the request is PENDING, even
+  when it holds everything that was left (`refund_open`).
 - **A line is still offered after its refund.** One of the refund's shares
   was declined (a second charge, or the stored-value share), so the value
   that share held is free again; `held_values` shows what each line holds.

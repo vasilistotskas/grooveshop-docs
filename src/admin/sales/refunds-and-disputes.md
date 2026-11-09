@@ -11,7 +11,7 @@ You give money back from the order itself: for products that came back, a goodwi
 
 ## What you see
 
-- **Return and refund**, a button at the top of the order page. It appears whenever the order still has money that can go back, whatever its status, and while a gift card and points refund is unfinished.
+- **Return and refund**, a button at the top of the order page. It appears whenever the order still has money that can go back, whatever its status, and while any refund of the order still waits for its answer or is unfinished.
 - The **Return and refund** dialog:
 
 | Field | What it is for |
@@ -110,7 +110,7 @@ A unit is never put back twice: both ways offer only the units not back in stock
 1. If the order is **Shipped** or **Delivered**, run **Mark selected orders as returned** from the order list.
 2. Once everything has been refunded, run **Mark selected orders as refunded**.
 
-A **Completed** order cannot be marked returned; leave its status as it is. The platform also refuses **Refunded** while money is still left to give back, and tells you how much.
+A **Completed** order cannot be marked returned; leave its status as it is. The platform also refuses **Refunded** while money is still left to give back, or a refund still waits for its answer, and tells you how much.
 
 ### A refund's result is unknown
 Sometimes Viva Wallet or Stripe does not answer a refund: the connection drops, or the provider is slow. The refund may or may not have been made, so the platform keeps its amount aside: it cannot be refunded a second time, and nothing is decided about it on a guess. The order's history says the result is not known.
@@ -143,7 +143,7 @@ Stripe recognises the repeat and hands back the refund it already made instead o
 - **The refund was sent more than an hour ago.** The provider may no longer recognise it. The platform looks it up every hour; if it stays unknown, record its outcome with **Record refund outcome** (above).
 - **Part of it was cash you paid back yourself.** Cash is never repeated: record how it was paid back with **Record refund outcome**.
 
-If the refund that waits holds everything that was left to refund, the order has nothing else to refund and **Return and refund** is not shown. The refund is then settled by the provider's answer, the hourly check or **Record refund outcome**.
+**Return and refund** stays on the order while a refund waits, even when that refund holds everything that was left to refund, so you can always retry it here or be pointed to **Record refund outcome**. Until it is settled, the order cannot be marked **Refunded**.
 
 ### Finish a gift card and points refund that stopped
 The part of a refund that goes back onto gift cards and points involves no provider, so it has no result to look up. If it stopped half-way, the order appears on the Dashboard as **Gift card and points refunds left unfinished**. Until it is finished it keeps its amount aside, and the order cannot be marked **Refunded**.
