@@ -126,7 +126,7 @@ unwound.
 | → DELIVERED | `order_delivered`, status email, DELIVERED toast, then the COMPLETED auto-advance for paid orders |
 | → COMPLETED | `order_completed` → loyalty points earned, status email, COMPLETED toast. Nothing is issued for an `INVOICE` order: invoices are issued by hand in timologio |
 | → CANCELED | `order_canceled` → carrier voucher cascade (skipped when the cancel already asked the courier), credit of whatever gift-card value has not come back yet, loyalty reversal, status email, CANCELED toast |
-| Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row, and the loyalty reversal once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund recorded after the receipt row was created, once the receipt has a MARK (`order/credit_documents.py: create_pending_credits`, task `issue_pending_credits`); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
+| Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row, and the loyalty reversal once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund recorded after the receipt row was created, once the receipt has a MARK, for the goods part of the refund at the VAT split stored when its money was claimed (`order/credit_documents.py: create_pending_credits`, task `issue_pending_credits`; see [Credit allocation](#credit-allocation)); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
 | Stored value returned | `order_stored_value_returned`, once per settled `STORED_VALUE` refund attempt → a staff history NOTE, the credit reconciliation (the same `create_pending_credits`), and the loyalty reversal once `payment_status` is REFUNDED. No email, no toast |
 | Status, payment status or tracking changed | `push_order_event_to_gateway` when `AGENT_GATEWAY_INTERNAL_URL` is set |
 
@@ -303,7 +303,7 @@ row lock.
 | `kind` | From `order/enum/payment_transaction.py: PaymentTransactionKind`: `CHARGE` (a provider captured money), `COD_COLLECTION` (a courier collected cash), `OFFLINE_COLLECTION` (stored as `OFFLINE`: a staff member confirmed a bank transfer arrived), `REFUND` (a provider paid it back, or the merchant paid cash or a transfer back), `CHARGEBACK` (a lost dispute took it back, written when the dispute closes) and `REFUND_REVERSAL` (a refund the ledger counted that the provider later reported failed) |
 | `amount` | Always positive; the kind gives the direction |
 | `provider` | `stripe`, `viva_wallet`, `acs_cod`, `boxnow_cod`, `bank_transfer` on an OFFLINE_COLLECTION (keyed on the bank's reference, so one transfer cannot pay two orders), or `manual` on a REFUND the merchant paid back |
-| `provider_reference` | The provider's own id for the movement: PaymentIntent, Viva transaction, refund id, voucher or parcel. A Stripe dashboard refund has no id in `charge.refunded`, so it carries the event id |
+| `provider_reference` | The provider's own id for the movement: PaymentIntent, Viva transaction, refund id, voucher or parcel. A Stripe refund, whoever made it, is keyed on its refund id (`re_...`) |
 | `charge` | On a REFUND, CHARGEBACK or REFUND_REVERSAL, the payment it acts on; null otherwise. A check constraint enforces both |
 | `description` | The reason given for a refund |
 
@@ -317,7 +317,7 @@ delivery the provider repeats records nothing the second time, and the
 | CHARGE | `OrderService.handle_payment_succeeded` (the event's `amount_received`), `handle_stripe_checkout_completed` (`amount_total`), `viva_webhook._handle_payment_created` (the verified amount), and `PaymentLedger.ensure_charge`, which reads a capture the ledger lacks from the provider once, when a refund first needs it |
 | COD_COLLECTION | `OrderService.settle_cod_payment`, in the same atomic step as the payment status (see [Shipping](/dev/flows/shipping)) |
 | OFFLINE_COLLECTION | `OrderService.confirm_offline_payment`, the admin's **Confirm payment received** detail action (`order/admin.py`, offered by `has_confirm_payment_permission` only on a PENDING `PaySettlement.OFFLINE_TRANSFER` order), through `PaymentLedger.record_offline_collection`. Under the order lock it refuses any other settlement, a payment not PENDING, an empty reference and an amount other than `amount_due`; it writes the row, marks the order paid, adds an `OrderHistory` entry and an admin log entry, and moves PENDING to PROCESSING |
-| REFUND | `OrderService.refund_order`, `handle_stripe_charge_refunded` and `viva_webhook._handle_reversal_created`, through `PaymentLedger.record_refund`; cash or a confirmed transfer the merchant paid back through `PaymentLedger.record_cod_refund` (`is_cash_collection` covers both) |
+| REFUND | `OrderService.refund_order` (step 3 through `OrderService.book_share`, which the reconciliation and the admin's **Record refund outcome** also use), `handle_stripe_refund_made` and `viva_webhook._handle_reversal_created`, through `PaymentLedger.record_refund`; cash or a confirmed transfer the merchant paid back through `PaymentLedger.record_cod_refund` (`is_cash_collection` covers both) |
 | REFUND_REVERSAL | `handle_stripe_refund_failed` (`refund.failed`, `refund.updated`, `charge.refund.updated`), through `PaymentLedger.record_refund_reversal` |
 | CHARGEBACK | `PaymentLedger.record_chargeback`, from `handle_stripe_dispute_closed` (a lost dispute) and `viva_webhook._record_viva_chargeback` (a 1797 of a Refund Claimed type, or a lost-dispute status) |
 
@@ -358,8 +358,9 @@ could not reconstruct.
 | A cancel (`cancel_order` → `_refund_canceled_order`) | After the cancel has committed, `refund_order(amount=None)`: everything still refundable, for an order with a `payment_id` and a pay way that is paid or still holds refundable money. A refusal before any provider call (a dispute open, nothing left, no credentials) is written to the order's history in plain words and returned as `refund_info["refunded"] = False`; `refund_info["dispute_open"]` says the refund waits for the dispute |
 | The admin's `mark_as_canceled` bulk action | The same path. It calls `cancel_order(order, customer_initiated=False)` with no `refund_payment` argument, and the parameter **defaults to `True`**, so bulk-cancelling a paid order does refund it |
 | `POST /api/v1/order-items/{id}/restock` (`order/views/item.py: restock`) | Staff only, on a DELIVERED, COMPLETED or RETURNED order (`RETURN_HANDLING_STATUSES`). Puts returned units back in stock and records them on the line (`refunded_quantity`, `is_refunded`). It **moves no money**: a line's snapshot price is not what the customer paid for it (tax, shared discounts, shipping), so money is decided at order level |
-| Stripe `charge.refunded` (`order/signals/handlers.py: handle_stripe_charge_refunded`) | Brings the ledger up to the charge's cumulative `amount_refunded`, net of reversals: records the charge first if the ledger lacks it, then the difference as one REFUND keyed on the event id. A refund this app made, a redelivery and an older event arriving late add nothing; an event raised before a recorded failure is ignored (`PaymentLedger.reversed_after`) |
-| Stripe `refund.failed` and its siblings (`handle_stripe_refund_failed`) | One REFUND_REVERSAL keyed on the refund id, capped at what the ledger holds as refunded on that charge; `payment_status` derived again; a staff NOTE and the `ops.refund_failed` operational email (the store's switch). The refund's consequences stand: the email, the gift-card credit and points released, the credit document |
+| Stripe `refund.created` / `refund.updated` (`order/signals/handlers.py: handle_stripe_refund_made`) | One REFUND per Stripe refund id (`re_...`), the key the in-app refund, the reconciliation lookup and `refund.failed` all use, so a refund is one row however it arrives. Whether it counts is read from Stripe's current state (`StripePaymentProvider.retrieve_refund`), never from the event: `succeeded` and `pending` book (`_ACCEPTED_REFUND_STATUSES`), anything else books nothing. A refund carrying our attempt key in `metadata.refund_attempt` settles exactly that attempt (`RefundAttempt.objects.with_provider_key`); one without it (a dashboard refund) settles the PENDING attempt of the same charge and amount, whatever its age, or is booked as a refund nobody claimed. A refund of a payment the ledger does not hold yet raises, so Stripe redelivers it. A Stripe error on the read propagates for the same reason |
+| Stripe `charge.refunded` (`handle_stripe_charge_refunded`) | Books no order refund: its cumulative `amount_refunded` names no refund. It only voids a purchased gift card once the refunds reach the purchase amount |
+| Stripe `refund.failed` and its siblings (`handle_stripe_refund_failed`) | Acts only on a refund Stripe NOW reports `failed` or `canceled` (`retrieve_refund`). One REFUND_REVERSAL keyed on the refund id, capped at what the ledger holds as refunded on that charge; `payment_status` derived again; a staff NOTE and the `ops.refund_failed` operational email (the store's switch). The refund's allocation is scaled down by everything reversed (`credit_allocation.free_reversed`): a credit not issued yet is issued for what stands, one already issued stays and is listed by the store dashboard until an accountant cancels it, and a refund the receipt was netted by leaves the receipt understated (see [Credit allocation](#credit-allocation)). The customer email, the gift-card credit and the points released stand |
 | Viva event 1797 (`order/views/viva_webhook.py: _handle_reversal_created`) | A refund made anywhere, the Viva dashboard included; see below |
 
 **`refund_order(order, amount=None, reason="", *, repayment_reference="")`**
@@ -378,28 +379,45 @@ books.
    live attempts hold everything) resumes it instead (`_attempts_to_resume`);
    for a provider without idempotent refunds (`idempotent_refunds` False:
    Viva) the repeat is refused, because a lost answer cannot be told from a
-   refund never made. Otherwise the value is split: **the provider is
+   refund never made, and so is the repeat of an **overdue** attempt
+   (`RefundAttempt.is_overdue`, below), because Stripe may have forgotten
+   its key. Otherwise the value is split: **the provider is
    paid back first**, payment by payment, oldest first
    (`PaymentLedger.plan_refund`), one `RefundAttempt` of kind `PROVIDER`
    per share, and only the excess becomes one `RefundAttempt` of kind
-   `STORED_VALUE` (`order/models/refund_attempt.py`). A live attempt
-   (`PENDING` and younger than `ATTEMPT_RESERVATION`, one hour) holds its
-   amount back, so a second refund cannot take the same money.
+   `STORED_VALUE` (`order/models/refund_attempt.py`). A `PENDING` attempt,
+   whatever its age, holds its amount back (`RefundAttempt.objects.live()`),
+   so a second refund cannot take the same money; only a settled or declined
+   attempt lets go. Before any attempt is written, `credit_allocation.allocate_order`
+   decides the order's older unallocated sources, and the claim is refused
+   while one stays undecided. The new attempts are then allocated over the
+   receipt's VAT rates (`OrderService._allocate_claim`): the
+   duplicate-payment excess first, which owes no credit, the rest pro rata
+   over the headroom; a claim that would take excess a still-PENDING claim
+   holds, or that the headroom cannot hold, is refused before any provider
+   call (see [Credit allocation](#credit-allocation)).
 2. **Call** the provider for each provider share with
    `idempotency_key=f"refund-{attempt.idempotency_key}"` and no
    transaction open (`_make_refund`). A refusal marks the attempt
    `DECLINED` and frees its amount; an unknown outcome (a timeout, a
    dropped connection, a 5xx, Viva accepting without a `TransactionId`)
    keeps it `PENDING` and writes a staff NOTE saying the refund may have
-   been made. The shares after a declined one are never called and are
+   been made; see [Unknown outcomes](#unknown-outcomes) for what resolves
+   it. Stripe's `refund_payment` writes the attempt's key into the refund's
+   `metadata` (`refund_attempt`), which is how the webhook and the lookup
+   find the attempt a refund was made for. The shares after a declined one are never called and are
    released, and the stored-value share runs only when every provider share
    was made.
 3. **Record**, under the lock again: `record_refund` (or `record_cod_refund`
    for cash) writes the REFUND row and settles the attempt; `_make_refund`
-   then signals `order_refunded` for a row it created. A webhook that booked the refund while the call was in
-   flight has already settled the attempt (`record_refund` settles the
-   oldest live attempt for the same charge and amount), so step 3 books and
-   signals nothing. The stored-value share is
+   then signals `order_refunded` for a row it created. This step is `OrderService.book_share`, which re-reads the
+   attempt under the lock and books only for one still `PENDING`. A webhook
+   that booked the refund while the call was in flight has already settled
+   the attempt (the attempt its metadata key names, or for a refund without
+   one the `PENDING` attempt of the same charge and amount, whatever its
+   age), so step 3 books and signals nothing; a refund the provider made
+   for an attempt staff declined meanwhile is booked as a refund nobody
+   claimed and never revives the attempt. The stored-value share is
    `_return_stored_value`, one transaction under the order lock: it reads
    what is still owed from the gift-card and points ledgers, splits the
    amount between cards and points in proportion to what each has not got
@@ -488,6 +506,147 @@ list's **Refund** filter, value "Cancelled but still paid"
 (`order/admin.py: RefundOwedFilter`, `OrderQuerySet.refund_owed`), lists
 exactly those orders, and the staff Refund action refunds them.
 
+#### Unknown outcomes
+
+A provider attempt still `PENDING` after `REFUND_RECONCILE_AFTER_MINUTES`
+(`settings.py`, an env setting, default 60; it must stay under the 24 hours
+Stripe remembers an idempotency key) is **overdue**
+(`order/models/refund_attempt.py: reconcile_after`,
+`RefundAttempt.objects.overdue()`, `RefundAttempt.is_overdue`). The window
+only decides when the answer is looked for: it never frees the money, and an
+overdue attempt is never sent to the provider again. Three things resolve a
+`PENDING` attempt, each through the paths a refund made in one go takes
+(`OrderService.book_share` settles; a `DECLINED` status frees the amount and
+the allocation):
+
+1. **The provider's webhook**: `refund.created` / `refund.updated` or Viva
+   1797, through `PaymentLedger.record_refund`.
+2. **The hourly lookup**: beat entry `reconcile-pending-refunds` →
+   `tenant.tasks.fanout_reconcile_pending_refunds` (suspended stores
+   included) → `order.tasks.reconcile_pending_refunds` →
+   `order/refund_reconciliation.py: reconcile_overdue`, which asks
+   `PaymentProvider.find_refunds` for each overdue attempt (`order/payment.py`).
+   **Stripe** lists the PaymentIntent's refunds (the list call filters by
+   `payment_intent`, not by metadata) and keeps the one whose
+   `metadata.refund_attempt` is the attempt's `provider_key`: `succeeded`
+   and `pending` settle, `failed` and `canceled` decline, `requires_action`
+   decides nothing. **Viva** lists `GET /api/transactions/?ordercode=`
+   (Basic auth) for each of the order's codes (`viva_webhook.order_viva_codes`)
+   and keeps the children of the payment (`ParentId`) of a refund or void
+   `TransactionTypeId` (`VIVA_REFUND_TRANSACTION_TYPE_IDS`) for exactly the
+   attempt's amount: `StatusId` `F` settles, `E` declines. A Viva refund
+   names no attempt (`refunds_carry_attempt` is False), so one the ledger
+   already holds is not given to a second attempt. Only one candidate for
+   exactly the amount decides; none, several, an unreadable provider, a
+   missing credential or a cash share (no provider) leave the attempt
+   `PENDING`. An attempt that raises is logged and counted unresolved, and
+   the rest go on.
+3. **Staff**: the order's **Record refund outcome** detail action
+   (`order/admin.py: OrderAdmin.record_refund_outcome`,
+   `RecordRefundOutcomeForm`), offered only while an attempt of the order is
+   overdue (`has_record_refund_outcome_permission`), calls
+   `refund_reconciliation.record_outcome`. It refuses an attempt that is not
+   overdue. "Made" needs a reference: on a provider charge the provider must
+   confirm it (`PaymentProvider.confirm_refund`: Stripe retrieves the refund
+   and checks its PaymentIntent, amount and status; Viva finds it among the
+   payment's refunds, ignoring case) and it is booked under the provider's
+   spelling; a refund the provider cannot find or reports failed is refused,
+   and so is a reference already on the ledger (compared ignoring case). On
+   a cash share the reference is the repayment reference. "Not made"
+   declines the attempt. Both write an `OrderHistory` note with the user;
+   the admin also writes a `LogEntry`.
+
+A `STORED_VALUE` attempt is never overdue: no provider is involved, and
+repeating the refund of the same amount resumes it (`_attempts_to_resume`).
+One older than the window is **stalled** (`RefundAttempt.objects.stalled()`).
+The store dashboard lists both kinds (`admin/dashboard/store/widgets.py:
+StoreAlerts._unknown_refunds`, "Refunds with an unknown outcome", and
+`_unfinished_returns`, "Gift card and points refunds left unfinished"; both
+need `order.change_order`).
+
+#### Credit allocation
+
+A retail credit (myDATA 11.4) must credit exactly the VAT rates its refund
+belongs to, and AADE cannot check it against the receipt, so the split is
+**stored when the money is claimed, booked or decided**, under the order
+lock, and the credit is issued from it alone
+(`order/credit_documents.py: credit_breakdown(..., allocation)`). The order
+in which credits are issued can no longer change one. The full rule set, with
+every edge case, is the "VAT split" part of the credit documents section in
+[Order system](/dev/django/reference/order-system); the invariants are
+replayed by `tests/integration/order/test_credit_invariants.py`.
+
+- **The rows.** `CreditAllocation` (`order/models/credit_allocation.py`,
+  migration `0102_credit_allocation`): one row per VAT rate per source, gross.
+  Exactly one source column is set (a check constraint): `refund_attempt` (a
+  share of `refund_order`, allocated in `_claim_refund`), `refund` (a booked
+  refund no attempt claimed, allocated in `PaymentLedger.record_refund`) or
+  `decision` (a goods-returned `ChargebackDecision`, allocated in
+  `decide_chargebacks`). `moved_at` is when the money moved, empty while in
+  flight. The source's first row also carries `goods_claimed`, `uncovered`,
+  `understated` and the two `*_acknowledged_at` stamps.
+- **Decided or undecided.** A source with no row is undecided: it owes
+  nothing yet and is never credited. A row of amount zero says it owes
+  nothing (a duplicate payment given back, a share reversed in full, nothing
+  taxable, no room left).
+- **Headroom is a plain sum** (`credit_allocation.headroom`): the receipt's
+  gross per rate (the order's VAT lines before a receipt exists), less the
+  allocations of every source not declined whose money moves at or after the
+  receipt row (an in-flight claim counts), less the credits issued, each
+  counted by its own `vat_breakdown`.
+- **The duplicate-payment excess goes first and owes no credit**
+  (`PaymentLedger.refundable_excess`, `excess_held`): what the ledger holds
+  above what the order is still for (`calculate_order_total_amount()` less
+  `credit_allocation.goods_returned`), capped at what the provider still holds
+  (captures less refunds less every dispute). It is read at the source's own
+  moment: a claimed refund when it was made, a refund nobody claimed at its
+  ledger row.
+- **A PENDING claim holds.** When releasing every `PENDING` claim would give
+  a source more room or more excess than it gets now, the source stays
+  undecided (`allocate_source` returns `False`). `credit_allocation.allocate_order`
+  decides oldest first and stops at the first undecided source. While one
+  remains, the receipt is deferred (`order/invoicing.py: ReceiptDeferred`,
+  `metadata["receipt_deferred"]`, the dashboard's "Receipts waiting for a
+  refund"), the settlement credit of a closed order waits, and a new claim
+  is refused naming the claims that block (`blocking_claims`,
+  `excess_holders`, `describe_blockers`). The admin's **Issue receipt
+  (myDATA)** says the receipt is deferred instead of scheduling it.
+- **Chargebacks.** A lost dispute never moves the excess: `held` does not take
+  it off and `goods_returned` ignores decisions, so a goods-kept chargeback
+  is a loss, never credited, and never eats a duplicate payment. A
+  goods-returned one is a credit source at its decision, capped to the
+  headroom. The settlement credit waits until every chargeback of the order
+  is decided. `PaymentLedger.overcharge_held`, behind `Order.overcharged_at`,
+  is a different figure: it counts what disputes took and the goods of a
+  returned chargeback.
+- **Points owe no credit** (they are a discount the receipt never held;
+  `PaymentLedger.split_stored_value`); value returned onto a gift card does.
+- **Money past the receipt** is kept as `uncovered`, noted on the order and
+  listed on the store dashboard ("Refunded money beyond the receipt",
+  `credit_allocation.beyond_receipt_orders`), and the order list's
+  **Refund books** filter (`BooksFilter`, `books=beyond_receipt`) finds it.
+- **Reversals.** `credit_allocation.free_reversed` scales the refund's
+  allocation by everything reversed (the duplicate part first, then the
+  uncovered part, then room), so a credit not issued yet is for what stands.
+  A credit already issued stands and is listed ("A refunded credit document
+  was reversed", `reversed_credits`, needs `order.view_retailcredit`) until
+  it is cancelled in myDATA. A refund the receipt was netted by leaves the
+  receipt short (`understated`, "Receipts short of goods the customer
+  kept", `understated_orders`).
+- **Acknowledging.** The order action **Acknowledge receipt differences**
+  (`OrderAdmin.acknowledge_uncovered` → `credit_allocation.acknowledge_uncovered`)
+  stamps `uncovered_acknowledged_at` and `understated_acknowledged_at`, each
+  on its own, and writes who to the order's history.
+- **The backfill.** Beat entry `allocate-credit-sources`, every five minutes
+  → `tenant.tasks.fanout_allocate_credit_sources` (suspended stores included)
+  → `order.tasks.allocate_credit_sources` →
+  `order/credit_allocation_backfill.py: backfill_credit_allocations`, which
+  runs `allocate_order` for every order with a source that owes a credit and
+  has no allocation, requests the credit documents of orders with a receipt,
+  and issues the receipt of a deferred order once nothing is undecided. So a
+  source that waited for a claim is decided within five minutes of the claim
+  resolving, whichever path resolved it.
+
 ### VAT on an order
 
 Every order line stores the VAT rate it was sold at
@@ -536,9 +695,11 @@ submit each report.
 A receipt row, once created, keeps the breakdown and totals it was issued
 with, MARK or not: a retry after a failed render and a forced regeneration
 reuse them (`order/invoicing.py: _persist_invoice_row`), because a new
-receipt is computed net of everything refunded before it (provider and
-cash refunds net of reversals, plus value returned onto gift cards and
-points: `refunded_before_receipt`) and what is refunded later is credited,
+receipt is computed net of everything returned before it, at each source's
+stored allocation (`refunded_before_receipt`, `_net_of`: provider and cash
+refunds net of reversals, value returned onto gift cards, and chargebacks
+staff decided came with the goods back; never a duplicate payment given back,
+never points) and what is refunded later is credited,
 so recomputing would count a later refund twice. Correcting a line's
 `vat_rate` therefore changes only a receipt not yet issued. For the same reason the order item
 admin offers `vat_rate` for correction only until the order's invoice
@@ -594,10 +755,15 @@ edited. So no surface edits one:
 ### An order paid twice
 
 `order/payment_ledger.py: PaymentLedger.sync_overcharge` runs for every new
-ledger row, under the order lock. It sets `Order.overcharged_at` while what
-the ledger holds (captured, less refunded, less charged back) exceeds
-`calculate_order_total_amount()` by more than `PAYMENT_AMOUNT_TOLERANCE`, and
-clears it when a refund, a reversal or a chargeback brings the sums back. On
+ledger row, under the order lock. It sets `Order.overcharged_at` while
+`PaymentLedger.overcharge_held` is positive: what the ledger holds (captured,
+less refunded, less charged back) above what the order is still for
+(`calculate_order_total_amount()` less the goods already returned, by refunds
+and by chargebacks staff decided came back), by more than
+`PAYMENT_AMOUNT_TOLERANCE`. It clears it when a refund, a reversal or a
+chargeback brings the sums back. The refund that gives the extra back is
+judged against a related but different figure, `excess_held`, which owes no
+credit document (see [Credit allocation](#credit-allocation)). On
 the change from clear to set it logs ERROR, writes a note on the order and
 sends the `ops.overcharged` operational email once (`order/emails.py`); a
 redelivered provider row is not new and never reaches it. Both CHARGE rows
@@ -709,7 +875,14 @@ customer racing can overshoot by the number in flight. See
 - **No transaction is open while a provider answers a refund.** The
   claim commits a `RefundAttempt` first; its UUID is the provider's
   idempotency key, and a provider without idempotent refunds is never
-  asked twice for one attempt.
+  asked twice for one attempt. An overdue attempt is never asked again.
+- **A PENDING attempt holds its money and its allocation until it is
+  settled or declined**; time frees nothing, and nothing is decided on a
+  guess (`RefundAttempt.objects.live()`, `credit_allocation.allocate_source`).
+- **A credit's VAT split is fixed when its money is claimed, booked or
+  decided**, and the credit is issued from that allocation only; the
+  duplicate-payment excess owes no credit, a lost dispute never moves it,
+  and credits are net of provider reversals (`order/credit_allocation.py`).
 - **A refund is in the value of what came back, the provider first.**
   Gift cards and points get only the excess, in proportion to what each
   has not got back, read from their own ledgers under their row locks.
@@ -727,8 +900,9 @@ customer racing can overshoot by the number in flight. See
   `amount_due`; the name and SKU printed for a line are its own snapshot.
 - **A net overpayment is flagged, never silently booked or refunded.**
   `Order.overcharged_at` is set only while captured, less refunded, less
-  charged back exceeds the order total by more than
-  `PAYMENT_AMOUNT_TOLERANCE`, and follows the ledger in both directions.
+  charged back exceeds what the order is still for by more than
+  `PAYMENT_AMOUNT_TOLERANCE` (`PaymentLedger.overcharge_held`), and follows
+  the ledger in both directions.
 - **An order's tax documents never re-read the catalogue's VAT.** The
   invoice and myDATA split each line at `OrderItem.vat_rate` and tax
   shipping and the fee at the goods' rates (`order/taxation.py`).
@@ -820,14 +994,31 @@ customer racing can overshoot by the number in flight. See
   Stripe's refund id and status. The attempt is DECLINED, so a retry from
   the admin is a new attempt under a new key.
 - **"Refund via … has an unknown outcome".** The provider timed out or
-  failed with a 5xx; the attempt stays PENDING for an hour and holds its
-  amount. The provider's webhook books the refund if it was made; a Stripe
-  retry within the hour resumes the attempt and Stripe returns the refund
-  it made; a Viva retry is refused until the attempt expires or the 1797
-  arrives. Check the provider's dashboard first.
+  failed with a 5xx; the attempt stays PENDING and holds its amount and its
+  allocation until something resolves it. The provider's webhook books the
+  refund if it was made; a Stripe retry before the attempt is overdue
+  resumes it and Stripe returns the refund it made; a Viva retry, and any
+  retry of an overdue attempt, is refused. Once overdue, the hourly
+  `reconcile_pending_refunds` asks the provider; what it cannot decide is on
+  the store dashboard ("Refunds with an unknown outcome") for staff to
+  resolve with **Record refund outcome**. See [Unknown outcomes](#unknown-outcomes).
+- **"Another refund of this order is waiting for … to be settled".** A
+  source of the order is undecided because a `PENDING` claim holds room or
+  excess it needs, or the new refund would take excess a `PENDING` claim
+  holds. The message names the blocking claims; resolve them (record the
+  outcome, or repeat a stalled gift card and points refund) and refund again.
+- **"The receipt of this order holds only … more across its VAT rates".**
+  The claim's goods part does not fit the headroom; nothing was sent to a
+  provider. Check the order's credits and allocations before refunding more.
+- **A shipped order has no receipt and `metadata["receipt_deferred"]`.** The
+  receipt waits for an undecided source. `allocate_credit_sources` issues it
+  within five minutes of the blocking claim resolving; the dashboard's
+  "Receipts waiting for a refund" names the claim.
 - **A Stripe refund was reported failed days later.** A REFUND_REVERSAL
   row, a staff NOTE and the `refund_failed` email; the money is
-  refundable again and the customer must be paid another way.
+  refundable again and the customer must be paid another way. A credit
+  already issued for it stays and is listed on the dashboard until an
+  accountant cancels it in myDATA.
 - **A cancelled order is still paid.** The provider declined the cancel's
   refund, or a dispute is open. The **Refund** filter's "Cancelled but
   still paid" lists every such order; refund it with the staff action.
@@ -846,8 +1037,14 @@ customer racing can overshoot by the number in flight. See
 | File | Role |
 |---|---|
 | `grooveshop-django-api/order/enum/status.py` | `OrderStatus`, `PaymentStatus`, `SETTLED_PAYMENT_STATUSES`, `RETURN_HANDLING_STATUSES` |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `stored_value`, `stored_value_refundable`, `refundable_value`, `refund_open`, `refund_status`, `sync_overcharge`, `plan_refund`, `record_charge`, `record_cod_collection`, `record_refund`, `record_cod_refund`, `record_refund_reversal`, `settle_attempt`, `ensure_charge` |
-| `grooveshop-django-api/order/models/refund_attempt.py` | `RefundAttempt` (kinds `PROVIDER`, `STORED_VALUE`; `PENDING`, `SETTLED`, `DECLINED`), `ATTEMPT_RESERVATION` |
+| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `stored_value`, `stored_value_refundable`, `split_stored_value`, `refundable_value`, `refund_open`, `refund_status`, `held`, `excess_held`, `refundable_excess`, `overcharge_held`, `sync_overcharge`, `plan_refund`, `record_charge`, `record_cod_collection`, `record_refund`, `record_cod_refund`, `record_refund_reversal`, `settle_attempt`, `ensure_charge` |
+| `grooveshop-django-api/order/models/refund_attempt.py` | `RefundAttempt` (kinds `PROVIDER`, `STORED_VALUE`; `PENDING`, `SETTLED`, `DECLINED`), `reconcile_after`, `live`, `overdue`, `stalled`, `with_provider_key`, `provider_key` |
+| `grooveshop-django-api/order/refund_reconciliation.py` | `reconcile`, `reconcile_overdue`, `record_outcome`: resolving an attempt whose outcome is unknown |
+| `grooveshop-django-api/order/models/credit_allocation.py` | `CreditAllocation`: per-rate allocation of a credit source, `goods_claimed`, `uncovered`, `understated` and their acknowledgements |
+| `grooveshop-django-api/order/migrations/0102_credit_allocation.py` | The `CreditAllocation` table, created empty |
+| `grooveshop-django-api/order/credit_allocation.py` | `headroom`, `allocate_source`, `allocate_order`, `undecided`, `owing_sources`, `goods_returned`, `blocking_claims`, `excess_holders`, `describe_blockers`, `free_reversed`, `reversed_credits`, `uncovered_orders`, `beyond_receipt_orders`, `understated_orders`, `acknowledge_uncovered`, `link_attempt` |
+| `grooveshop-django-api/order/credit_allocation_backfill.py` | `backfill_credit_allocations`, behind the five-minute `allocate_credit_sources` task |
+| `grooveshop-django-api/tenant/tasks.py` | `fanout_reconcile_pending_refunds`, `fanout_allocate_credit_sources` (both `include_suspended=True`) |
 | `grooveshop-django-api/order/models/payment_transaction.py` | `PaymentTransaction`, its unique and check constraints |
 | `grooveshop-django-api/order/enum/payment_transaction.py` | `PaymentTransactionKind` |
 | `grooveshop-django-api/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
@@ -856,25 +1053,25 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/exceptions.py` | `OrderCancellationError`, `ParcelWithCourierError`, `CourierUnreachableError`, `DisputeOpenError`, `RefundOutstandingError` |
 | `grooveshop-django-api/order/models/order.py` | `Order.save()` timestamp rules, `mark_as_paid`, `can_be_canceled`, `can_be_canceled_by_customer`, `awaits_online_payment`, `calculate_order_total_amount`, `AMOUNT_MISMATCH_FLAG` |
 | `grooveshop-django-api/order/managers/order.py` | `with_shipments`, `for_list`, `refund_owed` |
-| `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `refund_order`, `_claim_refund`, `_attempts_to_resume`, `_make_refund`, `_return_stored_value`, `RefundResult`, `_note_refund_declined`, `confirm_offline_payment`, `add_tracking_info` |
-| `grooveshop-django-api/order/payment.py` | `refund_payment` per provider, `StripePaymentProvider._ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
+| `grooveshop-django-api/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `refund_order`, `_claim_refund`, `_allocate_claim`, `_waiting_error`, `_attempts_to_resume`, `_make_refund`, `book_share`, `_return_stored_value`, `RefundResult`, `_note_refund_declined`, `confirm_offline_payment`, `add_tracking_info` |
+| `grooveshop-django-api/order/payment.py` | `refund_payment` per provider (Stripe writes `metadata.refund_attempt`), `find_refunds` and `confirm_refund` per provider, `StripePaymentProvider.retrieve_refund`, `refund_attempt_key`, `_ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
 | `grooveshop-django-api/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
-| `grooveshop-django-api/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_charge_refunded`, `handle_stripe_refund_failed` and every other domain receiver |
+| `grooveshop-django-api/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_refund_made`, `handle_stripe_charge_refunded` (gift card purchases only), `handle_stripe_refund_failed` and every other domain receiver |
 | `grooveshop-django-api/order/signals/__init__.py` | The twelve order signals and the `order_refunded` contract |
-| `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email` |
+| `grooveshop-django-api/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email`, `generate_order_invoice` and `_set_receipt_deferred`, `reconcile_pending_refunds`, `allocate_credit_sources` |
 | `grooveshop-django-api/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
 | `grooveshop-django-api/order/views/item.py`, `order/urls.py` | `OrderItemViewSet`: read-only list and detail, and `restock` |
 | `grooveshop-django-api/product/models/product.py` | `Product.vat`: NOT NULL, `on_delete=PROTECT` |
 | `grooveshop-django-api/order/line_snapshot.py`, `order/management/commands/backfill_line_snapshots.py` | The line name and SKU backfill |
-| `grooveshop-django-api/admin/dashboard/store/widgets.py` | The "Orders paid twice" row |
-| `grooveshop-django-api/order/admin.py` | `refund_payment`, `RefundOrderForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK; `OverchargedFilter`; no add on `OrderAdmin`, read-only `OrderItemInline` and `OrderItemAdmin` |
+| `grooveshop-django-api/admin/dashboard/store/widgets.py` | The "Orders paid twice" row; `StoreAlerts`: `_unknown_refunds`, `_unfinished_returns`, `_deferred_receipts`, `_reversed_credits`, `_uncovered_refunds`, `_understated_receipts` |
+| `grooveshop-django-api/order/admin.py` | `refund_payment`, `RefundOrderForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK; `OverchargedFilter`; `BooksFilter`, `ChargebackDecisionFilter`; `record_refund_outcome`, `RecordRefundOutcomeForm`, `acknowledge_uncovered`, `decide_chargeback`, `issue_receipt_now` and its deferral message; no add on `OrderAdmin`, read-only `OrderItemInline` and `OrderItemAdmin` |
 | `grooveshop-django-api/order/models/item.py` | `OrderItem.vat_rate`, `product_name`, `sku` and their snapshot in `save()`; `product_name_for` |
 | `grooveshop-django-api/order/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
 | `grooveshop-django-api/order/discounts.py` | `allocate_capped`, `discounted_line_gross`, `spread_by_remaining_value` |
 | `grooveshop-django-api/order/discount_snapshot.py` | `heal_discount_allocation` |
-| `grooveshop-django-api/order/invoicing.py` | Receipt totals from the VAT lines net of `refunded_before_receipt`, `_persist_invoice_row` keeping an existing row's figures, `_refuse_if_fully_refunded`, `receipt_issuable`, `render_credit_pdf` |
-| `grooveshop-django-api/order/credit_documents.py` | `create_pending_credits` (REFUND rows and settled `STORED_VALUE` attempts after the receipt row), `credit_breakdown` (cumulative net, never past the receipt), settlement credit |
+| `grooveshop-django-api/order/invoicing.py` | Receipt totals from the VAT lines net of `refunded_before_receipt` at each source's allocation (`_net_of`), `ReceiptDeferred`, `_persist_invoice_row` keeping an existing row's figures, `_refuse_if_fully_refunded`, `receipt_issuable`, `render_credit_pdf` |
+| `grooveshop-django-api/order/credit_documents.py` | `create_pending_credits` (REFUND rows and settled `STORED_VALUE` attempts after the receipt row, each from its allocation and net of reversals; goods-returned chargebacks), `credit_breakdown` (exactly the allocation's rates, cumulative net, never past the receipt), settlement credit |
 | `grooveshop-django-api/order/models/retail_credit.py` | `RetailCredit`, `CreditCounter` |
 | `grooveshop-django-api/order/mydata/builder.py` | myDATA lines and summary from the same VAT lines |
 | `grooveshop-django-api/shipping/services.py` | `ShippingService.cancel_shipment`, `can_cancel_shipment` |
@@ -886,7 +1083,7 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/order/notifications.py` | `_ORDER_STATUS_COPY` and the live-notification tasks |
 | `grooveshop-django-api/order/payment_events.py` | Redis pub/sub payment-status publish |
 | `grooveshop-django-api/loyalty/signals.py` | Earn on COMPLETED; reverse on CANCELED, on REFUNDED reached through `order_refunded` or `order_stored_value_returned`, on the REFUNDED status, and on `order_charged_back` once everything received is returned |
-| `grooveshop-django-api/settings.py` | `CELERY_BEAT_SCHEDULE` entries and their cadences |
+| `grooveshop-django-api/settings.py` | `CELERY_BEAT_SCHEDULE` entries and their cadences, `REFUND_RECONCILE_AFTER_MINUTES` |
 | `grooveshop-agent-gateway/internal/server/internalapi.go` | `POST /internal/events/order-status` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/[id]/cancel.post.ts` | Cancel proxy that returns the typed refusal body |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/error.ts` | `forwardUpstreamClientError`, `forwardUpstreamDocumentedError` |

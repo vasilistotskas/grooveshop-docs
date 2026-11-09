@@ -40,6 +40,8 @@ The filters panel lets you combine:
 - **Document Type** (receipt or invoice) and **Wholesale**
 - **Refund**: **Cancelled but still paid** (see [Refunds and disputes](/admin/sales/refunds-and-disputes))
 - **Overcharge**: **Paid more than the order is for** (see [A customer paid twice](#a-customer-paid-twice))
+- **Refund books**: **Receipt waiting for a refund** and **Beyond or short of the receipt** (see [Receipts and credit documents](/admin/sales/receipts#clear-a-receipt-difference))
+- **Chargeback**: **Goods not yet settled** (see [Settle a lost dispute](/admin/sales/refunds-and-disputes#settle-a-lost-dispute))
 - **Needs follow-up** and **Recent Orders**
 - the order source and cart source filters
 - dates, country, region, payment method, shipping provider and shipping kind
@@ -52,7 +54,7 @@ Cards at the top show **Status**, **Payment**, **Total**, **Customer**, **Shipme
 
 Further down: the order lines (read-only, see [Things to know](#things-to-know)), **Payment Transactions** (every charge, refund and chargeback), the receipt and credit documents, the order's history, and an ACS or BoxNow tab when a courier is attached.
 
-The header holds **Refund (amount, reason)** while money can still be refunded, **Download shipping voucher (PDF)** and, if the platform issues your receipts, the **Invoicing & myDATA** menu.
+The header holds **Refund (amount, reason)** while money can still be refunded, **Download shipping voucher (PDF)** and, if the platform issues your receipts, the **Invoicing & myDATA** menu. **Record refund outcome**, **Settle chargeback (goods)** and **Acknowledge receipt differences** appear only on an order that needs them; see [Refunds and disputes](/admin/sales/refunds-and-disputes) and [Receipts and credit documents](/admin/sales/receipts).
 
 ## Tasks
 
@@ -142,8 +144,10 @@ Nothing is refunded automatically, because which payment to give back is your ca
 ### Refund the extra payment
 
 1. Open the order from the **Orders paid twice** row or the filter.
-2. Work out the extra amount on **Payment Transactions**: everything charged, less what was already refunded or charged back, minus the order's **Total**.
+2. Work out the extra amount on **Payment Transactions**: everything charged, less what was already refunded or charged back, minus the order's **Total**. If goods already came back on this order (refunded, or a lost dispute you settled as returned), take their value off the **Total** too: the order is no longer for those goods.
 3. Press **Refund (amount, reason)**, enter the extra amount, fill in **Reason** and confirm.
+
+A refund always gives back the extra payment first. That part does not undo the sale, so it gets no credit document and does not reduce the receipt; only what you refund beyond it counts as goods returned. See [How a refund is judged](/admin/sales/refunds-and-disputes#how-a-refund-is-judged).
 
 The refund goes back against the order's payments oldest first; you cannot choose which payment it goes to. To give back one particular payment, refund it in your Viva Wallet or Stripe account instead: such a refund reaches the order on its own (see [Refunds and disputes](/admin/sales/refunds-and-disputes)).
 

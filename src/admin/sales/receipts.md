@@ -14,7 +14,7 @@ The entries appear when myDATA is switched on in Store Settings, even before the
 The platform issues receipts itself, through AADE's myDATA, only for a business exempt from the fiscal device. Then it issues:
 
 - the **receipt** when an order ships;
-- a **credit document** (the retail credit note) for every refund made after the receipt.
+- a **credit document** (the retail credit note) for every refund of goods made after the receipt.
 
 Both lists are archives: you can browse, search and download, never edit or add.
 
@@ -90,12 +90,41 @@ Once the receipt has a MARK, **VAT Rate** is read-only.
 ### Cancel a document issued in error
 Use **Cancel receipt in myDATA (issued in error)** on the order, or **Cancel in myDATA (issued in error)** on the credit documents list. AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, so in practice the right tool is almost always a credit document.
 
+### A receipt is waiting for a refund
+A receipt is due when the order ships. A refund still waiting for the provider's answer does not hold the receipt back on its own: its place on the receipt was fixed when you made it. The receipt waits only when another refund reached the order meanwhile, for example one made in your Viva Wallet or Stripe account, whose share depends on that answer: until the first refund is settled, the receipt cannot know how much to show. The [Dashboard](/admin/getting-started/dashboard#alerts) lists these orders as **Receipts waiting for a refund**, each with the refund it waits for.
+
+1. Open the order from that alert, or filter the order list with **Refund books → Receipt waiting for a refund**.
+2. Settle the refund it waits for: record its outcome with **Record refund outcome**, or finish a gift card and points refund that stopped (see [Refunds and disputes](/admin/sales/refunds-and-disputes#finish-a-gift-card-and-points-refund-that-stopped)).
+3. Within five minutes the receipt is issued on its own and the order leaves the alert.
+
+On such an order, **Issue receipt (myDATA)** does not schedule anything: it tells you the receipt is deferred and which refund it waits for.
+
+### Clear a receipt difference
+Two Dashboard alerts point at orders whose receipt and refunds do not match, so your accountant has to look at them:
+
+- **Refunded money beyond the receipt**: the order was refunded more for goods than its receipt holds. No credit document can be issued for the part past the receipt.
+- **Receipts short of goods the customer kept**: a refund the receipt was issued without later failed at the provider, so the customer kept goods the receipt does not show. The receipt needs correcting.
+
+1. Open the order from the alert, or filter the order list with **Refund books → Beyond or short of the receipt**.
+2. Read the order's history: it says how much is past the receipt, or how much the receipt is short.
+3. Settle it with your accountant.
+4. On the order, press **Acknowledge receipt differences**. The order leaves both alerts, and its history notes who acknowledged it and the amount.
+
+A new difference on the same order, from a later refund, shows up again.
+
+### A refund failed after its credit document
+Stripe can report a refund failed days after it went through. If its credit document was already issued, the document stays, because it is the record of what was sent to AADE. The Dashboard shows **A refunded credit document was reversed**, with a link to each document, and the order's history explains it. Ask your accountant how to correct it. If the document is cancelled in myDATA, the alert goes away.
+
 ## When documents are issued
 
 - **The receipt**, once a receipt order **ships**, cash on delivery included. It is issued once per order and emailed to the customer in their language.
-- **Net of earlier refunds.** If money went back before the receipt (to the card, or onto gift cards and points), the receipt shows only what was finally paid. If everything went back, no receipt is issued.
-- **A credit document for each refund after the receipt**, once the receipt is registered. It covers exactly what went back: money to the card, cash you paid back, or value returned onto gift cards and points. A partial refund is split over the VAT rates in proportion. Together the credit documents never exceed the receipt.
-- **No credit document for a chargeback**: the bank took the money back, you did not undo the sale.
+- **Net of earlier refunds.** If money went back before the receipt (to the card, or onto gift cards), the receipt shows only what was finally paid. Giving back a duplicate payment does not reduce it, and points were never on it. If everything went back, no receipt is issued.
+- **Not while another refund's share depends on an unanswered one.** A refund still waiting for the provider's answer does not delay the receipt by itself. The receipt waits only when another refund reached the order meanwhile and its share depends on that answer; once the first refund is settled, the receipt is issued on its own. See [A receipt is waiting for a refund](#a-receipt-is-waiting-for-a-refund).
+- **A credit document for each refund after the receipt**, once the receipt is registered. It covers what went back for the goods: money to the card, cash you paid back, or value returned onto gift cards. The part of a refund that gives back a duplicate payment gets none, and neither do points given back (see [How a refund is judged](/admin/sales/refunds-and-disputes#how-a-refund-is-judged)).
+- **Its VAT split is fixed when you make the refund.** A partial refund is split over the receipt's VAT rates in proportion to what each rate still holds at that moment, and keeps that split however the other refunds of the order turn out. Together the credit documents never exceed the receipt.
+- **Only for what really went back.** A refund the provider reported failed before its credit document was issued is credited only for the part that stands.
+- **A lost card dispute is credited only if the goods came back**, once you say so with **Settle chargeback (goods)** on the order (see [Card disputes](/admin/sales/refunds-and-disputes#card-disputes)). If the customer kept the goods, the bank took the money back but you did not undo the sale, so no credit document is issued.
+- **Never past the receipt.** If the refunds for goods add up to more than the receipt holds, the part past it gets no credit document, and the order is listed on the [Dashboard](/admin/getting-started/dashboard#alerts) for you to check (see [Clear a receipt difference](#clear-a-receipt-difference)).
 - **One closing credit document** when an order ends without a sale after its receipt, such as a cash-on-delivery parcel that came back.
 - **Orders cancelled before shipping** never get a receipt.
 
