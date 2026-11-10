@@ -49,10 +49,10 @@ The buttons:
 | Where | Button | What it does |
 |---|---|---|
 | Bulk action | **Download voucher PDFs (zip)** | One zip file with a PDF for each selected parcel. |
-| Bulk action | **Cancel parcels via BoxNow API** | Cancels the selected parcels that are **New**. It skips the others. |
+| Bulk action | **Cancel parcels via BoxNow API** | Cancels the selected parcels that are **New** or **Pending creation**, and reports a parcel that is already **Canceled** as cancelled. It skips the others. |
 | Bulk action | **Re-fetch label URL from BoxNow** | Fetches the label from BoxNow again, if downloading it does not work. |
 | Shipment page | **Download BoxNow voucher (PDF)** | This parcel's voucher. |
-| Shipment page | **Cancel parcel via BoxNow API** | Cancels the parcel, if it is **New**. |
+| Shipment page | **Cancel parcel via BoxNow API** | Cancels the parcel, if it is **New** or **Pending creation**. |
 | Shipment page | **Create BoxNow parcel now** | Sends the shipment to BoxNow again, after you fix the details. |
 
 ## Tasks
@@ -76,7 +76,7 @@ The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the
 
 ### Cancel a parcel
 
-1. Only a parcel in state **New** can be cancelled. For anything later, contact BoxNow.
+1. A parcel in state **New** can be cancelled. So can a shipment that is still **Pending creation**: your shop holds no parcel number for it, so it is cancelled in your shop only and nothing is sent to BoxNow. If the shop sent you an alert that the parcel could not be created, ask BoxNow whether a parcel exists for the order before you cancel, because a cancel from here would not reach it. For anything later, contact BoxNow.
 2. Open the shipment and click **Cancel parcel via BoxNow API**, or select rows and run **Cancel parcels via BoxNow API**.
 
 When you cancel the order, the parcel is cancelled too, if it is still **New**. A customer can cancel the order from their account only while the parcel is **New**. If you need a cancelled parcel after all, open the shipment and click **Create BoxNow parcel now**: a new parcel is created and the old one is kept in its history. This is refused while the order itself is cancelled.
