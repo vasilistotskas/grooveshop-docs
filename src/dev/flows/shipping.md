@@ -276,24 +276,40 @@ stateDiagram-v2
     Unknown --> New: late answer saved
     Unknown --> New: adopt_voucher
     Unknown --> Pending: request_voucher_again
+    Unknown --> Closed: close_voucher_request
     Pending --> Claimed: retry
 ```
 
 **Ways out of the state** (all in `shipping_acs/services.py`):
 
-- `AcsService.adopt_voucher(shipment, voucher_no, user=...)`: staff found the
-  voucher in the ACS portal. Refused (`AcsVoucherResolutionError`) when the
-  shipment is not waiting, when any shipment carries the number (its
-  voucher, a multipart child, `previous_vouchers`, `orphan_vouchers`), or
-  when ACS does not confirm it (`_confirm_voucher_at_acs`): the `recipient`
-  of the `ACS_Trackingsummary` row must equal the order's `Recipient_Name`
-  (compared without accents, case or extra spaces); with no recipient in the
-  summary the number must be an open `AcsUnrecognisedVoucher`. The checks run
-  again under the row lock, and a concurrent adopt of the same number gets the
-  same refusal instead of an `IntegrityError`. No create is sent.
+- `AcsService.adopt_voucher(shipment, voucher_no, user=..., confirmed_by_hand="")`:
+  staff found the voucher in the ACS portal. Refused
+  (`AcsVoucherResolutionError`) when the shipment is not waiting or its order
+  no longer needs a voucher, when any shipment carries the number (its voucher,
+  a multipart child, `previous_vouchers`, `orphan_vouchers`), or when
+  `_confirm_voucher_at_acs` cannot confirm it. ACS must first hold the voucher
+  for the store: a row from `ACS_Trackingsummary`, or an open
+  `AcsUnrecognisedVoucher`. The **only automatic yes** is the summary's
+  `recipient` equal to the `Recipient_Name` the lost request sent
+  (`_recipient_sent`: the recorded request, else the `AcsApiCall`, else the
+  order as it is), compared without accents, case or extra spaces, when no
+  other waiting shipment (`voucher_requests_waiting`) sent the same name. A
+  different or masked name, no recipient, a voucher known only from a refused
+  pickup list, or a twin order are all refused with a message; a non-empty
+  `confirmed_by_hand` overrides them (after the "ACS holds it" check), is
+  recorded as `confirmed_by: staff` and written to the order note. The checks
+  run again under the row lock, and a concurrent adopt of the same number gets
+  the same refusal instead of an `IntegrityError`. No create is sent.
 - `AcsService.request_voucher_again(shipment, user=..., note=...)`: staff
-  found no voucher. Clears the column, notes the order and queues the mint
-  once after the commit (`dispatch_on_commit`).
+  found no voucher. Refused when the order no longer needs a voucher. Clears
+  the column, notes the order and queues the mint once after the commit
+  (`dispatch_on_commit`).
+- `AcsService.close_voucher_request(shipment, user=..., note=...)`: for a
+  shipment that `attention.needs_no_voucher` (state `CANCELED`, or the order
+  `CANCELED` / `REFUNDED`). Needs a note, refuses an order that still needs its
+  voucher, clears the column, notes the order, sends nothing to ACS. Such a
+  shipment stays in `voucher_requests_unknown()` (counted) until closed, but is
+  not in `voucher_requests_waiting()`.
 - A late answer from the slow worker clears the column when it saves a
   voucher.
 - `reset_shipment_for_remint` clears the column beside a real voucher and
@@ -308,12 +324,19 @@ lists it under `unrecognised`. While a mint is in flight (a claim younger than
 its TTL) the run records nothing. A shipment that saves the number, by a mint
 or by `adopt_voucher`, resolves the row as `adopted`. Staff resolve the rest:
 
-- `delete_unrecognised_voucher` calls `ACS_Delete_Voucher` and resolves the
-  row as `deleted`. Under the row's lock it refuses when a shipment carries
-  the number, while a mint is in flight, and while any shipment is in the
-  unknown-outcome state (the voucher may be that order's lost one, and a
-  deleted voucher can no longer be adopted). ACS's own refusal, for a voucher
-  already on a pickup list, is raised as it is and the row stays open.
+- `delete_unrecognised_voucher(row, user=..., note=...)` calls
+  `ACS_Delete_Voucher` and resolves the row as `deleted`, keeping the note.
+  It first turns every expired mint claim into the unknown state
+  (`_record_expired_claims`). Under the row's lock it refuses when a
+  shipment's own voucher or multipart child is the number, while a mint is in
+  flight, and while any shipment in `voucher_requests_waiting()` exists (the
+  voucher may be that order's lost one, and a deleted voucher can no longer be
+  adopted); the refusal names the orders. A shipment that needs no voucher
+  does not hold it back, and a recorded duplicate (`orphan_vouchers`,
+  `previous_vouchers`) may be deleted. A mint that deleted its own duplicate
+  resolves the row through `_settle_unrecognised_vouchers`. ACS's own
+  refusal, for a voucher already on a pickup list, is raised as it is and the
+  row stays open.
 - `mark_unrecognised_voucher_checked` resolves it as `checked`, with a note.
 
 Nothing is deleted automatically: a voucher made in ACS's own portal looks
@@ -321,7 +344,7 @@ the same as an orphan.
 
 **Where staff see it.** The shipment admin
 (`shipping_acs/admin.py: AcsShipmentAdmin`) has the detail actions
-`adopt_voucher` and `request_voucher_again` and the `voucher_unknown` value of
+`adopt_voucher`, `request_voucher_again`, `close_voucher_request` and the `voucher_unknown` value of
 the "Needs attention" filter; `AcsUnrecognisedVoucherAdmin` has `delete_at_acs`
 and `mark_checked`. The store dashboard counts both
 (`admin/dashboard/store/queries.py`, `acs_voucher_requests_unknown` and
@@ -766,7 +789,8 @@ move `Order.status`, which the carrier events drive separately.
   and one live candidate is enough to make a refusal a failure again.
 - **A voucher request with an unknown outcome is never sent again by code.**
   Only `adopt_voucher` or `request_voucher_again` ends it, both by staff,
-  and an expired mint claim enters it instead of minting.
+  and an expired mint claim enters it instead of minting. Only a retired
+  shipment or a canceled or refunded order may be closed without a voucher.
 - **Exactly one task owns a dead voucher: `check_stale_acs_shipments`.**
   Every other task that trips over one defers to it rather than raising
   a second alarm.
@@ -873,9 +897,9 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
 | `grooveshop-django-api/shipping/urls.py` | Options, free-shipping-info, providers |
 | `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
-| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, the `voucher_unknown` filter value, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`) and the `label_printed_at` empty filter |
+| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` filter value, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`) and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/client.py` | `AcsClient._exchange` and `_never_connected`: which transport failures are `AcsOutcomeUnknownError` |
-| `grooveshop-django-api/shipping_acs/attention.py` | `voucher_request_unknown_q`, `voucher_requests_unknown`, `unrecognised_vouchers` |
+| `grooveshop-django-api/shipping_acs/attention.py` | `voucher_request_unknown_q`, `voucher_requests_unknown`, `voucher_requests_waiting`, `needs_no_voucher`, `unrecognised_vouchers` |
 | `grooveshop-django-api/shipping_acs/models/` | `AcsShipment.voucher_request_unknown_at`, `AcsUnrecognisedVoucher` |
 | `grooveshop-django-api/admin/dashboard/store/queries.py` | The two ACS counters of the dashboard |
 | `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |

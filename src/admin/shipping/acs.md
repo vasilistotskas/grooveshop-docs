@@ -57,6 +57,7 @@ The buttons:
 | Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Marks the shipments cancelled here only, so the checks and alerts stop. It does not tell ACS and does not change the order. |
 | Shipment page | **Adopt ACS voucher** | Gives the shipment a voucher you found in ACS's portal. See [A voucher request that got no answer](#a-voucher-request-that-got-no-answer). |
 | Shipment page | **No voucher at ACS: request again** | Asks ACS for one new voucher, when the portal shows none for the order. See the same section. |
+| Shipment page | **No voucher needed: close** | Ends the check for a shipment that was retired, or whose order was canceled or refunded. See the same section. |
 | Shipment page | **Record COD received outside ACS** | See "Cash on delivery that never arrived". |
 | Shipment page | **Cancel ACS voucher** | Cancels only the voucher at ACS, with a reason; the order stays as it is. |
 
@@ -101,7 +102,7 @@ Sometimes the request for a voucher is sent to ACS and no answer comes back: ACS
 How you are told:
 
 - One email, **ACS voucher request with an unknown outcome**, with the order number. It is sent once, not on every attempt.
-- A note in the order's history, which names the two actions below.
+- A note in the order's history, which names the actions below.
 - On the [Dashboard](/admin/getting-started/dashboard), the row **ACS voucher requests to check** in **Needs attention**.
 - On the shipment, which stays **Pending creation**, the field **Voucher request outcome unknown since**. The filter **Needs attention: Voucher request with an unknown outcome** lists these shipments.
 
@@ -111,15 +112,19 @@ What to do:
 2. Open the shipment in <span class="sidebar-path">Shipping → ACS Shipments</span>.
 3. If the portal has a voucher for the order, click **Adopt ACS voucher** and enter its number in **Voucher number**.
 4. If the portal has none, click **No voucher at ACS: request again** and write in **How you checked** where you looked.
+5. If the order no longer needs a voucher (the shipment was retired, or the order was canceled or refunded), click **No voucher needed: close** and write in **How you checked** what you did at ACS. If ACS holds the lost voucher, delete it in ACS's portal first and say so.
 
 What each action does:
 
 | Action | What happens | When it is refused |
 |---|---|---|
-| **Adopt ACS voucher** | The shipment takes that voucher and becomes **New**. The order gets the voucher number as its tracking number and a note, and moves to **Processing** if it was **Pending**. No new request is sent. | The number already belongs to another shipment. ACS does not confirm the voucher. ACS names a different recipient than the order's (accents, capitals and extra spaces are ignored in the comparison). Or ACS gives no recipient for it and the number is not on the list of [vouchers that match no order](#vouchers-that-match-no-order) either. |
-| **No voucher at ACS: request again** | The note is kept on the order, and exactly one new request is sent. | The note is empty. **Be sure first:** if ACS did make a voucher, this creates a second one. |
+| **Adopt ACS voucher** | The shipment takes that voucher and becomes **New**. The order gets the voucher number as its tracking number and a note, and moves to **Processing** if it was **Pending**. No new request is sent. | ACS does not hold the voucher for your store. The number already belongs to another shipment. The order no longer needs a voucher. Or ACS's answer does not settle it by itself (see below) and **Confirmed by hand** is empty. |
+| **No voucher at ACS: request again** | The note is kept on the order, and exactly one new request is sent. | The note is empty, or the order no longer needs a voucher. **Be sure first:** if ACS did make a voucher, this creates a second one. |
+| **No voucher needed: close** | The check ends, the note is kept on the order, and nothing is sent to ACS. | The note is empty, or the order still needs its voucher (then adopt or request again). |
 
-Both actions work only on a shipment that is waiting for this check; on any other shipment they answer that they cannot be used. If the slow answer from ACS arrives while you are checking, the shipment takes that voucher by itself and the wait ends.
+The three actions work only on a shipment that is waiting for this check; on any other shipment they answer that they cannot be used. A shipment that was retired, or whose order was canceled or refunded, "needs no voucher": it stays counted on the Dashboard until you close it, and **Adopt ACS voucher** and **No voucher at ACS: request again** refuse it. If the slow answer from ACS arrives while you are checking, the shipment takes that voucher by itself and the wait ends.
+
+**When Adopt accepts the number by itself.** Only when ACS reports a recipient that matches the name the lost request sent (accents, capitals and extra spaces are ignored), and no other order that is still waiting was sent to the same recipient. In every other case Adopt refuses and tells you why: ACS names a different or masked recipient, gives no recipient, knows the voucher only from a refused pickup list, or another waiting order has the same recipient so the name cannot tell them apart. Then check in ACS's portal that the voucher is really this order's parcel, click **Adopt ACS voucher** again, and write in **Confirmed by hand** how you confirmed it. That text is kept on the order.
 
 ### Vouchers that match no order
 
@@ -130,18 +135,18 @@ When ACS refuses a pickup list, it names the unprinted vouchers it holds for you
 Such a voucher can be the lost answer of a request (see above), a second voucher for an order that already has one, or a voucher you made yourself in ACS's portal. The shop cannot tell which, so it deletes nothing by itself. While it stays unprinted at ACS, it keeps the pickup list refused. Open the voucher and choose:
 
 - **Adopt it:** if it belongs to an order waiting for a check, adopt it from that order's shipment, as above. The voucher is then marked **Adopted by a shipment**.
-- **Delete at ACS:** deletes the voucher at ACS and marks it deleted. It cannot be undone.
+- **Delete at ACS:** deletes the voucher at ACS and marks it deleted, keeping your note. It cannot be undone. A duplicate that the shop's own request deleted at ACS is closed by itself.
 - **Mark as checked:** for a voucher you know, for example one you made in the ACS portal. Write in the note what it is. It stops being counted and nothing is sent to ACS.
 
 **Delete at ACS** is refused:
 
-- while any order is waiting for you to check its voucher request. The voucher may be that order's, and a deleted voucher can no longer be adopted, so the shop makes you resolve the waiting order first. The message names the order;
 - while a voucher request is in progress, because the voucher may be its answer. Try again in a few minutes;
+- while an order that still needs a voucher is waiting for you to check its voucher request. The voucher may be that order's, and a deleted voucher can no longer be adopted, so the shop makes you resolve that order first. The message names the order. An order that no longer needs a voucher does not hold the delete back;
 - when a shipment already holds the voucher: cancel it from that shipment instead;
 - when ACS refuses, for example because the voucher is already on a pickup list;
 - when the voucher is already resolved.
 
-Both actions ask for a note; only **Mark as checked** keeps it, on the voucher.
+Both actions ask for a note, and both keep it on the voucher.
 
 ### Cancel a voucher
 

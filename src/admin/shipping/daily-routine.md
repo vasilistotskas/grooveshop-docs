@@ -25,7 +25,7 @@ For ACS and BoxNow the voucher (the courier's shipping label) is issued by itsel
 
 Open the [Dashboard](/admin/getting-started/dashboard) and look at the **Needs attention** section, for example **Stale ACS shipments** and **COD cash ACS has not paid out**. Each line opens the list of parcels. At 09:00 an email also arrives about ACS parcels that are not moving.
 
-Two rows ask you to look in ACS's own portal before you press anything. **ACS voucher requests to check** counts orders whose voucher request got no answer: ACS may already hold a voucher for them, so the shop sends nothing more until you adopt that voucher or ask again. **ACS vouchers matching no order** counts vouchers ACS named on a refused pickup list that match none of your shipments. Both are explained in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer).
+Two rows ask you to look in ACS's own portal before you press anything. **ACS voucher requests to check** counts orders whose voucher request got no answer: ACS may already hold a voucher for them, so the shop sends nothing more until you adopt that voucher, ask again or close the check. **ACS vouchers matching no order** counts vouchers ACS named on a refused pickup list that match none of your shipments. Both are explained in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer).
 
 ### 2. ACS parcels
 
@@ -34,7 +34,7 @@ Two rows ask you to look in ACS's own portal before you press anything. **ACS vo
 3. Print the PDF and stick each label on its parcel.
 4. Hand the parcels to ACS.
 
-A shipment that stays **Pending creation** with a value in **Voucher request outcome unknown since** is not waiting for a fix to the address. Do not click **Issue ACS voucher now** on it: check ACS's portal and use **Adopt ACS voucher** or **No voucher at ACS: request again** on the shipment, as described in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer).
+A shipment that stays **Pending creation** with a value in **Voucher request outcome unknown since** is not waiting for a fix to the address. Do not click **Issue ACS voucher now** on it: check ACS's portal and use **Adopt ACS voucher**, **No voucher at ACS: request again** or, for an order that was canceled, **No voucher needed: close** on the shipment, as described in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer).
 
 The day's pickup list is issued by itself Monday to Friday at 16:30. If ACS refuses it because a label was not printed, the parcels with a printed label still leave as normal. Details in [ACS Courier](/admin/shipping/acs).
 
