@@ -25,7 +25,7 @@ The screen appears only while ACS is active under [Shipping providers](/admin/se
 
 Filters: **Shipment state**, **Delivery kind**, **Label** (**Printed** / **Not printed**), **Needs attention** and **Created At**. Search finds a voucher number, an order number or a customer email.
 
-A shipment waiting for you to check its voucher at ACS (see [A voucher request that got no answer](#a-voucher-request-that-got-no-answer)) stays in **Pending creation**. Its **Voucher request outcome unknown since** field on the **Shipment** tab shows the time, and the filter **Needs attention: Voucher request with an unknown outcome** lists such shipments.
+A shipment waiting for you to check its voucher at ACS (see [A voucher request that got no answer](#a-voucher-request-that-got-no-answer)) is usually in **Pending creation**; a shipment that was retired meanwhile is **Canceled** and stays counted until you close the check. Its **Voucher request outcome unknown since** field on the **Shipment** tab shows the time, and the filter **Needs attention: Voucher request with an unknown outcome** lists such shipments.
 
 The parcel states:
 
@@ -101,10 +101,10 @@ Sometimes the request for a voucher is sent to ACS and no answer comes back: ACS
 
 How you are told:
 
-- One email, **ACS voucher request with an unknown outcome**, with the order number. It is sent once, not on every attempt.
+- One email, **ACS voucher request with an unknown outcome**, with the order number. It is sent once for each unknown outcome, not on every attempt. If you request again and that request is also lost, you get a new email.
 - A note in the order's history, which names the actions below.
 - On the [Dashboard](/admin/getting-started/dashboard), the row **ACS voucher requests to check** in **Needs attention**.
-- On the shipment, which stays **Pending creation**, the field **Voucher request outcome unknown since**. The filter **Needs attention: Voucher request with an unknown outcome** lists these shipments.
+- On the shipment, which is **Pending creation** (or **Canceled**, if it was retired), the field **Voucher request outcome unknown since**. The filter **Needs attention: Voucher request with an unknown outcome** lists these shipments.
 
 What to do:
 

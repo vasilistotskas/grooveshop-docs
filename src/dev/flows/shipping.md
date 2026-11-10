@@ -227,9 +227,14 @@ carrier API call never happens with a Postgres row lock held:
 
 The claim TTL is 300 seconds (`_MINT_CLAIM_TTL_SECONDS`). It was 90 until
 a slow ACS round trip let a second worker re-mint and leak an orphan
-voucher. A claim older than the TTL with no `voucher_no` means a worker stopped
-after the request may have left; it enters the unknown-outcome state
-below rather than minting again.
+voucher. A claim older than the TTL with no `voucher_no` means the request
+is still in flight or a worker stopped after it may have left. Expiry alone
+changes nothing: the shipment enters the unknown-outcome state below only
+when a detection path runs (`AcsService._record_expired_claims`, or the
+claim check of the next `create_voucher_for_order` for that order). The
+callers of `_record_expired_claims` are the pickup-list refusal hook
+(`_raise_unrecognised_vouchers`) and `delete_unrecognised_voucher`. Until
+one runs, the alert and the dashboard counter lag.
 
 ### A voucher request with an unknown outcome
 
@@ -252,7 +257,8 @@ raised (`AcsClient._exchange`, `_never_connected` in `shipping_acs/client.py`):
 | HTTP 403 / 406 | `AcsAuthError` | released; Celery retries |
 | An ACS refusal (`ACSExecution_HasError`, a value-row `Error_Message`, any other 4xx) | `AcsAPIError` | released; `ops.shipment_rejected`; no retry |
 | A read timeout; any other connection error; any 5xx; a 200 whose body is not JSON | `AcsOutcomeUnknownError`, a subclass of `AcsRetryableError` so reads keep retrying | **unknown** |
-| An exception the client does not classify; a 200 with neither `Voucher_No` nor `Error_Message`; a claim older than its TTL | | **unknown** |
+| An exception the client does not classify; a 200 with neither `Voucher_No` nor `Error_Message` | | **unknown** |
+| A claim older than its TTL | | **unknown once detected** (see the paragraph above): by itself it only marks the claim expired |
 
 `create_voucher_for_order` turns an unknown outcome into
 `AcsShipment.voucher_request_unknown_at` (a column, not a new
@@ -272,7 +278,8 @@ stateDiagram-v2
     [*] --> Claimed: claim
     Claimed --> New: Voucher_No saved
     Claimed --> Pending: never reached ACS, or refused
-    Claimed --> Unknown: unknown outcome, or claim past its TTL
+    Claimed --> Unknown: unknown outcome
+    Claimed --> Unknown: claim past its TTL, once a detection path runs
     Unknown --> New: late answer saved
     Unknown --> New: adopt_voucher
     Unknown --> Pending: request_voucher_again
@@ -300,6 +307,14 @@ stateDiagram-v2
   recorded as `confirmed_by: staff` and written to the order note. The checks
   run again under the row lock, and a concurrent adopt of the same number gets
   the same refusal instead of an `IntegrityError`. No create is sent.
+
+  Observation, read-only on production, 2026-11-10 (8 vouchers; not a
+  guarantee of ACS's behaviour): `ACS_Trackingsummary` returned `recipient`
+  unmasked, and it matched the order's recipient name in 8 of 8. `consignee`
+  is a different field (who received the parcel), not the recipient. A retired
+  voucher returned an empty summary. The manual's own example masks every
+  personal value, so the comparison stays a refusal-with-override, not an
+  assumption.
 - `AcsService.request_voucher_again(shipment, user=..., note=...)`: staff
   found no voucher. Refused when the order no longer needs a voucher. Clears
   the column, notes the order and queues the mint once after the commit
@@ -788,9 +803,11 @@ move `Order.status`, which the carrier events drive separately.
 - **A pickup day with nothing live waiting is a `None`, not a raise**,
   and one live candidate is enough to make a refusal a failure again.
 - **A voucher request with an unknown outcome is never sent again by code.**
-  Only `adopt_voucher` or `request_voucher_again` ends it, both by staff,
-  and an expired mint claim enters it instead of minting. Only a retired
-  shipment or a canceled or refunded order may be closed without a voucher.
+  Staff end it with `adopt_voucher` or `request_voucher_again`, and a late
+  answer that saves a voucher ends it too (the mint's persist phase clears
+  the column). An expired mint claim enters it, once detected, instead of
+  minting. Only a retired shipment or a canceled or refunded order may be
+  closed without a voucher.
 - **Exactly one task owns a dead voucher: `check_stale_acs_shipments`.**
   Every other task that trips over one defers to it rather than raising
   a second alarm.
