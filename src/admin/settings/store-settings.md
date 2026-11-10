@@ -201,7 +201,7 @@ Shipping costs, free-shipping thresholds and countries are not here. They are on
 | `ABANDONED_CART_CLEANUP_DAYS` | After how many days empty guest carts are deleted. | 7 |
 | `OLD_GUEST_CART_CLEANUP_DAYS` | After how many days guest carts are deleted. | 30 |
 
-Low stock is not a setting here. The low-stock email (checked every hour) uses each product's own **Low Stock Threshold**, set on [Products](/admin/catalog/products). The number beside **Products** in the sidebar and **Running low on stock** on the [Dashboard](/admin/getting-started/dashboard) count active products with 1 to 9 units left.
+Low stock is not a setting here. The low-stock email (checked every hour) uses each product's own **Low Stock Threshold**, set on [Products](/admin/catalog/products). The number beside **Products** in the sidebar and **Running low on stock** on the [Dashboard](/admin/getting-started/dashboard) count active products that are at or below their own threshold and still have at least 1 unit. A threshold of 0 keeps a product out of both.
 
 ### Emails & Engagement
 

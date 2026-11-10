@@ -13,14 +13,15 @@ This is where you create and maintain what you sell: name, price, stock, images 
 
 The list shows the newest products first. Each row has the name with a thumbnail and the start of the SKU (product code), the category, the variant group, the price and the stock.
 
-| Label in the **Stock** column | Units |
+| Label in the **Stock** column | When |
 |---|---|
-| **Out of stock** | 0 |
-| **Critical** | 1 to 5 |
-| **Low** | 6 to 10 |
-| **In stock** | more than 10 |
+| **Out of stock** | The stock is 0. |
+| **Low stock** | The stock is above 0 and at or below the product's own **Low Stock Threshold**. |
+| **In stock** | The stock is above the threshold. |
 
-The number next to **Products** in the sidebar counts active products with 1 to 9 units. The Dashboard shows the same number as **Running low on stock**.
+Each label shows the number of units after it. The same three states are in the **Stock Status** filter. The threshold is set per product (10 to start with), so a product with a threshold of 20 shows **Low stock** at 20 units and one with a threshold of 3 only at 3. A threshold of 0 switches the alert off for that product: it is **Out of stock** at 0 and **In stock** above it, never **Low stock**.
+
+The number next to **Products** in the sidebar counts active products that are **Low stock**, each by its own threshold. The Dashboard shows the same number as **Running low on stock**. Products that are **Out of stock** are not part of it.
 
 Search finds products by SKU, name, description, category or brand. The filters (stock, price, discount, category, brand and more) open in a side panel.
 
