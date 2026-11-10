@@ -52,7 +52,7 @@ sequenceDiagram
 
 `ShippingCarrierInterface` declares the methods every carrier must have,
 even as no-ops. The abstract ones are `create_shipment`,
-`cancel_shipment`, `fetch_label_bytes`, `fetch_tracking_events`,
+`cancel_shipment`, `has_label`, `fetch_label_bytes`, `fetch_tracking_events`,
 `shipment_for_order`, `serialize_shipment` and `validate_order_payload`.
 The optional hooks are where a carrier states what it is:
 
@@ -280,7 +280,9 @@ stateDiagram-v2
     Claimed --> Pending: never reached ACS, or refused
     Claimed --> Unknown: unknown outcome
     Claimed --> Unknown: claim past its TTL, once a detection path runs
-    Unknown --> New: late answer saved
+    Unknown --> New: late answer saved, check still open
+    Unknown --> Resolved: staff resolve the check
+    Resolved --> Resolved: late answer deleted at ACS, not saved
     Unknown --> New: adopt_voucher
     Unknown --> Pending: request_voucher_again
     Unknown --> Closed: close_voucher_request
@@ -326,9 +328,29 @@ stateDiagram-v2
   shipment stays in `voucher_requests_unknown()` (counted) until closed, but is
   not in `voucher_requests_waiting()`.
 - A late answer from the slow worker clears the column when it saves a
-  voucher.
+  voucher, **only while the check is still open**. In `create_voucher_for_order`
+  Phase 3 (`resolved_meanwhile`: the shipment's `mint_started_at` is no longer
+  the claim this request was sent under and `voucher_request_unknown_at` is
+  empty) an answer that arrives after staff resolved the check (request
+  again, close, adopt another voucher) is stale: it is not saved, it is
+  deleted at ACS and its unrecognised row settled as `deleted`. If ACS
+  refuses, the number goes to `metadata["orphan_vouchers"]` and
+  `_keep_unrecognised_vouchers` records it at once as an
+  `AcsUnrecognisedVoucher` with `source=refused_delete` and `duplicate_of` the
+  shipment. It reopens a row staff had marked `checked` (a `deleted` or
+  `adopted` row keeps its resolution and gains the link only).
+- **The remaining gap.** If staff delete the voucher in the ACS portal
+  *before* resolving the check, the check is still open when the late answer
+  arrives, so Phase 3 saves the dead number. The safe order, for staff, is
+  resolve in the admin first, then delete (portal or `Delete at ACS`).
 - `reset_shipment_for_remint` clears the column beside a real voucher and
-  keeps it on a shipment with no voucher.
+  keeps it on a shipment with no voucher. It refuses while a mint claim is
+  younger than its TTL (the shipment was canceled with a request out: a
+  stale answer would now be deleted, and a refused re-mint would leave no
+  voucher). An expired claim becomes the unknown state, committed, and the
+  reset raises `AcsVoucherRequestUnknownError`, so nothing is queued; the
+  admin's "Issue ACS voucher now" shows the check guidance
+  (`voucher_check_message`).
 
 **Vouchers matching no order.** A refused `ACS_Issue_Pickup_List` names every
 unprinted voucher of the account. A number that is neither a shipment's
