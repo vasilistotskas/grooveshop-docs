@@ -35,7 +35,7 @@ For a draft, save without ticking **Is Published**.
 ### Schedule a post
 1. Tick **Is Published** and set **Published At** to a future date and time.
 2. Save. The list shows **Scheduled**.
-3. Do not use **Publish selected posts** on it: that publishes at once, with today's date.
+3. **Publish selected posts** leaves a scheduled post alone and keeps its date. To publish it now, open it and change its **Published At** date.
 
 Within about a minute of the date you set, the post appears on its own: on the blog, in the store's search and in its feeds. If `INDEXNOW_ENABLED` is on (see [Store settings](/admin/settings/store-settings)), the search engines hear of it in the store's next message to them, sent every half hour. You do not need to save it again or clear any cache.
 
@@ -74,7 +74,7 @@ Untick **Is Published** and save, or select posts and choose **Unpublish selecte
 - **Text that is refused**: if you paste something the store cannot show, e.g. code from **Source code**, saving stops with a message saying what is wrong.
 - **Fonts and text size come from the store**: when you save, the font and the text size are removed from the text, so every post uses the typography of your store's theme. This also goes for text pasted from Word or from a web page (Roboto, Calibri, 14pt, ...), and Word's hidden formatting and comment marks go with it. Bold, italics, colours, alignment and spacing stay as you set them. The editor does not offer a font or a text size for the same reason; use a heading for larger text.
 - **Search**: a scheduled post stays out of the store's search until its time, as it does on the blog pages.
-- **Bulk actions**: **Publish selected posts** puts today's date on every selected post, even ones already published. Changes made by bulk actions reach the store on their own.
+- **Bulk actions**: **Publish selected posts** publishes only drafts, with today's date. A post already live keeps the date it went live on, and a scheduled post keeps its scheduled date; a warning tells you how many were left scheduled. Changes made by bulk actions reach the store on their own.
 - **Comments**: they cannot be closed per post. The `BLOG_COMMENTS_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span> closes them for the whole blog; see [Comments](/admin/content/blog/comments).
 - **Deleting**: deleting a post does not erase its comments. Erase them first from [Comments](/admin/content/blog/comments) if they should go.
 - **A list for Excel**: select posts and choose **Export selected to CSV** or **Export selected to XML**.
