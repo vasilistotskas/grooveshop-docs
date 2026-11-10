@@ -289,10 +289,11 @@ setting states, the roles, the badges, and that every registered store
 page is reachable from the sidebar or a tab strip, or is named in the test
 with the reason it is not (`test_every_store_page_is_reachable`).
 
-The platform sidebar stays a static list in `UNFOLD_PLATFORM`; groups
-there may carry a `permission` dotted path, and `admin/permissions.py`
-provides `is_superuser` and `platform_environment` (the control-plane
-badge).
+The platform sidebar is built the same way: `UNFOLD_PLATFORM["SIDEBAR"]
+["navigation"]` points at `admin.navigation.platform_sidebar`, which lists
+every entry for every platform operator and reverses each link against the
+request's own URLconf. `admin/permissions.py` provides `is_superuser` and
+`platform_environment` (the control-plane badge).
 
 `SITE_DROPDOWN` on both sites is `admin.navigation.ops_site_dropdown`,
 built per request because Unfold renders dropdown items unchecked:
@@ -442,8 +443,8 @@ holds lazy strings evaluated after the request has reset the language.
 4. Add the sidebar entry: a `page(...)` call in
    `admin/navigation.py: store_sidebar`, under its group or sub-menu and
    gated on `admin.features` if it belongs to an optional feature; or, for
-   the platform site, an item in `UNFOLD_PLATFORM` with its pinned
-   `urlconf=`. A page reached only from a tab strip goes in `TABS`.
+   the platform site, a `page(...)` call in
+   `admin/navigation.py: platform_sidebar`. A page reached only from a tab strip goes in `TABS`.
 5. Run `uv run pytest tests/unit/admin tests/integration/admin`; add the
    admin guide page in the docs repo in both locales.
 
@@ -483,6 +484,7 @@ holds lazy strings evaluated after the request has reset the language.
 | `grooveshop-django-api/admin/branding.py` | Logo, icon and favicons per store |
 | `grooveshop-django-api/core/json_schema.py` | `JSONSchemaValidator`, `wire_schema` |
 | `grooveshop-django-api/tenant/role_scopes.py`, `tenant/auth_backends.py` | Role grants, reference data, `core.purge_cache` |
+| `grooveshop-django-api/admin/navigation.py` | `store_sidebar`, `platform_sidebar` |
 | `grooveshop-django-api/settings.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `ADMIN_DOCS_URL`, `ADMIN_OPS_LINKS` |
 | `grooveshop-django-api/tests/integration/admin/test_store_navigation.py` | The store sidebar's states, roles, badges and reachability |
 | `grooveshop-django-api/core/management/commands/makemessages_unfold.py` | Extracts Unfold's strings into `locale_vendor/unfold` |

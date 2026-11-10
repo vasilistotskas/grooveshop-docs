@@ -121,10 +121,10 @@ for (const repoName of [...present, null]) {
  * The store sidebar is built per request by `admin/navigation.py:
  * store_sidebar`, as nested calls — `_group(_("Sales"), [page(…, _("Orders")),
  * _menu(_("Wholesale"), "icon", [page(…), …]), …])`. The platform sidebar is
- * the `UNFOLD_PLATFORM["SIDEBAR"]["navigation"]` literal in `settings.py`,
- * dicts with "title" and "items". Both are read as Python source: a scanner
+ * built by `platform_sidebar` in the same module: a list of dicts with
+ * "title" and "items". Both are read as Python source: a scanner
  * that matches brackets and splits on top-level commas while skipping strings
- * and comments, which is all their shape needs. Neither file is imported —
+ * and comments, which is all their shape needs. The module is not imported —
  * that needs Django, a database and a tenant.
  *
  * The reading is generic over the helpers: an entry is a call (or a dict)
@@ -298,18 +298,19 @@ function storeSections(src) {
 }
 
 /**
- * The platform sidebar's sections, from `UNFOLD_PLATFORM` in settings.py.
- * Scanned from the assignment onward only, so nothing earlier in that long
- * file can throw the string tracking off.
+ * The platform sidebar's sections, from `platform_sidebar` in navigation.py:
+ * the list its own `return [` hands back, dicts with "title" and "items".
  */
-function platformSections(settingsSource) {
-  const m = /^UNFOLD_PLATFORM\s*=\s*\{/m.exec(settingsSource)
-  if (!m) return []
-  const src = stripComments(settingsSource.slice(m.index))
-  const open = src.indexOf('{')
-  const sidebar = unwrap(dictEntries(src.slice(open + 1, closing(src, open))).get('SIDEBAR') ?? '')
-  if (!sidebar.startsWith('{')) return []
-  return listItems(dictEntries(sidebar.slice(1, closing(sidebar, 0))).get('navigation') ?? '', new Map())
+function platformSections(src) {
+  const start = src.search(/^def\s+platform_sidebar\s*\(/m)
+  if (start === -1) return []
+  const body = src.slice(start)
+  const ret = /^ {4}return\s*\[/m.exec(body)
+  if (!ret) return []
+  const open = ret.index + ret[0].length - 1
+  const close = closing(body, open)
+  if (close === -1) return []
+  return listItems(body.slice(open, close + 1), functionTitles(src))
 }
 
 /** Greek `msgstr` per English `msgid`, so the el pages are checked too. */
@@ -332,14 +333,14 @@ const PATH_SEP = '\u0000'
  */
 function adminSidebar() {
   const django = join(WORKSPACE, 'grooveshop-django-api')
-  const settings = join(django, 'settings.py')
   const navigation = join(django, 'admin', 'navigation.py')
-  if (!existsSync(settings) || !existsSync(navigation)) return null
+  if (!existsSync(navigation)) return null
   const unreadable = []
-  const store = storeSections(stripComments(readFileSync(navigation, 'utf8')))
+  const navigationSource = stripComments(readFileSync(navigation, 'utf8'))
+  const store = storeSections(navigationSource)
   if (!store.some(s => s.title && s.children.length)) unreadable.push('the store sidebar in admin/navigation.py (store_sidebar)')
-  const platform = platformSections(readFileSync(settings, 'utf8'))
-  if (!platform.some(s => s.title && s.children.length)) unreadable.push('the platform sidebar in settings.py (UNFOLD_PLATFORM)')
+  const platform = platformSections(navigationSource)
+  if (!platform.some(s => s.title && s.children.length)) unreadable.push('the platform sidebar in admin/navigation.py (platform_sidebar)')
 
   const greek = greekLabels(join(django, 'locale', 'el', 'LC_MESSAGES', 'django.po'))
   const paths = new Set()
