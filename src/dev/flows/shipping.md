@@ -281,9 +281,10 @@ stateDiagram-v2
     Claimed --> Pending: never reached ACS, or refused
     Claimed --> Unknown: unknown outcome
     Claimed --> Unknown: claim past its TTL, once a detection path runs
-    Unknown --> New: late answer saved, check still open
+    Unknown --> New: late answer of the request the check belongs to
     Unknown --> Resolved: staff resolve the check
-    Resolved --> Resolved: late answer deleted at ACS, not saved
+    Resolved --> Resolved: any other late answer deleted at ACS, not saved
+    Unknown --> Unknown: a later request is lost too, the earlier answer is deleted at ACS
     Unknown --> New: adopt_voucher
     Unknown --> Pending: request_voucher_again
     Unknown --> Closed: close_voucher_request
@@ -299,7 +300,10 @@ stateDiagram-v2
   a multipart child, `previous_vouchers`, `orphan_vouchers`), or when
   `_confirm_voucher_at_acs` cannot confirm it. ACS must first hold the voucher
   for the store: a row from `ACS_Trackingsummary`, or an open
-  `AcsUnrecognisedVoucher`. The **only automatic yes** is the summary's
+  `AcsUnrecognisedVoucher` named by a refused pickup list (`source=pickup_list`;
+  a `refused_delete` row is not evidence). One exception: a `refused_delete`
+  row whose `duplicate_of` is this shipment is accepted with `confirmed_by_hand`
+  even when the summary is empty. The **only automatic yes** is the summary's
   `recipient` equal to the `Recipient_Name` the lost request sent
   (`_recipient_sent`: the recorded request, else the `AcsApiCall`, else the
   order as it is), compared without accents, case or extra spaces, when no
@@ -330,12 +334,15 @@ stateDiagram-v2
   voucher, clears the column, notes the order, sends nothing to ACS. Such a
   shipment stays in `voucher_requests_unknown()` (counted) until closed, but is
   not in `voucher_requests_waiting()`.
-- A late answer from the slow worker clears the column when it saves a
-  voucher, **only while the check is still open**. In `create_voucher_for_order`
-  Phase 3 (`resolved_meanwhile`: the shipment's `mint_started_at` is no longer
-  the claim this request was sent under and `voucher_request_unknown_at` is
-  empty) an answer that arrives after staff resolved the check (request
-  again, close, adopt another voucher) is stale: it is not saved, it is
+- An unknown state belongs to a request: `_set_voucher_request_unknown`
+  moves the claim (`mint_started_at`) into `metadata["unknown_request"]`, and
+  `_forget_voucher_request_unknown` clears both. In `create_voucher_for_order`
+  Phase 3 an answer is saved (and clears the state) only when the row still
+  holds its claim, or the pending check is its own request's
+  (`unknown_request` equals its claim). Otherwise it is stale: staff
+  resolved the check (request again, close, adopt another voucher), or a
+  **later** request took the check (it was lost too), or no identity was
+  recorded. A stale answer is not saved, and not offered for adoption: it is
   deleted at ACS and its unrecognised row settled as `deleted`. If ACS
   refuses, the number goes to `metadata["orphan_vouchers"]` and
   `_keep_unrecognised_vouchers` records it at once as an
@@ -347,16 +354,18 @@ stateDiagram-v2
   and `metadata["orphan_vouchers"]` on the shipment are all that keep the
   number, so the list of vouchers matching no order may miss it; search the
   logs for that line or read `orphan_vouchers`.
-- **Gaps in `main` as written.** (1) If staff delete the voucher in the ACS
-  portal *before* resolving the check, the check is still open when the late
-  answer arrives, so Phase 3 saves the dead number; staff resolve first, then
-  delete (portal or `Delete at ACS`). (2) `resolved_meanwhile` compares only
-  `mint_started_at` and the column, not the identity of the request. After
-  "request again", if the new request also becomes unknown, the column is set
-  again, `resolved_meanwhile` is false, and a late answer to the *first*
-  request is saved, clearing the second request's unknown state while the
-  second voucher may still exist at ACS. A fix is being worked on in the API;
-  re-check this bullet against the merged code.
+- **What staff must still not do.** If staff delete the voucher in the ACS
+  portal *before* resolving the check, the check is still open and is that
+  request's own, so Phase 3 saves the dead number; staff resolve first, then
+  delete (portal or `Delete at ACS`).
+- **A request releases or loses only its own claim** (`_voucher_request_lost`
+  checks the row still holds the claim it was sent under). An old request
+  that ends unknown *after* staff resolved its check, and whose claim was
+  not recorded as unknown, writes one order note and sends one
+  `ops.acs_voucher_request_unknown` alert with the `after_resolution`
+  wording ("ACS may hold one more voucher for this order"), once per claim
+  (`metadata["late_unknown_alerted"]`). It sets no state and adds no
+  dashboard count: there is no number to list.
 - `reset_shipment_for_remint` clears the column beside a real voucher and
   keeps it on a shipment with no voucher. It refuses while a mint claim is
   younger than its TTL (the shipment was canceled with a request out: a
@@ -840,8 +849,8 @@ move `Order.status`, which the carrier events drive separately.
   and one live candidate is enough to make a refusal a failure again.
 - **A voucher request with an unknown outcome is never sent again by code.**
   Staff end it with `adopt_voucher` or `request_voucher_again`, and a late
-  answer that saves a voucher ends it too (the mint's persist phase clears
-  the column). An expired mint claim enters it, once detected, instead of
+  answer of the very request it belongs to ends it too (the mint's persist
+  phase clears it; any other late answer is deleted at ACS). An expired mint claim enters it, once detected, instead of
   minting. Only a retired shipment or a canceled or refunded order may be
   closed without a voucher.
 - **Exactly one task owns a dead voucher: `check_stale_acs_shipments`.**
