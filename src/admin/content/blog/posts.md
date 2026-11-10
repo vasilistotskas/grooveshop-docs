@@ -35,7 +35,7 @@ For a draft, save without ticking **Is Published**.
 ### Schedule a post
 1. Tick **Is Published** and set **Published At** to a future date and time.
 2. Save. The list shows **Scheduled** and the post appears on its own at the moment you set.
-3. Do not use **Publish selected posts** on it: that publishes at once, with today's date.
+3. **Publish selected posts** leaves a scheduled post alone and keeps its date. To publish it now, open it and change its **Published At** date.
 
 ### Feature a post
 Tick **Featured**, in the list (then click **Save**) or inside the post. A featured post on the blog's first page is shown first, as a large card.
@@ -69,7 +69,7 @@ Untick **Is Published** and save, or select posts and choose **Unpublish selecte
 - **Text that is refused**: if you paste something the store cannot show, e.g. code from **Source code**, saving stops with a message saying what is wrong.
 - **Text pasted from Word**: it keeps its bold, sizes, colours and alignment, but not its font. The store shows every post in its own fonts, so a font set in Word (Roboto, Calibri, ...) does not appear, and Word's hidden comment marks are left out.
 - **Search**: the store's search finds a scheduled post before its time, even though the blog pages still hide it. Keep posts with a distant date as drafts.
-- **Bulk actions**: **Publish selected posts** puts today's date on every selected post, even ones already published. Changes made by bulk actions reach the store on their own.
+- **Bulk actions**: **Publish selected posts** publishes only drafts, with today's date. A post already live keeps the date it went live on, and a scheduled post keeps its scheduled date; a warning tells you how many were left scheduled. Changes made by bulk actions reach the store on their own.
 - **Comments**: they cannot be closed per post. The `BLOG_COMMENTS_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span> closes them for the whole blog; see [Comments](/admin/content/blog/comments).
 - **Deleting**: deleting a post does not erase its comments. Erase them first from [Comments](/admin/content/blog/comments) if they should go.
 - **A list for Excel**: select posts and choose **Export selected to CSV** or **Export selected to XML**.
