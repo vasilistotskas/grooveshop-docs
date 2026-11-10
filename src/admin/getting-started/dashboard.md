@@ -69,7 +69,7 @@ Work that is waiting. Each row opens its list already filtered to those records.
 | **Lost disputes to settle** | You lost a card dispute and have not said yet whether the goods came back, so the receipt is not credited. See [Settle a lost dispute](/admin/sales/refunds-and-disputes#settle-a-lost-dispute). |
 | **COD cash ACS has not paid out** | Cash-on-delivery parcels delivered more than 10 days ago with no payout from ACS. |
 | **Stale ACS shipments** | Parcels with no movement for three days, or orders still without a voucher (the courier's shipping label) one day on. |
-| **Running low on stock** | Active products with 1 to 9 in stock. |
+| **Running low on stock** | Active products that are **Low stock**: in stock, but at or below their own **Low Stock Threshold**. A product with a threshold of 0 is never counted. |
 | **Receipts rejected by myDATA** | Receipts to correct and send again. |
 | **Reviews to approve** | Reviews customers cannot see yet. |
 | **Blog comments to approve** | Comments readers cannot see yet. |

@@ -55,7 +55,7 @@ Six entries show a number. It counts work that is waiting and hides when it is z
 | Entry | What it counts |
 |---|---|
 | **Orders** | Orders in status **Pending**. |
-| **Products** | Active products with 1 to 9 in stock. |
+| **Products** | Active products at or below their own **Low Stock Threshold**, with at least 1 in stock. |
 | **Reviews** | Reviews **Waiting for approval**. |
 | **Messages** | Contact-form messages from the last 7 days. |
 | **Wholesale** | Business-customer applications waiting for review. |

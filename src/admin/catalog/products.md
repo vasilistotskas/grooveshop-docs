@@ -13,14 +13,15 @@ This is where you create and maintain what you sell: name, price, stock, images 
 
 The list shows the newest products first. Each row has the name with a thumbnail and the start of the SKU (product code), the category, the variant group, the price and the stock.
 
-| Label in the **Stock** column | Units |
+| Label in the **Stock** column | When |
 |---|---|
-| **Out of stock** | 0 |
-| **Critical** | 1 to 5 |
-| **Low** | 6 to 10 |
-| **In stock** | more than 10 |
+| **Out of stock** | The stock is 0. |
+| **Low stock** | The stock is above 0 and at or below the product's own **Low Stock Threshold**. |
+| **In stock** | The stock is above the threshold. |
 
-The number next to **Products** in the sidebar counts active products with 1 to 9 units. The Dashboard shows the same number as **Running low on stock**.
+Each label shows the number of units after it. The same three states are in the **Stock Status** filter. The threshold is set per product (10 to start with), so a product with a threshold of 20 shows **Low stock** from 20 units down, and one with a threshold of 3 only from 3 units down. A threshold of 0 switches the alert off for that product: it is **Out of stock** at 0 and **In stock** above it, never **Low stock**.
+
+The number next to **Products** in the sidebar counts active products that are **Low stock**, each by its own threshold. The Dashboard shows the same number as **Running low on stock**. Products that are **Out of stock** are not part of it.
 
 Search finds products by SKU, name, description, category or brand. The filters (stock, price, discount, category, brand and more) open in a side panel.
 
@@ -124,7 +125,7 @@ Only the **Owner** role sees **Cost price**, under **Price** on the **Pricing & 
 - **Search**: customers find a product in the store's search by its codes (**SKU**, **GTIN**, **MPN**), its name, brand, category, description and attributes. A code matches only when typed exactly, so a barcode with one wrong digit never matches another product's code; the search may still find products whose name or description contains similar words. Saving a product updates the search shortly after. So do the bulk activate and deactivate actions, and renaming the product's brand, category or attributes.
 - **Cache**: a change you save to text, price, stock, images or attributes reaches the store on its own within seconds. Stock that moves with orders (sales, cancellations) can take a few minutes to show on the page; checkout always checks the real stock.
 - **Stock reservations**: while a customer completes a purchase, their units are held for a while. The length is the `STOCK_RESERVATION_TTL_MINUTES` setting under <span class="sidebar-path">Settings → Store Settings</span> (category **Orders & Checkout**), 30 minutes to start with.
-- **Low-stock email**: once an hour, the store's contact email receives one message listing the active products that reached their **Low Stock Threshold** or fell below it (10 to start with). Each product is listed once, until it rises above the threshold again. Set 0 to stop alerts for a product.
+- **Low-stock email**: once an hour, the store's contact email receives one message listing the active products that are **Low stock** or **Out of stock**, that is, at or below their **Low Stock Threshold** (10 to start with). Each product is listed once, until it rises above the threshold again. Set 0 to stop alerts for a product.
 - **The two deletes differ.** **Delete** on the product's page keeps the record. Bulk delete from the list erases the product for good, with its reviews and images. Prefer deactivating.
 - The **History** button at the top right of the form shows who changed what and when.
 
