@@ -98,7 +98,7 @@ read payment "Pending" forever (`0058_settle_returned_unpaid_orders`).
 | SHIPPED → DELIVERED | Carrier event | Both carriers' `_apply_order_status_transition` |
 | DELIVERED → COMPLETED | Automatic, when paid: inline on the carrier DELIVERED and the COD reconcile, and hourly for anything paid outside those two moments | `OrderService.maybe_advance_to_completed`, `order.tasks.complete_paid_delivered_orders` |
 | SHIPPED/DELIVERED → RETURNED | Carrier event (`returned`, `lost`) | `AcsService.order_status_for_shipment_state` |
-| → CANCELED | Customer, staff, the cleanup task, or a carrier sync for a shipment cancelled before dispatch (ACS voucher retired, BoxNow `canceled` parcel). Only `cancel_order` does it | `OrderService.cancel_order`, `OrderService.cancel_for_dead_shipment` |
+| → CANCELED | Customer, staff, the cleanup task, or the ACS status sync for a voucher retired before dispatch (a BoxNow `canceled` parcel does not cancel the order). Only `cancel_order` does it | `OrderService.cancel_order`, `OrderService.cancel_for_dead_shipment` |
 | RETURNED → REFUNDED | Staff, manually; refused with `RefundOutstandingError` while `PaymentLedger.refund_open` holds. The admin action reports the refusal; `update_status` answers `409 refund_outstanding` naming what is left | `POST /api/v1/order/{id}/update_status`, the `mark_as_refunded` admin action |
 | Any pair the table allows | Staff, manually. A CANCELED request is refused: `update_status` answers 400 `cancel_through_cancel_action` (`update_order_status` raises `InvalidStatusTransitionError` for it) | `OrderViewSet.update_status`, admin bulk actions in `order/admin.py` |
 
@@ -210,7 +210,7 @@ Entry points:
 | Customer or guest | `POST /api/v1/order/{id}/cancel` (`OrderViewSet.cancel`; guests authorise with `?uuid=`, for `GUEST_ORDER_ACCESS_DAYS` after the order) | `True` |
 | Store staff | The same action (the view passes `not is_store_staff(user)`), or the `mark_as_canceled` bulk action in `order/admin.py` | `False` |
 | Automatic | `auto_cancel_stuck_pending_orders`, always with `refund_payment=False` | `False` |
-| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called by the ACS status sync for a retired voucher and by BoxNow for a `canceled` parcel event (only while the order is PENDING or PROCESSING). Always `refund_payment=False` | `False` |
+| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called only by the ACS status sync for a retired voucher. BoxNow never calls it: a `canceled` parcel event leaves the order as it is, and `order/follow_up.py` flags it only while it is PENDING or PROCESSING and not awaiting its online payment (see [Shipping](/dev/flows/shipping)). Always `refund_payment=False` | `False` |
 
 #### A customer cancel asks the courier first
 

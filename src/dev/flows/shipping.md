@@ -464,9 +464,26 @@ again (the endpoint answered 200 before the event was applied): the
 operators are alerted, and the tracking poll, which keeps reading a
 shipment that is not in a final state (`poll_boxnow_tracking_batch` in
 `shipping_boxnow/tasks.py`), applies the event on a later run.
-BoxNow does the same for a `canceled` parcel event, only while the order
-is PENDING or PROCESSING; a bare status write stranded prod
-order 248 with its unit still counted as sold.
+BoxNow does not. A `canceled` parcel event (webhook or tracking poll) is
+recorded on the shipment and moves no order
+(`BoxNowService._apply_order_status_transition`): BoxNow defines it as
+"canceled by the sender", and the sender is the store, so the parcel was
+canceled on purpose (a wrong locker, a re-issue). `OrderService.cancel_for_dead_shipment`
+has ACS as its only caller. The open order keeps its status, stock and
+payment and is flagged for follow-up at once: `canceled_shipment_q` on the
+carrier adapter (`shipping_boxnow/carrier.py`, aggregated by
+`ShippingService.canceled_shipment_q`) feeds `order/follow_up.py`, which
+flags an order that is PENDING or PROCESSING, not awaiting its online
+payment (`awaiting_online_payment_q`), whatever its age. That rule is
+independent of the age rule (`ORDER_FOLLOW_UP_DAYS`), so an order that
+meets both stays flagged for its age after the first one clears. The
+canceled-parcel part clears when the order leaves those statuses or when
+the admin's "Create BoxNow parcel now" calls
+`BoxNowService.reset_shipment_for_reissue`, which sets the shipment to
+`PENDING_CREATION` before `create_boxnow_shipment_for_order` is dispatched:
+the flag can therefore clear while no new parcel exists yet, and a P-coded
+BoxNow refusal (for example P410, a duplicate order number) raises the
+usual shipment-creation alert instead. ACS has no such rule.
 
 The summary alone is not enough to know the parcel has left. ACS reports
 `shipment_status=5`, `delivery_flag=0` and no non-delivery reason for a
