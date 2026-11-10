@@ -474,8 +474,16 @@ payment and is flagged for follow-up at once: `canceled_shipment_q` on the
 carrier adapter (`shipping_boxnow/carrier.py`, aggregated by
 `ShippingService.canceled_shipment_q`) feeds `order/follow_up.py`, which
 flags an order that is PENDING or PROCESSING, not awaiting its online
-payment, whatever its age. The flag clears when the parcel is replaced or
-the order leaves those statuses. ACS has no such rule.
+payment (`awaiting_online_payment_q`), whatever its age. That rule is
+independent of the age rule (`ORDER_FOLLOW_UP_DAYS`), so an order that
+meets both stays flagged for its age after the first one clears. The
+canceled-parcel part clears when the order leaves those statuses or when
+the admin's "Create BoxNow parcel now" calls
+`BoxNowService.reset_shipment_for_reissue`, which sets the shipment to
+`PENDING_CREATION` before `create_boxnow_shipment_for_order` is dispatched:
+the flag can therefore clear while no new parcel exists yet, and a P-coded
+BoxNow refusal (for example P410, a duplicate order number) raises the
+usual shipment-creation alert instead. ACS has no such rule.
 
 The summary alone is not enough to know the parcel has left. ACS reports
 `shipment_status=5`, `delivery_flag=0` and no non-delivery reason for a

@@ -38,7 +38,7 @@ The parcel states:
 | **Returned** | The parcel came back to you. | **Returned** |
 | **Expired** | The customer did not collect it in time. | **Returned** |
 | **Missing**, **Lost** | BoxNow declared the parcel lost. | **Returned** |
-| **Canceled** | Cancelled before pickup. | Unchanged. An order that is still open is flagged **Needs follow-up**. |
+| **Canceled** | Cancelled before pickup. | Unchanged. A **Pending** or **Processing** order is flagged **Needs follow-up** (not a card order still waiting for its payment). |
 
 An older BoxNow update that arrives late never moves the parcel back to an earlier state.
 
@@ -79,7 +79,7 @@ The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the
 1. A parcel in state **New** can be cancelled. So can a shipment that is still **Pending creation**: your shop holds no parcel number for it, so it is cancelled in your shop only and nothing is sent to BoxNow. If the shop sent you an alert that the parcel could not be created, ask BoxNow whether a parcel exists for the order before you cancel, because a cancel from here would not reach it. For anything later, contact BoxNow.
 2. Open the shipment and click **Cancel parcel via BoxNow API**, or select rows and run **Cancel parcels via BoxNow API**.
 
-Cancelling a parcel does not cancel the order. The order keeps its status, its stock and its payment, and it is flagged **Needs follow-up** at once, with the line "Needs follow-up: the parcel was canceled while the order is still open. Create a new parcel or cancel the order." The same happens when BoxNow reports the parcel as **Canceled**. To go on, click **Create BoxNow parcel now** on the shipment, or cancel the order. Cancelling a parcel that is already **Canceled** changes nothing.
+Cancelling a parcel does not cancel the order. The order keeps its status, its stock and its payment, and, if it is **Pending** or **Processing** and not a card order still waiting for its payment, it is flagged **Needs follow-up** at once, with the line "Needs follow-up: the parcel was canceled while the order is still open. Create a new parcel or cancel the order." The same happens when BoxNow reports the parcel as **Canceled**. To go on, click **Create BoxNow parcel now** on the shipment, or cancel the order. The flag for the canceled parcel goes at the click, before BoxNow has accepted the new parcel, so open the shipment afterwards and check that it has a new parcel. If BoxNow refuses it (for example because the order number was already used), you get an alert and no parcel is created: contact BoxNow or the [platform team](/admin/help/contact-support). Cancelling a parcel that is already **Canceled** changes nothing.
 
 When you cancel the order, the parcel is cancelled too, if it is still **New**. A customer can cancel the order from their account only while the parcel is **New**. If you need a cancelled parcel after all, open the shipment and click **Create BoxNow parcel now**: a new parcel is created and the old one is kept in its history. This is refused while the order itself is cancelled.
 

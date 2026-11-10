@@ -210,7 +210,7 @@ Entry points:
 | Customer or guest | `POST /api/v1/order/{id}/cancel` (`OrderViewSet.cancel`; guests authorise with `?uuid=`, for `GUEST_ORDER_ACCESS_DAYS` after the order) | `True` |
 | Store staff | The same action (the view passes `not is_store_staff(user)`), or the `mark_as_canceled` bulk action in `order/admin.py` | `False` |
 | Automatic | `auto_cancel_stuck_pending_orders`, always with `refund_payment=False` | `False` |
-| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called only by the ACS status sync for a retired voucher. BoxNow never calls it: a `canceled` parcel event leaves the order as it is and `order/follow_up.py` flags it (see [Shipping](/dev/flows/shipping)). Always `refund_payment=False` | `False` |
+| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called only by the ACS status sync for a retired voucher. BoxNow never calls it: a `canceled` parcel event leaves the order as it is, and `order/follow_up.py` flags it only while it is PENDING or PROCESSING and not awaiting its online payment (see [Shipping](/dev/flows/shipping)). Always `refund_payment=False` | `False` |
 
 #### A customer cancel asks the courier first
 
