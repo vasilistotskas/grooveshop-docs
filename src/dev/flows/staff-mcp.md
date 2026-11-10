@@ -14,7 +14,7 @@ While it is off:
 - the consent refuses (`agent/staff_connect.py`);
 - the gateway answers 404 on `/mcp/admin` and its metadata (`internal/adminmcp/identity.go`, `metadata.go`).
 
-Turning it off cuts connected apps at their next call: Django refuses at once, and the gateway passes Django's 404 on even while its tenant cache still says on. Turning it on reaches the gateway within that cache's lifetime.
+Turning it off cuts connected apps at their next call: Django refuses at once. Until the gateway's tenant cache catches up, a tool call that meets Django's 404 asks `/agent/staff/me` again and answers `access_off`, never "no data" (`upstreamErr`, `internal/adminmcp/server.go`). No token is revoked: turning it back on lets connected apps read again. Turning it on reaches the gateway within that cache's lifetime.
 
 This is a different surface from the shoppers' `/mcp` ([Agentic commerce](/dev/flows/agentic-commerce)), with a different identity:
 
@@ -78,7 +78,7 @@ The scope table is `STAFF_SCOPE_PERMISSIONS` (`agent/staff.py`). The role column
 - **A customer token never opens a staff tool.** Staff tokens are looked up in `public` only, and customer tokens live in the store's schema. Proven on real schemas in `tests_mt/test_staff_agent_schema_binding.py`, and against a real stack in `internal/realstack/staff_test.go`.
 - **A staff token works only on the store it was connected to**, and only while the holder is on that store's team. The resource and the membership are both checked on every call.
 - **A staff token never opens the shopper surface.** It is not in the store's token table, and its resource is not `/mcp`.
-- **No street or phone leaves the store.** Order detail carries city and country; customers carry name, email and order counts.
+- **No structured field carries a street or phone.** Order detail carries city and country; customers carry name, email and order counts. Free text is the exception: a review, an order note or a contact message is returned as the customer wrote it (marked untrusted), street or phone included.
 - **No customer data or token in logs.** The gateway logs the tool, store, outcome and duration of each call. Django's request log already redacts `Authorization`.
 - **The platform host keeps its basic-auth.** The connect host serves only the issuer (`agent/urls_connect.py`), so leaving it outside basic-auth opens nothing else. On staging, the connect host's browser pages stay behind staging basic-auth (`overlays/staging/ingress-connect.yaml`).
 
@@ -87,6 +87,7 @@ The scope table is `STAFF_SCOPE_PERMISSIONS` (`agent/staff.py`). The role column
 | What happens | Answer |
 |---|---|
 | The store has not turned `staff_ai_access` on | 404 on `/mcp/admin`, its metadata and `/api/v1/agent/staff/*`; the consent refuses |
+| The store turned it off while an app is connected | Tool error `access_off` until the gateway's tenant cache catches up, then 404 |
 | No bearer on `/mcp/admin` | 401, `scope="admin:orders:read …"`, `resource_metadata` |
 | An unknown, expired or revoked token; a refresh token sent as the bearer; another store's token; not on the team; `is_staff` cleared | 401 `error="invalid_token"`: the client connects again |
 | Scope not granted at consent | Tool error `not_granted`: disconnect and connect again, approving it |
@@ -98,7 +99,7 @@ The scope table is `STAFF_SCOPE_PERMISSIONS` (`agent/staff.py`). The role column
 
 ## Write tools: proposed, not built
 
-Writes need the owner's approval, tool by tool. Each would carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`, so Claude, ChatGPT and Gemini all ask the person before it runs. Clients that support form elicitation would also ask in-band. Each would get its own `admin:<area>:write` scope, call the service the admin uses, and record django-simple-history with the staff member and the AI app. The proposed list:
+Writes need the owner's approval, tool by tool. Each would carry `destructiveHint: true` and `_meta["anthropic/requiresUserInteraction"]: true`. Those are hints: MCP does not make a client ask, so the server must enforce the approval itself before a write runs (the design note proposes how). A client that does prompt, or supports form elicitation, asks in addition. Each would get its own `admin:<area>:write` scope, call the service the admin uses, and record django-simple-history with the staff member and the AI app. The proposed list:
 - product published state;
 - review status;
 - stock adjustment;

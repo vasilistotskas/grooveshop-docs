@@ -27,13 +27,13 @@ Each person sees only what their [role](/admin/getting-started/roles-and-team) a
 | Sales and turnover, as in the **Turnover** report | no | yes | yes |
 | Profit and costs, as in the **Profit** report | no | no | yes |
 
-A customer's street address and phone number are never shown to the app.
+Order and customer details never include a customer's street address or phone number. A customer can still type them into a review, an order note or a contact message, and that text reaches the app as written.
 
 ## Turn it on for your store
 
 An Owner or Admin opens <span class="sidebar-path">Settings → Store Settings</span>, finds `STAFF_AI_ACCESS_ENABLED` (under **Agent Commerce**), ticks it and saves. It can take up to five minutes before the first app can connect.
 
-Turning it off again disconnects every app at once: their next question is refused.
+Turning it off again blocks every app from its next question. It pauses the connections rather than ending them: if you turn it back on, apps that were connected before can read again.
 
 ## Connect
 
@@ -48,7 +48,7 @@ Every person on your team connects with their own account, so each one sees only
 
 ## Disconnect
 
-- Remove the connector in your AI app. That person's app can no longer read anything.
+- Remove the connector in your AI app. Some apps only forget the connection on your device and do not end it at the store, so the connection can keep working for whoever still holds it. To be sure, use one of the store's own controls below.
 - To stop every app at once, turn `STAFF_AI_ACCESS_ENABLED` off.
 - To cut off someone else, untick **Active** for them or remove them in <span class="sidebar-path">Settings → Team</span>. Their app stops reading your store from its next question. Lowering their role takes effect from the next question too.
 
