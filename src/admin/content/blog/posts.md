@@ -40,7 +40,7 @@ For a draft, save without ticking **Is Published**.
 Within about a minute of the date you set, the post appears on its own: on the blog, in the store's search and in its feeds. If `INDEXNOW_ENABLED` is on (see [Store settings](/admin/settings/store-settings)), the search engines hear of it in the store's next message to them, sent every half hour. You do not need to save it again or clear any cache.
 
 ### Make a link open in a new tab
-In the **Body**, when you add or edit a link, choose in the editor's link window that it opens in a new window. The store keeps that choice. To open every link that leads to another site in a new tab, without choosing it link by link, switch on `EXTERNAL_LINKS_NEW_TAB_ENABLED` in [Store settings](/admin/settings/store-settings).
+In the **Body**, when you add or edit a link, choose in the editor's link window that it opens in a new window. The store keeps that choice. To open every link that leads to another site in a new tab, without choosing it link by link, switch on `EXTERNAL_LINKS_NEW_TAB_ENABLED` in [Store settings](/admin/settings/store-settings). That setting leaves alone the links to the addresses your store serves its images and files from, even though they look like another site: for those, choose the new window in the link window.
 
 ### Feature a post
 Tick **Featured**, in the list (then click **Save**) or inside the post. A featured post on the blog's first page is shown first, as a large card.

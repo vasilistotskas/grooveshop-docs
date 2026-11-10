@@ -84,14 +84,14 @@ Search engines such as Bing, Yandex and Naver learn about a changed product or b
 1. Open the setting `INDEXNOW_ENABLED`.
 2. Tick **Value (Boolean)** and click **Save**.
 
-From then on the store collects the products and blog posts that were added, changed or taken off the store, and every half hour sends the search engines one message with their addresses, in every language the store is available in. Only products that are **Active** and blog posts that are published are announced; a draft is never mentioned. A product or post you remove from the store is announced too, so the search engines drop it sooner. Nothing else is needed from you. Google does not take part in this, and a search engine may still decide not to visit a page. The setting is off until you switch it on. A scheduled post is announced in the first message after its date passes.
+From then on the store collects the products and blog posts that were added, changed or taken off the store, and every half hour sends the search engines one message with their addresses, in every language the store is available in. Only products that are **Active** and blog posts that are published are announced; a draft is never mentioned. A product or post you remove from the store is announced too, so the search engines drop it sooner. Nothing else is needed from you. Google does not take part in this, and a search engine may still decide not to visit a page. The setting is off until you switch it on. A scheduled post is announced in the first message after it goes live on the store, which happens within about a minute of its date.
 
 ### Open links to other sites in a new tab
 
 1. Open the setting `EXTERNAL_LINKS_NEW_TAB_ENABLED`.
 2. Tick **Value (Boolean)** and click **Save**.
 
-From then on, every link in your texts that leads to another site opens in a new tab: in blog posts, product and category descriptions, author bios, pages and the text sections of the page builder. A link to your own store never does, whether it is written with your store's domain (with or without `www.`) or as a path such as `/products`; nor does a link to the addresses your store serves its images and files from. A link you set to open in a new window in the editor keeps doing so either way. The setting is off until you switch it on.
+From then on, every link in your texts that leads to another site opens in a new tab: in blog posts, product and category descriptions, author bios, pages and the text sections of the page builder. The setting does not change a link to your own store, whether it is written with your store's domain (with or without `www.`) or as a path such as `/products`, nor a link to the addresses your store serves its images and files from. A link you set to open in a new window in the editor keeps doing so either way. The setting is off until you switch it on.
 
 ### Set the same-day dispatch time
 

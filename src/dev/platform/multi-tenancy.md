@@ -103,7 +103,7 @@ bypass list, and resolves the store. The bypass list
 (the kubelet's probes, build assets, the server-to-server cache purge and
 text routes), for which nothing looks a store up, Nitro plugins included,
 and self-resolving ones (favicon, `robots.txt`, the manifest,
-`/llms*.txt`, the `.md` mirrors), whose own handler needs the
+`/llms.txt`, the `.md` mirrors), whose own handler needs the
 store. **A request looks its store up once**: the middleware, every Nitro
 plugin and every route go through `requestTenantResult(event)`
 (`server/utils/requestTenant.ts`), which memoises the outcome on the

@@ -48,13 +48,17 @@ Every page has its own **Page settings**: how it appears in search results and, 
 | **Search engine title** | The title on the browser tab and in search results. Empty: the title the page sets itself. | 70 characters |
 | **Search engine description** | The text under the title in search results, and when the page is shared. Empty: the description the page sets itself. | 300 characters |
 | **Keywords** | Kept with the page but not put on it, because search engines ignore keywords. | 255 characters |
-| **Main heading (h1)** | Home page only. The page's main heading, used when no section on it has a heading of its own (a banner with a heading, for example, has one). Empty: the store's name. | 120 characters |
+| **Main heading (h1)** | Home page only. The page's main heading, used unless a section on the page supplies it: a **Hero banner**, a **Hero carousel** whose first slide has a heading, or a **Contact** section. A heading in any other section does not count. Empty: the store's name. | 120 characters |
 
 4. Publish. Like any other change, the settings reach visitors only when the page is published.
 
-Each field is written per language. Switch the editor to another language of your store to write that language's text. A field you leave empty there uses the text of the store's main language, which the field shows greyed out.
+On the **Blog post** page, which adds sections under every post, these settings do nothing: each post keeps its own title and description.
 
-The **Main heading (h1)** is not shown on the page, in either store design: the sections at the top of the home page are what visitors see. Search engines and screen readers read it as the page's main heading.
+Each field is written per language. Switch the editor to another language of your store to write that language's text. A field you leave empty there uses the Greek text, which the field shows greyed out. Greek is the language every page is written in first, whatever your store's main language.
+
+Write a field in Greek before you translate it. While every Greek field of a page's settings is empty, a translation of one cannot be saved, and the editor does not point at the field: fill in the Greek field, or empty the translation.
+
+The **Main heading (h1)** is not shown on the page, in either store design: the sections at the top of the home page are what visitors see. When it is used, search engines and screen readers read it as the page's main heading; when a section supplies the heading, they read that section's instead.
 
 ## Choose what a section lists
 

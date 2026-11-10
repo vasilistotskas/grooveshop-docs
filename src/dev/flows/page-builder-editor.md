@@ -582,7 +582,11 @@ validates a draft's `settings` against the same schema:
 | `heading` | `BUILDER_PAGE_HEADING_MAX_LENGTH` (120) | the h1 a body draws where it would otherwise draw the store's name |
 
 The SEO limits are the model's (`SeoTranslationModel`), so a save the editor
-accepts is one the database does.
+accepts is one the database does. A page drawn `below-content` (the
+`template:blog-post` bands, `useBuilderPage('blog-post', { placement:
+'below-content' })` in `app/components/Storefront/BlogPost.vue` and its webside twin) emits no head
+tags at all, so its `seoTitle` and `seoDescription` never override the
+article's own: the panel still offers them.
 
 **The panel.** The outline's "Page settings" button (`Builder/Outline.vue`)
 calls `openPanel('page')`, kept in the address as `?panel=page`
@@ -608,6 +612,20 @@ goes through `store.change(..)`, coalesced per language and key, so it is
 undone, autosaved and checked like a node's settings. A save Django refuses
 names `/settings/<key>` or `/i18n/<locale>/@document/<pointer>`, which
 `builderProblemPageSetting` maps back to the field.
+
+**Known gap: a translation with no draft settings.** `setNodeTranslation`
+writes the `@document` overlay whether or not the draft has `settings`, but
+Django registers `@document` as a node only when the draft carries
+`settings` (`builder/validation.py: _check_root`, which returns early
+without them), so `_check_node_overlay` refuses such an overlay as
+`unknown_node` at `/i18n/<locale>/@document`, with no pointer
+(`tests/unit/builder/test_validation.py:
+test_an_overlay_needs_settings_to_translate`). The same happens when
+emptying the last default-language field drops `settings` while a
+translation remains. `builderProblemPageSetting` maps that pointer to no
+field, so the panel marks nothing; and `resolve_document` would not lay the
+overlay over absent settings either. A draft that has any root setting, in
+any key, is enough: `pointers.resolve_concrete` accepts a new last segment.
 
 **Reading.** Django's `builder/published.py: resolve_document` starts from
 the draft's root settings and overlays the language's `@document` entries
@@ -696,6 +714,8 @@ keeps its name as the h1, as before.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderPage.ts` | The live page's `seoTitle`, `seoDescription` and `heading` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/Home.vue`, `app/components/variants/webside/Storefront/Home.vue` | The home page's h1, both designs |
 | `grooveshop-django-api/builder/published.py` | `resolve_document`: the root settings with the language's overlay |
+| `grooveshop-django-api/builder/validation.py`, `builder/pointers.py` | `_check_root` registers `@document` only with `settings`; `_check_node_overlay` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/BlogPost.vue`, `app/components/variants/webside/Storefront/BlogPost.vue` | The `below-content` blog-post bands, which set no head tags |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/QueryField.vue` | A list setting |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecordList.vue` | A hand-picked list |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/OutlineTree.vue` | One document's rows, dragged to reorder |
