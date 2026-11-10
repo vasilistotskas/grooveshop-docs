@@ -80,7 +80,7 @@ rotation needs it.
 
 Viva Wallet, Stripe, ACS, BoxNow, Meta CAPI, analytics ids, chat and ACP
 tokens, and a store's Resend sending key and webhook secret all live on the `Tenant` model and are read through
-`tenant/credentials.py`, which has no platform-wide fallback: an empty
+`src/tenant/credentials.py`, which has no platform-wide fallback: an empty
 field means the integration is off for that tenant. They were removed from
 the Secrets at the multi-tenant cutover, and their last plaintext values
 sit in `untracked/secrets/retired/` for the record. Onboarding a store
@@ -132,7 +132,7 @@ placeholders may be present at build time. The same applies to any
 - The backend refuses to start in production without `SECRET_KEY` and
   `CELERY_BROKER_URL` (`settings.py`); Flower refuses to start without
   `FLOWER_BASIC_AUTH` (`base/backend.yaml`).
-- Merchant credentials have no env fallback (`tenant/credentials.py`).
+- Merchant credentials have no env fallback (`src/tenant/credentials.py`).
 - Purge and internal-admin tokens are used only from inside the cluster.
 
 ## Failure modes
@@ -159,6 +159,6 @@ placeholders may be present at build time. The same applies to any
 | `grooveshop-infrastructure/docs/sealed-secrets-key-management.md` | Controller key export, rotation, restore |
 | `grooveshop-infrastructure/docs/tenant-onboarding.md` | Tenant-row credential reference |
 | `grooveshop-infrastructure/scripts/export-sealed-secrets-key.sh` | Key export |
-| `grooveshop-django-api/settings.py` | `SECRET_KEY`, `SECRET_KEY_FALLBACKS`, production guards |
-| `grooveshop-django-api/tenant/credentials.py` | Per-tenant credential access, no fallback |
+| `grooveshop-django-api/src/settings.py` | `SECRET_KEY`, `SECRET_KEY_FALLBACKS`, production guards |
+| `grooveshop-django-api/src/tenant/credentials.py` | Per-tenant credential access, no fallback |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/ci.yml`, `docker.yml` | Build-time env hygiene |

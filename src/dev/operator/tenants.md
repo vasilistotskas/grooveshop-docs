@@ -6,7 +6,7 @@ description: Every field on the Tenant row group by group — identity, presenta
 # The tenant record
 
 One row in the public schema is the whole definition of a store:
-`tenant/models.py: Tenant` (the class opens just under the choice enums at
+`src/tenant/models.py: Tenant` (the class opens just under the choice enums at
 the top of the file). It is a `django_tenants.TenantMixin`, so saving a new
 row creates the PostgreSQL schema; everything else on it is either
 identity, presentation, commercial terms, or that merchant's own
@@ -43,10 +43,10 @@ flowchart LR
 
 | Field | Shape | Notes |
 |---|---|---|
-| `schema_name` | `CharField(max_length=63)`, unique, indexed | Redeclared over `TenantMixin`'s own field to add `tenant/validators.py: validate_reserved_schema_name` on top of django-tenants' identifier check. `public`, `global`, `information_schema`, anything starting `pg_`, and the media-stream sanitizer's old reserved words are refused; the literal public schema name is carved out because the framework requires exactly one row holding it |
+| `schema_name` | `CharField(max_length=63)`, unique, indexed | Redeclared over `TenantMixin`'s own field to add `src/tenant/validators.py: validate_reserved_schema_name` on top of django-tenants' identifier check. `public`, `global`, `information_schema`, anything starting `pg_`, and the media-stream sanitizer's old reserved words are refused; the literal public schema name is carved out because the framework requires exactly one row holding it |
 | `slug` | `SlugField(max_length=100)`, unique | Used for the infrastructure overlay directory name, among other things |
 | `name` | `CharField(max_length=100)` | The platform's name for the store; `__str__` returns it |
-| `owner_email` | `EmailField` | Who `tenant/provisioning.py: provision_owner_membership` grants the OWNER membership to |
+| `owner_email` | `EmailField` | Who `src/tenant/provisioning.py: provision_owner_membership` grants the OWNER membership to |
 | `uuid`, `created_at`, `updated_at` | from `UUIDModel`, `TimeStampMixinModel` | Read-only everywhere |
 
 `auto_create_schema = True`, so creating the row creates the schema and
@@ -62,7 +62,7 @@ gate nothing a shopper sees.
 | Field | Default | What it means |
 |---|---|---|
 | `is_demo` | `False` | A disposable showcase. `manage.py seed_demo_store` refuses any tenant whose domains lack a non-production marker, and this is the explicit per-tenant opt-in that lets it overwrite the catalogue, layouts and navigation without `--force`. Deliberately **not** on `TenantConfigSerializer` — the storefront has no use for it. Never set it on a store that takes real orders |
-| `is_protected` | `False` (`db_default=False`) | Suspend, reactivate and destroy refuse this row — in the admin actions, the platform API and automation. `Tenant.delete()` raises `ValidationError` for it via `tenant/lifecycle.py: is_protected_tenant`, and `TenantAdmin.has_delete_permission` withholds the button rather than letting the confirm page 500. A row attribute rather than a list of schema names in code, so shielding a store needs no deploy |
+| `is_protected` | `False` (`db_default=False`) | Suspend, reactivate and destroy refuse this row — in the admin actions, the platform API and automation. `Tenant.delete()` raises `ValidationError` for it via `src/tenant/lifecycle.py: is_protected_tenant`, and `TenantAdmin.has_delete_permission` withholds the button rather than letting the confirm page 500. A row attribute rather than a list of schema names in code, so shielding a store needs no deploy |
 | `is_platform_storefront` | `False` (`db_default=False`) | The platform's own storefront: it renders the brand assets bundled in the storefront image and the platform-only AI discovery surfaces. Enforced by a partial `UniqueConstraint` (`tenant_single_platform_storefront`), so at most one row can carry it. A row flag on purpose — the storefront used to recognise this tenant by comparing its primary domain with an env var, which put the first store's hostname into every tenant's serialised runtime config |
 
 `db_default` as well as `default` on the latter two is load-bearing: Django
@@ -79,7 +79,7 @@ pro, enterprise), `paid_until`, and the dunning bookkeeping pair
 by [Plans, billing & dunning](/dev/operator/billing) and
 [Suspend, export & destroy](/dev/operator/lifecycle); the one thing to know
 here is that `suspended_reason` is load-bearing rather than cosmetic —
-renewal-driven auto-reactivation (`tenant/signals.py: reactivate_on_renewal`)
+renewal-driven auto-reactivation (`src/tenant/signals.py: reactivate_on_renewal`)
 is scoped to `BILLING` only, so recording a payment can never resurrect a
 store an operator took down on purpose.
 
@@ -105,7 +105,7 @@ A store's colours, corners and fonts are not on this row: they are its theme doc
 | Field | Shape |
 |---|---|
 | `default_locale` | `CharField(max_length=10)`, default `el` |
-| `available_locales` | `JSONField(default=list)`, validated by `tenant/json_schemas.py: available_locales` |
+| `available_locales` | `JSONField(default=list)`, validated by `src/tenant/json_schemas.py: available_locales` |
 | `default_currency` | `CharField(max_length=3)`, default `EUR` |
 
 `available_locales` is an allow-list on top of the platform-wide locale
@@ -131,7 +131,7 @@ tenantAllowedLocales`):
 3. The language switcher, the hreflang set and the sitemap stop listing it.
 
 The removal reaches clients only as fast as the caches: the Django resolve
-payload is purged immediately by `tenant/signals.py:
+payload is purged immediately by `src/tenant/signals.py:
 invalidate_tenant_caches` on every `Tenant` save, but the Nuxt server keeps
 a five-minute in-memory copy (`server/utils/tenant.ts`), and pages already
 rendered into the SWR cache keep their old links until purged.
@@ -173,17 +173,17 @@ tenant's Stripe account enrolled in Stripe Agentic Commerce).
 How the two tiers combine:
 
 - The plan tier lives on this row and is read by
-  `tenant/permissions.py: IsTenantFeatureEnabled` subclasses on the
-  viewsets, and by `tenant/membership.py: tenant_plan_allows(flag)` inside
+  `src/tenant/permissions.py: IsTenantFeatureEnabled` subclasses on the
+  viewsets, and by `src/tenant/membership.py: tenant_plan_allows(flag)` inside
   services the public order-create path reaches without passing a viewset
   permission.
 - The runtime tier lives in the store's **own schema** as
   `extra_settings` rows, read by `IsSettingEnabled` subclasses. The
   storefront never reads a switch from the settings: it reads Django's
   effective state in `TenantConfig.features` and `TenantConfig.preferences`
-  (`tenant/features.py`). `GET /api/v1/settings/public` serves store
+  (`src/tenant/features.py`). `GET /api/v1/settings/public` serves store
   VALUES only (prices, texts, hours, loyalty figures), whose allowlist is
-  `core/api/views.py: PUBLIC_SETTING_KEYS`; a test refuses a feature or
+  `src/core/api/views.py: PUBLIC_SETTING_KEYS`; a test refuses a feature or
   preference key in it.
 - **Both must be on.** `agent_commerce_enabled` defaults to `True` and
   `blog_enabled` to `True` because those surfaces predate their flags; the
@@ -200,7 +200,7 @@ How the two tiers combine:
   (`IsB2BWholesaleEnabled`, `IsPromotionsRuntimeEnabled`,
   `IsContactAttachmentsEnabled`).
 - The store admin reads the two tiers separately
-  (`admin/features.py: StoreFeatures`, through the same services and
+  (`src/admin/features.py: StoreFeatures`, through the same services and
   permission classes): plan off hides the feature's sidebar menu and
   dashboard rows; plan on with the runtime twin off keeps its setup pages,
   marked "Off", without counters. See [Admin (Unfold)](/dev/django/admin).
@@ -213,7 +213,7 @@ request's side.
 `vertical` (`StoreVertical`: `general`, `fashion`, `plants_garden`,
 `electronics`, `food`) is a platform-level fact about the store, set at
 onboarding. It selects the recommendation preset
-(`recommendation/presets.py`) that seeds the store's recommendation slots at
+(`src/recommendation/presets.py`) that seeds the store's recommendation slots at
 provisioning and on every deploy — `backfill_recommendation_slots` runs as
 one of the PreSync job's steps — and it is what the slot admin's
 "Reset to preset" resets to. A merchant still edits every resulting slot.
@@ -221,7 +221,7 @@ one of the PreSync job's steps — and it is what the slot admin's
 Note that recommendations have a *third* gate on top of the two tiers:
 which strategies may run is a further check against `plan` itself — each
 strategy declares a `min_plan` and
-`recommendation/strategies/base.py: plan_allows` compares by **rank**, not
+`src/recommendation/strategies/base.py: plan_allows` compares by **rank**, not
 equality. So `recommendations_enabled` means
 "this store has the feature" and the plan rank means "how smart it is
 allowed to be".
@@ -263,7 +263,7 @@ not delivered and outbound mail carries no `Reply-To`.
 
 `from_email` is the store's **proposed** sender address and it is inert on
 its own — it takes effect only once `from_email_verified` is ticked.
-`emails/sender.py: from_address` reads the pair and produces one
+`src/emails/sender.py: from_address` reads the pair and produces one
 of three `From` headers:
 
 | Condition | `From` |
@@ -285,7 +285,7 @@ store name.
 
 ### Per-tenant credentials
 
-`tenant/credentials.py` is the only reader of these fields, and it draws a
+`src/tenant/credentials.py` is the only reader of these fields, and it draws a
 hard line through them:
 
 - **Configuration** helpers fall back to a platform setting
@@ -345,10 +345,10 @@ document.
 | Actor | Reach |
 |---|---|
 | Platform superuser on the control plane | Everything the admin form exposes, plus the domain inline and the lifecycle actions |
-| A store's ADMIN or OWNER, in their own store's admin | Their own row only, and only the fields in `tenant/role_scopes.py: TENANT_SELF_EDITABLE_FIELDS` |
+| A store's ADMIN or OWNER, in their own store's admin | Their own row only, and only the fields in `src/tenant/role_scopes.py: TENANT_SELF_EDITABLE_FIELDS` |
 | A store's STAFF | Nothing — `TenantRolePermissionBackend` withholds `tenant.change_tenant` from that role |
 
-Three mechanisms combine (`tenant/admin.py`):
+Three mechanisms combine (`src/tenant/admin.py`):
 
 1. `TenantAdmin.has_module_permission` returns `True` on the public schema
    and otherwise requires `tenant.change_tenant`, which the role backend
@@ -403,7 +403,7 @@ a common bug:
 |---|---|---|
 | `TenantAdmin.fieldsets` | The admin form | Grouped as identity, Plan & Billing, Branding, Theme, Features, Analytics, Social Links, Email, Authentication, Agentic Commerce, Security, Viva, ACS, BoxNow, Stripe, Timestamps. **`available_locales` and `openai_pixel_id` are in no fieldset**, so they cannot be set from the admin form at all — use the platform API or a shell |
 | `TenantConfigSerializer` | Anonymous `GET /api/v1/tenant/resolve` | Public-safe only: branding, locales, currency, domains, plan flags, pixel ids, CSP sources. Cached for an hour under a key that fingerprints the serializer's field names, so a release that adds a field never serves the old shape |
-| `TenantAdminSerializer` | `api/v1/tenant/admin/…` on the platform host | Everything including secrets. `is_active`, `suspended_at` and `suspended_reason` are read-only here: writing them through the serializer bypassed every gate `tenant/lifecycle.py` enforces, leaving `suspended_at` null so the store could never be destroyed through the gated path. `b2b_enabled`, `is_demo`, `is_protected` and `from_email_verified` are not in this serializer, so a store's sender domain can only be certified on the admin form |
+| `TenantAdminSerializer` | `api/v1/tenant/admin/…` on the platform host | Everything including secrets. `is_active`, `suspended_at` and `suspended_reason` are read-only here: writing them through the serializer bypassed every gate `src/tenant/lifecycle.py` enforces, leaving `suspended_at` null so the store could never be destroyed through the gated path. `b2b_enabled`, `is_demo`, `is_protected` and `from_email_verified` are not in this serializer, so a store's sender domain can only be certified on the admin form |
 
 ## Invariants
 
@@ -419,7 +419,7 @@ a common bug:
 - **Every credential field is excluded from the audit history.**
 - **Every `Tenant` save moves the resolve cache on** for all of that
   tenant's domains: `Tenant.save` bumps `cache_generation`, which is part of
-  every resolve and domain-set key (`tenant/models.py`, `tenant/cache.py`).
+  every resolve and domain-set key (`src/tenant/models.py`, `src/tenant/cache.py`).
   That is why the console never needs a manual purge for a branding change,
   even across a Redis outage.
 - **A new public extra-setting must be added to `PUBLIC_SETTING_KEYS`** or
@@ -456,20 +456,20 @@ a common bug:
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
-| `grooveshop-django-api/tenant/validators.py` | `validate_reserved_schema_name`, `validate_store_hostname`, `RESERVED_SCHEMA_NAMES` |
-| `grooveshop-django-api/tenant/json_schemas.py` | The JSON schemas of `available_locales`, `store_description_i18n` and `allowed_csp_sources` |
-| `grooveshop-django-api/tenant/credentials.py` | The credential helpers and the no-fallback rule |
-| `grooveshop-django-api/emails/sender.py` | `from_address`, which reads `from_email` and `from_email_verified` |
-| `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, `PLATFORM_ONLY_APP_LABELS` |
-| `grooveshop-django-api/tenant/admin.py` | `TenantAdmin` fieldsets, `get_queryset`, `get_readonly_fields`, `get_inlines`, `get_actions`, `self_service_tenant` |
-| `grooveshop-django-api/tenant/permissions.py` | `IsTenantFeatureEnabled` and `IsSettingEnabled` subclasses |
-| `grooveshop-django-api/tenant/membership.py` | `get_current_tenant`, `tenant_plan_allows` |
-| `grooveshop-django-api/tenant/serializers.py` | `TenantConfigSerializer`, `TenantAdminSerializer` and its read-only lifecycle fields |
-| `grooveshop-django-api/tenant/signals.py` | Resolve-cache invalidation, `reactivate_on_renewal` |
-| `grooveshop-django-api/tenant/provisioning.py` | What a new row gets after it is saved |
-| `grooveshop-django-api/core/api/views.py` | `PUBLIC_SETTING_KEYS`, the public settings endpoints |
-| `grooveshop-django-api/recommendation/presets.py`, `recommendation/strategies/base.py` | The per-vertical slot presets; `min_plan` and `plan_allows` |
+| `grooveshop-django-api/src/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
+| `grooveshop-django-api/src/tenant/validators.py` | `validate_reserved_schema_name`, `validate_store_hostname`, `RESERVED_SCHEMA_NAMES` |
+| `grooveshop-django-api/src/tenant/json_schemas.py` | The JSON schemas of `available_locales`, `store_description_i18n` and `allowed_csp_sources` |
+| `grooveshop-django-api/src/tenant/credentials.py` | The credential helpers and the no-fallback rule |
+| `grooveshop-django-api/src/emails/sender.py` | `from_address`, which reads `from_email` and `from_email_verified` |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, `PLATFORM_ONLY_APP_LABELS` |
+| `grooveshop-django-api/src/tenant/admin.py` | `TenantAdmin` fieldsets, `get_queryset`, `get_readonly_fields`, `get_inlines`, `get_actions`, `self_service_tenant` |
+| `grooveshop-django-api/src/tenant/permissions.py` | `IsTenantFeatureEnabled` and `IsSettingEnabled` subclasses |
+| `grooveshop-django-api/src/tenant/membership.py` | `get_current_tenant`, `tenant_plan_allows` |
+| `grooveshop-django-api/src/tenant/serializers.py` | `TenantConfigSerializer`, `TenantAdminSerializer` and its read-only lifecycle fields |
+| `grooveshop-django-api/src/tenant/signals.py` | Resolve-cache invalidation, `reactivate_on_renewal` |
+| `grooveshop-django-api/src/tenant/provisioning.py` | What a new row gets after it is saved |
+| `grooveshop-django-api/src/core/api/views.py` | `PUBLIC_SETTING_KEYS`, the public settings endpoints |
+| `grooveshop-django-api/src/recommendation/presets.py`, `src/recommendation/strategies/base.py` | The per-vertical slot presets; `min_plan` and `plan_allows` |
 | `grooveshop-storefront-ui-node-nuxt/shared/i18n/tenantLocales.ts` | `tenantAllowedLocales` |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | The 404 for an unlisted locale prefix |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.locale.ts` | Locale detection clamped to the tenant's set |

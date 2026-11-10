@@ -11,11 +11,11 @@ message id and carries hidden tags, which is what delivery events are matched
 on; SMTP returns neither. Production sends over SMTP until the switch below
 is made; staging stays on Mailpit. The code wins over this page.
 
-Source: `emails/transport.py`, `emails/resend.py`, `emails/sender.py`
-(`own_sender`), `tenant/credentials.py` (`tenant_resend_api_key`),
-`tenant/models.py` (`Tenant.resend_api_key`, `Tenant.resend_webhook_secret`),
+Source: `src/emails/transport.py`, `src/emails/resend.py`, `src/emails/sender.py`
+(`own_sender`), `src/tenant/credentials.py` (`tenant_resend_api_key`),
+`src/tenant/models.py` (`Tenant.resend_api_key`, `Tenant.resend_webhook_secret`),
 `settings.py` (`EMAIL_TRANSPORT`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`),
-`emails/webhooks.py`, `emails/events.py`, `emails/suppression.py`, `docs/emails.md` in the
+`src/emails/webhooks.py`, `src/emails/events.py`, `src/emails/suppression.py`, `docs/emails.md` in the
 Django repository, [Secrets](/dev/operations/secrets).
 
 ## Who sends through which team
@@ -108,7 +108,7 @@ The checklist:
 Resend reports what became of a message (delivered, delayed, bounced, marked
 as spam, failed, suppressed) to a webhook, and the platform records it on the
 `EmailLog` row and keeps a suppression list. One endpoint path serves every
-host, `POST /resend/webhook/` (`emails/webhooks.py`); which host a team
+host, `POST /resend/webhook/` (`src/emails/webhooks.py`); which host a team
 registers decides whose secret verifies it.
 
 | Team | Endpoint to register | Signing secret kept in |

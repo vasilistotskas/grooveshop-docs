@@ -15,18 +15,17 @@
  * still exist. Semantic review is a separate, human or agent, job.
  *
  * Needs the sibling repositories checked out (the local layout, or
- * GROOVESHOP_WORKSPACE). Skips a check rather than half-applying it when a
+ * GROOVESHOP_WORKSPACE, or GROOVESHOP_<REPO>_DIR for one repository, see
+ * scripts/workspace.mjs). Skips a check rather than half-applying it when a
  * source it needs is missing, so a partial checkout never fails the build on
  * prose that is correct.
  *
  * Exit 1 on any unresolved citation. Run: pnpm check:claims
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join, relative } from 'node:path'
+import { REPO, WORKSPACE, repoDir } from './workspace.mjs'
 
-const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const WORKSPACE = resolve(process.env.GROOVESHOP_WORKSPACE ?? join(REPO, '..'))
 const SRC = join(REPO, 'src')
 const REPOS = [
   'grooveshop-django-api',
@@ -63,7 +62,7 @@ function* walk(dir, match) {
   }
 }
 
-const present = REPOS.filter(r => existsSync(join(WORKSPACE, r)))
+const present = REPOS.filter(r => existsSync(repoDir(r)))
 if (!present.length) {
   console.warn(`check-claims: no source repositories under ${WORKSPACE} — nothing to check against, skipping`)
   process.exit(0)
@@ -88,7 +87,7 @@ const DEFINITIONS = [
 
 for (const repoName of [...present, null]) {
   // `null` is this repository: pages legitimately cite their own scripts.
-  const root = repoName ? join(WORKSPACE, repoName) : REPO
+  const root = repoName ? repoDir(repoName) : REPO
   for (const file of walk(root, CODE_EXT)) {
     const rel = relative(root, file).replace(/\\/g, '/')
     filesByPath.add(rel)
@@ -118,7 +117,7 @@ for (const repoName of [...present, null]) {
  * or send the reader to the wrong menu: every cited path must be a real
  * section → entry → sub-entry route, not merely a set of real labels.
  *
- * The store sidebar is built per request by `admin/navigation.py:
+ * The store sidebar is built per request by `src/admin/navigation.py:
  * store_sidebar`, as nested calls — `_group(_("Sales"), [page(…, _("Orders")),
  * _menu(_("Wholesale"), "icon", [page(…), …]), …])`. The platform sidebar is
  * built by `platform_sidebar` in the same module: a list of dicts with
@@ -316,7 +315,6 @@ function platformSections(src) {
 /** Greek `msgstr` per English `msgid`, so the el pages are checked too. */
 function greekLabels(poPath) {
   const labels = new Map()
-  if (!existsSync(poPath)) return labels
   // The catalogue is CRLF. A \n-only pattern silently matches nothing.
   for (const m of readFileSync(poPath, 'utf8').matchAll(/msgid\s+"([^"]+)"\r?\nmsgstr\s+"([^"]+)"/g)) {
     if (!labels.has(m[1])) labels.set(m[1], m[2])
@@ -332,17 +330,26 @@ const PATH_SEP = '\u0000'
  * and what could not be read.
  */
 function adminSidebar() {
-  const django = join(WORKSPACE, 'grooveshop-django-api')
-  const navigation = join(django, 'admin', 'navigation.py')
-  if (!existsSync(navigation)) return null
+  const django = repoDir('grooveshop-django-api')
+  if (!existsSync(django)) return null
+  // The Django repository keeps its apps, settings and catalogues under src/.
+  // With the repository present, a file that is not there is a failure, never
+  // a skipped check: a gate that reads nothing passes on anything.
+  const navigation = join(django, 'src', 'admin', 'navigation.py')
+  const poPath = join(django, 'src', 'locale', 'el', 'LC_MESSAGES', 'django.po')
   const unreadable = []
+  for (const file of [navigation, poPath]) {
+    if (!existsSync(file)) unreadable.push(`${relative(django, file).replaceAll('\\', '/')} (not found in ${django})`)
+  }
+  if (unreadable.length) return { paths: new Set(), sections: new Set(), labels: new Set(), unreadable }
   const navigationSource = stripComments(readFileSync(navigation, 'utf8'))
   const store = storeSections(navigationSource)
-  if (!store.some(s => s.title && s.children.length)) unreadable.push('the store sidebar in admin/navigation.py (store_sidebar)')
+  if (!store.some(s => s.title && s.children.length)) unreadable.push('the store sidebar in src/admin/navigation.py (store_sidebar)')
   const platform = platformSections(navigationSource)
-  if (!platform.some(s => s.title && s.children.length)) unreadable.push('the platform sidebar in admin/navigation.py (platform_sidebar)')
+  if (!platform.some(s => s.title && s.children.length)) unreadable.push('the platform sidebar in src/admin/navigation.py (platform_sidebar)')
 
-  const greek = greekLabels(join(django, 'locale', 'el', 'LC_MESSAGES', 'django.po'))
+  const greek = greekLabels(poPath)
+  if (!greek.size) unreadable.push('the Greek labels in src/locale/el/LC_MESSAGES/django.po (no msgid/msgstr pair matched)')
   const paths = new Set()
   const sections = new Set()
   const labels = new Set()
@@ -380,7 +387,7 @@ const SIDEBAR = adminSidebar()
 
 const problems = []
 for (const what of SIDEBAR?.unreadable ?? []) {
-  problems.push(`could not read ${what}: its shape changed, so update adminSidebar() in scripts/check-claims.mjs`)
+  problems.push(`could not read ${what}: it moved or its shape changed, so update adminSidebar() in scripts/check-claims.mjs`)
 }
 const stats = { paths: 0, screens: 0 }
 
@@ -442,7 +449,7 @@ for (const file of walk(SRC, /\.md$/)) {
       if (!verdict) problems.push(`${where}  path does not exist: ${cite}`)
     }
 
-    if (SIDEBAR) {
+    if (SIDEBAR?.paths.size) {
       for (const m of line.matchAll(SPAN_RE)) {
         const span = m[1].trim()
         // Spans also carry directions ("Not in the sidebar. Open the command

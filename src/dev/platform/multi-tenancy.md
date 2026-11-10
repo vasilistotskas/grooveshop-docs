@@ -48,47 +48,47 @@ both places, and that duplication is deliberate:
 
 The public schema also carries the platform's own `Tenant` row (created by
 `bootstrap_platform`), which is why helpers use
-`tenant/membership.py: get_current_tenant` rather than
+`src/tenant/membership.py: get_current_tenant` rather than
 `connection.tenant`: the former returns `None` on the public schema.
 
 Foreign keys that cross the schema boundary are declared with
 `db_constraint=False`, because the referenced table lives in a different
 schema and Postgres cannot enforce the constraint: the audit actor on
-`admin/log_actors.py`, the B2B profile's user link in
-`b2b/models/profile.py`, `order/models/stock_log.py: performed_by`, and
+`src/admin/log_actors.py`, the B2B profile's user link in
+`src/b2b/models/profile.py`, `src/order/models/stock_log.py: performed_by`, and
 the `history_user` on simple-history tables.
 
 ### Tenant resolution, service by service
 
 **Django.** `django_tenants.middleware.main.TenantMainMiddleware` looks the
 request host up in `TenantDomain` and switches the connection's search
-path. It runs third in `MIDDLEWARE`: `core/middleware/health_probe.py`
+path. It runs third in `MIDDLEWARE`: `src/core/middleware/health_probe.py`
 answers kubelet probes first (their `Host` is a pod IP that no row can
-match), and `tenant/internal.py: InternalDomainsMiddleware` answers the
+match), and `src/tenant/internal.py: InternalDomainsMiddleware` answers the
 cluster-internal domains feed second. Immediately after resolution
-`tenant/middleware.py: SuspendedTenantMiddleware` returns 503 for an
+`src/tenant/middleware.py: SuspendedTenantMiddleware` returns 503 for an
 inactive store, and `TenantCookieDomainMiddleware` rewrites the session and
 CSRF cookie `Domain` to the request host's registrable scope on the way
-out. On the WebSocket path `tenant/middleware_ws.py:
+out. On the WebSocket path `src/tenant/middleware_ws.py:
 TenantWebsocketMiddleware` does the same lookup and closes with code 4004
 when no active tenant matches. The public schema is served only on the
 platform host through `PUBLIC_SCHEMA_URLCONF`; an unknown host is a 404
 because `SHOW_PUBLIC_IF_NO_TENANT_FOUND` is not set.
 
 **The resolve endpoint.** `GET /api/v1/tenant/resolve?domain=<host>`
-(`tenant/views.py: tenant_resolve`) is anonymous, lives in the shared URL
+(`src/tenant/views.py: tenant_resolve`) is anonymous, lives in the shared URL
 patterns so it works on any host, and returns `TenantConfigSerializer`
-(`tenant/serializers.py`): branding, locales, currency, the domain set,
+(`src/tenant/serializers.py`): branding, locales, currency, the domain set,
 the feature flags, pixel ids and CSP sources. `features` is every optional
 store feature's effective state: its plan flag on `Tenant`, if it has one,
 AND every store setting it needs, read in the store's own schema through
-the same permission classes that answer 404 for it (`tenant/features.py:
+the same permission classes that answer 404 for it (`src/tenant/features.py:
 STORE_FEATURES`, `effective_features`; all off on the platform). A client
 reads that, never the two tiers combined itself, and a change to one of
 those settings bumps the store's resolve-cache generation
-(`tenant/signals.py: bump_generation_on_agent_setting_change`). The payload is cached for an
+(`src/tenant/signals.py: bump_generation_on_agent_setting_change`). The payload is cached for an
 hour under a schema-independent key that includes a fingerprint of the
-serializer's field names (`tenant/cache.py: tenant_resolve_key`), so a
+serializer's field names (`src/tenant/cache.py: tenant_resolve_key`), so a
 release that adds a field never serves the old shape. When the caller
 proves it is the gateway with `X-Internal-Token`
 (`AGENT_GATEWAY_INTERNAL_SECRET`), the response also carries
@@ -132,11 +132,11 @@ so the service needs no host lookup; it validates the schema segment and
 namespaces its cache as `image:{schema}:…`. Its host allowlist for
 upstream fetches, and the list of suspended stores whose images it
 refuses, are refreshed from `GET /api/v1/tenant/internal/domains`, gated
-by the same internal token (`tenant/internal.py`).
+by the same internal token (`src/tenant/internal.py`).
 
 ### Per-tenant credentials
 
-`tenant/credentials.py` is the only reader of credential fields, and it
+`src/tenant/credentials.py` is the only reader of credential fields, and it
 distinguishes two classes on purpose:
 
 - **Configuration fields fall back to settings.** Store name, contact
@@ -164,15 +164,15 @@ Every commercial feature has a **plan** tier the operator controls and a
 
 | Tier | Where | Enforced by |
 |---|---|---|
-| Plan | Boolean fields on `Tenant` (`loyalty_enabled`, `blog_enabled`, `promotions_enabled`, `gift_cards_enabled`, `b2b_enabled`, `recommendations_enabled`, `agent_commerce_enabled`, …) | `tenant/permissions.py: IsTenantFeatureEnabled` subclasses on the viewsets; `tenant/membership.py: tenant_plan_allows(flag)` inside services that the public order-create path reaches without passing a viewset permission |
-| Runtime | `extra_settings` rows in the tenant schema (`LOYALTY_ENABLED`, `PROMOTIONS_ENABLED`, `GIFT_CARDS_ENABLED`, `B2B_WHOLESALE_ENABLED`, `PRODUCT_SUGGESTIONS_ENABLED`, `AGENT_COMMERCE_ENABLED`, `PRODUCT_REVIEWS_ENABLED`, …) | `tenant/permissions.py: IsSettingEnabled` subclasses; the storefront reads only the effective state Django folds into `TenantConfig.features` (see below); `GET /api/v1/settings/public` publishes store values, never a switch |
+| Plan | Boolean fields on `Tenant` (`loyalty_enabled`, `blog_enabled`, `promotions_enabled`, `gift_cards_enabled`, `b2b_enabled`, `recommendations_enabled`, `agent_commerce_enabled`, …) | `src/tenant/permissions.py: IsTenantFeatureEnabled` subclasses on the viewsets; `src/tenant/membership.py: tenant_plan_allows(flag)` inside services that the public order-create path reaches without passing a viewset permission |
+| Runtime | `extra_settings` rows in the tenant schema (`LOYALTY_ENABLED`, `PROMOTIONS_ENABLED`, `GIFT_CARDS_ENABLED`, `B2B_WHOLESALE_ENABLED`, `PRODUCT_SUGGESTIONS_ENABLED`, `AGENT_COMMERCE_ENABLED`, `PRODUCT_REVIEWS_ENABLED`, …) | `src/tenant/permissions.py: IsSettingEnabled` subclasses; the storefront reads only the effective state Django folds into `TenantConfig.features` (see below); `GET /api/v1/settings/public` publishes store values, never a switch |
 
 Rules the code encodes:
 
 - A disabled feature answers **404, never 403**, so a disabled endpoint is
   indistinguishable from one that was never registered. Only the server
   log tells them apart: every refusal goes through
-  `tenant/permissions.py: refuse()`, which logs `feature_gate:refused`
+  `src/tenant/permissions.py: refuse()`, which logs `feature_gate:refused`
   with the gate, the switch and the route, and the infrastructure's
   `GrooveShopFeatureGateRefused` alert fires on it. A route a client still
   calls stays in the OpenAPI documents once gated, so the deploy's contract
@@ -245,9 +245,9 @@ on, end to end:
    (`createHeaders`, `useBackendFetch`; cached functions pass it explicitly
    to `backendFetchFor`, in `server/utils/backendFetch.ts`).
 4. Django activates it for unprefixed `/api/` and `/_allauth/` requests:
-   `core/middleware/locale.py: RequestLanguageMiddleware`, a
+   `src/core/middleware/locale.py: RequestLanguageMiddleware`, a
    `LocaleMiddleware` subclass, calls
-   `core/utils/i18n.py: resolve_request_language` (`X-Language`, then
+   `src/core/utils/i18n.py: resolve_request_language` (`X-Language`, then
    `X-Locale`, then `Accept-Language`, clamped to the served languages)
    in `process_view` — after URL resolution, because
    `LocalePrefixPattern` resolves the unprefixed routes only under the
@@ -264,7 +264,7 @@ axes, cart promotion names). Everything returned as a `translations`
 dict is language-independent. `Order.language_code` is seeded from it,
 so an order's emails and invoice come in the language the customer
 shopped in. Clients branch on stable codes, never on message text — the
-order-create 400 carries `error.type` (`order/enum/create_error.py:
+order-create 400 carries `error.type` (`src/order/enum/create_error.py:
 OrderCreateErrorType`).
 
 Caches key on it in one place per layer: Django's `cache_page` suffixes
@@ -276,7 +276,7 @@ tenant-config epoch (see [Caches & purging](/dev/operations/caches#the-tenant-co
 ### Asset origins
 
 Three hostnames matter per tenant, all derived from `TenantDomain` rows
-(`tenant/serializers.py`):
+(`src/tenant/serializers.py`):
 
 | Field | Source | Consumer |
 |---|---|---|
@@ -301,13 +301,13 @@ are the bugs it exists to catch.
 ## Invariants
 
 - **Every cache key is tenant-scoped by default.** Django through
-  `KEY_FUNCTION` (`tenant/cache.py`), Nuxt through `tenantCacheKey`, the
+  `KEY_FUNCTION` (`src/tenant/cache.py`), Nuxt through `tenantCacheKey`, the
   gateway through `ag:{schema}:…`, the media stream through
   `image:{schema}:…`. Opting out (`global:` prefix, a Nuxt route without
   `tenantCacheKey`) is an explicit, commented decision.
 - **Meilisearch indexes are per schema**: `{schema}__{index}`
-  (`meili/models.py: get_meili_index_name`), with a per-tenant search
-  client whose key is restricted to that prefix (`meili/_client.py`).
+  (`src/meili/models.py: get_meili_index_name`), with a per-tenant search
+  client whose key is restricted to that prefix (`src/meili/_client.py`).
 - **AI discovery surfaces are served only on the platform storefront.**
   `server/middleware/1.ai-ready-gate.ts` answers 404 for `/llms.txt` and
   direct `.md` mirrors on every other host (`server/utils/aiSurfaces.ts:
@@ -350,11 +350,11 @@ are the bugs it exists to catch.
   exist only in the schema that minted them; a membership is a staff
   grant on a public identity. `request.user.is_staff` on a tenant-schema
   row is customer residue and never an authorisation signal
-  (`core/api/permissions.py: IsPlatformSuperuser`).
-- **CORS and CSRF are per tenant.** `tenant/middleware.py:
+  (`src/core/api/permissions.py: IsPlatformSuperuser`).
+- **CORS and CSRF are per tenant.** `src/tenant/middleware.py:
   origin_belongs_to_tenant` is the one rule both use: a browser on the
   tenant's registered domains may make credentialed requests to the
-  tenant's API and nobody else may (`tenant/signals.py:
+  tenant's API and nobody else may (`src/tenant/signals.py:
   allow_tenant_origin`, `TenantCsrfMiddleware`).
 - **Money and secrets never fall back** (see credentials above).
 
@@ -381,19 +381,19 @@ are the bugs it exists to catch.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/settings.py` | `SHARED_APPS`, `TENANT_APPS`, `MIDDLEWARE`, `DATABASE_ROUTERS`, `PUBLIC_SCHEMA_URLCONF` |
-| `grooveshop-django-api/tenant/middleware.py` | Suspension, cookie domain, CSRF origin rule |
-| `grooveshop-django-api/tenant/middleware_ws.py` | WebSocket tenant resolution |
-| `grooveshop-django-api/tenant/internal.py` | Internal domains feed and token check |
-| `grooveshop-django-api/tenant/views.py` | `tenant_resolve` |
-| `grooveshop-django-api/tenant/serializers.py` | `TenantConfigSerializer`, folded gates, domain derivation |
-| `grooveshop-django-api/tenant/features.py` | `STORE_FEATURES`, `effective_features`: what `features` on the resolve payload says |
-| `grooveshop-django-api/tenant/cache.py` | `make_tenant_key`, `tenant_resolve_key` |
-| `grooveshop-django-api/tenant/credentials.py` | Credential helpers and the no-fallback rule |
-| `grooveshop-django-api/tenant/permissions.py` | Plan and runtime feature gates |
-| `grooveshop-django-api/tenant/membership.py` | `get_current_tenant`, `tenant_plan_allows`, `is_store_staff` |
-| `grooveshop-django-api/core/api/views.py` | `PUBLIC_SETTING_KEYS`, settings endpoints |
-| `grooveshop-django-api/meili/models.py`, `meili/_client.py` | Per-schema index names and search clients |
+| `grooveshop-django-api/src/settings.py` | `SHARED_APPS`, `TENANT_APPS`, `MIDDLEWARE`, `DATABASE_ROUTERS`, `PUBLIC_SCHEMA_URLCONF` |
+| `grooveshop-django-api/src/tenant/middleware.py` | Suspension, cookie domain, CSRF origin rule |
+| `grooveshop-django-api/src/tenant/middleware_ws.py` | WebSocket tenant resolution |
+| `grooveshop-django-api/src/tenant/internal.py` | Internal domains feed and token check |
+| `grooveshop-django-api/src/tenant/views.py` | `tenant_resolve` |
+| `grooveshop-django-api/src/tenant/serializers.py` | `TenantConfigSerializer`, folded gates, domain derivation |
+| `grooveshop-django-api/src/tenant/features.py` | `STORE_FEATURES`, `effective_features`: what `features` on the resolve payload says |
+| `grooveshop-django-api/src/tenant/cache.py` | `make_tenant_key`, `tenant_resolve_key` |
+| `grooveshop-django-api/src/tenant/credentials.py` | Credential helpers and the no-fallback rule |
+| `grooveshop-django-api/src/tenant/permissions.py` | Plan and runtime feature gates |
+| `grooveshop-django-api/src/tenant/membership.py` | `get_current_tenant`, `tenant_plan_allows`, `is_store_staff` |
+| `grooveshop-django-api/src/core/api/views.py` | `PUBLIC_SETTING_KEYS`, settings endpoints |
+| `grooveshop-django-api/src/meili/models.py`, `src/meili/_client.py` | Per-schema index names and search clients |
 | `grooveshop-django-api/tests_mt/conftest.py` | The multi-tenant test lane |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | Host resolution and bypass list |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.ai-ready-gate.ts` | Platform-only AI surfaces |
@@ -406,8 +406,8 @@ are the bugs it exists to catch.
 | `grooveshop-storefront-ui-node-nuxt/shared/i18n/tenantLocales.ts` | `tenantAllowedLocales`, `servedLocale` |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.locale.ts` | `event.context.locale` |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/api.ts`, `app/plugins/api.ts`, `app/composables/useApi.ts` | The page-locale fetchers |
-| `grooveshop-django-api/core/middleware/locale.py` | `RequestLanguageMiddleware` |
-| `grooveshop-django-api/core/utils/i18n.py` | `resolve_request_language` |
+| `grooveshop-django-api/src/core/middleware/locale.py` | `RequestLanguageMiddleware` |
+| `grooveshop-django-api/src/core/utils/i18n.py` | `resolve_request_language` |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/storeFeature.ts`, `app/composables/useStoreFeature.ts`, `server/utils/storeFeature.ts`, `app/utils/routeGate.ts` | `storeFeatureOn`, `useStoreFeature`, `eventStoreFeature`, `createFeatureGate`: every store feature from `TenantConfig.features` |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/storePreference.ts`, `app/composables/useStorePreference.ts` | `STORE_PREFERENCES`: the boolean settings that are not store features |
 | `grooveshop-storefront-ui-node-nuxt/.claude/rules/multi-tenant.md` | The `event.context.tenant` contract |

@@ -6,20 +6,20 @@ description: "The carrier abstraction, provider rows and the factory trap, per-t
 # Shipping
 
 A carrier is an adapter class plus a database row. The adapter
-(`shipping/interfaces.py: ShippingCarrierInterface`) is code registered
-at app start; the row (`shipping/models/provider.py: ShippingProvider`)
+(`src/shipping/interfaces.py: ShippingCarrierInterface`) is code registered
+at app start; the row (`src/shipping/models/provider.py: ShippingProvider`)
 is the runtime switch and capability declaration. Nothing above the
 shipping layer imports a provider app — the order flow, the serializers,
 the pay-way filter and the pricing calculator all go through
-`shipping/services.py: ShippingService`, which resolves the row and then
+`src/shipping/services.py: ShippingService`, which resolves the row and then
 the adapter. Price, availability and weight cap live in a third piece,
-the per-tenant `shipping/models/rate.py: ShippingRate` table, one row per
+the per-tenant `src/shipping/models/rate.py: ShippingRate` table, one row per
 (provider, country, kind). Adding a courier is one app plus one provider
 row plus its rates.
 
 Three adapters exist today: ACS Courier (`shipping_acs/`, REST, polled),
 BoxNow (`shipping_boxnow/`, REST plus webhook) and the merchant-fulfilled
-`flat_rate` (`shipping/carriers/flat_rate.py`, lifecycle only: no API,
+`flat_rate` (`src/shipping/carriers/flat_rate.py`, lifecycle only: no API,
 no label, no tracking).
 
 ## Diagram
@@ -76,7 +76,7 @@ which `PayWayService.filter_by_carrier` applies on top and which change
 without a deploy.
 
 Registration is `@register_provider` at `AppConfig.ready()` time into the
-module-level `_REGISTRY` in `shipping/interfaces.py`. Re-registering the
+module-level `_REGISTRY` in `src/shipping/interfaces.py`. Re-registering the
 same code overwrites, which is how test doubles are swapped in.
 
 ### Provider rows, and the factory trap
@@ -86,7 +86,7 @@ the master switch, `supports_home_delivery` / `supports_pickup_point`,
 `live_mode`, `priority`, a `metadata` JSON bag and two logo fields
 (pickup-point rows prefer `logo_pickup_point` and fall back to `logo`).
 
-**`shipping/factories.py: ShippingProviderFactory` sets
+**`src/shipping/factories.py: ShippingProviderFactory` sets
 `django_get_or_create = ("code",)`.** Every other declared attribute —
 `is_active`, `supports_home_delivery`, `supports_pickup_point`,
 `live_mode`, `priority`, `metadata` — is passed as a `defaults` value, and
@@ -126,7 +126,7 @@ admin edits rates through an Unfold `ShippingRateInline` on
 would 403, because the country admin is platform-only.
 
 Countries and regions stay global reference data (`SHARED_APPS`). Every
-ISO 3166-1 country is seeded (`country/migrations/0012_seed_iso_countries.py`),
+ISO 3166-1 country is seeded (`src/country/migrations/0012_seed_iso_countries.py`),
 so every country is *selectable* in the rate inline, and only a rate
 makes it *shippable* for one store.
 
@@ -135,7 +135,7 @@ product with no country dimension (`vat/`), so a rate to another EU
 country charges the product's own rate, not the destination's (no OSS),
 and a non-EU destination gets no customs data on the voucher. Opening
 such a country is a compliance decision that this code does not make
-for the merchant. `shipping/migrations/0011_convert_legacy_pricing_to_rates.py`
+for the merchant. `src/shipping/migrations/0011_convert_legacy_pricing_to_rates.py`
 converted each tenant's old setting values into rates for the countries
 in its old `supported_countries` (else GR), so no store started offering
 a new country by accident; a new tenant runs the same migration and gets
@@ -153,14 +153,14 @@ rest is built on it:
 |---|---|
 | `quote(...) -> Money` | Price, evaluated in a fixed order: availability (`ShippingUnavailableError`), weight cap (`ShippingWeightExceededError`), free-shipping threshold (judged on `OrderService.threshold_value`, see [Checkout and payment](/dev/flows/checkout-and-payment#_4-shipping-method-decides-which-pay-ways-exist)), then the adapter's `live_quote` or the rate's `price` |
 | `assert_available(...)` | Availability and cap without a price; used when a free-shipping promotion zeroes the cost, so a promo can never ship to a country the store does not serve |
-| `shippable_country_codes()` | Countries with at least one active rate, ordered by `Country.sort_order`; backs `GET /api/v1/country?shippable=true` (`country/filters.py`), which returns nothing on the platform host |
+| `shippable_country_codes()` | Countries with at least one active rate, ordered by `Country.sort_order`; backs `GET /api/v1/country?shippable=true` (`src/country/filters.py`), which returns nothing on the platform host |
 | `resolve_home_delivery_provider(country_code)` | The active home-delivery carrier with the lowest `priority` for that country |
 | `available_options(country_code)` | Checkout options; the country is required (400 without it) |
 | `free_shipping_info(country_code)` | The store's standing "free shipping from X" promise, for a page with no cart; defaults to `initial_country_code()` and echoes the `country_code` it used |
 | `free_threshold_rates(country_code, weight_grams, items)` | The rates that ship free above a threshold, on the `active_rate` gate, lowest threshold first; with a cart's weight and items, only those that can carry it. Feeds `free_shipping_info` and the cart's `freeShippingProgress` ([Promotions](/dev/flows/promotions-and-gift-cards#free-shipping-one-distance)) |
 | `initial_country_code()` | The first `shippable_country_codes()` entry, the country a caller with no address is judged for |
 
-The exceptions live in `shipping/exceptions.py`.
+The exceptions live in `src/shipping/exceptions.py`.
 
 The same module roots the carrier error hierarchy. Every carrier app's
 errors derive from `CarrierError` (`AcsError`, `BoxNowError`), and the
@@ -190,7 +190,7 @@ sort by `(priority, provider_code)`.
 
 Order pricing goes through the same service. `OrderService.shipping_cost`
 is the single entry point for every caller (order creation, the
-payment-intent computation in `cart/views/cart.py`) and calls
+payment-intent computation in `src/cart/views/cart.py`) and calls
 `ShippingService.quote`. A bare `home_delivery` request resolves through
 `resolve_home_delivery_provider`, and `_resolve_shipping_provider` uses
 the **same helper** to set the order's FK — otherwise the order would be
@@ -250,7 +250,7 @@ again may create a second one. So such a request is never sent again by
 the code: the shipment waits for staff.
 
 **Which failure leads where.** The client classifies a failure where it is
-raised (`AcsClient._exchange`, `_never_connected` in `shipping_acs/client.py`):
+raised (`AcsClient._exchange`, `_never_connected` in `src/shipping_acs/client.py`):
 
 | Failure | Raised as | The claim |
 |---|---|---|
@@ -272,7 +272,7 @@ call raises the same error: the task (it returns `status:
 voucher_request_unknown`, with no retry and no second alert), its retries, a
 re-dispatch and the admin "Issue ACS voucher now", which refuses with a
 message first. The stale digest's stranded-mint class excludes these
-shipments (`shipping_acs/attention.py: voucher_request_unknown_q`), because
+shipments (`src/shipping_acs/attention.py: voucher_request_unknown_q`), because
 its remedy is exactly what must not happen to them.
 
 ```mermaid
@@ -292,7 +292,7 @@ stateDiagram-v2
     Pending --> Claimed: retry
 ```
 
-**Ways out of the state** (all in `shipping_acs/services.py`):
+**Ways out of the state** (all in `src/shipping_acs/services.py`):
 
 - `AcsService.adopt_voucher(shipment, voucher_no, user=..., confirmed_by_hand="")`:
   staff found the voucher in the ACS portal. Refused
@@ -409,11 +409,11 @@ Nothing is deleted automatically: a voucher made in ACS's own portal looks
 the same as an orphan.
 
 **Where staff see it.** The shipment admin
-(`shipping_acs/admin.py: AcsShipmentAdmin`) has the detail actions
+(`src/shipping_acs/admin.py: AcsShipmentAdmin`) has the detail actions
 `adopt_voucher`, `request_voucher_again`, `close_voucher_request` and the `voucher_unknown` value of
 the "Needs attention" filter; `AcsUnrecognisedVoucherAdmin` has `delete_at_acs`
 and `mark_checked`. The store dashboard counts both
-(`admin/dashboard/store/queries.py`, `acs_voucher_requests_unknown` and
+(`src/admin/dashboard/store/queries.py`, `acs_voucher_requests_unknown` and
 `acs_unrecognised_vouchers`); the cache key of that dict is versioned, so a
 pod never reads the old shape.
 
@@ -485,7 +485,7 @@ retries, which an outage outlasts.
 
 #### The rule table
 
-The rule is the table in the docstring of `shipping_acs/voucher_hold.py`;
+The rule is the table in the docstring of `src/shipping_acs/voucher_hold.py`;
 `create_voucher_for_order` only reports which row happened. The last column is
 for the request that has the turn.
 
@@ -532,7 +532,7 @@ defaults). Only a failure of the request that has the turn adds to
 #### The sweep: `issue_held_acs_vouchers`
 
 A held request outlives the task's retries, and there was no task that issues
-missing vouchers, so `shipping_acs/tasks.py: issue_held_acs_vouchers` is the
+missing vouchers, so `src/shipping_acs/tasks.py: issue_held_acs_vouchers` is the
 one retry. Beat entry `issue-held-acs-vouchers` runs
 `tenant.tasks.fanout_issue_held_acs_vouchers` every 5 minutes per store
 (`expires: 240`); it skips a store without ACS credentials. Per store:
@@ -550,7 +550,7 @@ one retry. Beat entry `issue-held-acs-vouchers` runs
   spaced by `ACS_POLL_DISPATCH_SPACING_SECONDS` so they do not queue for a
   request slot and spend their retries on it.
 
-The queue is `shipping_acs/attention.py: voucher_requests_held`: stamped,
+The queue is `src/shipping_acs/attention.py: voucher_requests_held`: stamped,
 without a voucher, not of unknown outcome, not an order that no longer needs a
 voucher. **Rotation:** the sweep writes `AcsShipment.voucher_request_retried_at`
 before it dispatches and chooses the order tried longest ago (never tried first,
@@ -566,8 +566,8 @@ nothing, writes no admin log entry and dispatches nothing. Otherwise it writes
 the log entry and dispatches `issue_held_acs_vouchers` on commit. It skips the
 wait and the read, not the one-request rule. The shipment filter value
 `voucher_held` and the read-only `voucher_request_held_at` field are in
-`shipping_acs/admin.py`; the dashboard row is `acs_voucher_holds` in
-`admin/dashboard/store/queries.py` (cache key `store:attention:v3`), drawn while
+`src/shipping_acs/admin.py`; the dashboard row is `acs_voucher_holds` in
+`src/admin/dashboard/store/queries.py` (cache key `store:attention:v3`), drawn while
 the hold is closed or requests wait behind it
 (`attention.voucher_holds_holding_requests`).
 
@@ -594,7 +594,7 @@ the hold is closed or requests wait behind it
 
 The manual documents 200, 403 and 406, so a 400/401/404/429 is a proxy's or a
 gateway's. `AcsClient._exchange` raises `AcsUndocumentedHttpError`
-(`shipping_acs/exceptions.py`, an `AcsAPIError`) for any other 4xx, so it is
+(`src/shipping_acs/exceptions.py`, an `AcsAPIError`) for any other 4xx, so it is
 no longer told from ACS's refusal by `raw` being empty. Like every 4xx it is a
 known outcome, but it says nothing about the order, so staff are not told to fix
 an address. While a hold is in force a held order stays held, and the task
@@ -638,7 +638,7 @@ Two encodings on the wire are easy to get wrong:
   confused proof-of-delivery entry.
 
 `Delivery_Notes` carries `Order.customer_notes` through
-`shipping/services.py: sanitize_delivery_notes`, which collapses
+`src/shipping/services.py: sanitize_delivery_notes`, which collapses
 whitespace runs and caps at 500 characters — an embedded carriage return
 can be read as a record separator by ACS.
 
@@ -650,12 +650,12 @@ ACS is the only adapter with a `live_quote`: it returns
 `quote` charges the rate's `price`. The free-shipping threshold is
 applied before `live_quote` is ever called.
 
-The station sync in `shipping_acs/tasks.py` covers the countries that
+The station sync in `src/shipping_acs/tasks.py` covers the countries that
 have an active ACS rate; `AcsService.sync_stations(country=...)` takes
 the country as a required argument. The voucher uses `order.country_id`
 and `live_quote` receives the real destination country and region, so
 no ACS path assumes Greece: which countries ACS serves is rate data.
-The `ACS_SUPPORTED_COUNTRIES` setting and `shipping_acs/config.py:
+The `ACS_SUPPORTED_COUNTRIES` setting and `src/shipping_acs/config.py:
 default_country` are gone.
 
 ### The storefront's pickup-point picker
@@ -707,14 +707,14 @@ A store without ACS credentials is skipped by the sync (rows an earlier
 sync left stay, but nothing refreshes them) and its checkout never offers
 ACS. Django's station routes answer it a plain 404
 (`AcsStationViewSet.initial`,
-`grooveshop-django-api/shipping_acs/views/station.py`), which the bulk
+`grooveshop-django-api/src/shipping_acs/views/station.py`), which the bulk
 route forwards when it asks Django, so a stray request there is a warning,
 not a server error. A catalogue the bulk route cached before the
 credentials were removed is served until that entry expires.
 
 ### Labels and the pickup list
 
-`Print_Type` defaults to **1, thermal/roll** (`shipping_acs/config.py:
+`Print_Type` defaults to **1, thermal/roll** (`src/shipping_acs/config.py:
 print_type`), overridable per tenant through
 `ShippingProvider.metadata["print_type"]`. Value 2 is the laser layout,
 four vouchers per A4. ACS accepts nothing else.
@@ -747,7 +747,7 @@ Two failure shapes are deliberate, and pinned by
   batch would reproduce the all-or-nothing failure this path exists to
   cure.
 - **An empty merge returns `b""`, not a valid PDF of nothing.**
-  `shipping_acs/admin.py: bulk_print_labels` then returns `None` so the
+  `src/shipping_acs/admin.py: bulk_print_labels` then returns `None` so the
   browser gets no download and the per-failure `message_user` errors
   stand — a zero-page PDF would read as a successful print.
 
@@ -843,7 +843,7 @@ recorded) with `refund_payment=False`: nobody asked for it, so a paid
 order is logged at WARNING and left for staff to refund by hand.
 The courier is not asked to cancel, since the shipment already is: the
 order records `shipment_cancel = {attempted: false, dispatched: true}`
-(`SHIPMENT_ALREADY_CANCELED` in `order/services.py`), so no courier
+(`SHIPMENT_ALREADY_CANCELED` in `src/order/services.py`), so no courier
 call runs inside the sync's transaction. An order whose status no
 longer allows a cancel raises `OrderNotCancelableError`, which BoxNow's
 sync drops with a warning; any other `OrderCancellationError` is a
@@ -852,7 +852,7 @@ and the shipment's state roll back. BoxNow does not send the webhook
 again (the endpoint answered 200 before the event was applied): the
 operators are alerted, and the tracking poll, which keeps reading a
 shipment that is not in a final state (`poll_boxnow_tracking_batch` in
-`shipping_boxnow/tasks.py`), applies the event on a later run.
+`src/shipping_boxnow/tasks.py`), applies the event on a later run.
 BoxNow does not. A `canceled` parcel event (webhook or tracking poll) is
 recorded on the shipment and moves no order
 (`BoxNowService._apply_order_status_transition`): BoxNow defines it as
@@ -860,8 +860,8 @@ recorded on the shipment and moves no order
 canceled on purpose (a wrong locker, a re-issue). `OrderService.cancel_for_dead_shipment`
 has ACS as its only caller. The open order keeps its status, stock and
 payment and is flagged for follow-up at once: `canceled_shipment_q` on the
-carrier adapter (`shipping_boxnow/carrier.py`, aggregated by
-`ShippingService.canceled_shipment_q`) feeds `order/follow_up.py`, which
+carrier adapter (`src/shipping_boxnow/carrier.py`, aggregated by
+`ShippingService.canceled_shipment_q`) feeds `src/order/follow_up.py`, which
 flags an order that is PENDING or PROCESSING, not awaiting its online
 payment (`awaiting_online_payment_q`), whatever its age. That rule is
 independent of the age rule (`ORDER_FOLLOW_UP_DAYS`), so an order that
@@ -911,7 +911,7 @@ below.
 
 **The status flip and its ledger row are one step.**
 `_mark_cod_order_paid_if_pending` calls
-`order/services.py: OrderService.settle_cod_payment`, which locks the
+`src/order/services.py: OrderService.settle_cod_payment`, which locks the
 order, re-reads its payment status under the lock and, only if it is still
 PENDING, runs `mark_as_paid` and writes a `COD_COLLECTION` row on the
 payment ledger (provider `acs_cod`, the voucher number, the voucher's
@@ -921,7 +921,7 @@ PENDING instead of skipping an order that is paid but unrecorded. It
 returns `True` only to the call that settled the order, and only that call
 sends `order_paid` and attempts the auto-advance, so the nightly reconcile
 and the staff **Record COD received outside ACS** action
-(`shipping_acs/admin.py`, `AcsService.record_cod_received_outside_acs`,
+(`src/shipping_acs/admin.py`, `AcsService.record_cod_received_outside_acs`,
 which goes through the same method) settle one order once.
 
 Unattributable rows are still persisted (it is real money) and reported
@@ -984,11 +984,11 @@ delivery country clears the chosen locker.
 
 The webhook is `POST /boxnow/webhook/`, registered at the URL root rather
 than under `api/v1/` so BoxNow reaches it without a language prefix or
-auth headers (`core/urls.py`). Its only gate is HMAC-SHA256:
+auth headers (`src/core/urls.py`). Its only gate is HMAC-SHA256:
 
 - The signed payload is the **raw bytes of the top-level `data` object**,
   extracted from the request body by brace-walking without any JSON
-  re-serialise cycle (`shipping_boxnow/webhook.py: extract_data_substring`),
+  re-serialise cycle (`src/shipping_boxnow/webhook.py: extract_data_substring`),
   because whitespace and key order are part of the signature.
 - `verify_signature` rejects anything that is not 64 hex digits on shape
   before comparing, because `hmac.compare_digest` raises `TypeError` on
@@ -1060,7 +1060,7 @@ move `Order.status`, which the carrier events drive separately.
   A request is held twice (before its claim and inside its request slot), and
   only the request that has the turn, `AcsVoucherHold.trial_request`, settles
   it; only its voucher ends the hold. The rule table is in
-  `shipping_acs/voucher_hold.py`.
+  `src/shipping_acs/voucher_hold.py`.
 - **A voucher request with an unknown outcome is never sent again by code.**
   Staff end it with `adopt_voucher` or `request_voucher_again`, and a late
   answer of the very request it belongs to ends it too (the mint's persist
@@ -1163,44 +1163,44 @@ move `Order.status`, which the carrier events drive separately.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment`), `_REGISTRY`, `register_provider`, `all_payload_keys` |
-| `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
-| `grooveshop-django-api/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError` |
-| `grooveshop-django-api/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy, including `AcsOutcomeUnknownError`, `AcsVoucherRequestUnknownError`, `AcsVoucherResolutionError`, `AcsUndocumentedHttpError`, `AcsVoucherRequestNotSentError` and `AcsVoucherRequestHeldError` |
-| `grooveshop-django-api/shipping_acs/voucher_hold.py` | The voucher hold's state machine and the rule table: `admit`, `allow_trial`, `record_voucher`, `record_refusal`, `record_no_answer`, `record_not_sent`, `record_unknown_outcome` |
-| `grooveshop-django-api/shipping_acs/models/voucher_hold.py` | `AcsVoucherHold`: the one-in-force constraint, `trial_request`, `retry_after`, `holds` |
-| `grooveshop-django-api/shipping_boxnow/exceptions.py` | BoxNow errors on the carrier hierarchy |
-| `grooveshop-django-api/shipping/models/provider.py` | `ShippingProvider` fields and kind-aware logo resolution |
-| `grooveshop-django-api/shipping/models/rate.py` | `ShippingRate`: fields, constraints, `clean()` |
-| `grooveshop-django-api/shipping/migrations/0011_convert_legacy_pricing_to_rates.py` | Settings-to-rates conversion per tenant |
-| `grooveshop-django-api/shipping/admin.py` | `ShippingRateInline` on `ShippingProviderAdmin` |
-| `grooveshop-django-api/shipping/carriers/flat_rate.py` | Merchant-fulfilled, lifecycle-only adapter |
-| `grooveshop-django-api/country/filters.py` | `?shippable=true` |
-| `grooveshop-django-api/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider`, `settle_cod_payment` |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
-| `grooveshop-django-api/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
-| `grooveshop-django-api/shipping/alerts.py`, `shipping/emails.py`, `shipping_acs/emails.py` | The two carrier alerts (`alert_admins_*`) and the ops email types they and the ACS tasks send |
-| `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
-| `grooveshop-django-api/shipping/urls.py` | Options, free-shipping-info, providers |
-| `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
-| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` and `voucher_held` filter values, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`), `AcsVoucherHoldAdmin` (`allow_one_request`) and the `label_printed_at` empty filter |
-| `grooveshop-django-api/shipping_acs/client.py` | `AcsClient._exchange` and `_never_connected`: which transport failures are `AcsOutcomeUnknownError` |
-| `grooveshop-django-api/shipping_acs/attention.py` | `voucher_request_unknown_q`, `voucher_requests_unknown`, `voucher_requests_waiting`, `needs_no_voucher`, `unrecognised_vouchers`, `voucher_request_held_q`, `voucher_requests_held`, `voucher_holds_holding_requests` |
-| `grooveshop-django-api/shipping_acs/models/` | `AcsShipment.voucher_request_unknown_at`, `voucher_request_held_at`, `voucher_request_retried_at`, `AcsUnrecognisedVoucher`, `AcsVoucherHold` |
-| `grooveshop-django-api/admin/dashboard/store/queries.py` | The ACS counters of the dashboard, including `acs_voucher_holds` and `acs_voucher_hold_since` |
-| `grooveshop-django-api/admin/navigation.py` | `store_sidebar`: the ACS voucher holds menu entry under Shipping |
-| `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts, including `issue_held_acs_vouchers` |
-| `grooveshop-django-api/settings.py` | The `issue-held-acs-vouchers` beat entry, `ACS_VOUCHER_HOLD_RETRY_SECONDS`, `ACS_VOUCHER_HOLD_RETRY_MAX_SECONDS` |
-| `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
-| `grooveshop-django-api/shipping_acs/views/station.py` | The station routes the picker and the gateway read; 404 for a store without ACS credentials |
-| `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
-| `grooveshop-django-api/shipping_boxnow/webhook.py` | Raw-bytes `data` extraction and HMAC verification |
-| `grooveshop-django-api/shipping_boxnow/views/webhook.py` | Tenant resolution and the response contract |
-| `grooveshop-django-api/shipping_boxnow/services.py` | Shipment creation, `apply_webhook_event`, locker sync (`skipped_no_country`), COD on delivery, `cancel_shipment` and `can_cancel_shipment` |
-| `grooveshop-django-api/shipping_boxnow/carrier.py` | BoxNow adapter, `supported_settlements`, the locker-country check in `validate_order_payload` |
-| `grooveshop-django-api/shipping_boxnow/models/locker.py` | `BoxNowLocker.country_code`, no default |
-| `grooveshop-django-api/pay_way/services.py` | `filter_by_carrier`, `filter_by_shipping_kind` |
-| `grooveshop-django-api/settings.py` | Beat cadences for every carrier task |
+| `grooveshop-django-api/src/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment`), `_REGISTRY`, `register_provider`, `all_payload_keys` |
+| `grooveshop-django-api/src/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
+| `grooveshop-django-api/src/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError` |
+| `grooveshop-django-api/src/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy, including `AcsOutcomeUnknownError`, `AcsVoucherRequestUnknownError`, `AcsVoucherResolutionError`, `AcsUndocumentedHttpError`, `AcsVoucherRequestNotSentError` and `AcsVoucherRequestHeldError` |
+| `grooveshop-django-api/src/shipping_acs/voucher_hold.py` | The voucher hold's state machine and the rule table: `admit`, `allow_trial`, `record_voucher`, `record_refusal`, `record_no_answer`, `record_not_sent`, `record_unknown_outcome` |
+| `grooveshop-django-api/src/shipping_acs/models/voucher_hold.py` | `AcsVoucherHold`: the one-in-force constraint, `trial_request`, `retry_after`, `holds` |
+| `grooveshop-django-api/src/shipping_boxnow/exceptions.py` | BoxNow errors on the carrier hierarchy |
+| `grooveshop-django-api/src/shipping/models/provider.py` | `ShippingProvider` fields and kind-aware logo resolution |
+| `grooveshop-django-api/src/shipping/models/rate.py` | `ShippingRate`: fields, constraints, `clean()` |
+| `grooveshop-django-api/src/shipping/migrations/0011_convert_legacy_pricing_to_rates.py` | Settings-to-rates conversion per tenant |
+| `grooveshop-django-api/src/shipping/admin.py` | `ShippingRateInline` on `ShippingProviderAdmin` |
+| `grooveshop-django-api/src/shipping/carriers/flat_rate.py` | Merchant-fulfilled, lifecycle-only adapter |
+| `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
+| `grooveshop-django-api/src/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider`, `settle_cod_payment` |
+| `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
+| `grooveshop-django-api/src/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
+| `grooveshop-django-api/src/shipping/alerts.py`, `src/shipping/emails.py`, `src/shipping_acs/emails.py` | The two carrier alerts (`alert_admins_*`) and the ops email types they and the ACS tasks send |
+| `grooveshop-django-api/src/shipping/utils.py` | `compute_total_weight_grams` |
+| `grooveshop-django-api/src/shipping/urls.py` | Options, free-shipping-info, providers |
+| `grooveshop-django-api/src/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
+| `grooveshop-django-api/src/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` and `voucher_held` filter values, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`), `AcsVoucherHoldAdmin` (`allow_one_request`) and the `label_printed_at` empty filter |
+| `grooveshop-django-api/src/shipping_acs/client.py` | `AcsClient._exchange` and `_never_connected`: which transport failures are `AcsOutcomeUnknownError` |
+| `grooveshop-django-api/src/shipping_acs/attention.py` | `voucher_request_unknown_q`, `voucher_requests_unknown`, `voucher_requests_waiting`, `needs_no_voucher`, `unrecognised_vouchers`, `voucher_request_held_q`, `voucher_requests_held`, `voucher_holds_holding_requests` |
+| `grooveshop-django-api/src/shipping_acs/models/` | `AcsShipment.voucher_request_unknown_at`, `voucher_request_held_at`, `voucher_request_retried_at`, `AcsUnrecognisedVoucher`, `AcsVoucherHold` |
+| `grooveshop-django-api/src/admin/dashboard/store/queries.py` | The ACS counters of the dashboard, including `acs_voucher_holds` and `acs_voucher_hold_since` |
+| `grooveshop-django-api/src/admin/navigation.py` | `store_sidebar`: the ACS voucher holds menu entry under Shipping |
+| `grooveshop-django-api/src/shipping_acs/tasks.py` | Every ACS beat task and its alerts, including `issue_held_acs_vouchers` |
+| `grooveshop-django-api/src/settings.py` | The `issue-held-acs-vouchers` beat entry, `ACS_VOUCHER_HOLD_RETRY_SECONDS`, `ACS_VOUCHER_HOLD_RETRY_MAX_SECONDS` |
+| `grooveshop-django-api/src/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
+| `grooveshop-django-api/src/shipping_acs/views/station.py` | The station routes the picker and the gateway read; 404 for a store without ACS credentials |
+| `grooveshop-django-api/src/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
+| `grooveshop-django-api/src/shipping_boxnow/webhook.py` | Raw-bytes `data` extraction and HMAC verification |
+| `grooveshop-django-api/src/shipping_boxnow/views/webhook.py` | Tenant resolution and the response contract |
+| `grooveshop-django-api/src/shipping_boxnow/services.py` | Shipment creation, `apply_webhook_event`, locker sync (`skipped_no_country`), COD on delivery, `cancel_shipment` and `can_cancel_shipment` |
+| `grooveshop-django-api/src/shipping_boxnow/carrier.py` | BoxNow adapter, `supported_settlements`, the locker-country check in `validate_order_payload` |
+| `grooveshop-django-api/src/shipping_boxnow/models/locker.py` | `BoxNowLocker.country_code`, no default |
+| `grooveshop-django-api/src/pay_way/services.py` | `filter_by_carrier`, `filter_by_shipping_kind` |
+| `grooveshop-django-api/src/settings.py` | Beat cadences for every carrier task |
 | `grooveshop-storefront-ui-node-nuxt/shared/shipping/index.ts` | Checkout method to carrier mapping |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step, over-cap and error states, locker pickers |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/GenericLockerPicker.vue`, `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Checkout/GenericLockerPicker.vue` | The picker modal, default and webside designs: search, location button, map and list |

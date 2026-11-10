@@ -172,17 +172,17 @@ by a namespace regex.
 - One correlation id follows a request across services. Every storefront
   call to Django sends `X-Correlation-ID`: the caller's own header, else
   the request's evlog `requestId` (`server/utils/backendFetch.ts`). Django
-  binds it in `core/middleware/correlation_id.py` (minting a UUID when
+  binds it in `src/core/middleware/correlation_id.py` (minting a UUID when
   none came), stamps it on every log record as `log.correlation_id` and
   echoes it on the response. To follow a storefront request into Django,
   take its `requestId` and filter Django on `log.correlation_id`.
 - Django logs one access line per request it handles
-  (`core/middleware/access_log.py`): `log.method`, `log.route` (the URL
+  (`src/core/middleware/access_log.py`): `log.method`, `log.route` (the URL
   pattern, never the raw path or query string; `unmatched` for a path no
   pattern matches), `log.status`, `log.duration_ms`, `log.db_queries`,
   `log.db_ms`, `log.schema` and `log.correlation_id`. `log.db_queries` and
   `log.db_ms` are the queries the request ran on any database alias and the
-  time spent in them (`core/db_cost.py: measure`), so `log.duration_ms` minus
+  time spent in them (`src/core/db_cost.py: measure`), so `log.duration_ms` minus
   `log.db_ms` is Python, Redis and outbound calls. A query a view hands to
   another thread is not counted, and the time is a floor for a query that
   streams a large result. A 4xx or 5xx API response also carries
@@ -201,7 +201,7 @@ by a namespace regex.
 
 - A failed Celery task logs one ERROR line from `MonitoredTask.on_failure`
   with the traceback in `log.exception` and redacted arguments
-  (`core/tasks.py`); Celery's own `celery.app.trace` line also carries
+  (`src/core/tasks.py`); Celery's own `celery.app.trace` line also carries
   one. The `MonitoredTask.on_failure` line, not Celery's, and the success line
   from `MonitoredTask.on_success` carry
   `log.duration_ms`, `log.db_queries` and `log.db_ms`, measured around the
@@ -270,10 +270,10 @@ by a namespace regex.
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/error-reporting.client.ts` | Reports browser errors through evlog's client transport |
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/web-vitals.client.ts` | Reports a page's slow interaction (INP) with its attribution |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/clientEventRedaction.ts` | The allowlists browser events are cut back to before they are printed |
-| `grooveshop-django-api/core/middleware/correlation_id.py` | Binds and echoes the correlation id |
-| `grooveshop-django-api/core/middleware/access_log.py` | Django's per-request access line, with the error code of an error response and the request's database cost |
-| `grooveshop-django-api/core/db_cost.py` | `measure`: counts and times every query on every alias, as `db_queries` and `db_ms` |
-| `grooveshop-django-api/core/api/exception_handler.py` | Puts the `code` on every raised API error |
-| `grooveshop-django-api/core/tasks.py` | `MonitoredTask`: the task completion and failure lines, with the task's duration and database cost, and the failure's traceback |
+| `grooveshop-django-api/src/core/middleware/correlation_id.py` | Binds and echoes the correlation id |
+| `grooveshop-django-api/src/core/middleware/access_log.py` | Django's per-request access line, with the error code of an error response and the request's database cost |
+| `grooveshop-django-api/src/core/db_cost.py` | `measure`: counts and times every query on every alias, as `db_queries` and `db_ms` |
+| `grooveshop-django-api/src/core/api/exception_handler.py` | Puts the `code` on every raised API error |
+| `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask`: the task completion and failure lines, with the task's duration and database cost, and the failure's traceback |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |

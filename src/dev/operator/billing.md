@@ -8,7 +8,7 @@ description: Plan tiers, the term end recorded on every tenant row, the three-st
 Billing on this platform is manual bookkeeping with automated reminders.
 There is no subscription integration, no invoice generation and no card on
 file for a merchant's own plan: an operator records a term end on the
-tenant row, and a daily task (`tenant/billing.py: run_billing_cycle`)
+tenant row, and a daily task (`src/tenant/billing.py: run_billing_cycle`)
 reads that date, emails the owner as it approaches and passes, and —
 **only if a switch that currently ships off is turned on** — suspends the
 store.
@@ -16,15 +16,15 @@ store.
 Everything on this page runs in the `public` schema. `Tenant` rows, the
 dunning bookkeeping and the outbound mail all live there, so no tenant
 schema is entered and a half-provisioned store cannot break the cycle
-(`tenant/billing.py` module docstring).
+(`src/tenant/billing.py` module docstring).
 
 ## The fields
 
-All six live on `Tenant` (`tenant/models.py`). Open a store from
+All six live on `Tenant` (`src/tenant/models.py`). Open a store from
 <span class="sidebar-path">Control plane → Tenants</span>: the first four
 are in the **Plan & Billing** section of the change form and the two
 suspension fields are in the unnamed section at the top
-(`tenant/admin.py: TenantAdmin.fieldsets`).
+(`src/tenant/admin.py: TenantAdmin.fieldsets`).
 
 | Field | Meaning |
 |---|---|
@@ -39,21 +39,21 @@ suspension fields are in the unnamed section at the top
 `TenantAdmin.readonly_fields` — they are the task's bookkeeping, not an
 operator control. `plan` and `paid_until` are editable by platform staff
 and are deliberately **absent** from `TENANT_SELF_EDITABLE_FIELDS`
-(`tenant/role_scopes.py`), so a merchant sees them read-only on their own
+(`src/tenant/role_scopes.py`), so a merchant sees them read-only on their own
 store console: "commercial terms, security policy, or identity, none of
 which a merchant may set for themselves".
 
 ## Plan tiers
 
-`TenantPlan` (`tenant/models.py`) has four values, and it is worth being
+`TenantPlan` (`src/tenant/models.py`) has four values, and it is worth being
 precise about what the tier actually decides today.
 
 | Plan | Where the value is read |
 |---|---|
-| `trial` | `billing_state()` special-cases it (an in-term trial reads "trial", not "paid"); `tenant_create --trial-days` stamps a `paid_until` for it; it is rank 0 in `recommendation/strategies/base.py: _PLAN_RANK`. |
+| `trial` | `billing_state()` special-cases it (an in-term trial reads "trial", not "paid"); `tenant_create --trial-days` stamps a `paid_until` for it; it is rank 0 in `src/recommendation/strategies/base.py: _PLAN_RANK`. |
 | `basic` | Rank 1. |
 | `pro` | Rank 2. |
-| `enterprise` | Rank 3. Also the plan `recommendation/context.py` reports for the public schema, which is never plan-gated. |
+| `enterprise` | Rank 3. Also the plan `src/recommendation/context.py` reports for the public schema, which is never plan-gated. |
 
 Two things follow, and both are easy to get wrong:
 
@@ -62,7 +62,7 @@ Two things follow, and both are easy to get wrong:
   `recommendations_enabled`, `gift_cards_enabled`, `loyalty_enabled`,
   `promotions_enabled`, `blog_enabled`, `agent_commerce_enabled` — each
   paired with a merchant-controlled `extra_settings` toggle, and both must
-  hold (`tenant/membership.py: tenant_plan_allows`). Moving a store from
+  hold (`src/tenant/membership.py: tenant_plan_allows`). Moving a store from
   `basic` to `pro` changes no feature on its own; the operator flips the
   matching flag in the **Features** section of the same change form. See
   [The tenant record](/dev/operator/tenants).
@@ -79,17 +79,17 @@ escalating.
 
 ## Billing states
 
-`billing_state(tenant, today)` (`tenant/billing.py`) is the single
+`billing_state(tenant, today)` (`src/tenant/billing.py`) is the single
 classifier. The Tenants changelist renders it as a badge
 (`TenantAdmin.display_billing_state`) and
 <span class="sidebar-path">Control plane → Plan & Billing</span> renders
-the same call (`admin/platform_billing.py`), so the two surfaces cannot
+the same call (`src/admin/platform_billing.py`), so the two surfaces cannot
 disagree with what the automation will do. That page is reachable only to
 a platform superuser — it is mounted exclusively on `PlatformAdminSite`
-(`admin/platform_site.py: get_urls`), so it is structurally absent from
+(`src/admin/platform_site.py: get_urls`), so it is structurally absent from
 every merchant admin rather than reachable-but-403.
 
-| State | Condition | Badge (`tenant/admin.py: _STATE_BADGES`) |
+| State | Condition | Badge (`src/tenant/admin.py: _STATE_BADGES`) |
 |---|---|---|
 | `suspended` | `suspended_at` is set — checked first, whatever the dates say | Suspended |
 | `trial` | plan is `trial` and either no term, or the term is further out than the warning window | Trial |
@@ -132,10 +132,10 @@ has already been notified.
 | 3 | today is past term end + `GRACE_DAYS` | `platform.billing_suspended` (`suspended`) | owner, **plus** `platform.billing_stage_copy` to `ADMINS` |
 
 Each is an email type of the platform (`Owner.PLATFORM`, declared in
-`tenant/emails.py`), sent through `send_email` under the `public` schema, so
+`src/tenant/emails.py`), sent through `send_email` under the `public` schema, so
 it is branded as the platform and never as a store; it is required, so no
 store's switch or the platform's can mute it. The stage-to-type-and-copy map
-is `_STAGES` in `tenant/billing.py`; `_send_stage_email` hands the pipeline a
+is `_STAGES` in `src/tenant/billing.py`; `_send_stage_email` hands the pipeline a
 `BillingNotice` (the tenant row and the grace days). The subject is the
 type's msgid (`{store} — your plan expires on {date}`) and the whole message
 renders in `tenant.default_locale`, in the store's own language. The sender is
@@ -203,7 +203,7 @@ very next run — there is no gradual catch-up.
 
 ### The stage 1 and 2 emails promise a suspension that will not happen
 
-`tenant/billing.py`'s docstring says "no email ever claims a suspension
+`src/tenant/billing.py`'s docstring says "no email ever claims a suspension
 that did not happen". That is true of the stage 3 email, which is capped
 away. It is **not** true of the two that still send: `expiring.txt` tells
 the owner "your store keeps running for a grace period of _N_ days before
@@ -247,7 +247,7 @@ Which path depends on `suspended_reason`, and the distinction is
 load-bearing.
 
 - **`billing`** — set `paid_until` to today or later and save. The
-  `reactivate_on_renewal` receiver (`tenant/signals.py`, `post_save` on
+  `reactivate_on_renewal` receiver (`src/tenant/signals.py`, `post_save` on
   `Tenant`) calls `activate_tenant()` immediately, so the operator does
   not have to remember a second step. It is recursion-safe: the
   reactivating save re-enters the receiver with `is_active=True` and exits
@@ -256,7 +256,7 @@ load-bearing.
   scoped strictly to `SuspendedReason.BILLING` precisely so bookkeeping
   can never resurrect a store an operator took down for abuse or on legal
   advice. Use the **Activate selected tenants** bulk action on the Tenants
-  changelist (`TenantAdmin.activate_tenants` → `tenant/lifecycle.py:
+  changelist (`TenantAdmin.activate_tenants` → `src/tenant/lifecycle.py:
   activate_tenant`), which clears `is_active`, `suspended_at` and
   `suspended_reason` together.
 
@@ -268,7 +268,7 @@ destroy cooldown. See [Suspend, export & destroy](/dev/operator/lifecycle).
 `suspend_tenant()` sets `is_active=False`, stamps `suspended_at` on the
 **first** suspension only (so re-suspending never resets the destroy
 cooldown), records the reason, and dispatches a best-effort media-cache
-flush. From then on `SuspendedTenantMiddleware` (`tenant/middleware.py`)
+flush. From then on `SuspendedTenantMiddleware` (`src/tenant/middleware.py`)
 answers **503** for every request on that store's host — not just the
 storefront, but the API too, which is the path that used to keep serving
 catalogue reads, cart mutations and order creation on a frozen store.
@@ -284,7 +284,7 @@ Nothing is deleted.
 | Schema | `public` — **not** a fan-out |
 | Retries | `max_retries=3`, `autoretry_for=(Exception,)`, backoff with jitter |
 
-It is defined in `tenant/tasks.py` rather than `tenant/billing.py` only
+It is defined in `src/tenant/tasks.py` rather than `src/tenant/billing.py` only
 because Celery autodiscovery scans `tasks.py` modules. Everything about
 the beat schedule, fan-out and the result backend is in
 [Celery and background jobs](/dev/django/celery); the console screens for
@@ -299,7 +299,7 @@ it are in [Scheduled work & platform data](/dev/operator/background-jobs).
 - The stage is recorded only after a successful send.
 - A protected tenant (`is_protected`, or the public schema) is never
   suspended by billing, and is skipped before the stage 3 email is
-  composed (`tenant/lifecycle.py: is_protected_tenant`).
+  composed (`src/tenant/lifecycle.py: is_protected_tenant`).
 - The billing task can only ever set `suspended_reason = BILLING`;
   `suspend_tenant` refuses to relabel a store that is already suspended,
   so it can never overwrite an operator's `MANUAL` reason.
@@ -336,15 +336,15 @@ it are in [Scheduled work & platform data](/dev/operator/background-jobs).
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/tenant/billing.py` | `billing_config`, `billing_state`, `target_stage`, `_STAGES`, `_send_stage_email`, `run_billing_cycle` |
-| `grooveshop-django-api/tenant/models.py` | `TenantPlan`, `SuspendedReason`, the six billing fields and their `help_text` |
-| `grooveshop-django-api/tenant/lifecycle.py` | `suspend_tenant`, `activate_tenant`, `is_protected_tenant`, `SUSPEND_COOLDOWN` |
-| `grooveshop-django-api/tenant/signals.py` | `reactivate_on_renewal` |
-| `grooveshop-django-api/tenant/tasks.py` | `process_tenant_billing` |
-| `grooveshop-django-api/tenant/admin.py` | `TenantAdmin` fieldsets, `readonly_fields`, `_STATE_BADGES`, `activate_tenants` |
-| `grooveshop-django-api/admin/platform_billing.py` | The **Plan & Billing** control-plane page |
-| `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS` — why a merchant cannot edit plan or term |
-| `grooveshop-django-api/tenant/middleware.py` | `SuspendedTenantMiddleware` (503 for a suspended host) |
-| `grooveshop-django-api/settings.py` | `TENANT_BILLING`, `ADMINS`, `process-tenant-billing` beat entry |
-| `grooveshop-django-api/core/templates/emails/billing/` | `expiring`, `expired`, `suspended` (html + txt) |
+| `grooveshop-django-api/src/tenant/billing.py` | `billing_config`, `billing_state`, `target_stage`, `_STAGES`, `_send_stage_email`, `run_billing_cycle` |
+| `grooveshop-django-api/src/tenant/models.py` | `TenantPlan`, `SuspendedReason`, the six billing fields and their `help_text` |
+| `grooveshop-django-api/src/tenant/lifecycle.py` | `suspend_tenant`, `activate_tenant`, `is_protected_tenant`, `SUSPEND_COOLDOWN` |
+| `grooveshop-django-api/src/tenant/signals.py` | `reactivate_on_renewal` |
+| `grooveshop-django-api/src/tenant/tasks.py` | `process_tenant_billing` |
+| `grooveshop-django-api/src/tenant/admin.py` | `TenantAdmin` fieldsets, `readonly_fields`, `_STATE_BADGES`, `activate_tenants` |
+| `grooveshop-django-api/src/admin/platform_billing.py` | The **Plan & Billing** control-plane page |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS` — why a merchant cannot edit plan or term |
+| `grooveshop-django-api/src/tenant/middleware.py` | `SuspendedTenantMiddleware` (503 for a suspended host) |
+| `grooveshop-django-api/src/settings.py` | `TENANT_BILLING`, `ADMINS`, `process-tenant-billing` beat entry |
+| `grooveshop-django-api/src/core/templates/emails/billing/` | `expiring`, `expired`, `suspended` (html + txt) |
 | `grooveshop-django-api/.env.example` | The only declaration of the three `TENANT_BILLING_*` variables anywhere |

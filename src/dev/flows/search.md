@@ -20,7 +20,7 @@ Everything else on this page follows from those two.
 
 ```mermaid
 flowchart TD
-  Save["Product / BlogPost save"] --> Sig["meili/apps.py post_save"]
+  Save["Product / BlogPost save"] --> Sig["src/meili/apps.py post_save"]
   Sig --> Task["index_document_task"]
   Task --> Filt{"meili_filter()"}
   Filt -- "true" --> Ser["meili_serialize + greeklish fields"]
@@ -45,18 +45,18 @@ flowchart TD
 
 ### The index mixin
 
-`meili/models.py: IndexMixin` is the abstract base. A model declares a
+`src/meili/models.py: IndexMixin` is the abstract base. A model declares a
 nested `MeiliMeta` with `searchable_fields`, `filterable_fields`,
 `displayed_fields`, `sortable_fields`, `ranking_rules`, `synonyms`,
 `typo_tolerance`, `faceting`, `pagination` and `search_cutoff_ms`;
 `get_meili_settings()` turns that into a `MeiliIndexSettings` dataclass and
-`meili/_client.py: Client.with_settings` posts it to the engine.
+`src/meili/_client.py: Client.with_settings` posts it to the engine.
 
 Index names are tenant-scoped by construction:
 `IndexMixin.get_meili_index_name()` reads `connection.schema_name` and
 returns `{schema}__{base_name}`, falling back to the bare base name on the
 public schema. Index creation is deliberately **not** done at class-load
-time — `meili/apps.py` explains why: `ready()` runs in the public schema,
+time — `src/meili/apps.py` explains why: `ready()` runs in the public schema,
 so an auto-create there would produce a bare `ProductTranslation` index no
 tenant ever reads.
 
@@ -69,13 +69,13 @@ Two hooks a model overrides:
 `get_meilisearch_queryset()` is the bulk-indexing queryset and is declared
 on the mixin. `get_search_result_queryset()` is the hit-hydration queryset
 and is **not** part of the mixin: each indexed model defines its own
-(`product/models/product.py`, `blog/models/post.py`) and
-`meili/querysets.py` reaches it through `getattr`. It is what keeps the
+(`src/product/models/product.py`, `src/blog/models/post.py`) and
+`src/meili/querysets.py` reaches it through `getattr`. It is what keeps the
 product and blog views from paying extra queries per hit.
 
 ### Index-time Greeklish, in three layers
 
-`search/transliteration.py` holds the whole story, and its module docstring
+`src/search/transliteration.py` holds the whole story, and its module docstring
 is the rationale: Meilisearch has no custom analyzers, treats the query as
 one phrase, considers only the first ten words, and its default `last`
 matching strategy relaxes words from the **end** only — so the first word is
@@ -111,7 +111,7 @@ only.
 ### Typo tolerance must match across indexes
 
 Both models declare the identical block, and the comment in
-`product/models/product.py` says why: the storefront shows both result
+`src/product/models/product.py` says why: the storefront shows both result
 lists for one query side by side, and mismatched thresholds would make the
 same word typo-tolerant in one list and not the other. Both
 use `oneTypo: 4` and `twoTypos: 8`. The historical `{3, 5}` gave five-letter
@@ -119,12 +119,12 @@ words a two-typo budget, which let first-character noise match. Convention
 differences are the variant bags' job, not the typo budget's.
 
 A model that declares no `typo_tolerance` gets the client default in
-`meili/_client.py` instead, which is `{5, 9}` — so silence is not agreement.
+`src/meili/_client.py` instead, which is `{5, 9}` — so silence is not agreement.
 
 ### What a product is searched by
 
 `ProductTranslation.MeiliMeta.searchable_fields`
-(`product/models/product.py`) is ordered, and the `attribute` ranking rule
+(`src/product/models/product.py`) is ordered, and the `attribute` ranking rule
 prefers a match in an earlier field: `master_id` (the product's id), the
 product codes `sku`, `gtin` and `mpn`, then `name`, `brand_name`,
 `category_name`, `description`, the attribute names and the attribute
@@ -146,7 +146,7 @@ values. The rationale is in
 
 ### The two read endpoints
 
-`search/urls.py` registers five paths. Two of them run queries:
+`src/search/urls.py` registers five paths. Two of them run queries:
 
 | Path | View | Gate |
 |---|---|---|
@@ -167,8 +167,8 @@ filter-injection into the query DSL and because passing the camelCase name
 straight through silently did nothing. Facets are restricted the same way by
 `_ALLOWED_PRODUCT_FACETS`.
 
-Both views go through the model managers into `meili/querysets.py`, which
-reads through `meili/_client.py: Client.tenant_search_client()`: the index
+Both views go through the model managers into `src/meili/querysets.py`, which
+reads through `src/meili/_client.py: Client.tenant_search_client()`: the index
 handle (`get_search_index`) and the facet-group `multi_search` both take
 the client for the schema the request runs in. For a store schema that is
 `Client.search_client_for_schema`, a Meilisearch tenant token minted from
@@ -193,7 +193,7 @@ documents exist either way. The storefront does not ask in that case:
 A shopper who ticks Black and White under Colour and 2 m under Length
 means (Black OR White) AND 2 m. The storefront sends one flat list
 (`attributeValues=10,11,20`), so the grouping happens in Django:
-`product/attribute_selection.py: AttributeSelection.from_value_ids` groups
+`src/product/attribute_selection.py: AttributeSelection.from_value_ids` groups
 the ids by the attribute each value belongs to. **OR within one
 attribute, AND across attributes**, and every surface that filters by
 attribute value reads the selection through it, so they cannot drift:
@@ -201,7 +201,7 @@ attribute value reads the selection through it, so they cannot drift:
 | Surface | How the selection is applied |
 |---|---|
 | `GET /api/v1/search/product` (`product_meili_search`) | `filter_search`: one `attribute_values IN [...]` clause per attribute; Meilisearch ANDs the elements of a filter list |
-| `GET /api/v1/product` (`attributeValue_In`, `product/filters/product.py`) | `filter_products`: one subquery per attribute, ids parsed as integers (garbage is a 400), a product carrying two values of one attribute listed once |
+| `GET /api/v1/product` (`attributeValue_In`, `src/product/filters/product.py`) | `filter_products`: one subquery per attribute, ids parsed as integers (garbage is a 400), a product carrying two values of one attribute listed once |
 
 An id that belongs to no attribute (a deleted value in a stale link) stays
 a group of its own and matches nothing, so the request lists nothing
@@ -212,7 +212,7 @@ agent gateway sends no attribute filter.
 shrink its own counts, or the alternatives to the value you picked would
 vanish; the other attributes' selections still narrow them. When the
 request asks for the `attribute_values` facet, `filter_search` registers
-each attribute as a facet group (`meili/querysets.py:
+each attribute as a facet group (`src/meili/querysets.py:
 IndexQuerySet.filter_facet_group`), and `IndexQuerySet.search` sends one
 `multi-search` request: the main query plus one count-only query
 (`limit: 0`) per selected attribute, with that attribute's own clause left
@@ -246,7 +246,7 @@ fragment, or a typo beyond tolerance.
 
 ### Indexing lifecycle
 
-`meili/apps.py: MeiliConfig.ready()` discovers every concrete model with
+`src/meili/apps.py: MeiliConfig.ready()` discovers every concrete model with
 `IndexMixin` in its MRO and connects `post_save` / `post_delete` with
 `weak=False` — the receivers are closures defined inside `ready()`, and
 Django's default weak references would garbage-collect them and silently
@@ -257,7 +257,7 @@ non-qualifying ones have any existing document **deleted**, so a
 deactivated product stops being searchable instead of lingering. Where the
 `meili_filter()` branch runs differs by path. Outside `DEBUG`, and when
 `MEILI_ASYNC_INDEXING` allows, the handler dispatches through
-`tenant.celery.dispatch_on_commit` to `meili/tasks.py:
+`tenant.celery.dispatch_on_commit` to `src/meili/tasks.py:
 index_document_task` **unconditionally**, and the task itself calls
 `meili_filter()` and deletes on a false. Only the synchronous
 DEBUG / no-Celery path branches before dispatching. `MeiliTask`, the task's
@@ -268,10 +268,10 @@ with backoff.
 A product document also carries text saved on other rows: the brand name,
 the category name, attribute names and attribute values. Those rows are
 saved on their own, so the product receivers never run for them, and
-`product/signals.py: _watch_search_text` watches them instead. Renaming a
+`src/product/signals.py: _watch_search_text` watches them instead. Renaming a
 brand, a category, an attribute or an attribute value, and adding or
 deleting a translation of a category, attribute or attribute value, queues
-`product/tasks.py: reindex_products_for_search_text` on commit, which finds
+`src/product/tasks.py: reindex_products_for_search_text` on commit, which finds
 the affected products and queues one document each; only a changed name or
 value queues it, so editing a category's description reindexes nothing.
 Deleting a brand or a category nulls `Product.brand` / `Product.category`
@@ -281,9 +281,9 @@ delete, the category's whole subtree included (its children CASCADE).
 
 ### Analytics
 
-`search/middleware.py: SearchAnalyticsMiddleware` records a `SearchQuery`
+`src/search/middleware.py: SearchAnalyticsMiddleware` records a `SearchQuery`
 row for every response that answers exactly 200 from one of the two
-query routes of `search/urls.py` (`search-product`, `search-blog-post`,
+query routes of `src/search/urls.py` (`search-product`, `search-blog-post`,
 mapped to a content type in `_QUERY_ROUTES`). The `federated` content
 type remains on `SearchQuery` and in the analytics filters only for rows
 recorded before that endpoint's removal on 2026-10-25. The route is read from `request.resolver_match` once the view has answered.
@@ -295,14 +295,14 @@ to a schema with no `search_query` table.
 The middleware parses the response body for `results`,
 `estimatedTotalHits` and the `queryId` the view minted, and mints a uuid
 itself when the body carried none. It then fires
-`search/tasks.py: save_search_query` with `.delay()`: fire and forget, off
+`src/search/tasks.py: save_search_query` with `.delay()`: fire and forget, off
 the response path. The task retries only on a lost connection
 (`OperationalError`, `InterfaceError`), because a `DataError` fails the
 same way every time. Such a retry can follow a write that was already
 committed, so the task writes with `get_or_create` keyed on the uuid and
 the second attempt finds the row instead of inserting another.
 
-`session_key` is `core/sessions.py: persisted_session_key`, which gives
+`session_key` is `src/core/sessions.py: persisted_session_key`, which gives
 the key of a session that is actually stored, else `""`. Until a session
 loads, Django's `session_key` is the raw `sessionid` cookie: a
 227-character one failed the insert on the column's 40 characters. The
@@ -334,7 +334,7 @@ what the task's own exclusion clause keys on, so do not relax either
 column back to null.
 
 `SearchQuery.processing_time_ms` is Meilisearch's own processing time,
-which `search/views.py: _record_engine_time` adds up on the request over
+which `src/search/views.py: _record_engine_time` adds up on the request over
 every engine call (a relaxed retry included). It travels on the request,
 never in the response body, so that it stays out of the public OpenAPI
 contract.
@@ -360,7 +360,7 @@ index in place.
 ### The search key
 
 `settings.py` reads `MEILI_SEARCH_KEY` into `MEILISEARCH["SEARCH_KEY"]`, and
-`meili/_settings.py` falls back to the master key when it is unset so local
+`src/meili/_settings.py` falls back to the master key when it is unset so local
 and CI keep working. The `Client` builds two engine clients: a master-key
 one for administration and indexing, and a read-only `search_client` for
 query traffic, so the master key never serves an untrusted path.
@@ -394,7 +394,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
 
 - **Queries are never rewritten.** Not into Greek variants, not into
   space-joined alternates. Recall is bought at index time or not at all
-  (`search/transliteration.py` module docstring).
+  (`src/search/transliteration.py` module docstring).
 - **`minWordSizeForTypos` is identical on every searchable index.** Today
   that is `{4, 8}` on both `ProductTranslation` and `BlogPostTranslation`,
   whose result lists the storefront shows side by side for one query.
@@ -423,7 +423,7 @@ every failure — tracking must never affect the shopper. It no-ops without a
   `BlogPostTranslation.meili_filter` returns `master.is_published` once it
   has a master to read (it returns false for an unset `master_id` and
   catches a missing row), and the blog view filters on
-  `is_published = true`. But `blog/managers/post.py: published()` — what
+  `is_published = true`. But `src/blog/managers/post.py: published()` — what
   every public blog endpoint uses — additionally requires `published_at` to
   be null or already past. A post scheduled for next week with
   `is_published` already set is therefore indexed and findable now, while
@@ -479,25 +479,25 @@ every failure — tracking must never affect the shopper. It no-ops without a
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/meili/models.py` | `IndexMixin`, `MeiliMeta`, `get_meili_index_name`, serialization |
-| `grooveshop-django-api/product/signals.py`, `product/tasks.py` | `_watch_search_text`, the brand and category delete receivers, `reindex_products_for_search_text` |
-| `grooveshop-django-api/meili/_client.py` | Master and search clients, tenant tokens, index settings, paged `get_indexes` |
-| `grooveshop-django-api/meili/querysets.py` | `IndexQuerySet.search`, `filter_facet_group` and the disjunctive-facet `multi-search`, hit hydration through each model's `get_search_result_queryset` |
-| `grooveshop-django-api/product/attribute_selection.py` | `AttributeSelection`: grouping, `filter_search`, `filter_products` |
-| `grooveshop-django-api/product/filters/product.py` | `attributeValue_In` on the product list |
-| `grooveshop-django-api/meili/_settings.py` | Search-key fallback |
-| `grooveshop-django-api/meili/apps.py` | Signal wiring, index-or-delete branch |
-| `grooveshop-django-api/meili/tasks.py` | `index_document_task`, `delete_document_task`, `reindex_model_task` |
-| `grooveshop-django-api/meili/management/commands/` | Sync, settings, drop, inspect |
-| `grooveshop-django-api/search/transliteration.py` | The three Greeklish layers |
-| `grooveshop-django-api/search/views.py` | Product, blog, click, analytics, trending |
-| `grooveshop-django-api/search/middleware.py` | `SearchAnalyticsMiddleware` |
-| `grooveshop-django-api/search/tasks.py` | Query and click persistence, `update_click_scores`, anonymisation |
-| `grooveshop-django-api/core/sessions.py` | `persisted_session_key`, the session key of a stored session only |
-| `grooveshop-django-api/search/models.py` | `SearchQuery`, `SearchClick` |
-| `grooveshop-django-api/product/models/product.py` | `ProductTranslation.MeiliMeta` (searchable order, typo tolerance, ranking rules), Greeklish, code, brand and category fields |
-| `grooveshop-django-api/blog/models/post.py` | `BlogPostTranslation.MeiliMeta`, `meili_filter` |
-| `grooveshop-django-api/blog/managers/post.py` | `published()` — the schedule gate search does not apply |
+| `grooveshop-django-api/src/meili/models.py` | `IndexMixin`, `MeiliMeta`, `get_meili_index_name`, serialization |
+| `grooveshop-django-api/src/product/signals.py`, `src/product/tasks.py` | `_watch_search_text`, the brand and category delete receivers, `reindex_products_for_search_text` |
+| `grooveshop-django-api/src/meili/_client.py` | Master and search clients, tenant tokens, index settings, paged `get_indexes` |
+| `grooveshop-django-api/src/meili/querysets.py` | `IndexQuerySet.search`, `filter_facet_group` and the disjunctive-facet `multi-search`, hit hydration through each model's `get_search_result_queryset` |
+| `grooveshop-django-api/src/product/attribute_selection.py` | `AttributeSelection`: grouping, `filter_search`, `filter_products` |
+| `grooveshop-django-api/src/product/filters/product.py` | `attributeValue_In` on the product list |
+| `grooveshop-django-api/src/meili/_settings.py` | Search-key fallback |
+| `grooveshop-django-api/src/meili/apps.py` | Signal wiring, index-or-delete branch |
+| `grooveshop-django-api/src/meili/tasks.py` | `index_document_task`, `delete_document_task`, `reindex_model_task` |
+| `grooveshop-django-api/src/meili/management/commands/` | Sync, settings, drop, inspect |
+| `grooveshop-django-api/src/search/transliteration.py` | The three Greeklish layers |
+| `grooveshop-django-api/src/search/views.py` | Product, blog, click, analytics, trending |
+| `grooveshop-django-api/src/search/middleware.py` | `SearchAnalyticsMiddleware` |
+| `grooveshop-django-api/src/search/tasks.py` | Query and click persistence, `update_click_scores`, anonymisation |
+| `grooveshop-django-api/src/core/sessions.py` | `persisted_session_key`, the session key of a stored session only |
+| `grooveshop-django-api/src/search/models.py` | `SearchQuery`, `SearchClick` |
+| `grooveshop-django-api/src/product/models/product.py` | `ProductTranslation.MeiliMeta` (searchable order, typo tolerance, ranking rules), Greeklish, code, brand and category fields |
+| `grooveshop-django-api/src/blog/models/post.py` | `BlogPostTranslation.MeiliMeta`, `meili_filter` |
+| `grooveshop-django-api/src/blog/managers/post.py` | `published()` — the schedule gate search does not apply |
 | `grooveshop-storefront-ui-node-nuxt/server/api/search/` | Storefront proxies |
 | `grooveshop-storefront-ui-node-nuxt/server/api/products/search.get.ts` | Cached product search |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useProductSearchData.ts` | Category and attribute facet queries, the attribute one carrying the selection |

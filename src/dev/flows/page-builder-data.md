@@ -54,7 +54,7 @@ flowchart TD
 
 - A **document** has a key (`theme`, `group:<name>`, `template:<name>`,
   `page:<slug>`), a **draft** and a per-language **overlay**, and a revision
-  that moves with every change (`builder/models.py: BuilderDocument`).
+  that moves with every change (`src/builder/models.py: BuilderDocument`).
 - A **version** is an immutable snapshot of one document, numbered per
   document; only named saves and publishes make one. Autosaves never do.
 - A **release** is an immutable map from document key to version. It is the
@@ -65,9 +65,9 @@ flowchart TD
 ### 2. A save
 
 `PUT /api/v1/builder/documents/<key>/draft` with the revision in `If-Match`.
-`builder/services.py: save_draft` checks permission, asks for the catalogue
-(`builder/storefront.py: fetch_catalogue`, held per process and revalidated
-by ETag), validates the document in full (`builder/validation.py`) and writes
+`src/builder/services.py: save_draft` checks permission, asks for the catalogue
+(`src/builder/storefront.py: fetch_catalogue`, held per process and revalidated
+by ETag), validates the document in full (`src/builder/validation.py`) and writes
 under a row lock. A stale revision is a `409 revision_conflict` carrying the
 current revision and who saved it. With no catalogue to check against
 nothing is saved (`503 storefront_unavailable`): there is no fallback.
@@ -93,9 +93,9 @@ repointed.
 
 ### 5. What a release moves
 
-`tenant/signals.py: bump_generation_on_builder_release` moves
+`src/tenant/signals.py: bump_generation_on_builder_release` moves
 `Tenant.cache_generation` in the release's transaction.
-`core/cache/surfaces.py` registers the `builder` surface
+`src/core/cache/surfaces.py` registers the `builder` surface
 (`invalidated_by=("builder.BuilderRelease",)`): the storefront's
 `builderPage` handler (a handler name the storefront's cached route must
 carry), every cached route of the store, and `invalidates_tenant_config=True`,
@@ -115,7 +115,7 @@ never purged.
 ### 7. Who may
 
 `builder` is in `STORE_SETTINGS_APP_LABELS` and `STAFF_READ_ONLY_APP_LABELS`
-(`tenant/role_scopes.py`): Admin and Owner edit and publish, Staff only look.
+(`src/tenant/role_scopes.py`): Admin and Owner edit and publish, Staff only look.
 Staff can still open the editor (`Edit storefront` and the ticket ask for
 `builder.view_builderdocument`, not the change permission), and the session
 reports their `role`; every write is refused by the same role check, so the
@@ -123,13 +123,13 @@ editor only has to read `role` to open read only.
 
 ### 8. Scheduled publishing
 
-A publish can wait for a time (`builder/scheduling.py`,
+A publish can wait for a time (`src/builder/scheduling.py`,
 `BuilderScheduledPublish`). `POST /api/v1/builder/schedules` checks exactly
 what a publish checks, now, and **freezes** the drafts as versions held by the
 schedule, so what goes live is what was checked whatever is edited meanwhile; a
 time without an offset is read in the store's timezone. A beat task,
 `builder.tasks.run_due_publishes`, fans out per store every minute
-(`tenant/tasks.py: fanout_run_due_builder_publishes`) and releases each due
+(`src/tenant/tasks.py: fanout_run_due_builder_publishes`) and releases each due
 schedule in its own transaction under the per-store release lock with
 `select_for_update`, the status change inside it, so a retry, an overlapping
 sweep or a second worker finds it spent. At that moment references are checked
@@ -137,22 +137,22 @@ again and the documents must still exist; a schedule that can no longer be
 released is `failed` with the problems recorded, never half done. Otherwise it
 is the ordinary release, so the cache generation and the `builder` surface move
 then. A failure reaches a person: the store-staff email
-`ops.builder_schedule_failed` (`builder/emails.py`, listed on the store's Emails
+`ops.builder_schedule_failed` (`src/builder/emails.py`, listed on the store's Emails
 page, Greek and English) and a danger alert on the store dashboard
-(`admin/dashboard/store/widgets.py: StoreAlerts`) until someone acknowledges it
+(`src/admin/dashboard/store/widgets.py: StoreAlerts`) until someone acknowledges it
 (`POST schedules/<id>/acknowledge`, or the admin action in Content, Page
 builder, Scheduled publishes). Moving and cancelling a pending schedule is
 `PATCH` and `DELETE schedules/<id>`.
 
 ### 9. The media library
 
-`MediaAsset` (`builder/models.py`) is an image in the store's library; an
+`MediaAsset` (`src/builder/models.py`) is an image in the store's library; an
 image setting is a `media` reference to its id, never a URL. The storefront
 gets the size a browser shows (EXIF orientation applied, so it can reserve
 space and size `srcset`), a focal point, the alt text per language
 (a parler translation, because the row stands alone, unlike a block's JSON
 overlay) and `path`, what media-stream serves
-(`media/<schema>/uploads/builder/<name>`). `builder/media_services.py` is
+(`media/<schema>/uploads/builder/<name>`). `src/builder/media_services.py` is
 the only writer: raster images only, within `BUILDER_MEDIA_MAX_BYTES` and
 `BUILDER_MEDIA_MAX_PIXELS`. A used asset cannot be deleted
 (`409 media_in_use`, from the reference index), and changing a used asset's
@@ -165,12 +165,12 @@ assets the current release uses.
 
 The editor runs on the store's host, where nobody is signed in as staff.
 `Content -> Edit storefront` in the store admin
-(`builder/admin_views.py`) mints a single-use ticket (Redis, one minute,
+(`src/builder/admin_views.py`) mints a single-use ticket (Redis, one minute,
 `GETDEL` to spend it) and redirects to `/_builder?ticket=`. The storefront's
 server posts it to `POST /api/v1/builder/staff-session` and receives a
 `PlatformStaffToken` of scope `builder`: never renewed, ended at its expiry,
 and refused outside the builder's routes
-(`tenant/api_tokens.py`). The role and `is_staff` are re-checked on every
+(`src/tenant/api_tokens.py`). The role and `is_staff` are re-checked on every
 request, so losing either ends a session at once. The storefront keeps the
 token in its own HttpOnly cookie, separate from the customer session.
 
@@ -190,12 +190,12 @@ keeps.
 ### 12. Link pickers
 
 Two staff reads let the editor pick and name the target of a link
-(`builder/link_picker.py`). `GET link-search?q=&kinds=&locale=` finds
+(`src/builder/link_picker.py`). `GET link-search?q=&kinds=&locale=` finds
 products, categories, posts, blog categories, pages and content pages by
 label or slug; `GET link-labels?product=1,2&page=about&locale=` names the
 targets a stored reference points at, **including inactive and missing
 ones**, so a block can show a name and a "no longer available" warning. Both
-read the one existence rule, `builder/references.py: VISIBLE`, which the
+read the one existence rule, `src/builder/references.py: VISIBLE`, which the
 publish check and the public `link-targets` read share. Neither returns a
 path: the storefront builds it from the slug with its own route helpers.
 
@@ -205,7 +205,7 @@ path: the storefront builds it from the slug with its own route helpers.
 copies and answers what the public read would answer if they were released
 now: `{release, locale, theme, groups, page}`, the copies standing in for the
 release's documents of the same keys. It runs the same code as the public read
-(`builder/published.py: assemble`), validates each copy like a draft save and
+(`src/builder/published.py: assemble`), validates each copy like a draft save and
 stores nothing; the answer is `Cache-Control: private, no-store`. Any store
 role may call it, so a read-only editor previews too.
 
@@ -217,7 +217,7 @@ sent one for each document, the caller left out; `DELETE` on sign-out. It is a
 hint, not a lock: `If-Match` still decides a save. The state is in Redis
 under the store's schema (a record per person and document that expires after
 `BUILDER_PRESENCE_TTL_SECONDS`, plus a set of ids per document so a read never
-scans), never in the database (`builder/presence.py`).
+scans), never in the database (`src/builder/presence.py`).
 
 ### 15. Share-preview links
 
@@ -247,7 +247,7 @@ anonymiser deletes the table: a link is a credential.
 - **Releases and versions are immutable.** Only whole unreleased checkpoints
   are ever deleted, by retention.
 - **Document content is never re-cased.** Its keys are the storefront's; only
-  the envelope is camelCased (`builder/rendering.py`).
+  the envelope is camelCased (`src/builder/rendering.py`).
 - **A staff session is short and narrow**: one ticket spends once, the token
   is not renewed and works on the builder's routes only.
 - **A publish is atomic**: every document valid, one release, or nothing.
@@ -275,28 +275,28 @@ anonymiser deletes the table: a link is a credential.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/builder/models.py` | Documents, versions, releases, reference index |
-| `grooveshop-django-api/builder/services.py` | The only writer: save, checkpoint, restore, discard, publish, rollback, delete page |
-| `grooveshop-django-api/builder/validation.py` | Every rule, as pointer and code |
-| `grooveshop-django-api/builder/storefront.py` | The catalogue client |
-| `grooveshop-django-api/builder/references.py` | Reference existence and the index |
-| `grooveshop-django-api/builder/published.py` | The public read, cached per release; `assemble` and `preview` shared with the editor preview |
-| `grooveshop-django-api/builder/link_picker.py` | `link-search` and `link-labels` |
-| `grooveshop-django-api/builder/presence.py` | Who else has a document open (Redis) |
-| `grooveshop-django-api/builder/preview_links.py` | Share-preview links: create, revoke, open, sweep |
-| `grooveshop-django-api/builder/views.py` | Staff and public routes |
-| `grooveshop-django-api/builder/rendering.py` | Parser and renderer that leave document keys alone |
-| `grooveshop-django-api/builder/scheduling.py` | Schedule, move, cancel, the sweep, acknowledging a failure |
-| `grooveshop-django-api/builder/tasks.py` | `run_due_publishes`, the per-store sweep; `purge_expired_preview_links` |
-| `grooveshop-django-api/builder/emails.py` | `ops.builder_schedule_failed` |
-| `grooveshop-django-api/builder/media_services.py` | The media library's only writer |
-| `grooveshop-django-api/builder/media_api.py` | Library routes and the public resolve |
-| `grooveshop-django-api/builder/staff_session.py` | Ticket and builder session token |
-| `grooveshop-django-api/builder/session_api.py` | `POST` / `DELETE builder/staff-session` |
-| `grooveshop-django-api/builder/admin_views.py` | `Edit storefront` |
-| `grooveshop-django-api/tenant/api_tokens.py` | Token scope enforcement |
-| `grooveshop-django-api/core/storefront.py` | `base_url`, `StorefrontUnavailable` shared with `texts` |
-| `grooveshop-django-api/core/cache/surfaces.py` | The `builder` surface |
-| `grooveshop-django-api/tenant/signals.py` | `bump_generation_on_builder_release` |
-| `grooveshop-django-api/tenant/role_scopes.py` | Roles |
-| `grooveshop-django-api/settings.py` | `BUILDER_*` settings |
+| `grooveshop-django-api/src/builder/models.py` | Documents, versions, releases, reference index |
+| `grooveshop-django-api/src/builder/services.py` | The only writer: save, checkpoint, restore, discard, publish, rollback, delete page |
+| `grooveshop-django-api/src/builder/validation.py` | Every rule, as pointer and code |
+| `grooveshop-django-api/src/builder/storefront.py` | The catalogue client |
+| `grooveshop-django-api/src/builder/references.py` | Reference existence and the index |
+| `grooveshop-django-api/src/builder/published.py` | The public read, cached per release; `assemble` and `preview` shared with the editor preview |
+| `grooveshop-django-api/src/builder/link_picker.py` | `link-search` and `link-labels` |
+| `grooveshop-django-api/src/builder/presence.py` | Who else has a document open (Redis) |
+| `grooveshop-django-api/src/builder/preview_links.py` | Share-preview links: create, revoke, open, sweep |
+| `grooveshop-django-api/src/builder/views.py` | Staff and public routes |
+| `grooveshop-django-api/src/builder/rendering.py` | Parser and renderer that leave document keys alone |
+| `grooveshop-django-api/src/builder/scheduling.py` | Schedule, move, cancel, the sweep, acknowledging a failure |
+| `grooveshop-django-api/src/builder/tasks.py` | `run_due_publishes`, the per-store sweep; `purge_expired_preview_links` |
+| `grooveshop-django-api/src/builder/emails.py` | `ops.builder_schedule_failed` |
+| `grooveshop-django-api/src/builder/media_services.py` | The media library's only writer |
+| `grooveshop-django-api/src/builder/media_api.py` | Library routes and the public resolve |
+| `grooveshop-django-api/src/builder/staff_session.py` | Ticket and builder session token |
+| `grooveshop-django-api/src/builder/session_api.py` | `POST` / `DELETE builder/staff-session` |
+| `grooveshop-django-api/src/builder/admin_views.py` | `Edit storefront` |
+| `grooveshop-django-api/src/tenant/api_tokens.py` | Token scope enforcement |
+| `grooveshop-django-api/src/core/storefront.py` | `base_url`, `StorefrontUnavailable` shared with `texts` |
+| `grooveshop-django-api/src/core/cache/surfaces.py` | The `builder` surface |
+| `grooveshop-django-api/src/tenant/signals.py` | `bump_generation_on_builder_release` |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | Roles |
+| `grooveshop-django-api/src/settings.py` | `BUILDER_*` settings |

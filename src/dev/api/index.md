@@ -28,9 +28,9 @@ committed copy is `grooveshop-django-api/schema.yml`, regenerated with:
 uv run python manage.py spectacular --color --file schema.yml
 ```
 
-Every endpoint is mounted under `/api/v1/` (`core/urls.py`). Storefront
+Every endpoint is mounted under `/api/v1/` (`src/core/urls.py`). Storefront
 and commerce endpoints exist only on tenant hosts; the platform host serves
-the shared subset plus the tenant-admin API (`tenant/urls_public.py`).
+the shared subset plus the tenant-admin API (`src/tenant/urls_public.py`).
 
 ## Authentication
 
@@ -52,9 +52,9 @@ inside the cluster). There is no tenant parameter.
 - **camelCase bodies and query parameters.** Django works in snake_case;
   `djangorestframework-camel-case` renders, parses and converts filter
   names on the way in and out (`settings.py: REST_FRAMEWORK`
-  renderer and parser classes; `core/filters/` camel-case mixins).
+  renderer and parser classes; `src/core/filters/` camel-case mixins).
 - **Pagination.** `?paginationType=` selects `pageNumber` (default),
-  `cursor` or `limitOffset` (`core/pagination/`). Every strategy returns
+  `cursor` or `limitOffset` (`src/core/pagination/`). Every strategy returns
   the same envelope:
 
   ```json
@@ -79,19 +79,19 @@ inside the cluster). There is no tenant parameter.
 - **Translations.** Translatable models expose a `translations` object
   keyed by language code. In multipart requests (uploads) send them as
   dotted form fields, `translations.el.name`, which
-  `core/utils/views.py: process_translations_data` reassembles into the
+  `src/core/utils/views.py: process_translations_data` reassembles into the
   nested object. The default language must be present and non-empty; other
   locales are optional.
 - **Errors.** DRF's standard shapes: `{"detail": "..."}` for
   authentication, permission and not-found errors, optionally with an
-  `error` code (`core/api/serializers.py: ErrorResponseSerializer`), and a
+  `error` code (`src/core/api/serializers.py: ErrorResponseSerializer`), and a
   field-to-messages object with status 400 for validation failures. The
   Nuxt proxy forwards Django's status; it answers 422 only when a Django
   response fails the generated Zod schema, which means the contract has
   drifted. Disabled features answer 404.
 - **Idempotency.** Mutating requests may send `Idempotency-Key`; the
   middleware replays the stored response for a repeated key
-  (`core/middleware/idempotency.py`). A key belongs to the caller as the
+  (`src/core/middleware/idempotency.py`). A key belongs to the caller as the
   view authenticates it (decided in `process_view`, so Knox, staff and
   agent tokens all count); an anonymous key to the cart it names
   (`X-Cart-Token`, else `X-Cart-Id`), else the session, else the client
@@ -121,13 +121,13 @@ a Django change followed by a regeneration; see
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/core/urls.py` | Schema, Swagger UI, ReDoc, health, every `/api/v1/` mount |
-| `grooveshop-django-api/settings.py` | `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK`, `REST_KNOX` |
-| `grooveshop-django-api/core/pagination/` | The three paginators and the envelope |
-| `grooveshop-django-api/core/api/views.py` | `BaseModelViewSet`, `paginate_and_serialize` and `unpaginated_actions`, settings endpoints |
-| `grooveshop-django-api/core/utils/serializers.py` | `create_schema_view_config`, `PAGINATION_PARAMETER` |
-| `grooveshop-django-api/core/utils/views.py` | `process_translations_data` for multipart translations |
-| `grooveshop-django-api/core/api/serializers.py` | `ErrorResponseSerializer`, `RequiredDefaultTranslationMixin` |
-| `grooveshop-django-api/core/middleware/idempotency.py` | `Idempotency-Key` replay |
+| `grooveshop-django-api/src/core/urls.py` | Schema, Swagger UI, ReDoc, health, every `/api/v1/` mount |
+| `grooveshop-django-api/src/settings.py` | `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK`, `REST_KNOX` |
+| `grooveshop-django-api/src/core/pagination/` | The three paginators and the envelope |
+| `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet`, `paginate_and_serialize` and `unpaginated_actions`, settings endpoints |
+| `grooveshop-django-api/src/core/utils/serializers.py` | `create_schema_view_config`, `PAGINATION_PARAMETER` |
+| `grooveshop-django-api/src/core/utils/views.py` | `process_translations_data` for multipart translations |
+| `grooveshop-django-api/src/core/api/serializers.py` | `ErrorResponseSerializer`, `RequiredDefaultTranslationMixin` |
+| `grooveshop-django-api/src/core/middleware/idempotency.py` | `Idempotency-Key` replay |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | Type and Zod generation |
 | `grooveshop-storefront-ui-node-nuxt/scripts/fetch-schema.mjs`, `scripts/sync-schema-yml.mjs` | Schema fetch and sync |

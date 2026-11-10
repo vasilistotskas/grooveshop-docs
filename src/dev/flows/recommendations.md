@@ -47,7 +47,7 @@ flowchart TD
 
 ### Merchant relations are the input a catalogue cannot infer
 
-`product/enum/relation.py: RelationType` is the vocabulary: `similar`,
+`src/product/enum/relation.py: RelationType` is the vocabulary: `similar`,
 `complementary`, `accessory`, `replacement`, `bundle`. Its docstring makes
 the argument — "related" means a different thing to a fashion store, a
 nursery and a phone shop, and none of it is derivable from the catalogue, so
@@ -61,7 +61,7 @@ label the storefront renders.
 
 ### The strategy contract
 
-`recommendation/strategies/base.py` defines a small ABC plus a
+`src/recommendation/strategies/base.py` defines a small ABC plus a
 `@register_strategy` class decorator and a module-level `_REGISTRY`,
 mirroring the shipping-carrier pattern. A strategy declares `code` (a
 `StrategyCode` member — the enum is what slot configuration is validated
@@ -76,7 +76,7 @@ which is every store on its first day.
 
 `TenantContext` is what a strategy is allowed to know: plan, product count,
 whether brands, tags and attributes are populated, order counts, and whether
-a semantic embedder exists. `recommendation/context.py` builds it from cheap
+a semantic embedder exists. `src/recommendation/context.py` builds it from cheap
 `EXISTS` and `COUNT` queries, caches it for five minutes under the
 schema-scoped default cache key `recs:tenant_context`, and strategies read it
 rather than running those queries themselves.
@@ -88,7 +88,7 @@ lowest of the four (`trial`, `basic`, `pro`, `enterprise`), so a typo in a
 All four registered strategies declare `min_plan = TenantPlan.TRIAL`, so
 none of them is plan-gated in practice yet.
 
-Registered today (`recommendation/strategies/__init__.py`):
+Registered today (`src/recommendation/strategies/__init__.py`):
 
 | Code | Module | Precompute | Notes |
 |---|---|---|---|
@@ -109,7 +109,7 @@ strategy and it simply starts contributing the day it ships.
 constraint forbidding self-reference and a read index on
 `(product, strategy, -score)`.
 
-`recommendation/candidates.py: compute_candidates_for_product` asks every
+`src/recommendation/candidates.py: compute_candidates_for_product` asks every
 **precomputing** available strategy for `CANDIDATES_PER_STRATEGY` candidates
 and replaces that seed's rows atomically (delete then `bulk_create`).
 
@@ -125,7 +125,7 @@ whole seed set in a fixed number of queries; the cart surface seeds with
 every basket line, and the per-seed loop measurably pushed cart detail from
 30 to 42 queries as items were added.
 
-Rebuilds are scheduled by `recommendation/signals.py` through
+Rebuilds are scheduled by `src/recommendation/signals.py` through
 `tenant.celery.dispatch_on_commit` on `Product` save and on `ProductRelation`
 save or delete (a relation change rebuilds the **source** product).
 `_NOISE_FIELDS` skips saves that only touch `view_count`, `click_score` or
@@ -135,14 +135,14 @@ save or delete (a relation change rebuilds the **source** product).
 `precompute = True`, so `compute_candidates_for_product` skips every
 strategy and always writes zero rows, and the engine's precomputed branch
 never has a code to read. `recompute_all_candidates` exists in
-`recommendation/tasks.py` but nothing calls it: there is no fanout wrapper
-in `tenant/tasks.py` and no `CELERY_BEAT_SCHEDULE` entry. The table and its
+`src/recommendation/tasks.py` but nothing calls it: there is no fanout wrapper
+in `src/tenant/tasks.py` and no `CELERY_BEAT_SCHEDULE` entry. The table and its
 rebuild machinery are wired and waiting for the first precomputing
 strategy; treat this whole section as future-tense until one ships.
 
 ### The online engine
 
-`recommendation/engine.py: suggest(ctx)` does six things in order.
+`src/recommendation/engine.py: suggest(ctx)` does six things in order.
 
 1. **Load the slot** for the surface. Missing row means a tenant provisioned
    before the engine existed; `_slot` falls back to the vertical preset in
@@ -166,7 +166,7 @@ strategy; treat this whole section as future-tense until one ships.
    **empty list**, because one lonely suggestion looks broken.
 
 `suggest` returns product ids plus a reason, never serialized products.
-Hydration happens in the view through `recommendation/hydrate.py` so pricing
+Hydration happens in the view through `src/recommendation/hydrate.py` so pricing
 context and locale are applied per request while the engine stays cacheable.
 
 ### Curated is a tier, not a score
@@ -187,7 +187,7 @@ by where the shopper is: `pdp`, `cart`, `out_of_stock`, `empty_cart`,
 `RecommendationSlot` is one row per surface per tenant: `strategy_chain`
 (ordered list of codes), `weights` (code to weight in 0..1, missing defaults
 to 1.0), `limit`, `min_fill`, `price_band_ratio`, `enabled`. The JSON fields
-carry a JSON Schema validator (`recommendation/json_schemas.py`: known
+carry a JSON Schema validator (`src/recommendation/json_schemas.py`: known
 strategy codes, no duplicates, weights in 0..1), and the model's `clean()`
 adds the checks that span fields: every weighted code is in the chain, and
 `min_fill` may not exceed `limit`. A bad chain is a field error in the
@@ -195,7 +195,7 @@ admin, which also edits both fields through the schema-driven editor,
 rather than a 500 — and a shell or a preset seeding a bad row is caught the
 same way.
 
-`recommendation/presets.py` keys a per-surface chain, weights and limits by
+`src/recommendation/presets.py` keys a per-surface chain, weights and limits by
 `tenant.models.StoreVertical`. Chain order is priority, not tier — a preset
 freely names an unregistered code ahead of a registered one, and the
 unregistered one simply starts contributing the day it ships. Two chains do
@@ -220,8 +220,8 @@ rows without a manual step.
 
 | Tier | Where | Effect |
 |---|---|---|
-| Plan | `Tenant.recommendations_enabled` (default `False`) | `tenant/permissions.py: IsRecommendationsEnabled` answers **404** on both recommendation endpoints |
-| Runtime | `PRODUCT_SUGGESTIONS_ENABLED` extra-setting (ships `False`) | `tenant/permissions.py: IsRecommendationsRuntimeEnabled` answers **404** on both endpoints too; the pages that mount a strip check it before asking |
+| Plan | `Tenant.recommendations_enabled` (default `False`) | `src/tenant/permissions.py: IsRecommendationsEnabled` answers **404** on both recommendation endpoints |
+| Runtime | `PRODUCT_SUGGESTIONS_ENABLED` extra-setting (ships `False`) | `src/tenant/permissions.py: IsRecommendationsRuntimeEnabled` answers **404** on both endpoints too; the pages that mount a strip check it before asking |
 
 The cart's suggestions are not part of the cart payload: the cart page and
 the cart drawer ask `GET /api/v1/recommendations?surface=cart&seeds=<ids>`
@@ -249,7 +249,7 @@ not count against a strategy's click-through rate. It also lets the storefront
 cache the response body per (surface, seed) without cache fills inflating the
 counts.
 
-`recommendation/events.py: record_events` revalidates every enum rather than
+`src/recommendation/events.py: record_events` revalidates every enum rather than
 trusting the task payload, because the payload crossed a broker, and it
 **refuses `attach` outright** — that kind is derived from orders.
 
@@ -283,9 +283,9 @@ runs end to end:
    which stores the pair in per-tab `sessionStorage` with a one-hour TTL.
 2. The add-to-cart call consumes it and sends it as
    `recommendationImpressionId`, landing on
-   `cart/models/item.py: CartItem.recommendation_impression_id`.
-3. Order creation copies it onto `order/models/item.py:
-   OrderItem.recommendation_impression_id` (`order/services.py`, both
+   `src/cart/models/item.py: CartItem.recommendation_impression_id`.
+3. Order creation copies it onto `src/order/models/item.py:
+   OrderItem.recommendation_impression_id` (`src/order/services.py`, both
    creation paths).
 4. `record_attach_events` reads `order.items.values_list("product_id",
    "recommendation_impression_id")` and matches `Q(impression_id=…,
@@ -378,7 +378,7 @@ drawer and in webside's strip); the cached body is anonymous.
   path falls back to the cart and customer windows. The add-to-cart itself is
   unaffected.
 - **A configured strategy never contributing.** Either it is not registered in
-  `recommendation/strategies/__init__.py`, or `is_available` is declining — the
+  `src/recommendation/strategies/__init__.py`, or `is_available` is declining — the
   `TenantContext` is the place to look, and it is cached for five minutes.
 
 ## Related
@@ -392,22 +392,22 @@ drawer and in webside's strip); the cached body is anonymous.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/recommendation/models.py` | `RecommendationSlot`, `RecommendationCandidate`, `RecommendationEvent` |
-| `grooveshop-django-api/recommendation/enum.py` | `Surface`, `StrategyCode`, `EventKind`, `AttachMatch` |
-| `grooveshop-django-api/recommendation/engine.py` | Merge, guard, curated tier, diversify, `min_fill` |
-| `grooveshop-django-api/recommendation/candidates.py` | Offline rebuild for one seed |
-| `grooveshop-django-api/recommendation/context.py` | `TenantContext` and its cache |
-| `grooveshop-django-api/recommendation/strategies/` | Registry, base class, the four registered strategies |
-| `grooveshop-django-api/recommendation/presets.py` | Vertical presets, `PRESET_FIELDS`, reset |
-| `grooveshop-django-api/recommendation/events.py` | `record_events`, `record_attach_events` |
-| `grooveshop-django-api/recommendation/tasks.py` | Per-product and nightly rebuilds, event and attach tasks |
-| `grooveshop-django-api/recommendation/signals.py` | Rebuild scheduling, order-created hook |
-| `grooveshop-django-api/recommendation/views.py` | The two endpoints and their gates |
-| `grooveshop-django-api/recommendation/serializers.py` | Seed and limit caps, event request shape |
-| `grooveshop-django-api/recommendation/management/commands/backfill_recommendation_slots.py` | PreSync seeding |
-| `grooveshop-django-api/product/enum/relation.py` | `RelationType` |
-| `grooveshop-django-api/cart/models/item.py`, `order/models/item.py` | The carried impression id |
-| `grooveshop-django-api/core/cache/surfaces.py` | The `recommendations` surface |
+| `grooveshop-django-api/src/recommendation/models.py` | `RecommendationSlot`, `RecommendationCandidate`, `RecommendationEvent` |
+| `grooveshop-django-api/src/recommendation/enum.py` | `Surface`, `StrategyCode`, `EventKind`, `AttachMatch` |
+| `grooveshop-django-api/src/recommendation/engine.py` | Merge, guard, curated tier, diversify, `min_fill` |
+| `grooveshop-django-api/src/recommendation/candidates.py` | Offline rebuild for one seed |
+| `grooveshop-django-api/src/recommendation/context.py` | `TenantContext` and its cache |
+| `grooveshop-django-api/src/recommendation/strategies/` | Registry, base class, the four registered strategies |
+| `grooveshop-django-api/src/recommendation/presets.py` | Vertical presets, `PRESET_FIELDS`, reset |
+| `grooveshop-django-api/src/recommendation/events.py` | `record_events`, `record_attach_events` |
+| `grooveshop-django-api/src/recommendation/tasks.py` | Per-product and nightly rebuilds, event and attach tasks |
+| `grooveshop-django-api/src/recommendation/signals.py` | Rebuild scheduling, order-created hook |
+| `grooveshop-django-api/src/recommendation/views.py` | The two endpoints and their gates |
+| `grooveshop-django-api/src/recommendation/serializers.py` | Seed and limit caps, event request shape |
+| `grooveshop-django-api/src/recommendation/management/commands/backfill_recommendation_slots.py` | PreSync seeding |
+| `grooveshop-django-api/src/product/enum/relation.py` | `RelationType` |
+| `grooveshop-django-api/src/cart/models/item.py`, `src/order/models/item.py` | The carried impression id |
+| `grooveshop-django-api/src/core/cache/surfaces.py` | The `recommendations` surface |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Product/Suggestions.vue` | The strip |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useRecommendationTracking.ts` | Impression and click reporting |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useRecommendationAttribution.ts` | Per-tab carry of the impression |

@@ -36,7 +36,7 @@ stateDiagram-v2
 
 ### The ledger
 
-`loyalty/models/transaction.py: PointsTransaction` holds a signed `points`
+`src/loyalty/models/transaction.py: PointsTransaction` holds a signed `points`
 integer, a `transaction_type`, an optional `reference_order`, a description
 and an optional `created_by` for admin adjustments. Types are `EARN`,
 `REDEEM`, `EXPIRE`, `ADJUST` and `BONUS`; positive for earn and bonus,
@@ -48,7 +48,7 @@ is a counter that only earning and reversal move, floored at zero on the way
 down. Redemption never touches it, so spending points cannot cost a customer
 a tier.
 
-`loyalty/models/tier.py: LoyaltyTier` is a translatable, sortable model with
+`src/loyalty/models/tier.py: LoyaltyTier` is a translatable, sortable model with
 a **unique** `required_level`, a `points_multiplier` (minimum 1.0) and an
 icon. Levels are derived, not stored: `get_user_level` is
 `1 + total_xp // LOYALTY_XP_PER_LEVEL`, and `get_user_tier` returns the
@@ -91,7 +91,7 @@ writes a `BONUS` row worth `LOYALTY_NEW_CUSTOMER_BONUS_POINTS` only when the
 customer has no prior `EARN` rows outside this order. The bonus does not
 affect XP, so no further tier recalculation is needed.
 
-`loyalty/tasks.py: process_order_points` calls both, in that order, but the
+`src/loyalty/tasks.py: process_order_points` calls both, in that order, but the
 bonus is **conditional**: it runs only when the award returned more than
 zero points and the order has a user. A genuine first order whose items
 compute to zero points — a zero `points_coefficient`, a zero
@@ -117,7 +117,7 @@ same points twice. XP is not touched. `PaymentLedger.stored_value` reads
 what is still owed from these rows (REDEEM less positive ADJUST), valued
 at the order's loyalty discount in proportion.
 
-**Earned points are reversed once.** `loyalty/signals.py` listens on
+**Earned points are reversed once.** `src/loyalty/signals.py` listens on
 `order_completed` (award) and reverses on these signals, skipping guest
 orders and dispatching through `tenant.celery.dispatch_on_commit` so the
 tenant schema rides the message:
@@ -135,7 +135,7 @@ and runs once per order, so taking it on the first slice would never take
 the rest, and taking all of it for a small goodwill refund would wipe the
 points of an order the shopper keeps. REFUNDED comes from the ledgers, not
 from the path that made the refund: `PaymentLedger.refund_status`
-(`order/payment_ledger.py`) sets it once refunds and chargebacks cover what
+(`src/order/payment_ledger.py`) sets it once refunds and chargebacks cover what
 was received **and** the gift cards and points are back.
 
 `reverse_order_points(order_id)` is careful about order of operations:
@@ -176,14 +176,14 @@ The rate is `LOYALTY_REDEMPTION_RATIO_<CURRENCY>`: points divided by the
 ratio give the discount.
 
 `preview_redemption` prices without writing and is used by
-`cart/views/cart.py: create_payment_intent` and by the order-create
+`src/cart/views/cart.py: create_payment_intent` and by the order-create
 verification. `redeem_points` takes the lock (`lock=True` inside the
 order-create transaction means a later redeem in the same transaction cannot
 fail on balance), enforces **one redemption per order** under that lock, writes
 the negative `REDEEM` row, and stores `loyalty_points_redeemed` and
 `loyalty_discount` in the order metadata.
 
-Two entry points reach it: order creation (`order/services.py`, both paths,
+Two entry points reach it: order creation (`src/order/services.py`, both paths,
 where the points to redeem arrive with the checkout payload) and
 `POST /api/v1/loyalty/redeem`, which additionally requires the order to belong
 to the caller and to still be `PENDING` — redeeming against a settled order
@@ -216,9 +216,9 @@ reconsidered on the next run.
 
 Nothing expires while the programme is off, and that time does not count
 towards a point's age. `loyalty.models.LoyaltyPause` (on
-`core/models.py: FeaturePauseModel`, at most one open span) records each span
+`src/core/models.py: FeaturePauseModel`, at most one open span) records each span
 the store had loyalty off; `LoyaltyService.sync_pause` opens and closes them,
-queued by `tenant/switches.py: on_switch_change` whenever `LOYALTY_ENABLED` or
+queued by `src/tenant/switches.py: on_switch_change` whenever `LOYALTY_ENABLED` or
 `Tenant.loyalty_enabled` really changes and run first by the sweep itself.
 The cutoff is `FeaturePauseModel.active_cutoff(now, days)`: the moment from
 which `LOYALTY_POINTS_EXPIRATION_DAYS` of time **with the programme on** has
@@ -231,12 +231,12 @@ schema. `settings.py` registers one beat entry,
 `process-loyalty-points-expiration`, pointing at
 `tenant.tasks.fanout_process_points_expiration` and scheduled daily at 03:00.
 
-`tenant/celery.py: run_for_all_tenants` does not enter schemas itself. It
+`src/tenant/celery.py: run_for_all_tenants` does not enter schemas itself. It
 iterates the active, non-public, non-suspended tenants and sends **one
 message per tenant**, each stamped with a `_schema_name` header; the
 subtasks enter their own schema later, in the worker.
 
-That entry is `core/tasks.py: MonitoredTask`, which every loyalty task uses
+That entry is `src/core/tasks.py: MonitoredTask`, which every loyalty task uses
 and which **subclasses `TenantTask`** — so `apply_async` stamps the header
 and `__call__` enters the tenant on the way in, while the base adds
 success/failure logging with secret-looking kwargs masked. `__call__` uses
@@ -251,8 +251,8 @@ against whatever schema the worker happens to be in.
 
 | Tier | Where | Effect |
 |---|---|---|
-| Plan | `Tenant.loyalty_enabled` | `tenant/permissions.py: IsLoyaltyEnabled` answers **404** on every loyalty endpoint, `agent/me/loyalty` included |
-| Runtime | `LOYALTY_ENABLED` extra-setting, ships `False` | `tenant/permissions.py: IsLoyaltyRuntimeEnabled` answers **404** on the same endpoints; `LoyaltyService.is_enabled()` in the service |
+| Plan | `Tenant.loyalty_enabled` | `src/tenant/permissions.py: IsLoyaltyEnabled` answers **404** on every loyalty endpoint, `agent/me/loyalty` included |
+| Runtime | `LOYALTY_ENABLED` extra-setting, ships `False` | `src/tenant/permissions.py: IsLoyaltyRuntimeEnabled` answers **404** on the same endpoints; `LoyaltyService.is_enabled()` in the service |
 
 `LoyaltyService.is_enabled()` checks **both** — `tenant_plan_allows("loyalty_enabled")`
 and the setting — and it is called from `award_order_points`,
@@ -389,26 +389,26 @@ storefront never advertises a reward the backend will not grant.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/loyalty/models/transaction.py` | `PointsTransaction`, the ledger |
-| `grooveshop-django-api/loyalty/models/tier.py` | `LoyaltyTier`, `required_level`, multiplier |
-| `grooveshop-django-api/loyalty/models/pause.py` | `LoyaltyPause`, the spans the programme was off |
-| `grooveshop-django-api/core/models.py` | `FeaturePauseModel`: `open_at`, `close_at`, `active_cutoff` |
-| `grooveshop-django-api/tenant/switches.py` | `on_switch_change`, the hook that queues `sync_loyalty_pause` |
-| `grooveshop-django-api/loyalty/enum.py` | `TransactionType`, `PriceBasis` |
-| `grooveshop-django-api/loyalty/services.py` | `is_enabled`, award, `reverse_order_points`, `restore_spent_points`, redeem, tiers, expiry, bonus |
-| `grooveshop-django-api/loyalty/signals.py` | Order hooks (reversal on cancel, on REFUNDED through `order_refunded` or `order_stored_value_returned`, on a chargeback that completes the return, and on the REFUNDED status), tier-change detection, tier-up notification |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED; `stored_value`, what the order's points are still owed |
-| `grooveshop-django-api/loyalty/tasks.py` | `process_order_points`, `reverse_order_points`, expiry, tier-up notification |
-| `grooveshop-django-api/loyalty/views/loyalty.py` | Summary, transactions, redeem, product points, tiers |
-| `grooveshop-django-api/loyalty/urls.py` | Endpoint paths |
-| `grooveshop-django-api/core/tasks.py` | `MonitoredTask`, which extends `TenantTask` |
-| `grooveshop-django-api/tenant/tasks.py` | `fanout_process_points_expiration` |
-| `grooveshop-django-api/tenant/celery.py` | `run_for_all_tenants`, `TenantTask` schema entry |
-| `grooveshop-django-api/tenant/permissions.py` | `IsLoyaltyEnabled` |
-| `grooveshop-django-api/b2b/services.py` | `loyalty_allowed`, `suppresses_loyalty` |
-| `grooveshop-django-api/order/services.py` | Redemption at order create, wholesale suppression |
-| `grooveshop-django-api/cart/views/cart.py` | Preview redemption at payment-intent creation |
-| `grooveshop-django-api/settings.py` | `LOYALTY_*` defaults (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` included), beat schedule |
+| `grooveshop-django-api/src/loyalty/models/transaction.py` | `PointsTransaction`, the ledger |
+| `grooveshop-django-api/src/loyalty/models/tier.py` | `LoyaltyTier`, `required_level`, multiplier |
+| `grooveshop-django-api/src/loyalty/models/pause.py` | `LoyaltyPause`, the spans the programme was off |
+| `grooveshop-django-api/src/core/models.py` | `FeaturePauseModel`: `open_at`, `close_at`, `active_cutoff` |
+| `grooveshop-django-api/src/tenant/switches.py` | `on_switch_change`, the hook that queues `sync_loyalty_pause` |
+| `grooveshop-django-api/src/loyalty/enum.py` | `TransactionType`, `PriceBasis` |
+| `grooveshop-django-api/src/loyalty/services.py` | `is_enabled`, award, `reverse_order_points`, `restore_spent_points`, redeem, tiers, expiry, bonus |
+| `grooveshop-django-api/src/loyalty/signals.py` | Order hooks (reversal on cancel, on REFUNDED through `order_refunded` or `order_stored_value_returned`, on a chargeback that completes the return, and on the REFUNDED status), tier-change detection, tier-up notification |
+| `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED; `stored_value`, what the order's points are still owed |
+| `grooveshop-django-api/src/loyalty/tasks.py` | `process_order_points`, `reverse_order_points`, expiry, tier-up notification |
+| `grooveshop-django-api/src/loyalty/views/loyalty.py` | Summary, transactions, redeem, product points, tiers |
+| `grooveshop-django-api/src/loyalty/urls.py` | Endpoint paths |
+| `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask`, which extends `TenantTask` |
+| `grooveshop-django-api/src/tenant/tasks.py` | `fanout_process_points_expiration` |
+| `grooveshop-django-api/src/tenant/celery.py` | `run_for_all_tenants`, `TenantTask` schema entry |
+| `grooveshop-django-api/src/tenant/permissions.py` | `IsLoyaltyEnabled` |
+| `grooveshop-django-api/src/b2b/services.py` | `loyalty_allowed`, `suppresses_loyalty` |
+| `grooveshop-django-api/src/order/services.py` | Redemption at order create, wholesale suppression |
+| `grooveshop-django-api/src/cart/views/cart.py` | Preview redemption at payment-intent creation |
+| `grooveshop-django-api/src/settings.py` | `LOYALTY_*` defaults (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` included), beat schedule |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/loyalty-enabled.ts` | Fail-open two-tier gate |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useLoyalty.ts` | Summary, transactions, tiers, settings |
 | `grooveshop-storefront-ui-node-nuxt/server/api/loyalty/` | Storefront proxies |

@@ -36,13 +36,13 @@ public-schema operator, and can register with an operator's email.
 `UserTenantMembership` lives in the `public` schema and its `user` foreign
 key targets `public.user_useraccount`. A shopper created inside a tenant
 schema therefore *cannot* hold one — a version that tried to create one
-raised `ForeignKeyViolation` and made signup 500 (`tenant/membership.py`
+raised `ForeignKeyViolation` and made signup 500 (`src/tenant/membership.py`
 module docstring). The table is a staff grant, never a customer roster.
 
 ## Who may sign into which console
 
 Both consoles use the same login form. `PlatformAdminAuthenticationForm`
-(`admin/forms.py`) bypasses Django's global `authenticate()` dispatch and
+(`src/admin/forms.py`) bypasses Django's global `authenticate()` dispatch and
 calls `PlatformStaffBackend.authenticate_staff()` directly, which resolves
 credentials inside `schema_context(public)` and returns the user only when
 they are `is_active` **and** `is_staff`. The session is then bound
@@ -64,7 +64,7 @@ flowchart TD
 
 ### The control plane
 
-`PlatformAdminSite.has_permission` (`admin/platform_site.py`) requires a
+`PlatformAdminSite.has_permission` (`src/admin/platform_site.py`) requires a
 platform-staff session **and** `is_superuser` — not merely `is_staff`.
 The reason is written into the code: `is_staff` on a public identity is
 exactly what lets a *store operator* into their own store's admin, so it
@@ -74,7 +74,7 @@ domain, plan and order count, which is another merchant's commercial data.
 
 ### A store console
 
-`MyAdminSite.has_permission` (`admin/admin.py`) requires, in order:
+`MyAdminSite.has_permission` (`src/admin/admin.py`) requires, in order:
 
 1. Django's own `is_active and is_staff`.
 2. `is_platform_staff_session(request)` — the session must have been minted
@@ -95,11 +95,11 @@ existing session cookie kept working for its remaining life.
 
 ## What each store role can do
 
-`TenantMembershipRole` (`tenant/models.py`) has four values; `member` is
+`TenantMembershipRole` (`src/tenant/models.py`) has four values; `member` is
 retired and issues nothing (the rows it once carried were removed in
 `tenant/migrations/0015`). The other three are turned into Django model
 permissions at request time by `TenantRolePermissionBackend`
-(`tenant/auth_backends.py`), which computes them with
+(`src/tenant/auth_backends.py`), which computes them with
 `_permissions_for_role()` rather than storing them.
 
 | Role | Permission set |
@@ -108,7 +108,7 @@ permissions at request time by `TenantRolePermissionBackend`
 | `admin` | The full default permission set (including `delete`) on every store app, plus store settings, plus the narrow platform grants below. |
 | `owner` | Identical to `admin` in permissions. The difference is entirely in the guards: an owner row can only be acted on by another owner. |
 
-The app sets come from `tenant/role_scopes.py` and are **derived, not
+The app sets come from `src/tenant/role_scopes.py` and are **derived, not
 enumerated**:
 
 - `store_app_labels()` = the `TENANT_APPS`-only labels, plus
@@ -143,7 +143,7 @@ perms |= {
 platform-only. And these permissions only make the *pages* reachable —
 confining them to the operator's own row is a separate, object-level job
 done in the `ModelAdmin` by `self_service_tenant(request)`
-(`tenant/admin.py`), which returns `None` for superusers and on the public
+(`src/tenant/admin.py`), which returns `None` for superusers and on the public
 schema, so every caller reads a non-`None` result as "restrict to this one
 store". `TenantAdmin.get_queryset` filters to `pk=scope.pk`, and
 `get_readonly_fields` reduces the form to the
@@ -154,7 +154,7 @@ Superusers never touch any of this: `User.has_perm` short-circuits on
 
 ## The owner guards
 
-All four live in `UserTenantMembershipAdmin` (`tenant/admin.py`) and all
+All four live in `UserTenantMembershipAdmin` (`src/tenant/admin.py`) and all
 four are scoped to `self_service_tenant(request)` — that is, they apply on
 a **store** console and not to a platform superuser working on the control
 plane.
@@ -197,7 +197,7 @@ breaking.
 
 ## Why Django permission groups are not a store-facing tool
 
-`auth` is in `PLATFORM_ONLY_APP_LABELS` (`tenant/role_scopes.py`) with the
+`auth` is in `PLATFORM_ONLY_APP_LABELS` (`src/tenant/role_scopes.py`) with the
 reason stated inline: "A store admin who can mint Groups can mint
 themselves any permission that exists." So no store role is ever granted
 `auth.*`, and since 2026-09-12 the store sidebar does not link the screen
@@ -270,20 +270,20 @@ To cut someone off the platform entirely, untick `is_staff` on the
 `UserAccount`. Because `PlatformStaffBackend.get_user()` re-checks the flag
 on every session restore, an outstanding admin session stops working on the
 next request rather than lingering. The same flag gates staff API tokens
-(`tenant/api_tokens.py: PlatformStaffTokenAuthentication`).
+(`src/tenant/api_tokens.py: PlatformStaffTokenAuthentication`).
 
 ### Where to do it from
 
 Both **Memberships** and **Platform Staff** are control-plane screens.
-`WithheldOnTenantHostModelAdmin` (`admin/mixins.py`) withholds
+`WithheldOnTenantHostModelAdmin` (`src/admin/mixins.py`) withholds
 public-schema-only models from a store host — but `tenant` is listed in
 `STORE_SELF_SERVICE_APP_LABELS`, which is the exemption that lets a store
 admin reach their own row and their own team without also exposing
 `django_site` or the cache purge log.
 
 The two consoles have separate sidebars (`store_sidebar` and `platform_sidebar`
-in `admin/navigation.py`), so neither needs to hide the other's links;
-`admin/permissions.py: platform_environment` paints the **Control plane**
+in `src/admin/navigation.py`), so neither needs to hide the other's links;
+`src/admin/permissions.py: platform_environment` paints the **Control plane**
 badge in the header — "the two look alike enough
 that an operator could otherwise edit the wrong thing". See
 [The control plane](/dev/operator/).
@@ -303,7 +303,7 @@ that an operator could otherwise edit the wrong thing". See
   answer into the next request.
 - A store role never receives a permission on a
   `PLATFORM_ONLY_APP_LABELS` app.
-- `is_platform_superuser()` (`tenant/membership.py`) honours
+- `is_platform_superuser()` (`src/tenant/membership.py`) honours
   `is_superuser` only when the identity provably came from `public` — the
   flag on a tenant-schema row is customer residue from the id-preserving
   cutover.
@@ -337,15 +337,15 @@ that an operator could otherwise edit the wrong thing". See
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/tenant/models.py` | `TenantMembershipRole`, `UserTenantMembership`, `can_manage_tenant`, `is_tenant_staff`, `PlatformStaffToken` |
-| `grooveshop-django-api/tenant/auth_backends.py` | `PlatformStaffBackend`, `TenantRolePermissionBackend`, `_permissions_for_role`, `PLATFORM_IDENTITY_ATTR`, `is_platform_staff_session` |
-| `grooveshop-django-api/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS`, `STORE_SHARED_APP_LABELS`, `STORE_SETTINGS_APP_LABELS`, `store_app_labels()`, `operational_app_labels()`, `TENANT_SELF_EDITABLE_FIELDS` |
-| `grooveshop-django-api/tenant/membership.py` | `get_membership`, `is_store_staff`, `is_platform_superuser`, `get_current_tenant` |
-| `grooveshop-django-api/tenant/api_tokens.py` | `PlatformStaffTokenAuthentication.validate_user` — an outstanding token dies with `is_staff` |
-| `grooveshop-django-api/tenant/admin.py` | `UserTenantMembershipAdmin` and its owner guards, `self_service_tenant`, `PublicSchemaModelChoiceField`, `TenantAdmin.get_queryset` / `get_readonly_fields` |
-| `grooveshop-django-api/admin/admin.py` | `MyAdminSite.has_permission` |
-| `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite.has_permission` (superuser-only) |
-| `grooveshop-django-api/admin/forms.py` | `PlatformAdminAuthenticationForm` |
-| `grooveshop-django-api/admin/permissions.py` | `platform_environment` — the Control plane badge; `is_superuser` for superuser-only sidebar groups |
-| `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `IsSuperuserOnlyModelAdmin` |
-| `grooveshop-django-api/settings.py` | `AUTHENTICATION_BACKENDS`, `SHARED_APPS` / `TENANT_APPS`, `UNFOLD_PLATFORM` |
+| `grooveshop-django-api/src/tenant/models.py` | `TenantMembershipRole`, `UserTenantMembership`, `can_manage_tenant`, `is_tenant_staff`, `PlatformStaffToken` |
+| `grooveshop-django-api/src/tenant/auth_backends.py` | `PlatformStaffBackend`, `TenantRolePermissionBackend`, `_permissions_for_role`, `PLATFORM_IDENTITY_ATTR`, `is_platform_staff_session` |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS`, `STORE_SHARED_APP_LABELS`, `STORE_SETTINGS_APP_LABELS`, `store_app_labels()`, `operational_app_labels()`, `TENANT_SELF_EDITABLE_FIELDS` |
+| `grooveshop-django-api/src/tenant/membership.py` | `get_membership`, `is_store_staff`, `is_platform_superuser`, `get_current_tenant` |
+| `grooveshop-django-api/src/tenant/api_tokens.py` | `PlatformStaffTokenAuthentication.validate_user` — an outstanding token dies with `is_staff` |
+| `grooveshop-django-api/src/tenant/admin.py` | `UserTenantMembershipAdmin` and its owner guards, `self_service_tenant`, `PublicSchemaModelChoiceField`, `TenantAdmin.get_queryset` / `get_readonly_fields` |
+| `grooveshop-django-api/src/admin/admin.py` | `MyAdminSite.has_permission` |
+| `grooveshop-django-api/src/admin/platform_site.py` | `PlatformAdminSite.has_permission` (superuser-only) |
+| `grooveshop-django-api/src/admin/forms.py` | `PlatformAdminAuthenticationForm` |
+| `grooveshop-django-api/src/admin/permissions.py` | `platform_environment` — the Control plane badge; `is_superuser` for superuser-only sidebar groups |
+| `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `IsSuperuserOnlyModelAdmin` |
+| `grooveshop-django-api/src/settings.py` | `AUTHENTICATION_BACKENDS`, `SHARED_APPS` / `TENANT_APPS`, `UNFOLD_PLATFORM` |

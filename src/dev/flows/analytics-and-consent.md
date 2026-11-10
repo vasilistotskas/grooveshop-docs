@@ -334,7 +334,7 @@ Meta counts the conversion twice.
 `AddToCart`, `Search`, `AddPaymentInfo`, `CompleteRegistration`, `Lead`.
 **Browser plus server** events need the same id on both: `InitiateCheckout`
 and `Purchase`. `Refund` is the one the comment in `useMetaPixel` groups with
-them but which has no browser leg — `meta_capi/services.py: build_refund_event`
+them but which has no browser leg — `src/meta_capi/services.py: build_refund_event`
 mints a fresh `uuid4().hex`, so there is nothing to deduplicate against.
 
 `app/composables/useCheckoutSubmit.ts: buildMetaPayload` mints them at
@@ -359,9 +359,9 @@ The real client IP comes from `CF-Connecting-IP`, falling back to
 surface the socket address, which is the Traefik pod. The value only feeds
 Meta's event matching, so a caller who forges it spoils the attribution of
 their own events and nothing else — it is never used for a security
-decision (that is `core/client_ip.py` in Django).
+decision (that is `src/core/client_ip.py` in Django).
 
-`order/services.py: _sanitise_meta_context` filters the incoming dict to a
+`src/order/services.py: _sanitise_meta_context` filters the incoming dict to a
 closed key set — `fbp`, `fbc`, `client_user_agent`, `client_ip_address`,
 `event_ids`, `consent` — caps raw strings at 512 characters, restricts
 `event_ids` to `purchase`, `initiate_checkout` and `add_payment_info`, and
@@ -371,7 +371,7 @@ key entirely rather than leaving a phantom empty bag on the order.
 The success page reads the ids back through the order serializer's
 `metaEventIds` field.
 
-**Dispatch** is signal-driven (`meta_capi/signals.py`):
+**Dispatch** is signal-driven (`src/meta_capi/signals.py`):
 
 | Signal | Event |
 |---|---|
@@ -381,7 +381,7 @@ The success page reads the ids back through the order serializer's
 | `user_signed_up` | `CompleteRegistration` |
 
 `CompleteRegistration` carries a consent gate of its own, separate from the
-order-based one. `meta_capi/signals.py: _on_user_signed_up` reads the
+order-based one. `src/meta_capi/signals.py: _on_user_signed_up` reads the
 `ad_storage` cookie off the signup request and sends only on an explicit
 `granted`; a signup with no request at all, such as a programmatic one,
 returns early. It fails closed because there is no order to carry a consent
@@ -403,7 +403,7 @@ audit table clean and lets an operator stage credentials before flipping the
 toggle. Consent defaults to **false**: without an explicit `consent.ads` on the
 order, nothing is sent.
 
-**The log table** is `meta_capi/models.py: MetaCapiEventLog`, one row per
+**The log table** is `src/meta_capi/models.py: MetaCapiEventLog`, one row per
 `(event_name, event_id)` attempt with a **unique** `event_id`. It carries the
 status (`pending`, `sent`, `failed`, `skipped`), Meta's `fbtrace_id` for
 support tickets, `events_received`, the error message, and a **PII-stripped
@@ -414,7 +414,7 @@ get there. The SDK SHA-256 hashes the user identifiers (`em`, `ph` and the
 rest) before anything is sent. The other four are not hashed at all:
 `client_ip_address`, `client_user_agent`, `fbp` and `fbc` go to Meta **in
 the clear**, because hashing them would break attribution. So
-`meta_capi/tasks.py: _serialize_event_payload` pops exactly those four from
+`src/meta_capi/tasks.py: _serialize_event_payload` pops exactly those four from
 the persisted copy. The audit log is clean; the wire is not, and that is
 deliberate.
 
@@ -423,7 +423,7 @@ deliberate.
 transient error is re-raised so Celery autoretries; a permanent one is logged
 and stops.
 
-The client is a facade (`meta_capi/client.py`) over the Facebook SDK,
+The client is a facade (`src/meta_capi/client.py`) over the Facebook SDK,
 centralising init and splitting exceptions into transient and permanent so the
 task's `autoretry_for` works. Its API instances are **standalone per tenant**,
 keyed by (token, version), never the SDK's process-global default.
@@ -578,12 +578,12 @@ The script refuses to run unless the tenant's primary domain carries the
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/index.post.ts` | Server-side enrichment of the meta context |
 | `grooveshop-storefront-ui-node-nuxt/server/api/analytics/cookie-consent.post.ts` | Banner telemetry endpoint |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | Per-tenant tracker origins |
-| `grooveshop-django-api/order/services.py` | `_sanitise_meta_context`, the closed key set |
-| `grooveshop-django-api/order/serializers/order.py` | `metaEventIds` on the order payload |
-| `grooveshop-django-api/meta_capi/services.py` | Event building, `is_capi_enabled`, consent check |
-| `grooveshop-django-api/meta_capi/signals.py` | Which domain events dispatch which CAPI events |
-| `grooveshop-django-api/meta_capi/tasks.py` | `_dispatch`, idempotency, retry split |
-| `grooveshop-django-api/meta_capi/models.py` | `MetaCapiEventLog` |
-| `grooveshop-django-api/meta_capi/client.py` | Per-tenant SDK facade |
-| `grooveshop-django-api/tenant/credentials.py` | Tenant-only tracker credentials |
+| `grooveshop-django-api/src/order/services.py` | `_sanitise_meta_context`, the closed key set |
+| `grooveshop-django-api/src/order/serializers/order.py` | `metaEventIds` on the order payload |
+| `grooveshop-django-api/src/meta_capi/services.py` | Event building, `is_capi_enabled`, consent check |
+| `grooveshop-django-api/src/meta_capi/signals.py` | Which domain events dispatch which CAPI events |
+| `grooveshop-django-api/src/meta_capi/tasks.py` | `_dispatch`, idempotency, retry split |
+| `grooveshop-django-api/src/meta_capi/models.py` | `MetaCapiEventLog` |
+| `grooveshop-django-api/src/meta_capi/client.py` | Per-tenant SDK facade |
+| `grooveshop-django-api/src/tenant/credentials.py` | Tenant-only tracker credentials |
 | `grooveshop-infrastructure/scripts/staging-arm-features.py` | What staging blanks and disables |

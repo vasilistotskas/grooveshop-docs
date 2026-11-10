@@ -26,7 +26,7 @@ flowchart LR
 ## The nightly database dump
 
 `settings.py` schedules `scheduled-database-backup` at 03:00 Athens
-(`SCHEDULE_PRESETS["daily_3am"]`). The task (`core/tasks.py:
+(`SCHEDULE_PRESETS["daily_3am"]`). The task (`src/core/tasks.py:
 scheduled_database_backup`) dispatches a Celery chain:
 
 ```python
@@ -42,7 +42,7 @@ chain(
 ```
 
 `backup_database_task` calls the `backup_database` management command
-(`core/management/commands/backup_database.py`), which runs `pg_dump` in
+(`src/core/management/commands/backup_database.py`), which runs `pg_dump` in
 custom format with gzip compression and lets `pg_dump` own the output
 file. The command raises `CommandError` on a non-zero exit and unlinks the
 zero-byte partial file `pg_dump --file` creates before it connects, and
@@ -172,7 +172,7 @@ What does not exist, and is the open item alongside the off-cluster copy:
 ## Invariants
 
 - The scheduled dump is a Celery task, not a Kubernetes resource
-  (`settings.py`, `core/tasks.py`, `base/backend-database.yaml` comment).
+  (`settings.py`, `src/core/tasks.py`, `base/backend-database.yaml` comment).
 - A failed `pg_dump` fails the task (`backup_database.py` raises
   `CommandError`; `backup_database_task` propagates it).
 - Backups share the cluster, the storage class and the replica count with
@@ -191,10 +191,10 @@ What does not exist, and is the open item alongside the off-cluster copy:
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/settings.py` | `scheduled-database-backup`, `cleanup-old-backups`, `monitor-system-health` beat entries |
-| `grooveshop-django-api/core/tasks.py` | `scheduled_database_backup`, `backup_database_task`, `cleanup_old_backups`, `monitor_system_health` |
-| `grooveshop-django-api/core/management/commands/backup_database.py` | `pg_dump` invocation |
-| `grooveshop-django-api/core/caches.py` | `failing_persistence_statuses()` |
+| `grooveshop-django-api/src/settings.py` | `scheduled-database-backup`, `cleanup-old-backups`, `monitor-system-health` beat entries |
+| `grooveshop-django-api/src/core/tasks.py` | `scheduled_database_backup`, `backup_database_task`, `cleanup_old_backups`, `monitor_system_health` |
+| `grooveshop-django-api/src/core/management/commands/backup_database.py` | `pg_dump` invocation |
+| `grooveshop-django-api/src/core/caches.py` | `failing_persistence_statuses()` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` | Backups, media, media-private and static PVCs and mounts |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend-database.yaml` | Postgres CR, logical backup disabled, the gap statement |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis.yaml`, `backend-message-broker.yaml` | Redis and RabbitMQ volumes |

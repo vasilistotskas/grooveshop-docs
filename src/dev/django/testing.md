@@ -69,7 +69,7 @@ def test_list_is_not_n_plus_one(api_client, count_queries):
 
 ## Factories
 
-Every factory extends `CustomDjangoModelFactory` (`devtools/factories.py`);
+Every factory extends `CustomDjangoModelFactory` (`src/devtools/factories.py`);
 see [Base classes & patterns](/dev/django/patterns). Parler models get a
 translation per configured language automatically. `SortableModel.save()`
 assigns `sort_order` when none is set, so pass one explicitly only if the
@@ -142,7 +142,7 @@ query. Warm the code path once before each measured block, then assert.
 coverage needs `-n0`:
 
 ```bash
-uv run pytest --cov=. --cov-report=term --cov-config=pyproject.toml -n0
+uv run pytest --cov=src --cov-report=term --cov-config=pyproject.toml -n0
 ```
 
 In CI the four shards upload raw data and the gate job combines them, so
@@ -181,7 +181,7 @@ shards of the latest green pull_request run.
 | `grooveshop-django-api/pyproject.toml` | `[tool.pytest.ini_options]`, `[tool.coverage.report]` |
 | `grooveshop-django-api/tests/conftest.py` | Settings overrides, autouse fixtures, `count_queries`, `bind_tenant` |
 | `grooveshop-django-api/tests_mt/conftest.py` | Multi-tenant lane |
-| `grooveshop-django-api/devtools/factories.py` | `CustomDjangoModelFactory` |
+| `grooveshop-django-api/src/devtools/factories.py` | `CustomDjangoModelFactory` |
 | `grooveshop-django-api/.test_durations` | Shard timings |
 | `grooveshop-django-api/.github/workflows/ci.yml` | CI jobs |
 | `grooveshop-django-api/.github/scripts/tested_in_pr.sh` | The "already tested in its PR" rule |

@@ -616,12 +616,12 @@ names `/settings/<key>` or `/i18n/<locale>/@document/<pointer>`, which
 **A translation with no draft settings.** `setNodeTranslation` writes the
 `@document` overlay whether or not the draft has `settings` (the panel drops
 an empty one). Django registers `@document` for every kind that has a root
-(`builder/validation.py: _check_root`), so `_check_node_overlay` checks such
+(`src/builder/validation.py: _check_root`), so `_check_node_overlay` checks such
 an overlay against the root's schema over no settings, and
-`builder/published.py: resolve_document` answers the translation alone. A
+`src/builder/published.py: resolve_document` answers the translation alone. A
 kind with no root still refuses it as `unknown_node`.
 
-**Reading.** Django's `builder/published.py: resolve_document` starts from
+**Reading.** Django's `src/builder/published.py: resolve_document` starts from
 the draft's root settings and overlays the language's `@document` entries
 (`localised`), so a field not translated into a language falls back to the
 default language's text on the live page too. `useBuilderPage`
@@ -707,8 +707,8 @@ keeps its name as the h1, as before.
 | `grooveshop-storefront-ui-node-nuxt/app/builder/labels/en.json`, `app/builder/labels/el.json` | `documentSettings` labels and help |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderPage.ts` | The live page's `seoTitle`, `seoDescription` and `heading` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/Home.vue`, `app/components/variants/webside/Storefront/Home.vue` | The home page's h1, both designs |
-| `grooveshop-django-api/builder/published.py` | `resolve_document`: the root settings with the language's overlay |
-| `grooveshop-django-api/builder/validation.py`, `builder/pointers.py` | `_check_root` registers `@document` only with `settings`; `_check_node_overlay` |
+| `grooveshop-django-api/src/builder/published.py` | `resolve_document`: the root settings with the language's overlay |
+| `grooveshop-django-api/src/builder/validation.py`, `src/builder/pointers.py` | `_check_root` registers `@document` only with `settings`; `_check_node_overlay` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/BlogPost.vue`, `app/components/variants/webside/Storefront/BlogPost.vue` | The `below-content` blog-post bands, which set no head tags |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/QueryField.vue` | A list setting |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecordList.vue` | A hand-picked list |

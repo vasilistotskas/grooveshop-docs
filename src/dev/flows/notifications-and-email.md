@@ -48,20 +48,20 @@ sequenceDiagram
 
 ### The notification model
 
-`Notification` (`notification/models/notification.py`) is a translatable
+`Notification` (`src/notification/models/notification.py`) is a translatable
 row: `link`, `kind`, `category`, `priority`, `notification_type`,
 `expiry_date`, and per-language `title` / `message` through parler.
-`NotificationUser` (`notification/models/user.py`) is the join to a user
+`NotificationUser` (`src/notification/models/user.py`) is the join to a user
 with `seen` and `seen_at` — one notification can fan out to many users.
 
 `notification_type` is a `CharField` that names `NotificationTypeEnum` in
 `choices` but is not constrained in the database, so an ad-hoc admin
 broadcast needs no migration. Every event fired from application code uses a
-member of `notification/enum.py: NotificationTypeEnum`. That enum is the
+member of `src/notification/enum.py: NotificationTypeEnum`. That enum is the
 one place new event types are added, and it reaches the storefront as a
 typed union through the OpenAPI contract.
 
-`notification/services.py: create_user_notification` is the only
+`src/notification/services.py: create_user_notification` is the only
 sanctioned creator. It takes a `{language_code: {title, message}}` map,
 writes one translation row per locale in `PARLER_LANGUAGES[SITE_ID]`,
 falls back `en` then `el` for a locale the caller did not supply, skips
@@ -70,27 +70,27 @@ inside one atomic block.
 
 ### WebSocket delivery
 
-`NotificationUser` post-save fires `notification/signals.py:
+`NotificationUser` post-save fires `src/notification/signals.py:
 handle_notification_created`, which serialises the row plus its
 translations (cached 60 seconds, so a broadcast to N users does not issue
 N translation queries) and enqueues `send_notification_task`. That task
 reads the worker connection's schema, builds the group name through
-`notification/groups.py: user_group` and calls `group_send`.
+`src/notification/groups.py: user_group` and calls `group_send`.
 
 **The group name is `tenant_{schema_name}_user_{user_id}`.** The schema
 segment is what stops tenant A's user 42 receiving tenant B's user 42's
 messages on a shared Redis channel layer. Every sender and the consumer
 use the same helper; nothing builds the string by hand.
 
-`notification/consumers.py: NotificationConsumer` joins that group on
+`src/notification/consumers.py: NotificationConsumer` joins that group on
 connect and is server-push only — client frames are read and discarded.
 An anonymous scope is accepted and then closed with code 4003, because
 Channels requires the handshake to complete before an application close
 code can be delivered. `force_logout` is a second handler on the same
-consumer: `user/signals.py` broadcasts it after Knox tokens are revoked,
+consumer: `src/user/signals.py` broadcasts it after Knox tokens are revoked,
 and it closes with 4003 so every open tab re-authenticates.
 
-The route is `ws/notifications/` (`asgi/__init__.py`), wrapped in
+The route is `ws/notifications/` (`src/asgi/__init__.py`), wrapped in
 `AllowedHostsOriginValidator` → `TenantWebsocketMiddleware` →
 `TokenAuthMiddlewareStack`.
 
@@ -98,13 +98,13 @@ The route is `ws/notifications/` (`asgi/__init__.py`), wrapped in
 
 Knox tokens and cookies are **not** accepted on the socket URL.
 `POST /api/v1/websocket/ticket`
-(`notification/views/websocket.py: create_websocket_ticket`) requires an
+(`src/notification/views/websocket.py: create_websocket_ticket`) requires an
 authenticated HTTP request, refuses if the user has no live Knox token,
 and returns a URL-safe ticket of 32 bytes of entropy (a 43-character
 string) cached against the user's primary key for 60 seconds
 (`WS_TICKET_TTL_SECONDS`).
 
-`core/middleware/channels.py: TokenAuthMiddleware` reads `?ticket=` and
+`src/core/middleware/channels.py: TokenAuthMiddleware` reads `?ticket=` and
 consumes it with an atomic Redis `GETDEL` — a compare-then-delete has a
 window in which two concurrent connects both succeed. It then re-checks
 that a live Knox token still exists, so a password change between minting
@@ -127,9 +127,9 @@ tabs in step.
 
 ### The email system
 
-Every email is an **email type** (`emails/types.py: EmailType`), declared
-in its domain app's `emails.py` (`order/emails.py`, `product/emails.py`,
-`user/emails.py`, `tenant/emails.py`, ...) through `emails.declare`. A type
+Every email is an **email type** (`src/emails/types.py: EmailType`), declared
+in its domain app's `emails.py` (`src/order/emails.py`, `src/product/emails.py`,
+`src/user/emails.py`, `src/tenant/emails.py`, ...) through `emails.declare`. A type
 names its template pair (`core/templates/emails/<directory>/<name>.html` and
 `.txt`), its subject (a gettext msgid with named fields), the builder that
 reads the domain for its context, a `sample` the preview renders, its
@@ -144,7 +144,7 @@ marketing mail the recipient opted out of, renders through
 `emails.render.render` in the recipient's language, builds the headers and
 hands the message to `emails.transport`, the only module that builds one
 (`tests/unit/emails/test_only_transport_sends.py` fails for any other). The
-admin preview (`emails/preview.py`, on an email's page under Settings → Emails) calls the same
+admin preview (`src/emails/preview.py`, on an email's page under Settings → Emails) calls the same
 `render`: for a real order through `order.emails.preview_object`, which finds
 the refund, receipt, dispute or shipment the email is about, else from the
 type's `sample`. The preview is therefore the mail that is sent, subject and
@@ -167,7 +167,7 @@ email page. `mail_admins` is not called anywhere in the project.
 
 **Account emails** (allauth: sign-in code, email confirmation, password
 reset, security notices, MFA and connected-account notices) are 19 email
-types, `account.*`, `mfa.*` and `social.*` (`user/emails.py`), required and
+types, `account.*`, `mfa.*` and `social.*` (`src/user/emails.py`), required and
 customer-facing. Their templates live in
 `core/templates/emails/{account,mfa,social}/`, each an HTML and a text
 file. `UserAccountAdapter.send_mail` maps allauth's template prefix to the
@@ -184,8 +184,8 @@ mail with that name.
 
 ### The email log and the transports
 
-Every outcome of `send_email` is a row of `EmailLog` (`emails/models.py`,
-written by `emails/log.py`), in the schema the mail is sent under: a store's
+Every outcome of `send_email` is a row of `EmailLog` (`src/emails/models.py`,
+written by `src/emails/log.py`), in the schema the mail is sent under: a store's
 rows in its own schema, a platform type's in `public`. The row is created
 `QUEUED` before the transport runs, then becomes `sent` or `failed`; a
 closed gate, a switched-off type, no recipient or an opt-out is one row with
@@ -199,7 +199,7 @@ setting, 90, `0` keeps) are deleted nightly with their provider events; see
 
 `settings.EMAIL_TRANSPORT` picks the one transport that carries the mail:
 `smtp` (Django's backend over the `EMAIL_HOST*` relay) or `resend` (Resend's
-HTTP API, `emails/resend.py`). Resend returns a message id, which is stored
+HTTP API, `src/emails/resend.py`). Resend returns a message id, which is stored
 and sent back in the webhook; SMTP returns none. A message posted to Resend
 carries `Idempotency-Key` (the log row's uuid) and two hidden tags,
 `schema` and `log`, never a header. **Which team's key signs the request is
@@ -214,8 +214,8 @@ other 4xx is permanent. Selecting `resend` while a store with its own verified d
 ### Provider events, the webhook and suppression
 
 What Resend reports about a message arrives at `POST /resend/webhook/`
-(`emails/webhooks.py`), mounted on every host. The delivery is verified on
-the raw body (`emails/webhooks.py`, through the Standard Webhooks library:
+(`src/emails/webhooks.py`), mounted on every host. The delivery is verified on
+the raw body (`src/emails/webhooks.py`, through the Standard Webhooks library:
 HMAC-SHA256 over the id, timestamp and body, within a five-minute tolerance)
 with the secret of the host it reached: the
 store's own `Tenant.resend_webhook_secret` on a store's host, the platform's
@@ -233,7 +233,7 @@ warning. Setup and failure modes: [Resend setup](/dev/operations/resend).
 ### The admin pages
 
 A store's staff see the emails under Settings → Emails (status, log,
-suppression list, preview, test send): `emails/admin.py`, over the store's
+suppression list, preview, test send): `src/emails/admin.py`, over the store's
 schema. The control plane has the same pages over `public`, in the platform
 admin's sidebar (`PlatformEmailSwitchAdmin`, `Owner.PLATFORM` types grouped by
 who receives them, the platform's log and suppression list, a throttled test
@@ -248,7 +248,7 @@ cache key carries the schema so the two pages never share an answer.
 ### Tenant branding
 
 Every email context is built by
-`core/utils/email_context.py: build_email_context`, which supplies
+`src/core/utils/email_context.py: build_email_context`, which supplies
 `SITE_NAME`, `SITE_URL`, `INFO_EMAIL`, `STATIC_BASE_URL`, `SITE_LOGO_URL`,
 `THEME` and `LANGUAGE_CODE` from the active tenant and the email's language and merges the caller's keys on top.
 Routing every task through it is what made the per-tenant logo branch in
@@ -260,7 +260,7 @@ logo **only** for the platform tenant, and an empty string otherwise — the
 base template then renders the store name as a text wordmark, so an
 unbranded tenant's mail never wears another store's brand.
 
-Envelope addressing comes from `emails/sender.py: from_address`,
+Envelope addressing comes from `src/emails/sender.py: from_address`,
 and the sending domain decides it, not the merchant's preference. A tenant
 whose own domain is verified on the relay — `Tenant.from_email` set **and**
 `Tenant.from_email_verified` ticked — sends as `"{store name}" <from_email>`.
@@ -275,14 +275,14 @@ that the relay holds a DKIM key for that domain. Putting an unsignable
 address in `From` fails DMARC alignment and lands the mail in spam.
 
 Transactional mail carries `List-ID` and a `mailto:` `List-Unsubscribe`
-from `emails/headers.py: build_transactional_list_headers`.
+from `src/emails/headers.py: build_transactional_list_headers`.
 `List-Unsubscribe-Post=One-Click` is deliberately omitted — there is no
 programmatic unsubscribe for a receipt, and advertising one without a
 matching endpoint penalises the sender.
 
 **Marketing mail** is different: every `Kind.MARKETING` type carries the
-full RFC 8058 pair (`emails/headers.py: build_list_unsubscribe_headers`)
-whose URL is `emails/optout.py: unsubscribe_url`, a signed, store-scoped
+full RFC 8058 pair (`src/emails/headers.py: build_list_unsubscribe_headers`)
+whose URL is `src/emails/optout.py: unsubscribe_url`, a signed, store-scoped
 token for that type. A mailbox provider POSTs it
 (`POST /api/v1/emails/unsubscribe/<token>`), which records `EmailOptOut`
 for that type only. A GET of the same URL never opts anyone out: it
@@ -293,7 +293,7 @@ A link in a mail BODY (today only the re-engagement email) is
 which does nothing on load (link scanners prefetch body links) and offers
 two buttons: "stop these emails" (the same POST) and "stop all marketing
 emails" (`POST /api/v1/emails/unsubscribe/<token>/all`, through
-`user/services/subscription.py: unsubscribe_from_all_marketing`: every
+`src/user/services/subscription.py: unsubscribe_from_all_marketing`: every
 marketing type, the account's `marketing_opted_out_at` and its active topic
 subscriptions). `send_email` reads `EmailOptOut` for every marketing send;
 no task filters on its own. See `grooveshop-django-api/docs/emails.md`.
@@ -301,10 +301,10 @@ no task filters on its own. See `grooveshop-django-api/docs/emails.md`.
 Only the customer lifts an opt-out, from the storefront account's email
 page ("Store emails", `app/composables/useEmailPreferences.ts` in both
 designs): `GET`/`PATCH /api/v1/user/email-preferences`
-(`user/views/email_preferences.py`, proxied by
+(`src/user/views/email_preferences.py`, proxied by
 `server/api/user/email-preferences.{get,patch}.ts`) lists the marketing types
-the store sends (`emails/preferences.py: offered_types`) and applies the
-choices through `user/services/subscription.py: set_marketing_preferences`.
+the store sends (`src/emails/preferences.py: offered_types`) and applies the
+choices through `src/user/services/subscription.py: set_marketing_preferences`.
 Turning a type on splits a `*` row into one row per other type, so the other
 choices stand. The split writes a row for EVERY marketing type, offered or
 not, so a type the store does not send today keeps its opt-out and
@@ -316,7 +316,7 @@ not, so a type the store does not send today keeps its opt-out and
 locale (`OrderService._seed_language_code`, validated against
 `settings.LANGUAGES`). Every customer-facing order email wraps its render
 in `translation.override(get_order_language(order))`
-(`core/utils/i18n.py`), which falls back to the user's language and then
+(`src/core/utils/i18n.py`), which falls back to the user's language and then
 to the store's: `store_language()` is the bound tenant's
 `default_locale`, and `settings.LANGUAGE_CODE` only where no store is
 bound (the public schema). A guest product alert stores the visitor's
@@ -327,17 +327,17 @@ else the store's language.
 **Emails to the store render in the store's language**, subject included:
 `send_admin_new_order_email`, the B2B application, dispute, low-stock,
 review-pending and stale-ACS alerts all wrap their render in
-`translation.override(store_language())` (`order/tasks.py`,
-`b2b/tasks.py`, `product/tasks.py`, `shipping_acs/tasks.py`), never in
+`translation.override(store_language())` (`src/order/tasks.py`,
+`src/b2b/tasks.py`, `src/product/tasks.py`, `src/shipping_acs/tasks.py`), never in
 the worker's active locale. So do the contact-form and feedback
-notifications (`contact/tasks.py`), which also set the submitter's address
+notifications (`src/contact/tasks.py`), which also set the submitter's address
 as `Reply-To` after validating it as one bare address.
 
 ### Link language
 
 A storefront link opens the storefront in the language the email is
 written in. The storefront runs @nuxtjs/i18n `prefix_except_default`, so
-the one rule lives in `core/utils/tenant_urls.py:
+the one rule lives in `src/core/utils/tenant_urls.py:
 storefront_locale_prefix`: a link gets a `/<code>` prefix only when the
 tenant serves that language and it is not the unprefixed locale;
 otherwise it has no prefix.
@@ -380,9 +380,9 @@ In-app notifications are the exception: a notification is read in
 whatever language its viewer is browsing, so `Notification.link` stores a
 **locale-neutral path**. It has no host and no locale prefix, for example
 `/account/orders/42`, and may carry a query and a fragment. Tasks build it
-with `core/utils/tenant_urls.py: storefront_path`. The field is a
+with `src/core/utils/tenant_urls.py: storefront_path`. The field is a
 `CharField` with `validate_storefront_path`, and
-`notification/services.py: create_user_notification` runs that validator
+`src/notification/services.py: create_user_notification` runs that validator
 too, because `objects.create` skips field validators. The storefront opens
 the path under the viewer's current locale with `useLocalePath()`
 (`useNotificationsBell`, which both designs' bells share:
@@ -393,7 +393,7 @@ It cleared links that pointed at a host outside the tenant's domains.
 
 ### What the order-received email says
 
-`send_order_confirmation_email` (`order/tasks.py`) sends
+`send_order_confirmation_email` (`src/order/tasks.py`) sends
 `order_payment_confirmed` for an online payment that has completed, and
 `order_received` otherwise. The second states only what is true when it
 is sent:
@@ -442,7 +442,7 @@ together.
   on commit for each REFUND row of the payment ledger, so an order
   refunded in parts sends one email per part. The task claims its refund
   before sending by inserting a `RefundNotification`
-  (`order/models/refund_notification.py`, one-to-one with the refund, so
+  (`src/order/models/refund_notification.py`, one-to-one with the refund, so
   the database decides between two workers handed the same refund) and
   deletes the claim on permanent failure. A refund the ledger already
   holds never signals again, so the webhook that reports a refund the
@@ -459,7 +459,7 @@ together.
   dispatch, so the two channels stay in lockstep.
 - **PENDING and PROCESSING never reach the customer.**
   `handle_order_status_changed` skips them for email;
-  `order/notifications.py: _ORDER_STATUS_COPY` has no entry for them, so
+  `src/order/notifications.py: _ORDER_STATUS_COPY` has no entry for them, so
   `notify_order_status_changed_live` returns a skip. They are internal
   milestones already covered by the order-received or payment-confirmed
   message.
@@ -497,7 +497,7 @@ together.
 | ACS parcel out for delivery | `acs_out_for_delivery` | `ACS_OUT_FOR_DELIVERY` |
 | BoxNow parcel at locker | `boxnow_parcel_at_locker` | `BOXNOW_PARCEL_AT_LOCKER` |
 | ACS shipment stale | `stale_shipments_alert` to operators | — |
-| Carrier rejected a shipment, or a verified webhook failed to apply | `ops.shipment_rejected`, `ops.webhook_failed` through `shipping/alerts.py` | — |
+| Carrier rejected a shipment, or a verified webhook failed to apply | `ops.shipment_rejected`, `ops.webhook_failed` through `src/shipping/alerts.py` | — |
 
 There is no standalone "tracking available" toast. It used to fire at
 voucher mint — the same premature moment as the old shipped email — and
@@ -506,8 +506,8 @@ was removed with it as redundant against the SHIPPED toast.
 ### Celery delivery and retries
 
 Every email and live-notification task extends
-`core/tasks.py: MonitoredTask`, which extends
-`tenant/celery.py: TenantTask`. `TenantTask.apply_async` stamps a
+`src/core/tasks.py: MonitoredTask`, which extends
+`src/tenant/celery.py: TenantTask`. `TenantTask.apply_async` stamps a
 `_schema_name` header (preferring an explicit one from the caller) and
 `__call__` re-enters that schema — via `tenant_context` with the real
 `Tenant` row, not `schema_context`, because a bare `FakeTenant` carries
@@ -526,7 +526,7 @@ the merchant and dispute emails and the two sweep tasks use
 reservation flag at all, `send_invoice_to_mydata` uses
 `max_retries=5, default_retry_delay=120`, and the two B2B profile emails
 use `max_retries=5` with backoff and jitter. Live-notification tasks
-(`order/notifications.py: TASK_DEFAULTS`) retry **only** on
+(`src/order/notifications.py: TASK_DEFAULTS`) retry **only** on
 `OperationalError` with backoff and jitter: `IntegrityError` will not
 resolve on retry, and re-running a partially completed task would create
 a second `Notification` row because the helper is not idempotent.
@@ -604,7 +604,7 @@ so a staging refresh cannot email real customers. See
 
 ## Invariants
 
-- **Channel-layer group names come from `notification/groups.py:
+- **Channel-layer group names come from `src/notification/groups.py:
   user_group`.** Never build `tenant_…_user_…` by hand.
 - **The socket accepts only a ticket.** No Knox token in a URL, no
   cookie. Tickets are single-use, 60 seconds, consumed with `GETDEL`.
@@ -639,7 +639,7 @@ so a staging refresh cannot email real customers. See
   tokens were revoked. A missing tenant is **not** a cause here: the
   tenant middleware runs first and closes 4004 before the ticket is ever
   read.
-- **Socket closes 4004.** `tenant/middleware_ws.py` found no active
+- **Socket closes 4004.** `src/tenant/middleware_ws.py` found no active
   tenant for the host. See [Multi-tenancy](/dev/platform/multi-tenancy).
 - **No toast but the email arrived.** Expected for a guest order. For a
   signed-in customer, check whether the transition is in
@@ -652,7 +652,7 @@ so a staging refresh cannot email real customers. See
   failure; `_release_*` helpers clear the flag so a resend is possible.
 - **The subject line is wrong but the template is right.** Every
   non-empty `core.Translation` row overrides the compiled catalogue in
-  every pod and worker (`core/rosetta_storage.py: apply_db_overlay`), and
+  every pod and worker (`src/core/rosetta_storage.py: apply_db_overlay`), and
   a fresh `manage.py shell` does not apply the overlay, so it will insist
   the catalogue is fine. The rendered subject is in the worker log line
   and in the order's history note. `manage.py translation_overlay_audit -l el`
@@ -681,52 +681,52 @@ so a staging refresh cannot email real customers. See
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/notification/models/notification.py` | `Notification` fields, expiry |
-| `grooveshop-django-api/notification/models/user.py` | `NotificationUser`, seen state |
-| `grooveshop-django-api/notification/enum.py` | Kind, category, priority, `NotificationTypeEnum` |
-| `grooveshop-django-api/notification/services.py` | `create_user_notification` and locale fallback |
-| `grooveshop-django-api/notification/signals.py` | Post-save fan-out and the translation cache |
-| `grooveshop-django-api/notification/tasks.py` | `send_notification_task`, `group_send` |
-| `grooveshop-django-api/notification/groups.py` | `user_group` name format |
-| `grooveshop-django-api/notification/consumers.py` | `NotificationConsumer`, `force_logout`, close codes |
-| `grooveshop-django-api/notification/views/websocket.py` | Ticket minting, TTL, Knox liveness check |
-| `grooveshop-django-api/core/middleware/channels.py` | `GETDEL` ticket consumption, tenant binding |
-| `grooveshop-django-api/asgi/__init__.py` | WebSocket routing and middleware stack |
-| `grooveshop-django-api/emails/types.py`, `emails/registry.py` | `EmailType` and the catalogue of every email |
-| `grooveshop-django-api/emails/send.py`, `emails/render.py`, `emails/transport.py` | `send_email`, `render`, the one sender |
-| `grooveshop-django-api/emails/resend.py` | The Resend HTTP client: which team's key, the request, the error text |
-| `grooveshop-django-api/settings.py` (`MAILERS`), `core/mail.py` | The `default` and `relay` mailers built from the `EMAIL_*` environment variables, and the demo-recipient filter every send passes |
-| `grooveshop-django-api/emails/log.py`, `emails/status.py`, `emails/tasks.py` | The `EmailLog` writes, the status enum, the retention sweep and the event task |
-| `grooveshop-django-api/emails/webhooks.py`, `emails/events.py`, `emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
-| `grooveshop-django-api/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
-| `grooveshop-django-api/emails/preview.py` | The admin preview of any registered email |
-| `grooveshop-django-api/emails/admin.py`, `emails/switches.py`, `emails/figures.py`, `emails/testsend.py` | The Emails pages of the store admin and the platform admin: grouping, figures, test send |
-| `grooveshop-django-api/tenant/emails.py`, `core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
-| `grooveshop-django-api/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
-| `grooveshop-django-api/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
-| `grooveshop-django-api/core/utils/tenant_urls.py` | `STOREFRONT_LOCALES`, `STOREFRONT_DEFAULT_LOCALE`, `storefront_locale_prefix`, `get_tenant_frontend_url`, `localize_storefront_url`, `storefront_path` |
-| `grooveshop-django-api/user/adapter.py` | `UserAccountAdapter.send_mail` (allauth prefix to email type, queues the send) |
-| `grooveshop-django-api/user/emails.py` | the 19 allauth email types, `AllauthMail`, `ALLAUTH_TYPES`, link localization |
-| `grooveshop-django-api/notification/migrations/0017_notification_link_storefront_path.py` | Link field change and the rewrite of existing links |
+| `grooveshop-django-api/src/notification/models/notification.py` | `Notification` fields, expiry |
+| `grooveshop-django-api/src/notification/models/user.py` | `NotificationUser`, seen state |
+| `grooveshop-django-api/src/notification/enum.py` | Kind, category, priority, `NotificationTypeEnum` |
+| `grooveshop-django-api/src/notification/services.py` | `create_user_notification` and locale fallback |
+| `grooveshop-django-api/src/notification/signals.py` | Post-save fan-out and the translation cache |
+| `grooveshop-django-api/src/notification/tasks.py` | `send_notification_task`, `group_send` |
+| `grooveshop-django-api/src/notification/groups.py` | `user_group` name format |
+| `grooveshop-django-api/src/notification/consumers.py` | `NotificationConsumer`, `force_logout`, close codes |
+| `grooveshop-django-api/src/notification/views/websocket.py` | Ticket minting, TTL, Knox liveness check |
+| `grooveshop-django-api/src/core/middleware/channels.py` | `GETDEL` ticket consumption, tenant binding |
+| `grooveshop-django-api/src/asgi/__init__.py` | WebSocket routing and middleware stack |
+| `grooveshop-django-api/src/emails/types.py`, `src/emails/registry.py` | `EmailType` and the catalogue of every email |
+| `grooveshop-django-api/src/emails/send.py`, `src/emails/render.py`, `src/emails/transport.py` | `send_email`, `render`, the one sender |
+| `grooveshop-django-api/src/emails/resend.py` | The Resend HTTP client: which team's key, the request, the error text |
+| `grooveshop-django-api/src/settings.py` (`MAILERS`), `src/core/mail.py` | The `default` and `relay` mailers built from the `EMAIL_*` environment variables, and the demo-recipient filter every send passes |
+| `grooveshop-django-api/src/emails/log.py`, `src/emails/status.py`, `src/emails/tasks.py` | The `EmailLog` writes, the status enum, the retention sweep and the event task |
+| `grooveshop-django-api/src/emails/webhooks.py`, `src/emails/events.py`, `src/emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
+| `grooveshop-django-api/src/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
+| `grooveshop-django-api/src/emails/preview.py` | The admin preview of any registered email |
+| `grooveshop-django-api/src/emails/admin.py`, `src/emails/switches.py`, `src/emails/figures.py`, `src/emails/testsend.py` | The Emails pages of the store admin and the platform admin: grouping, figures, test send |
+| `grooveshop-django-api/src/tenant/emails.py`, `src/core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
+| `grooveshop-django-api/src/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
+| `grooveshop-django-api/src/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
+| `grooveshop-django-api/src/core/utils/tenant_urls.py` | `STOREFRONT_LOCALES`, `STOREFRONT_DEFAULT_LOCALE`, `storefront_locale_prefix`, `get_tenant_frontend_url`, `localize_storefront_url`, `storefront_path` |
+| `grooveshop-django-api/src/user/adapter.py` | `UserAccountAdapter.send_mail` (allauth prefix to email type, queues the send) |
+| `grooveshop-django-api/src/user/emails.py` | the 19 allauth email types, `AllauthMail`, `ALLAUTH_TYPES`, link localization |
+| `grooveshop-django-api/src/notification/migrations/0017_notification_link_storefront_path.py` | Link field change and the rewrite of existing links |
 | `grooveshop-storefront-ui-node-nuxt/app/components/User/NotificationsBell.vue` | Opens a notification path under the viewer's locale |
-| `grooveshop-django-api/emails/sender.py` | `from_address`, `reply_to`, `store_reply_to` |
-| `grooveshop-django-api/emails/recipients.py` | `store_operators`, `store_operator_addresses` (the store's own inbox list) |
-| `grooveshop-django-api/emails/headers.py` | `build_list_unsubscribe_headers`, `build_transactional_list_headers` |
-| `grooveshop-django-api/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
-| `grooveshop-django-api/order/emails.py` | The order email types and builders (subject, context), `ORDER_EMAIL_KEYS` |
-| `grooveshop-django-api/contact/tasks.py` | The store's contact-form and feedback notifications |
-| `grooveshop-django-api/emails/views.py` | The unsubscribe endpoints (one-click, "all", and the GET redirect to the confirm page) |
-| `grooveshop-django-api/user/views/email_preferences.py` | The customer's marketing email choices, the one place an opt-out is lifted |
-| `grooveshop-django-api/user/services/subscription.py` | `set_marketing_preferences` and `unsubscribe_from_all_marketing` |
-| `grooveshop-django-api/emails/preferences.py` | `offered_types`, the marketing types the store sends |
+| `grooveshop-django-api/src/emails/sender.py` | `from_address`, `reply_to`, `store_reply_to` |
+| `grooveshop-django-api/src/emails/recipients.py` | `store_operators`, `store_operator_addresses` (the store's own inbox list) |
+| `grooveshop-django-api/src/emails/headers.py` | `build_list_unsubscribe_headers`, `build_transactional_list_headers` |
+| `grooveshop-django-api/src/order/tasks.py` | Every order email task and its reservation helpers, `_claim_refund_email` |
+| `grooveshop-django-api/src/order/emails.py` | The order email types and builders (subject, context), `ORDER_EMAIL_KEYS` |
+| `grooveshop-django-api/src/contact/tasks.py` | The store's contact-form and feedback notifications |
+| `grooveshop-django-api/src/emails/views.py` | The unsubscribe endpoints (one-click, "all", and the GET redirect to the confirm page) |
+| `grooveshop-django-api/src/user/views/email_preferences.py` | The customer's marketing email choices, the one place an opt-out is lifted |
+| `grooveshop-django-api/src/user/services/subscription.py` | `set_marketing_preferences` and `unsubscribe_from_all_marketing` |
+| `grooveshop-django-api/src/emails/preferences.py` | `offered_types`, the marketing types the store sends |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useEmailPreferences.ts` | The account's "Store emails" list and switches, for both designs |
 | `grooveshop-storefront-ui-node-nuxt/server/api/user/email-preferences.get.ts` | Proxy for `GET /api/v1/user/email-preferences` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/user/email-preferences.patch.ts` | Proxy for `PATCH /api/v1/user/email-preferences` |
-| `grooveshop-django-api/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
-| `grooveshop-django-api/order/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
-| `grooveshop-django-api/core/tasks.py` | `MonitoredTask` |
-| `grooveshop-django-api/tenant/celery.py` | `TenantTask`, `dispatch_on_commit` |
-| `grooveshop-django-api/core/templates/emails/` | Every template pair and `base/email_base.html` |
+| `grooveshop-django-api/src/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
+| `grooveshop-django-api/src/order/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
+| `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask` |
+| `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `dispatch_on_commit` |
+| `grooveshop-django-api/src/core/templates/emails/` | Every template pair and `base/email_base.html` |
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/websocket.client.ts` | Connect, reconnect, cross-tab broadcast |
 | `grooveshop-storefront-ui-node-nuxt/server/api/websocket/user/ticket.get.ts` | Ticket proxy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/` | Mailpit patches |

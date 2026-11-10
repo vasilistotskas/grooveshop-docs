@@ -128,7 +128,7 @@ hook.
 
 The schema lands before the new code, and the previous release keeps
 querying it until its last pod exits. `manage.py migration_preflight`
-(`grooveshop-django-api/core/db/migration_safety.py`) checks `public` and
+(`grooveshop-django-api/src/core/db/migration_safety.py`) checks `public` and
 every tenant schema. For each one it compares the pending migrations with
 the migrations already applied there, which are the serving release's
 models. It blocks any pending operation whose database effect removes,
@@ -305,7 +305,7 @@ Deployment.
 | `grooveshop-infrastructure/.claude/skills/update-deploy-version/SKILL.md` | Pin-bump skill |
 | `grooveshop-django-api/.github/workflows/ci.yml`, `docker.yml` | Release and image publish; the `Migration Check` deploy replay |
 | `grooveshop-django-api/.github/scripts/tested_in_pr.sh`, `grooveshop-storefront-ui-node-nuxt/.github/scripts/tested_in_pr.sh` | Skip the tests on `main` when the PR run already passed the tree |
-| `grooveshop-django-api/core/management/commands/migration_preflight.py`, `core/db/migration_safety.py` | PreSync step 0 and its classifier |
+| `grooveshop-django-api/src/core/management/commands/migration_preflight.py`, `src/core/db/migration_safety.py` | PreSync step 0 and its classifier |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml`, `grooveshop-media-stream/.github/workflows/docker.yml`, `grooveshop-docs/.github/workflows/docker.yml` | Image publish on release |
 | `grooveshop-docs/.github/workflows/sources.yml`, `scripts/source-lock.mjs`, `sources.lock.json` | The pinned reference-docs commits and the job that moves them |
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release and image |

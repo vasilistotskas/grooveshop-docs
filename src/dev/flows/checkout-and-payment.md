@@ -7,9 +7,9 @@ description: "Cart to paid order: stock reservation, country-aware address and p
 
 There is exactly one order-creation endpoint and two ways through it.
 Which one runs is decided by two facts about the chosen payment method:
-what its **settlement** is (`pay_way/enum/settlement.py: PaySettlement`)
+what its **settlement** is (`src/pay_way/enum/settlement.py: PaySettlement`)
 and whether its **provider** can mint a client-confirmed intent
-(`order/payment.py: PaymentProvider.supports_payment_intent`). Never by a
+(`src/order/payment.py: PaymentProvider.supports_payment_intent`). Never by a
 provider name. Intent-first means the money is verified before the order
 row exists; order-first means the order exists before any money moves.
 Everything else on this page follows from that split.
@@ -65,7 +65,7 @@ sequenceDiagram
 Every price the shopper sees and every price the order is built from
 comes from the same cart row. Before any total is computed, both
 creation paths re-lock the cart and re-bind wholesale pricing
-(`order/services.py: create_order_from_cart` step 2.4 and
+(`src/order/services.py: create_order_from_cart` step 2.4 and
 `create_order_from_cart_offline` step 2.4, both calling
 `B2BPricingService.bind_cart`). The binding runs on **every**
 materialisation, never once — see [B2B](/dev/flows/b2b).
@@ -93,9 +93,9 @@ recorded on the order cannot drift; the detail lives in
 
 ### 2. Stock is reserved, then consumed
 
-`POST /api/v1/cart/reserve-stock` (`cart/views/cart.py: reserve_stock`)
+`POST /api/v1/cart/reserve-stock` (`src/cart/views/cart.py: reserve_stock`)
 makes the cart's holds exactly its current quantities, through
-`order/stock.py: StockManager.reserve_cart_stock`. One transaction locks the
+`src/order/stock.py: StockManager.reserve_cart_stock`. One transaction locks the
 `Cart` row first (`select_for_update`, the lock checkout takes first), then
 every product the old or the new set touches in pk order, releases **all**
 of the cart's unconsumed holds (expired ones included, each with its
@@ -137,7 +137,7 @@ that owns the field instead of as a late 400.
 
 **Phones follow the country, not a hardcoded `+30`.** The country API
 exposes a read-only, derived `phone_metadata` on every country
-(`country/serializers.py`, built by `country/phone.py` from
+(`src/country/serializers.py`, built by `src/country/phone.py` from
 `phonenumbers.PhoneMetadata.metadata_for_region` and cached; never
 stored): `national_number_pattern`, `possible_lengths`,
 `national_prefix_for_parsing` and `example_mobile`. `app/utils/phone.ts`
@@ -165,7 +165,7 @@ country**, and then whatever the chosen carrier adds through
 adapter, not here — see [Shipping](/dev/flows/shipping).
 
 **Region is required only where the country has regions, and must belong
-to it.** `core/validators/address.py: address_errors` owns both rules,
+to it.** `src/core/validators/address.py: address_errors` owns both rules,
 and `region` is part of `ADDRESS_FIELDS`, so `Order.clean`,
 `UserAddress.clean` and the serializers all inherit them;
 `UserAddressWriteSerializer.region` is optional at the field level for
@@ -173,8 +173,8 @@ that reason. The Country API exposes a read-only `has_regions`, and the
 storefront's region field (`required`, disabled state and Zod rule)
 follows `selectedCountry.hasRegions` in checkout and the address forms.
 The country list itself is the full ISO 3166-1 set, seeded by
-`country/migrations/0012_seed_iso_countries.py`; only a rate makes a
-country shippable. `order/serializers/order.py` returns field-scoped 400s for a
+`src/country/migrations/0012_seed_iso_countries.py`; only a rate makes a
+country shippable. `src/order/serializers/order.py` returns field-scoped 400s for a
 region in another country, a carrier with no active rate and a cart over
 the rate's weight cap.
 
@@ -185,7 +185,7 @@ buyer never gets a late rejection.
 
 ### 4. Shipping method decides which pay-ways exist
 
-`GET /api/v1/shipping/options` (`shipping/services.py:
+`GET /api/v1/shipping/options` (`src/shipping/services.py:
 ShippingService.available_options`) requires the delivery country and
 returns one row per active `ShippingRate` for it, and each row carries
 the pay-ways that combination can settle, plus `max_weight_grams` and
@@ -194,13 +194,13 @@ the pay-ways that combination can settle, plus `max_weight_grams` and
 country the store has a rate for; a saved address elsewhere switches the
 form to a new address.
 `GET /api/v1/pay_way` applies the same rules through
-`pay_way/filters.py`, which routes to `PayWayService.filter_by_carrier`
+`src/pay_way/filters.py`, which routes to `PayWayService.filter_by_carrier`
 when a provider code is present and to `filter_by_shipping_kind` when it
 is not — home delivery is provider-agnostic in checkout, so the second
 form intersects the rules of every carrier that serves the kind.
 
 Order creation re-applies both layers in
-`order/views/order.py: OrderViewSet._validate_pay_way_for_order`, plus a
+`src/order/views/order.py: OrderViewSet._validate_pay_way_for_order`, plus a
 credentials gate (`PayWayService.is_provider_configured`). A stale client
 cannot place an order with a method checkout would never have offered.
 
@@ -213,7 +213,7 @@ country the store does not serve. The storefront reads no shipping
 setting either: `shippingPrice` is the live option price or `null`
 (shown as "—"), and a failed options fetch is an error state with a
 retry that blocks the step, not a fallback number.
-`cart/serializers/cart.py` requires `country_id` for the same reason.
+`src/cart/serializers/cart.py` requires `country_id` for the same reason.
 
 **Free shipping and a free pay-way fee are judged on one value.**
 `OrderService.threshold_value(cart_total, discount_total)` is the products
@@ -225,9 +225,9 @@ threshold is never free), and `OrderService.calculate_payment_method_fee`
 waives the fee when it reaches a non-zero `PayWay.free_threshold`. Every
 caller of `shipping_cost` and `calculate_payment_method_fee` passes it:
 both order-creation paths, the payment-first verification and the
-`cart/create-payment-intent` preview (`cart/views/cart.py`), so the preview
+`cart/create-payment-intent` preview (`src/cart/views/cart.py`), so the preview
 and the order cannot disagree. The cart serializer exposes it as
-`freeThresholdValue` (`cart/serializers/cart.py:
+`freeThresholdValue` (`src/cart/serializers/cart.py:
 get_free_threshold_value`). The storefront compares every "free above X"
 with it, never with the cart total: `useCheckoutForm.ts` sends it as the
 shipping options' `orderValueAmount`, `app/utils/payWayCost.ts:
@@ -268,7 +268,7 @@ first.
 
 **One order per payment intent.** `Order.payment_id` carries a partial
 unique index over non-empty ids (`order_payment_id_unique`, migration
-`order/migrations/0069_order_payment_id_unique.py`; `''` and NULL stay
+`src/order/migrations/0069_order_payment_id_unique.py`; `''` and NULL stay
 repeatable), and `_order_created_for_payment` looks the intent up twice:
 once without a lock before the provider is asked, so a repeat does not
 depend on the provider being reachable, and again under the cart row lock,
@@ -281,7 +281,7 @@ or deleted order, is refused as `PaymentVerificationError`, 400
 `payment_verification`. Two different carts racing for one intent can
 both miss the lookup; the index then rejects the second insert, and
 `create_order_from_cart` recognises the constraint by name
-(`PAYMENT_ID_UNIQUE_CONSTRAINT`, `order/models/order.py`) and answers it
+(`PAYMENT_ID_UNIQUE_CONSTRAINT`, `src/order/models/order.py`) and answers it
 the same way. Any other integrity error stays a generic
 `invalid_order_data`. The order-first path is **not** idempotent: a
 repeated Viva submit creates a second PENDING order, which the stuck-order
@@ -291,15 +291,15 @@ sweep cancels.
 product the order touches (cart lines, the session's reservations,
 free-gift products) in one statement ordered by pk
 (`OrderService._lock_order_products` calling
-`order/stock.py: StockManager.lock_products`), before the first
+`src/order/stock.py: StockManager.lock_products`), before the first
 `OrderItem` insert; the cart-item query locks only the cart lines
 (`of=("self",)`). Two carts holding the same products in different line
 orders used to lock them in opposite orders, and PostgreSQL broke the
 cycle by aborting one checkout. The lock must precede the inserts because
 each insert takes `FOR KEY SHARE` on its product, which conflicts with
 `FOR UPDATE`. `cancel_order` and the expired-reservation sweep lock through
-the same helper, the bulk discount admin actions in `product/admin.py`
-lock in pk order, and the guest-to-user cart merge (`cart/services.py`)
+the same helper, the bulk discount admin actions in `src/product/admin.py`
+lock in pk order, and the guest-to-user cart merge (`src/cart/services.py`)
 no longer locks products through its join.
 
 Before it creates anything, the order-first path refuses an online-settled
@@ -310,7 +310,7 @@ guest email). The service raises `InvalidOrderDataError` with a sentence
 naming the limit, but `OrderViewSet.create` answers every
 `InvalidOrderDataError` with the generic 400 `invalid_order_data` and the
 detail "Invalid order data", so the shopper does not see that sentence
-(`order/views/order.py`). The payment-first path (`create_order_from_cart`)
+(`src/order/views/order.py`). The payment-first path (`create_order_from_cart`)
 does not call it, though its own unpaid orders are counted.
 
 The order-first path creates `status=PENDING, payment_status=PENDING`,
@@ -325,7 +325,7 @@ error, not a silent full charge.
 
 **Viva Wallet — primary, hosted redirect.** The order is created first,
 then `POST /api/v1/order/{id}/create_checkout_session` mints a Viva order
-code (`order/payment.py: VivaWalletPaymentProvider.create_checkout_session`)
+code (`src/order/payment.py: VivaWalletPaymentProvider.create_checkout_session`)
 and the storefront sets `window.location.href` to the hosted page
 (`app/components/VivaWalletCheckout.vue`). Every issued code is appended
 to `metadata["viva_order_codes"]` — a shopper can pay on an older
@@ -334,7 +334,7 @@ session, and both the webhook and the return endpoint resolve by
 
 The webhook is a machine-to-machine call that lands on the public schema,
 since Viva knows nothing about the tenant boundary
-(`order/views/viva_webhook.py: viva_wallet_webhook`). A GET is Viva's
+(`src/order/views/viva_webhook.py: viva_wallet_webhook`). A GET is Viva's
 verification handshake and returns the tenant's
 `webhook_verification_key` when set, otherwise fetches one from Viva and
 returns that — the stored key is a cache, not a requirement. A POST
@@ -343,9 +343,9 @@ Retrieve Transaction API inside each candidate's context**; only the
 tenant whose credentials can retrieve the transaction processes it. The
 IP allowlist is informational, a log line: refusing on Viva's hardcoded
 ranges would fail closed the day they change. It reads the one address a
-caller cannot write (`core/client_ip.py: client_ip_or_peer`), never a
+caller cannot write (`src/core/client_ip.py: client_ip_or_peer`), never a
 bare `X-Forwarded-For` entry. Idempotency is a database row, not metadata:
-`order/models/viva_webhook_event.py: VivaWebhookEvent` is unique on
+`src/order/models/viva_webhook_event.py: VivaWebhookEvent` is unique on
 `(transaction_id, event_type_id)`.
 
 Event 1796 checks `StatusId == "F"`, then verifies the transaction
@@ -364,7 +364,7 @@ Transaction (`_verify_viva_reversal`: one of the order's codes, status `F`,
 a refund or void type, a negative amount), and it is recorded as a REFUND
 row against the order's CHARGE row that its `ParentId` names. The payment
 status, PARTIALLY_REFUNDED or REFUNDED, follows from the ledger's sums
-(`order/payment_ledger.py: PaymentLedger.refund_status`). The handler
+(`src/order/payment_ledger.py: PaymentLedger.refund_status`). The handler
 records its real outcome on `VivaWebhookEvent.outcome`, so a refused event
 reads `skipped`, not `processed`. Refunds and the ledger are covered in
 [Order lifecycle](/dev/flows/order-lifecycle).
@@ -387,7 +387,7 @@ re-verify, then mints the intent. The card is confirmed in the browser
 publishable key. dj-stripe receives webhooks on a per-tenant, UUID-routed
 endpoint, so django-tenants selects the schema and dj-stripe verifies
 against that schema's `WebhookEndpoint` secret. Handlers live in
-`order/signals/handlers.py`: `payment_intent.succeeded`,
+`src/order/signals/handlers.py`: `payment_intent.succeeded`,
 `payment_intent.payment_failed`, `payment_intent.requires_action`,
 `charge.succeeded` / `charge.updated` (the fee, `handle_stripe_charge_fee`),
 `refund.created` / `refund.updated` (one handler, `handle_stripe_refund_made`),
@@ -395,7 +395,7 @@ against that schema's `WebhookEndpoint` secret. Handlers live in
 (one handler, `handle_stripe_refund_failed`), `charge.refunded` (gift card
 purchases only), `charge.dispute.created`, `charge.dispute.closed`,
 `checkout.session.completed` and `checkout.session.expired`. The endpoint
-the platform provisions subscribes every event (`tenant/provisioning.py`,
+the platform provisions subscribes every event (`src/tenant/provisioning.py`,
 `enabled_events=["*"]`); an endpoint created by hand must deliver at least
 `refund.created` and `refund.updated`, or no Stripe refund reaches an
 order's ledger, because `charge.refunded` books none. Each except
@@ -449,7 +449,7 @@ no remittance reconcile on this path, and no multi-day wait.
 **Bank transfer.** Settlement `offline_transfer` exists and
 `PayWayService.process_payment` handles it (it deliberately does not
 write `payment_id`/`payment_status` for that settlement), but **no
-bank-transfer pay-way row is seeded**. `pay_way/migrations/0019_seed_default_pay_ways.py`
+bank-transfer pay-way row is seeded**. `src/pay_way/migrations/0019_seed_default_pay_ways.py`
 seeds only cash on delivery (active), Viva Wallet and Stripe (both
 inactive until credentials land). A merchant who wants bank transfer
 creates the row in the admin and fills in the WYSIWYG `instructions`
@@ -477,7 +477,7 @@ arrived through a real checkout — see
   attempt and reuses it across automatic retries
   (`useCheckoutSubmit.ts`), clearing it on success or on a
   non-retryable error. Django scopes the key to the shopper, not the
-  connection (`core/middleware/idempotency.py`: the authenticated user,
+  connection (`src/core/middleware/idempotency.py`: the authenticated user,
   else the cart token or id, else the session), so a retry from another
   address (a phone changing networks, the other gateway pod) still
   replays instead of running twice.
@@ -505,7 +505,7 @@ arrived through a real checkout — see
 
 Every order records where the shopper came from, as one
 `OrderAttribution` row written in the creation transaction by
-`OrderAttributionService.record` (`order/services.py`), on both paths.
+`OrderAttributionService.record` (`src/order/services.py`), on both paths.
 
 **Capture, in the browser.** `app/plugins/attribution.client.ts` runs
 once per page load, synchronously, and reads `window.location` and
@@ -530,23 +530,23 @@ browser that strips `Referer` still names itself there. The agent
 gateway sends only `attribution.agentProtocol`; see
 [Agentic commerce](/dev/flows/agentic-commerce).
 
-**Classification, in Django.** `order/attribution.py: classify` is pure
+**Classification, in Django.** `src/order/attribution.py: classify` is pure
 and first-match-wins: agent protocol, then `utm_source` (`paid` when the
 medium matches GA4's paid rule or a paid click id is present, else
 `campaign`), then click id, known referrer host, in-app browser
 `User-Agent`, any other external referrer, and finally `direct`. The
-tenant's own domains (`tenant/middleware.py: tenant_domain_set`) never
+tenant's own domains (`src/tenant/middleware.py: tenant_domain_set`) never
 count as a referrer. Only the referrer's host and the landing path (no
 query) are stored. The result is an `OrderSourceType`
-(`order/enum/attribution.py`) plus `source`, `medium`, `campaign`,
+(`src/order/enum/attribution.py`) plus `source`, `medium`, `campaign`,
 `referrer_host` and `landing_path`.
 
 **Read side.** `OrderSerializer.attribution` on order list and detail
 (null for an order older than the table), the `source` / `sourceType`
-filters (`order/filters.py`), and in the admin a source badge column,
+filters (`src/order/filters.py`), and in the admin a source badge column,
 two filters, read-only fields on the order's Additional Information tab
 and the store dashboard's "Where orders come from" card
-(`admin/dashboard/store/queries.py: order_sources`, the top five sources
+(`src/admin/dashboard/store/queries.py: order_sources`, the top five sources
 plus "Other" for the selected period). The per-field reference
 is section 3.4 of [Order system](/dev/django/reference/order-system).
 
@@ -555,7 +555,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 - **Routing is on settlement and capability, never on a provider
   name.** `provider_supports(code, "supports_payment_intent")` and
   `PaySettlement(pay_way.settlement)` are the only discriminators
-  (`order/views/order.py`, `order/services.py`, `cart/views/cart.py`).
+  (`src/order/views/order.py`, `src/order/services.py`, `src/cart/views/cart.py`).
 - **Credentials never fall back to platform settings.** An unconfigured
   provider is hidden from the pay-way list, refused at order creation
   and refused at checkout-session creation
@@ -563,7 +563,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   [Multi-tenancy](/dev/platform/multi-tenancy).
 - **Shipping never falls back to settings.** No active `ShippingRate`
   means no option, no quote and a 400 at order creation, on both sides
-  (`shipping/services.py`, `order/services.py`,
+  (`src/shipping/services.py`, `src/order/services.py`,
   `app/composables/useCheckoutForm.ts`).
 - **One order per provider payment.** `Order.payment_id` is unique when
   non-empty (`order_payment_id_unique`), and `create_order_from_cart`
@@ -586,7 +586,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   `_clear_cart_for_order` removes only the order's own lines so a basket
   built during the redirect window is not destroyed.
 - **A settled payment status is final.** `SETTLED_PAYMENT_STATUSES`
-  (`order/enum/status.py`) blocks any provider report — webhook or poll
+  (`src/order/enum/status.py`) blocks any provider report — webhook or poll
   — from regressing COMPLETED, REFUNDED, PARTIALLY_REFUNDED or CANCELED.
 - **Money that arrived for a cancelled order is recorded, never
   fulfilled.** Both Stripe entry points stamp
@@ -626,7 +626,7 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
   hook fails and the old pods keep serving. It never deletes or merges
   rows: decide which order is real, cancel and clear the other, then sync
   again. The build is
-  `core/db/migration_operations.py: AddUniqueConstraintAdaptively`,
+  `src/core/db/migration_operations.py: AddUniqueConstraintAdaptively`,
   concurrent outside a transaction; a failed concurrent build drops its
   own INVALID index.
 - **Shopper pays on a stale Viva tab after the total moved.** The
@@ -670,34 +670,34 @@ is section 3.4 of [Order system](/dev/django/reference/order-system).
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `threshold_value`, `calculate_payment_method_fee`, `settle_cod_payment`, `OrderAttributionService` |
-| `grooveshop-django-api/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
-| `grooveshop-django-api/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
-| `grooveshop-django-api/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
-| `grooveshop-django-api/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
-| `grooveshop-django-api/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
-| `grooveshop-django-api/shipping/services.py` | `quote`, `assert_available`, `available_options` |
-| `grooveshop-django-api/country/serializers.py` | `phone_metadata` and `has_regions` fields |
-| `grooveshop-django-api/country/migrations/0012_seed_iso_countries.py` | The full ISO 3166-1 country seed |
-| `grooveshop-django-api/country/phone.py` | Phone metadata from `phonenumbers` |
-| `grooveshop-django-api/country/filters.py` | `?shippable=true` |
-| `grooveshop-django-api/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value` |
-| `grooveshop-django-api/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
-| `grooveshop-django-api/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
-| `grooveshop-django-api/order/models/viva_webhook_event.py` | Viva idempotency table |
-| `grooveshop-django-api/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
-| `grooveshop-django-api/order/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |
-| `grooveshop-django-api/order/models/attribution.py` | `OrderAttribution` |
-| `grooveshop-django-api/order/enum/attribution.py` | `OrderSourceType` |
-| `grooveshop-django-api/order/serializers/order.py` | `OrderAttributionInputSerializer` (write), `OrderAttributionSerializer` (read) |
-| `grooveshop-django-api/order/filters.py` | `source` and `sourceType` order filters |
-| `grooveshop-django-api/order/stock.py` | `StockManager.reserve_cart_stock` (a cart's holds replaced under the cart lock), convert, decrement, increment, cleanup, `lock_products` |
-| `grooveshop-django-api/pay_way/services.py` | `is_provider_configured`, `filter_by_carrier`, `filter_by_shipping_kind`, `process_payment` |
-| `grooveshop-django-api/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
-| `grooveshop-django-api/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
-| `grooveshop-django-api/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `create_payment_intent` |
+| `grooveshop-django-api/src/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
+| `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `threshold_value`, `calculate_payment_method_fee`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/src/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
+| `grooveshop-django-api/src/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
+| `grooveshop-django-api/src/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
+| `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
+| `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
+| `grooveshop-django-api/src/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
+| `grooveshop-django-api/src/shipping/services.py` | `quote`, `assert_available`, `available_options` |
+| `grooveshop-django-api/src/country/serializers.py` | `phone_metadata` and `has_regions` fields |
+| `grooveshop-django-api/src/country/migrations/0012_seed_iso_countries.py` | The full ISO 3166-1 country seed |
+| `grooveshop-django-api/src/country/phone.py` | Phone metadata from `phonenumbers` |
+| `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
+| `grooveshop-django-api/src/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value` |
+| `grooveshop-django-api/src/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
+| `grooveshop-django-api/src/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
+| `grooveshop-django-api/src/order/models/viva_webhook_event.py` | Viva idempotency table |
+| `grooveshop-django-api/src/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
+| `grooveshop-django-api/src/order/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |
+| `grooveshop-django-api/src/order/models/attribution.py` | `OrderAttribution` |
+| `grooveshop-django-api/src/order/enum/attribution.py` | `OrderSourceType` |
+| `grooveshop-django-api/src/order/serializers/order.py` | `OrderAttributionInputSerializer` (write), `OrderAttributionSerializer` (read) |
+| `grooveshop-django-api/src/order/filters.py` | `source` and `sourceType` order filters |
+| `grooveshop-django-api/src/order/stock.py` | `StockManager.reserve_cart_stock` (a cart's holds replaced under the cart lock), convert, decrement, increment, cleanup, `lock_products` |
+| `grooveshop-django-api/src/pay_way/services.py` | `is_provider_configured`, `filter_by_carrier`, `filter_by_shipping_kind`, `process_payment` |
+| `grooveshop-django-api/src/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
+| `grooveshop-django-api/src/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
+| `grooveshop-django-api/src/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `create_payment_intent` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, shippable countries, shipping options (quoted on `freeThresholdValue`) and their error state, pay-way loading |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/payWayCost.ts` | `payWayDisplayCost`: the fee shown, waived on `freeThresholdValue` |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/phone.ts` | `normalizePhone`, `isPlausiblePhone`, `stripDialCodeForDisplay`, `dialCodeLabel` |

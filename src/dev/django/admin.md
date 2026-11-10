@@ -17,32 +17,32 @@ URLs, dashboards, sidebars or settings blocks.
 
 | | Store admin | Platform admin |
 |---|---|---|
-| Class | `admin/admin.py: MyAdminSite` | `admin/platform_site.py: PlatformAdminSite` |
+| Class | `src/admin/admin.py: MyAdminSite` | `src/admin/platform_site.py: PlatformAdminSite` |
 | Instance name | `admin` | `platform_admin` |
-| Mounted by | `core/urls.py` (`ROOT_URLCONF`, locale-prefixed `admin/`) | `tenant/urls_public.py` (`PUBLIC_SCHEMA_URLCONF`, locale-prefixed `admin/`) |
+| Mounted by | `src/core/urls.py` (`ROOT_URLCONF`, locale-prefixed `admin/`) | `src/tenant/urls_public.py` (`PUBLIC_SCHEMA_URLCONF`, locale-prefixed `admin/`) |
 | Unfold settings | `UNFOLD` in `settings.py` | `UNFOLD_PLATFORM` (`settings_name = "UNFOLD_PLATFORM"`) |
-| Dashboard | `admin/index.html`, widgets in `admin/dashboard/store/` | `admin/platform_index.html`, widgets in `admin/dashboard/platform.py` |
+| Dashboard | `admin/index.html`, widgets in `src/admin/dashboard/store/` | `admin/platform_index.html`, widgets in `src/admin/dashboard/platform.py` |
 | Who passes `has_permission` | a platform-staff session with an active staff-capable `UserTenantMembership` in the current tenant, or a superuser | a platform-staff session that is a superuser |
 
 Both sites use `PlatformAdminAuthenticationForm`, so credentials are always
 checked against the public schema's user table. `MyAdminSite.has_permission`
 first requires `is_platform_staff_session(request)` (the provenance stamp
-from `tenant/auth_backends.py`) and then a membership; `is_staff` alone
+from `src/tenant/auth_backends.py`) and then a membership; `is_staff` alone
 never opens a store's admin. `PlatformAdminSite.has_permission` requires
 `is_superuser` because the control-plane dashboard renders every store's
 name, domain, plan and order count. The membership is read once per
 request: `tenant.membership.get_membership` remembers its answer on the
 user object, keyed by tenant.
 
-`register_platform_models()` (`admin/platform_site.py`), called from
-`MyAdminConfig.ready()` in `admin/apps.py`, mirrors the control-plane
+`register_platform_models()` (`src/admin/platform_site.py`), called from
+`MyAdminConfig.ready()` in `src/admin/apps.py`, mirrors the control-plane
 models onto the platform site after autodiscovery. The store site is not
 mounted on the public host at all
 (`tests/unit/tenant/test_platform_host_serves_only_the_platform_admin.py`).
 
 The copy reuses the store admin's own class. `PLATFORM_ADMIN_CLASSES`
 lists the exceptions, models the two sites describe differently. Today it
-has one: `user.UserAccount` → `user/admin.py: PlatformUserAdmin`. A
+has one: `user.UserAccount` → `src/user/admin.py: PlatformUserAdmin`. A
 `UserAccount` is a shopper on a store host but a platform identity in
 public, and the store's `UserAdmin` reads store-only tables (loyalty,
 orders), which answered 500 on the platform. `PlatformUserAdmin` shows:
@@ -52,13 +52,13 @@ orders), which answered 500 on the platform. `PlatformUserAdmin` shows:
 - a **Kind** filter: platform superusers, store staff, dormant.
 
 It shows no shopper data. Deleting an identity goes through
-`tenant/deletion.py: PublicSchemaDeletionMixin`, which collects nothing
+`src/tenant/deletion.py: PublicSchemaDeletionMixin`, which collects nothing
 from tenant-only apps in the public schema, for the delete and for its
 confirmation page. `tests_mt/test_platform_admin_pages_open.py` walks
 every model on the platform site (list, add, change) on the real public
 schema, and deletes an identity.
 
-Branding comes from `admin/branding.py`: a store shows its own logo and
+Branding comes from `src/admin/branding.py`: a store shows its own logo and
 favicon, and only the platform's own storefront falls back to the platform
 assets; any other store without a logo shows Unfold's symbol and its name.
 
@@ -75,7 +75,7 @@ urlconfs. The store sidebar is not in settings: it is built per request
 on the store host (below), so its plain `reverse()` calls always resolve
 against the urlconf serving them.
 
-## `BaseModelAdmin` (`admin/base.py`)
+## `BaseModelAdmin` (`src/admin/base.py`)
 
 Every first-party admin extends `BaseModelAdmin` (or
 `BaseTranslatableAdmin` / `BaseTranslatableTabularInline` for parler
@@ -103,13 +103,13 @@ one that does not. It sets the shared defaults once — `compressed_fields`,
 - **HTML fields.** `formfield_overrides` maps `tinymce.models.HTMLField`
   to TinyMCE; without it Unfold's `TextField` override wins the MRO walk.
 
-Shared helpers: `admin/displays.py` (`money`, `format_dt`,
+Shared helpers: `src/admin/displays.py` (`money`, `format_dt`,
 `relative_time` — all locale-aware; `header_two_line` for
 `@display(header=True)` rows, with `contained=True` for logos and flags;
 `change_link`, which reverses on the serving site's namespace;
 `link_cell` / `label_cell` for Unfold's escaping table component),
-`admin/filters.py` (`AnnotatedRangeFilter`, which annotates only when a
-bound is set, and `LikesCountFilter`), `admin/datasets.py`.
+`src/admin/filters.py` (`AnnotatedRangeFilter`, which annotates only when a
+bound is set, and `LikesCountFilter`), `src/admin/datasets.py`.
 
 ### Guarantees the tests enforce
 
@@ -123,9 +123,9 @@ bound is set, and `LikesCountFilter`), `admin/datasets.py`.
 
 ## Withholding on a tenant host
 
-`WithheldOnTenantHostModelAdmin` (`admin/mixins.py`), a base of
+`WithheldOnTenantHostModelAdmin` (`src/admin/mixins.py`), a base of
 `BaseModelAdmin`, refuses on a store host every model whose app label is
-in `tenant/app_labels.py: shared_only_app_labels()` — in `SHARED_APPS`,
+in `src/tenant/app_labels.py: shared_only_app_labels()` — in `SHARED_APPS`,
 not in `TENANT_APPS` — so a store never sees the platform's rows dressed
 as its own. It overrides `has_module_permission` and the four object
 permissions; `has_module_permission` returning `False` drops the model
@@ -177,7 +177,7 @@ page, built from Unfold components.
   context from `render_change_form`).
 - **Datasets.** A related list that grows without bound is a dataset,
   not an inline (an inline's `max_num` caps new rows, not shown ones):
-  `admin/datasets.py: RelatedDatasetAdmin` pages the rows belonging to
+  `src/admin/datasets.py: RelatedDatasetAdmin` pages the rows belonging to
   the change form's object and shows nothing without view permission.
   Used for a product's stock activity, a customer's orders and a gift
   card's ledger.
@@ -190,7 +190,7 @@ page, built from Unfold components.
 
 A structured `JSONField` names its schema with
 `validators=[JSONSchemaValidator("app.json_schemas.name")]`
-(`core/json_schema.py`). The path points at a function returning a Draft
+(`src/core/json_schema.py`). The path points at a function returning a Draft
 2020-12 schema, so migrations record the path, not a copy, and a schema
 built from runtime data (the storefront locales, strategy codes) is built
 when used. The one schema validates writes (`full_clean`, the admin form,
@@ -199,17 +199,17 @@ Errors name the offending entry (`[0]: ...` for the first item of a list, `en: .
 
 Schemas are self-contained, with no `$ref`: Unfold creates its editor
 without a reference resolver. Fields covered: `Tenant.available_locales`,
-`store_description_i18n`, `allowed_csp_sources` (`tenant/json_schemas.py`),
+`store_description_i18n`, `allowed_csp_sources` (`src/tenant/json_schemas.py`),
 `RecommendationSlot.strategy_chain` and `weights`
-(`recommendation/json_schemas.py`).
+(`src/recommendation/json_schemas.py`).
 
 ## Dashboards
 
 Both dashboards are Unfold component widgets
-(`admin/dashboard/base.py: DashboardWidget`); the page templates are
+(`src/admin/dashboard/base.py: DashboardWidget`); the page templates are
 layouts of `{% component ... with component_class="..." %}` tags, and
 `DASHBOARD_CALLBACK` is not used. A widget's figures come from a
-`@dashboard_query` (`admin/dashboard/cache.py`):
+`@dashboard_query` (`src/admin/dashboard/cache.py`):
 
 ```python
 @dashboard_query(
@@ -228,8 +228,8 @@ save or delete of a model it `depends_on`, every variant at once.
 `UserAccount` is never a dependency — every login saves it. Widgets build
 their labels, colours (theme tokens, never hex) and chart JSON per request.
 
-The store dashboard (`admin/dashboard/store/widgets.py`, laid out by
-`core/templates/admin/index.html`) shows one period at a time, picked by
+The store dashboard (`src/admin/dashboard/store/widgets.py`, laid out by
+`src/core/templates/admin/index.html`) shows one period at a time, picked by
 `?period=` (`7d`, `30d` default, `13w`, `12m`: `queries.PERIODS`, whole
 calendar buckets ending with the current one, compared with the span of
 equal length before), and its sales chart one measure, picked by
@@ -267,7 +267,7 @@ every store-admin page. Every entry is decided there:
   user (`changelist_link`: `has_module_permission` and
   `has_view_or_change_permission`), so a role never sees a link that
   answers 403;
-- an optional feature follows `admin/features.py: StoreFeatures`, read
+- an optional feature follows `src/admin/features.py: StoreFeatures`, read
   once per request. A plan-gated feature (loyalty, promotions, gift
   cards, B2B, recommendations) is an `Availability`: `UNAVAILABLE` when
   the `Tenant` plan flag is off (`tenant_plan_allows`) hides it,
@@ -283,7 +283,7 @@ every store-admin page. Every entry is decided there:
 - badges count waiting work only, from `queries.attention_counts`.
 
 The titles there are what the admin guide names as `Sales → Orders`; the
-Greek guide uses their `locale/el` translations.
+Greek guide uses their `src/locale/el` translations.
 `tests/integration/admin/test_store_navigation.py` covers the plan and
 setting states, the roles, the badges, and that every registered store
 page is reachable from the sidebar or a tab strip, or is named in the test
@@ -292,7 +292,7 @@ with the reason it is not (`test_every_store_page_is_reachable`).
 The platform sidebar is built the same way: `UNFOLD_PLATFORM["SIDEBAR"]
 ["navigation"]` points at `admin.navigation.platform_sidebar`, which lists
 every entry for every platform operator and reverses each link against the
-request's own URLconf. `admin/permissions.py` provides `is_superuser` and
+request's own URLconf. `src/admin/permissions.py` provides `is_superuser` and
 `platform_environment` (the control-plane badge).
 
 `SITE_DROPDOWN` on both sites is `admin.navigation.ops_site_dropdown`,
@@ -301,14 +301,14 @@ built per request because Unfold renders dropdown items unchecked:
 when its `ADMIN_*_URL` is set) for platform superusers, nothing for
 anyone else. The store tools it used to hold are sidebar entries in the
 store's **Settings** group (the email preview now lives on each email's page
-under Settings → Emails, `emails/admin.py`):
+under Settings → Emails, `src/emails/admin.py`):
 Translations (Rosetta) where `core.rosetta_access.tenant_scoped_rosetta_access`
 allows it, Cache for `core.purge_cache` holders (store ADMIN and OWNER;
 STAFF may not change store settings).
 
 ## Command palette
 
-Both sites answer ⌘K through `admin/search.py: CommandSearchMixin`, which
+Both sites answer ⌘K through `src/admin/search.py: CommandSearchMixin`, which
 overrides Unfold's `search` view and renders Unfold's own
 `command_results.html`, so only what is found changes. Unfold's version
 matched the term against app names as well as model names (typing
@@ -336,7 +336,7 @@ of 2 and 3, except a screen the sidebar lists, which stays searchable (a
 platform superuser's System section keeps the ACS logs while ACS is
 inactive). The platform site hides nothing; the store site returns
 `StoreFeatures.absent_apps() | StoreFeatures.absent_models()`
-(`admin/features.py`): the apps of plan features that are not
+(`src/admin/features.py`): the apps of plan features that are not
 configurable and of inactive carriers, and the shopper-input pages whose
 setting is off. `absent_models` is the same list `store_sidebar` drops, so
 the sidebar and the palette cannot disagree. `UNFOLD["COMMAND"]` and
@@ -348,33 +348,33 @@ cap and order, and the two-character minimum.
 
 ## Header and footer
 
-`core/templates/admin/base_site.html` overrides Unfold's file through two
+`src/core/templates/admin/base_site.html` overrides Unfold's file through two
 blocks Unfold leaves empty: `nav-global-side` renders a **View store**
 link to `storefront_url` (set by `MyAdminSite.each_context` from
 `UNFOLD["SITE_URL"]`, `admin.navigation.storefront_url`), and `footer`
-includes `core/templates/admin/footer.html` on every non-popup page. The
-footer context comes from `admin/mixins.py: AdminFooterMixin`, shared by
+includes `src/core/templates/admin/footer.html` on every non-popup page. The
+footer context comes from `src/admin/mixins.py: AdminFooterMixin`, shared by
 both sites: the site header, `RELEASE_VERSION`, a **Help & Guides** link
 when `ADMIN_DOCS_URL` is set, and **API docs** (`api_docs_url_name`,
 `swagger-ui`, which both sites' URLconfs serve) for platform superusers.
 
-`admin/environment.py` supplies `ENVIRONMENT` and
+`src/admin/environment.py` supplies `ENVIRONMENT` and
 `ENVIRONMENT_TITLE_PREFIX` for the store site. Both return `None` on
 production unless the viewer `is_platform_superuser`, since a store's own
 staff only ever work in production; every other environment is labelled
 for everyone.
 
-The cache page (`admin/admin.py: MyAdminSite.clear_cache_view`) requires
+The cache page (`src/admin/admin.py: MyAdminSite.clear_cache_view`) requires
 `core.purge_cache`; purges are scoped to the store's own keys, host and
 edge zone. See [Caches & purging](/dev/operations/caches).
 
 ## Template overrides
 
-- `core/templates/admin/base_site.html`, `footer.html`: the header link
+- `src/core/templates/admin/base_site.html`, `footer.html`: the header link
   and the footer (above).
-- `core/templates/admin/index.html`, `platform_index.html` and
+- `src/core/templates/admin/index.html`, `platform_index.html` and
   `admin/dashboard/`: the dashboards.
-- `core/templates/admin/clear_cache.html`, `platform_billing.html`: custom
+- `src/core/templates/admin/clear_cache.html`, `platform_billing.html`: custom
   pages. The email pages (switches, preview and the htmx preview fragment) are
   in `emails/templates/admin/emails/`.
 - `admin/order/order_summary.html`, `product/apply_discount.html`,
@@ -388,10 +388,10 @@ Everything is Unfold components and the project's Tailwind build
 The admin is Greek-first (`el`, with `en` as the source language; `de`
 is out of scope for the admin). Three catalogues meet on one page:
 
-- **The project's own**, `locale/<lang>/LC_MESSAGES/django.po`, from
+- **The project's own**, `src/locale/<lang>/LC_MESSAGES/django.po`, from
   `manage.py makemessages -l el -l en` (ignore `node_modules`, `htmlcov`,
   `staticfiles`, `mediafiles`, `web`, `tests`, `tests_mt`).
-- **django-unfold's strings**, `locale_vendor/unfold/`, from
+- **django-unfold's strings**, `src/locale_vendor/unfold/`, from
   `manage.py makemessages_unfold -l el`. Unfold ships no translations
   and leaves them to each project; the command walks the installed
   package, leaves out what Django's own Greek catalogues already
@@ -422,7 +422,7 @@ has strings its catalogue lacks (one way only, since what xgettext finds
 depends on its version); `tests/unit/test_model_field_labels.py`
 fails on a model field whose label Django derived from its name. Text
 built for display goes through gettext (`ngettext` for counts), never an
-f-string; `admin/displays.py: relative_time` passes its own translated
+f-string; `src/admin/displays.py: relative_time` passes its own translated
 units, because Django's Greek catalogue leaves `timesince`'s empty.
 CI compiles every catalogue before the tests, and tests run in `el`:
 a test asserting English text takes `pytest.mark.assert_english`, and an
@@ -441,10 +441,10 @@ holds lazy strings evaluated after the request has reset the language.
 3. Register it for the store site; add public-schema models to
    `register_platform_models()`.
 4. Add the sidebar entry: a `page(...)` call in
-   `admin/navigation.py: store_sidebar`, under its group or sub-menu and
+   `src/admin/navigation.py: store_sidebar`, under its group or sub-menu and
    gated on `admin.features` if it belongs to an optional feature; or, for
    the platform site, a `page(...)` call in
-   `admin/navigation.py: platform_sidebar`. A page reached only from a tab strip goes in `TABS`.
+   `src/admin/navigation.py: platform_sidebar`. A page reached only from a tab strip goes in `TABS`.
 5. Run `uv run pytest tests/unit/admin tests/integration/admin`; add the
    admin guide page in the docs repo in both locales.
 
@@ -467,25 +467,25 @@ holds lazy strings evaluated after the request has reset the language.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/admin/admin.py` | `MyAdminSite`, cache page |
-| `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite`, `register_platform_models`, `PLATFORM_ADMIN_CLASSES` |
-| `grooveshop-django-api/user/admin.py` | `UserAdmin` (store) and `PlatformUserAdmin` (platform identities) |
-| `grooveshop-django-api/tenant/deletion.py` | `PublicSchemaDeletionMixin`, deletes that skip tenant-only tables |
-| `grooveshop-django-api/admin/base.py` | `BaseModelAdmin`, action permissions, filter mapping, JSON Schema editor |
-| `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `AdminSiteLoginNextMixin`, `AdminFooterMixin` |
-| `grooveshop-django-api/admin/displays.py`, `admin/filters.py`, `admin/datasets.py` | Shared displays, filters, datasets |
-| `grooveshop-django-api/admin/dashboard/` | Dashboard widgets and the cached queries |
-| `grooveshop-django-api/admin/navigation.py` | Per-request store sidebar, `changelist_link`, site menu, storefront link |
-| `grooveshop-django-api/admin/features.py` | `StoreFeatures`, `Availability`: plan flag and store setting per optional feature; `absent_apps`, `absent_models` |
-| `grooveshop-django-api/admin/search.py` | `CommandSearchMixin`: the ⌘K palette on both sites |
+| `grooveshop-django-api/src/admin/admin.py` | `MyAdminSite`, cache page |
+| `grooveshop-django-api/src/admin/platform_site.py` | `PlatformAdminSite`, `register_platform_models`, `PLATFORM_ADMIN_CLASSES` |
+| `grooveshop-django-api/src/user/admin.py` | `UserAdmin` (store) and `PlatformUserAdmin` (platform identities) |
+| `grooveshop-django-api/src/tenant/deletion.py` | `PublicSchemaDeletionMixin`, deletes that skip tenant-only tables |
+| `grooveshop-django-api/src/admin/base.py` | `BaseModelAdmin`, action permissions, filter mapping, JSON Schema editor |
+| `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `AdminSiteLoginNextMixin`, `AdminFooterMixin` |
+| `grooveshop-django-api/src/admin/displays.py`, `src/admin/filters.py`, `src/admin/datasets.py` | Shared displays, filters, datasets |
+| `grooveshop-django-api/src/admin/dashboard/` | Dashboard widgets and the cached queries |
+| `grooveshop-django-api/src/admin/navigation.py` | Per-request store sidebar, `changelist_link`, site menu, storefront link |
+| `grooveshop-django-api/src/admin/features.py` | `StoreFeatures`, `Availability`: plan flag and store setting per optional feature; `absent_apps`, `absent_models` |
+| `grooveshop-django-api/src/admin/search.py` | `CommandSearchMixin`: the ⌘K palette on both sites |
 | `grooveshop-django-api/tests/integration/admin/test_command_search.py` | The palette's ordering, folding, hidden screens and record cap |
-| `grooveshop-django-api/admin/environment.py` | Environment label and tab-title prefix |
-| `grooveshop-django-api/core/templates/admin/base_site.html`, `core/templates/admin/footer.html` | Header link, footer |
-| `grooveshop-django-api/admin/branding.py` | Logo, icon and favicons per store |
-| `grooveshop-django-api/core/json_schema.py` | `JSONSchemaValidator`, `wire_schema` |
-| `grooveshop-django-api/tenant/role_scopes.py`, `tenant/auth_backends.py` | Role grants, reference data, `core.purge_cache` |
-| `grooveshop-django-api/admin/navigation.py` | `store_sidebar`, `platform_sidebar` |
-| `grooveshop-django-api/settings.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `ADMIN_DOCS_URL`, `ADMIN_OPS_LINKS` |
+| `grooveshop-django-api/src/admin/environment.py` | Environment label and tab-title prefix |
+| `grooveshop-django-api/src/core/templates/admin/base_site.html`, `src/core/templates/admin/footer.html` | Header link, footer |
+| `grooveshop-django-api/src/admin/branding.py` | Logo, icon and favicons per store |
+| `grooveshop-django-api/src/core/json_schema.py` | `JSONSchemaValidator`, `wire_schema` |
+| `grooveshop-django-api/src/tenant/role_scopes.py`, `src/tenant/auth_backends.py` | Role grants, reference data, `core.purge_cache` |
+| `grooveshop-django-api/src/admin/navigation.py` | `store_sidebar`, `platform_sidebar` |
+| `grooveshop-django-api/src/settings.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `ADMIN_DOCS_URL`, `ADMIN_OPS_LINKS` |
 | `grooveshop-django-api/tests/integration/admin/test_store_navigation.py` | The store sidebar's states, roles, badges and reachability |
-| `grooveshop-django-api/core/management/commands/makemessages_unfold.py` | Extracts Unfold's strings into `locale_vendor/unfold` |
+| `grooveshop-django-api/src/core/management/commands/makemessages_unfold.py` | Extracts Unfold's strings into `src/locale_vendor/unfold` |
 | `grooveshop-django-api/tests/unit/admin/` | The guarantees above |
