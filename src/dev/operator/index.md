@@ -183,15 +183,15 @@ renaming the console is a row change, not a code change.
 
 ## The sidebar
 
-Four groups, twenty links (`UNFOLD_PLATFORM["SIDEBAR"]["navigation"]`).
+Four groups, twenty links (`admin/navigation.py: platform_sidebar`, which
+`UNFOLD_PLATFORM["SIDEBAR"]["navigation"]` names as a dotted path).
 `tests/integration/admin/test_store_navigation.py:
 test_every_platform_page_is_in_the_platform_sidebar` fails when a model
 registered on this site has no link here.
-Every `link` is a `reverse_lazy(..., urlconf=PUBLIC_SCHEMA_URLCONF)`: an
-unpinned lazy cannot be cast on a host that does not register the
-`platform_admin` namespace, and Django's technical 500 page casts every lazy
-in settings, so an unpinned link turns any local error into
-`NoReverseMatch`.
+Every `link` is reversed when the request is served, against that request's
+own URLconf, so `UNFOLD_PLATFORM` holds no link for Django's technical 500
+page to cast on a host that does not register the `platform_admin`
+namespace.
 
 ### Control plane
 
@@ -286,10 +286,10 @@ through `tenant/provisioning.py` — see
   mounted on this host at all.
 - **Only superusers reach this console**, and a merchant `is_staff` flag is
   not a superuser flag.
-- **Every `UNFOLD_PLATFORM` link is pinned with `urlconf=`.**
-  `tests/unit/core/test_unfold_links_resolve.py` casts every link in both
-  blocks under both URL confs and runs the debug page's own settings dump;
-  an unpinned link fails that test.
+- **No `UNFOLD_PLATFORM` setting holds a link.** The sidebar is built per
+  request by `platform_sidebar`, and
+  `tests/unit/core/test_unfold_links_resolve.py` casts the store admin's
+  links under both URL confs and runs the debug page's own settings dump.
 - **A new public-schema model belongs in `register_platform_models()`**, via
   `PLATFORM_APP_LABELS`, not in a second `@admin.register(..., site=...)`
   declaration.
@@ -343,6 +343,7 @@ through `tenant/provisioning.py` — see
 | `grooveshop-django-api/tenant/urls_public.py` | Mounts the site and the platform API on `PUBLIC_SCHEMA_URLCONF` |
 | `grooveshop-django-api/tenant/auth_backends.py` | `PlatformStaffBackend`, `is_platform_staff_session` |
 | `grooveshop-django-api/tenant/management/commands/bootstrap_platform.py` | The public tenant row and its host |
+| `grooveshop-django-api/admin/navigation.py` | `platform_sidebar` |
 | `grooveshop-django-api/settings.py` | `UNFOLD_PLATFORM`, `PUBLIC_SCHEMA_URLCONF`, Celery result settings |
 | `grooveshop-django-api/core/cache/models.py` | `CachePurgeLog` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-platform.yaml` | The platform host, its certificate and basic auth |

@@ -1,3 +1,10 @@
+## [1.2.210](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.209...v1.2.210) (2026-11-10)
+
+
+### Bug Fixes
+
+* **ci:** check-claims reads the platform sidebar from admin/navigation.py ([#161](https://github.com/vasilistotskas/grooveshop-docs/issues/161)) ([f394226](https://github.com/vasilistotskas/grooveshop-docs/commit/f394226c8ea61da046b1fa5579f2fe7b4e49a738))
+
 ## [1.2.209](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.208...v1.2.209) (2026-11-10)
 
 ## [1.2.208](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.207...v1.2.208) (2026-11-10)
