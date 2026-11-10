@@ -613,19 +613,13 @@ undone, autosaved and checked like a node's settings. A save Django refuses
 names `/settings/<key>` or `/i18n/<locale>/@document/<pointer>`, which
 `builderProblemPageSetting` maps back to the field.
 
-**Known gap: a translation with no draft settings.** `setNodeTranslation`
-writes the `@document` overlay whether or not the draft has `settings`, but
-Django registers `@document` as a node only when the draft carries
-`settings` (`builder/validation.py: _check_root`, which returns early
-without them), so `_check_node_overlay` refuses such an overlay as
-`unknown_node` at `/i18n/<locale>/@document`, with no pointer
-(`tests/unit/builder/test_validation.py:
-test_an_overlay_needs_settings_to_translate`). The same happens when
-emptying the last default-language field drops `settings` while a
-translation remains. `builderProblemPageSetting` maps that pointer to no
-field, so the panel marks nothing; and `resolve_document` would not lay the
-overlay over absent settings either. A draft that has any root setting, in
-any key, is enough: `pointers.resolve_concrete` accepts a new last segment.
+**A translation with no draft settings.** `setNodeTranslation` writes the
+`@document` overlay whether or not the draft has `settings` (the panel drops
+an empty one). Django registers `@document` for every kind that has a root
+(`builder/validation.py: _check_root`), so `_check_node_overlay` checks such
+an overlay against the root's schema over no settings, and
+`builder/published.py: resolve_document` answers the translation alone. A
+kind with no root still refuses it as `unknown_node`.
 
 **Reading.** Django's `builder/published.py: resolve_document` starts from
 the draft's root settings and overlays the language's `@document` entries

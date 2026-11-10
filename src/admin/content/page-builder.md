@@ -56,8 +56,6 @@ On the **Blog post** page, which adds sections under every post, these settings 
 
 Each field is written per language. Switch the editor to another language of your store to write that language's text. A field you leave empty there uses the Greek text, which the field shows greyed out. Greek is the language every page is written in first, whatever your store's main language.
 
-Write a field in Greek before you translate it. While every Greek field of a page's settings is empty, a translation of one cannot be saved, and the editor does not point at the field: fill in the Greek field, or empty the translation.
-
 The **Main heading (h1)** is not shown on the page, in either store design: the sections at the top of the home page are what visitors see. When it is used, search engines and screen readers read it as the page's main heading; when a section supplies the heading, they read that section's instead.
 
 ## Choose what a section lists
