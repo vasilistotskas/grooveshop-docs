@@ -98,9 +98,9 @@ read payment "Pending" forever (`0058_settle_returned_unpaid_orders`).
 | SHIPPED → DELIVERED | Carrier event | Both carriers' `_apply_order_status_transition` |
 | DELIVERED → COMPLETED | Automatic, when paid: inline on the carrier DELIVERED and the COD reconcile, and hourly for anything paid outside those two moments | `OrderService.maybe_advance_to_completed`, `order.tasks.complete_paid_delivered_orders` |
 | SHIPPED/DELIVERED → RETURNED | Carrier event (`returned`, `lost`) | `AcsService.order_status_for_shipment_state` |
-| → CANCELED | Customer, staff, the cleanup task, or the ACS replay for a voucher retired before dispatch | `OrderService.cancel_order`, `AcsService._cancel_order_for_dead_shipment` |
+| → CANCELED | Customer, staff, the cleanup task, or a carrier sync for a shipment cancelled before dispatch (ACS voucher retired, BoxNow `canceled` parcel). Only `cancel_order` does it | `OrderService.cancel_order`, `OrderService.cancel_for_dead_shipment` |
 | RETURNED → REFUNDED | Staff, manually; refused with `RefundOutstandingError` while `PaymentLedger.refund_open` holds. The admin action reports the refusal; `update_status` answers `409 refund_outstanding` naming what is left | `POST /api/v1/order/{id}/update_status`, the `mark_as_refunded` admin action |
-| Any | Staff, manually | `OrderViewSet.update_status`, admin bulk actions in `order/admin.py` |
+| Any pair the table allows | Staff, manually. A CANCELED request is refused: `update_status` answers 400 `cancel_through_cancel_action` (`update_order_status` raises `InvalidStatusTransitionError` for it) | `OrderViewSet.update_status`, admin bulk actions in `order/admin.py` |
 
 Carriers can skip steps. A parcel that goes from PROCESSING straight to
 DELIVERED or RETURNED between two polls is bridged through SHIPPED first,
@@ -125,7 +125,7 @@ unwound.
 | Tracking first set | `order_shipment_dispatched` → the same shipping email, which sends whichever condition completes second |
 | → DELIVERED | `order_delivered`, status email, DELIVERED toast, then the COMPLETED auto-advance for paid orders |
 | → COMPLETED | `order_completed` → loyalty points earned, status email, COMPLETED toast. Nothing is issued for an `INVOICE` order: invoices are issued by hand in timologio |
-| → CANCELED | `order_canceled` → carrier voucher cascade (skipped when the cancel already asked the courier), credit of whatever gift-card value has not come back yet, loyalty reversal, status email, CANCELED toast |
+| → CANCELED | Written by `cancel_order`, which also runs the carrier voucher cascade itself (skipped when the cancel already asked the courier). `order_canceled` → credit of whatever gift-card value has not come back yet, loyalty reversal, status email, CANCELED toast |
 | Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row, and the loyalty reversal once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund recorded after the receipt row was created, once the receipt has a MARK, for the goods part of the refund at the VAT split stored when its money was claimed (`order/credit_documents.py: create_pending_credits`, task `issue_pending_credits`; see [Credit allocation](#credit-allocation)); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
 | Stored value returned | `order_stored_value_returned`, once per settled `STORED_VALUE` refund attempt → a staff history NOTE, the credit reconciliation (the same `create_pending_credits`), and the loyalty reversal once `payment_status` is REFUNDED. No email, no toast |
 | Status, payment status or tracking changed | `push_order_event_to_gateway` when `AGENT_GATEWAY_INTERNAL_URL` is set |
@@ -183,7 +183,9 @@ that `log_payment_update` writes on every payment transition.
 
 ### Cancellation
 
-`OrderService.cancel_order` is the only correct entry point. Its
+`OrderService.cancel_order` is the only way an order is cancelled:
+`update_order_status` refuses CANCELED and the staff `update_status`
+endpoint answers 400 `cancel_through_cancel_action`. Its
 keyword-only `customer_initiated` decides who has the last word on the
 parcel: a customer cancel is held to the courier's answer, a staff or
 system cancel is not. It defaults to `True`, so a new caller that forgets
@@ -208,7 +210,7 @@ Entry points:
 | Customer or guest | `POST /api/v1/order/{id}/cancel` (`OrderViewSet.cancel`; guests authorise with `?uuid=`, for `GUEST_ORDER_ACCESS_DAYS` after the order) | `True` |
 | Store staff | The same action (the view passes `not is_store_staff(user)`), or the `mark_as_canceled` bulk action in `order/admin.py` | `False` |
 | Automatic | `auto_cancel_stuck_pending_orders`, always with `refund_payment=False` | `False` |
-| Carrier-driven | `AcsService._cancel_order_for_dead_shipment`, for a voucher already retired | `False` |
+| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called by the ACS status sync for a retired voucher and by BoxNow for a `canceled` parcel event (only while the order is PENDING or PROCESSING). Always `refund_payment=False` | `False` |
 
 #### A customer cancel asks the courier first
 
@@ -256,11 +258,13 @@ courier could not be reached, so try again in a few minutes.
 #### Staff and system cancels are best-effort at the courier
 
 These cancel first and ask the courier afterwards, through
-`OrderService.cancel_attached_shipment`. That cascade also fires from the
-`order_canceled` receiver, so every path that produces CANCELED reaches the
-courier; a `shipment_cancel` breadcrumb on the metadata stops it
-double-firing, and a customer cancel, which already asked, writes that
-breadcrumb before the save. A carrier refusal never stops the cancel: it
+`OrderService.cancel_attached_shipment`, called by `cancel_order` itself:
+`cancel_order` is the only path that produces CANCELED, so every cancel
+of an order whose shipment is still alive reaches the courier. A
+dead-shipment cancel does not ask: the shipment is already canceled
+([Shipping](/dev/flows/shipping)). A customer cancel, which already asked, writes the
+`shipment_cancel` breadcrumb on the metadata before the save so the
+cascade skips. A carrier refusal never stops the cancel: it
 is logged, kept in `metadata["cancellation"]["shipment_cancel"]["error"]`,
 left as a staff-only `OrderHistory` NOTE (the order is canceled but the
 parcel may still be delivered), and the admin **Cancel selected orders and

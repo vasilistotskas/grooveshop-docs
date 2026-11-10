@@ -448,9 +448,24 @@ straight to DELIVERED or RETURNED, and for DELIVERED it calls
 `maybe_advance_to_completed` so an already-paid order lands on COMPLETED
 in the same pass. A `canceled` shipment state — produced only by the
 admin retire action or a voucher cancel, never by tracking — routes the
-order through `OrderService.cancel_order` instead
-(`_cancel_order_for_dead_shipment`), so stock is restored and the payment
-settled exactly as a staff cancel would; a bare status write stranded prod
+order through `OrderService.cancel_for_dead_shipment` instead, a real
+`cancel_order` (stock restored, reservation released, cancellation
+recorded) with `refund_payment=False`: nobody asked for it, so a paid
+order is logged at WARNING and left for staff to refund by hand.
+The courier is not asked to cancel, since the shipment already is: the
+order records `shipment_cancel = {attempted: false, dispatched: true}`
+(`SHIPMENT_ALREADY_CANCELED` in `order/services.py`), so no courier
+call runs inside the sync's transaction. An order whose status no
+longer allows a cancel raises `OrderNotCancelableError`, which BoxNow's
+sync drops with a warning; any other `OrderCancellationError` is a
+cancel that failed on the way and is not caught, so the parcel event
+and the shipment's state roll back. BoxNow does not send the webhook
+again (the endpoint answered 200 before the event was applied): the
+operators are alerted, and the tracking poll, which keeps reading a
+shipment that is not in a final state (`poll_boxnow_tracking_batch` in
+`shipping_boxnow/tasks.py`), applies the event on a later run.
+BoxNow does the same for a `canceled` parcel event, only while the order
+is PENDING or PROCESSING; a bare status write stranded prod
 order 248 with its unit still counted as sold.
 
 The summary alone is not enough to know the parcel has left. ACS reports
@@ -640,9 +655,8 @@ move `Order.status`, which the carrier events drive separately.
 - **A customer cancel asks the carrier first; staff and system cancels
   ask afterwards.** A customer cancel goes on only when the courier
   confirms or there is no shipment. A staff or system cancel cascades to
-  the carrier from two entry points (`cancel_order` and the
-  `order_canceled` receiver), guarded by the `shipment_cancel` breadcrumb
-  so it fires once.
+  the carrier from `cancel_order`, the only path that cancels an order,
+  guarded by the `shipment_cancel` breadcrumb so it fires once.
 - **Both carriers' cancel is idempotent on a canceled shipment**
   (`AcsService.cancel_voucher`, `BoxNowService.cancel_shipment`), so a
   customer who retries after a cancel that stopped half way is not
