@@ -84,7 +84,14 @@ Search engines such as Bing, Yandex and Naver learn about a changed product or b
 1. Open the setting `INDEXNOW_ENABLED`.
 2. Tick **Value (Boolean)** and click **Save**.
 
-From then on the store collects the products and blog posts that were added, changed or taken off the store, and every half hour sends the search engines one message with their addresses, in every language the store is available in. Only products that are **Active** and blog posts that are published are announced; a draft is never mentioned. A product or post you remove from the store is announced too, so the search engines drop it sooner. Nothing else is needed from you. Google does not take part in this, and a search engine may still decide not to visit a page. The setting is off until you switch it on.
+From then on the store collects the products and blog posts that were added, changed or taken off the store, and every half hour sends the search engines one message with their addresses, in every language the store is available in. Only products that are **Active** and blog posts that are published are announced; a draft is never mentioned. A product or post you remove from the store is announced too, so the search engines drop it sooner. Nothing else is needed from you. Google does not take part in this, and a search engine may still decide not to visit a page. The setting is off until you switch it on. A scheduled post is announced in the first message after it goes live on the store, which happens within about a minute of its date.
+
+### Open links to other sites in a new tab
+
+1. Open the setting `EXTERNAL_LINKS_NEW_TAB_ENABLED`.
+2. Tick **Value (Boolean)** and click **Save**.
+
+From then on, every link in your texts that leads to another site opens in a new tab: in blog posts, product and category descriptions, author bios, pages and the text sections of the page builder. The setting does not change a link to your own store, whether it is written with your store's domain (with or without `www.`) or as a path such as `/products`, nor a link to the addresses your store serves its images and files from. A link you set to open in a new window in the editor keeps doing so either way. The setting is off until you switch it on.
 
 ### Set the same-day dispatch time
 
@@ -105,6 +112,7 @@ Defaults are the values a new store starts with. Amounts are in euros.
 | `STICKY_ADD_TO_CART_ENABLED` | The "add to cart" bar that stays on screen as you scroll a product page. | on |
 | `RECENTLY_VIEWED_ENABLED` | The "Recently viewed" strip on the home page. A visitor sees it only if they accepted **Personalisation** in the cookie choices, so a store with no cookie banner does not show it. The recent searches follow the same rule. | on |
 | `PRODUCT_ASSURANCES_ENABLED` | The box under the buy button on a product page with the delivery time, the free-shipping amount, the payment methods and the return period. Each line shows only when the store has that information (for example delivery days on the shipping rates). | on |
+| `EXTERNAL_LINKS_NEW_TAB_ENABLED` | Links in your texts that lead to another site open in a new tab. Links to your own store keep what the editor chose. See the task above. | off |
 | `CHAT_WIDGET_ENABLED` | The AI shopping assistant button. Agent commerce must be on too. | on |
 | `PRODUCT_REVIEWS_ENABLED` | Reviews everywhere: on product pages, the stars on cards, the customers' "My reviews". | on |
 | `PRODUCT_REVIEWS_PURCHASE_REQUIRED` | Only someone who bought the product can review it. Off: any signed-in customer can. A buyer's review always carries the verified-purchase badge. Switch it off if you want more reviews early on. | on |

@@ -565,6 +565,77 @@ The editor stores only the descriptor or the id. The page route reads the data
 (`resolveBuilderData`), and the canvas keeps a node the published page would hide
 so it can still be selected.
 
+### 18. Page settings
+
+A page or a template carries root settings of its own, beside its sections:
+`PAGE_ROOT` in `shared/builder/documentRoots.ts`, which
+`builderDocumentRootsFor` gives the `page` and `template` kinds (the theme has
+its own root, a section group none). Every field is an optional, translatable
+string, and the catalogue publishes the root under `documentKinds`, so Django
+validates a draft's `settings` against the same schema:
+
+| Key | Max | What reads it |
+|---|---|---|
+| `seoTitle` | 70 | `<title>` and `og:title` (`useBuilderPage`, `tagPriority: 'high'`, so it beats the page's own `useSeoMeta`) |
+| `seoDescription` | 300 | `description` and `og:description`, the same way |
+| `seoKeywords` | 255 | nothing: stored, never emitted (search engines ignore keywords) |
+| `heading` | `BUILDER_PAGE_HEADING_MAX_LENGTH` (120) | the h1 a body draws where it would otherwise draw the store's name |
+
+The SEO limits are the model's (`SeoTranslationModel`), so a save the editor
+accepts is one the database does. A page drawn `below-content` (the
+`template:blog-post` bands, `useBuilderPage('blog-post', { placement:
+'below-content' })` in `app/components/Storefront/BlogPost.vue` and its webside twin) emits no head
+tags at all, so its `seoTitle` and `seoDescription` never override the
+article's own: the panel still offers them.
+
+**The panel.** The outline's "Page settings" button (`Builder/Outline.vue`)
+calls `openPanel('page')`, kept in the address as `?panel=page`
+(`useBuilderEditorView`), and `Builder/Inspector.vue` shows
+`Builder/PageSettings.vue` in place of a node's settings, with the
+"Translating" badge in another language. `builderPageSettingFields`
+(`app/utils/builderPageSettings.ts`) lists the root's translatable string
+properties in schema order with their `maxLength`; it leaves `heading` out
+unless the document is in `BUILDER_HEADING_DOCUMENTS` (`shared/constants/builder.ts`,
+today `template:home`). A field up to `BUILDER_TEXTAREA_MIN_LENGTH` is one line,
+a longer one a growing text area, each with a `length/max` counter. Labels and
+help come from `documentSettings` in `app/builder/labels/{el,en}.json`
+(`useBuilderLabels().documentSettingLabel` / `documentSettingHelp`). A
+document kind with no root shows "This document has no page settings of its
+own".
+
+**Writing.** In the default language a field writes the draft's `settings`
+(`setBuilderPageSetting`; an empty text takes the key out, and a draft left
+with none drops `settings`). In another language it writes the overlay under
+`BUILDER_DOCUMENT_NODE_ID` (`@document`) through `setNodeTranslation`, with the
+draft's text as the placeholder; emptying it removes the entry. Every change
+goes through `store.change(..)`, coalesced per language and key, so it is
+undone, autosaved and checked like a node's settings. A save Django refuses
+names `/settings/<key>` or `/i18n/<locale>/@document/<pointer>`, which
+`builderProblemPageSetting` maps back to the field.
+
+**A translation with no draft settings.** `setNodeTranslation` writes the
+`@document` overlay whether or not the draft has `settings` (the panel drops
+an empty one). Django registers `@document` for every kind that has a root
+(`builder/validation.py: _check_root`), so `_check_node_overlay` checks such
+an overlay against the root's schema over no settings, and
+`builder/published.py: resolve_document` answers the translation alone. A
+kind with no root still refuses it as `unknown_node`.
+
+**Reading.** Django's `builder/published.py: resolve_document` starts from
+the draft's root settings and overlays the language's `@document` entries
+(`localised`), so a field not translated into a language falls back to the
+default language's text on the live page too. `useBuilderPage`
+(`app/composables/useBuilderPage.ts`) returns `seoTitle`, `seoDescription`
+and `heading`; an unset field emits no tag at all.
+
+**The heading.** `app/components/Storefront/Home.vue` and its webside twin
+`app/components/variants/webside/Storefront/Home.vue` draw `heading`, or the store's name
+when it is empty, as the page's h1 only when no section owns one
+(`shared/pageSections.ts: sectionsProvideHeading`), and in both designs that
+h1 is `sr-only`: read by search engines and screen readers, never seen, since
+the hero sections own the visible top of the page. A store with no `heading`
+keeps its name as the h1, as before.
+
 ## Invariants
 
 - No editor code in the public bundle: the page renders inside `<ClientOnly>`,
@@ -629,6 +700,16 @@ so it can still be selected.
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/DocumentSwitcher.vue` | The page switcher |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/Outline.vue` | The outline |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/ThemePanel.vue` | The theme |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Builder/PageSettings.vue` | The page settings panel |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/builderPageSettings.ts` | The panel's fields; reading and writing a root setting |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/documentRoots.ts` | `PAGE_ROOT`: a page's and a template's root settings |
+| `grooveshop-storefront-ui-node-nuxt/shared/constants/builder.ts` | `BUILDER_HEADING_DOCUMENTS`, `BUILDER_PAGE_HEADING_MAX_LENGTH`, `BUILDER_DOCUMENT_NODE_ID` |
+| `grooveshop-storefront-ui-node-nuxt/app/builder/labels/en.json`, `app/builder/labels/el.json` | `documentSettings` labels and help |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderPage.ts` | The live page's `seoTitle`, `seoDescription` and `heading` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/Home.vue`, `app/components/variants/webside/Storefront/Home.vue` | The home page's h1, both designs |
+| `grooveshop-django-api/builder/published.py` | `resolve_document`: the root settings with the language's overlay |
+| `grooveshop-django-api/builder/validation.py`, `builder/pointers.py` | `_check_root` registers `@document` only with `settings`; `_check_node_overlay` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/BlogPost.vue`, `app/components/variants/webside/Storefront/BlogPost.vue` | The `below-content` blog-post bands, which set no head tags |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/QueryField.vue` | A list setting |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecordList.vue` | A hand-picked list |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/OutlineTree.vue` | One document's rows, dragged to reorder |

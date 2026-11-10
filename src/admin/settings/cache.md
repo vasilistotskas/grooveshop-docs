@@ -30,7 +30,7 @@ The **Cache Management** page shows one card for each area of the storefront, in
 | **Content pages** | content pages (policies, FAQ, information pages) and the pages that show or link them. |
 | **Page builder** | the pages and menus made in the page builder, and every page that shows them. |
 | **Storefront pages** | every page of the storefront at once. |
-| **Sitemap & SEO** | the sitemap (the site map for search engines) and RSS. |
+| **Sitemap & SEO** | the sitemap (the site map for search engines) and the RSS feeds. It clears itself whenever a post, product, category or page changes, and when a scheduled post's date passes, so you do not need to clear it after changing a post. |
 | **Site settings** | values in Store Settings and the seller details at the bottom of the page. |
 
 At the bottom, the **Recent activity** table shows your store's last twenty clears: who, when and which areas.
@@ -63,9 +63,9 @@ Click **Purge all** and confirm. Every area is cleared. Right after, the storefr
 
 ## Things to know
 
-- **Updated on their own** as soon as you save: products, categories, tags, payment methods, shipping providers and prices, VAT rates, promotions (also when one starts or ends on its dates), coupon codes, reviews you approve or reject, blog posts and comments, pages, layouts and menus. The same goes for bulk actions on a list, such as activating many products at once.
+- **Updated on their own** as soon as you save: products, categories, tags, payment methods, shipping providers and prices, VAT rates, promotions (also when one starts or ends on its dates), coupon codes, reviews you approve or reject, blog posts and comments (also when a scheduled post's date passes), pages, layouts and menus, the sitemap and the RSS feeds. The same goes for bulk actions on a list, such as activating many products at once.
 - When you switch a feature on or off in [Store settings](/admin/settings/store-settings), every storefront page is updated on its own.
-- **Need a few minutes or a clear:** the other Store Settings values, loyalty, the sitemap, and a sync of lockers or ACS stations.
+- **Need a few minutes or a clear:** the other Store Settings values, loyalty, and a sync of lockers or ACS stations.
 - When an order lowers the stock, the product page is not refreshed right away. Checkout always checks the real stock, though, so you never sell something that ran out.
 - Clearing changes none of your data. If the change itself is wrong, clearing only shows the mistake sooner.
 - If a product is missing from search, save it again. Search is updated on every save and again every night.
