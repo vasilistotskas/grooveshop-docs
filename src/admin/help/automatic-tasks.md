@@ -112,7 +112,7 @@ Even with an email off, some of the work stays in **Needs attention** on the [Da
 | Once a day, for ACS parcels without movement or without a voucher. |
 | ACS delivered a cash-on-delivery parcel and has not paid the money out. |
 | ACS paid out money that matches none of your shipments. |
-| A voucher request to ACS got no answer, so ACS may already hold a voucher for the order. It comes once per order. Details in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer). |
+| A voucher request to ACS got no answer, so ACS may already hold a voucher for the order. It comes once for each request with an unknown outcome, so a new request that is also lost brings another. Details in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer). |
 | ACS named vouchers on a refused pickup list that match none of your shipments. It comes the first time ACS names each voucher. Details in [ACS Courier](/admin/shipping/acs#vouchers-that-match-no-order). |
 | A courier refused to create a shipment, for example because of a wrong address. The order also gets a note. |
 | BoxNow sent a parcel update the store could not apply. |

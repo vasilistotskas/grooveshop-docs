@@ -52,7 +52,7 @@ sequenceDiagram
 
 `ShippingCarrierInterface` declares the methods every carrier must have,
 even as no-ops. The abstract ones are `create_shipment`,
-`cancel_shipment`, `fetch_label_bytes`, `fetch_tracking_events`,
+`cancel_shipment`, `has_label`, `fetch_label_bytes`, `fetch_tracking_events`,
 `shipment_for_order`, `serialize_shipment` and `validate_order_payload`.
 The optional hooks are where a carrier states what it is:
 
@@ -227,9 +227,15 @@ carrier API call never happens with a Postgres row lock held:
 
 The claim TTL is 300 seconds (`_MINT_CLAIM_TTL_SECONDS`). It was 90 until
 a slow ACS round trip let a second worker re-mint and leak an orphan
-voucher. A claim older than the TTL with no `voucher_no` means a worker stopped
-after the request may have left; it enters the unknown-outcome state
-below rather than minting again.
+voucher. A claim older than the TTL with no `voucher_no` means the request
+is still in flight or a worker stopped after it may have left. Expiry alone
+changes nothing: the shipment enters the unknown-outcome state below only
+when a detection path runs: the claim check of the next
+`create_voucher_for_order` for that order, `reset_shipment_for_remint` (the
+admin's "Issue ACS voucher now" on a canceled shipment), or
+`AcsService._record_expired_claims`, which the pickup-list refusal hook
+(`_raise_unrecognised_vouchers`) and `delete_unrecognised_voucher` call.
+Until one runs, the alert and the dashboard counter lag.
 
 ### A voucher request with an unknown outcome
 
@@ -252,7 +258,8 @@ raised (`AcsClient._exchange`, `_never_connected` in `shipping_acs/client.py`):
 | HTTP 403 / 406 | `AcsAuthError` | released; Celery retries |
 | An ACS refusal (`ACSExecution_HasError`, a value-row `Error_Message`, any other 4xx) | `AcsAPIError` | released; `ops.shipment_rejected`; no retry |
 | A read timeout; any other connection error; any 5xx; a 200 whose body is not JSON | `AcsOutcomeUnknownError`, a subclass of `AcsRetryableError` so reads keep retrying | **unknown** |
-| An exception the client does not classify; a 200 with neither `Voucher_No` nor `Error_Message`; a claim older than its TTL | | **unknown** |
+| An exception the client does not classify; a 200 with neither `Voucher_No` nor `Error_Message` | | **unknown** |
+| A claim older than its TTL | | **unknown once detected** (see the paragraph above): by itself it only marks the claim expired |
 
 `create_voucher_for_order` turns an unknown outcome into
 `AcsShipment.voucher_request_unknown_at` (a column, not a new
@@ -272,8 +279,12 @@ stateDiagram-v2
     [*] --> Claimed: claim
     Claimed --> New: Voucher_No saved
     Claimed --> Pending: never reached ACS, or refused
-    Claimed --> Unknown: unknown outcome, or claim past its TTL
-    Unknown --> New: late answer saved
+    Claimed --> Unknown: unknown outcome
+    Claimed --> Unknown: claim past its TTL, once a detection path runs
+    Unknown --> New: late answer of the request the check belongs to
+    Unknown --> Resolved: staff resolve the check
+    Resolved --> Resolved: any other late answer deleted at ACS, not saved
+    Unknown --> Unknown: a later request is lost too, the earlier answer is deleted at ACS
     Unknown --> New: adopt_voucher
     Unknown --> Pending: request_voucher_again
     Unknown --> Closed: close_voucher_request
@@ -289,7 +300,10 @@ stateDiagram-v2
   a multipart child, `previous_vouchers`, `orphan_vouchers`), or when
   `_confirm_voucher_at_acs` cannot confirm it. ACS must first hold the voucher
   for the store: a row from `ACS_Trackingsummary`, or an open
-  `AcsUnrecognisedVoucher`. The **only automatic yes** is the summary's
+  `AcsUnrecognisedVoucher` named by a refused pickup list (`source=pickup_list`;
+  a `refused_delete` row is not evidence). One exception: a `refused_delete`
+  row whose `duplicate_of` is this shipment is accepted with `confirmed_by_hand`
+  even when the summary is empty. The **only automatic yes** is the summary's
   `recipient` equal to the `Recipient_Name` the lost request sent
   (`_recipient_sent`: the recorded request, else the `AcsApiCall`, else the
   order as it is), compared without accents, case or extra spaces, when no
@@ -300,6 +314,16 @@ stateDiagram-v2
   recorded as `confirmed_by: staff` and written to the order note. The checks
   run again under the row lock, and a concurrent adopt of the same number gets
   the same refusal instead of an `IntegrityError`. No create is sent.
+
+  Observation, read-only on production, 2026-11-10 (not a guarantee of ACS's
+  behaviour). Source: the comment "After merge: what was checked, and where"
+  on grooveshop-django-api pull request 626, which records 8 vouchers.
+  `ACS_Trackingsummary` returned `recipient` unmasked, and it matched the
+  order's recipient name in 8 of 8. `consignee`
+  is a different field (who received the parcel), not the recipient. A retired
+  voucher returned an empty summary. The manual's own example masks every
+  personal value, so the comparison stays a refusal-with-override, not an
+  assumption.
 - `AcsService.request_voucher_again(shipment, user=..., note=...)`: staff
   found no voucher. Refused when the order no longer needs a voucher. Clears
   the column, notes the order and queues the mint once after the commit
@@ -310,10 +334,51 @@ stateDiagram-v2
   voucher, clears the column, notes the order, sends nothing to ACS. Such a
   shipment stays in `voucher_requests_unknown()` (counted) until closed, but is
   not in `voucher_requests_waiting()`.
-- A late answer from the slow worker clears the column when it saves a
-  voucher.
+- An unknown state belongs to a request: `_set_voucher_request_unknown`
+  moves the claim (`mint_started_at`) into `metadata["unknown_request"]`, and
+  `_forget_voucher_request_unknown` clears both. In `create_voucher_for_order`
+  Phase 3 an answer is saved (and clears the state) only when the row still
+  holds its claim, or the pending check is its own request's
+  (`unknown_request` equals its claim). Otherwise it is stale: staff
+  resolved the check (request again, close, adopt another voucher), or a
+  **later** request took the check (it was lost too), or no identity was
+  recorded. A stale answer is not saved, and not offered for adoption: it is
+  deleted at ACS and its unrecognised row settled as `deleted`. If ACS
+  refuses, the number goes to `metadata["orphan_vouchers"]` and
+  `_keep_unrecognised_vouchers` records it at once as an
+  `AcsUnrecognisedVoucher` with `source=refused_delete` and `duplicate_of` the
+  shipment. It reopens a row staff had marked `checked` (a `deleted` or
+  `adopted` row keeps its resolution and gains the link only). That record is
+  best effort, after Phase 3 has committed: if it fails, an ERROR log
+  ("could not be recorded as a voucher matching no order", with the number)
+  and `metadata["orphan_vouchers"]` on the shipment are all that keep the
+  number, so the list of vouchers matching no order may miss it; search the
+  logs for that line or read `orphan_vouchers`.
+- **What staff must still not do.** If staff delete the voucher in the ACS
+  portal *before* resolving the check, the check is still open and is that
+  request's own, so Phase 3 saves the dead number; staff resolve first, then
+  delete (portal or `Delete at ACS`).
+- **A request releases or loses only its own claim** (`_voucher_request_lost`
+  checks the row still holds the claim it was sent under). An old request
+  that ends unknown *after* staff resolved its check, and whose claim was
+  not recorded as unknown, writes one order note and sends one
+  `ops.acs_voucher_request_unknown` alert with the `after_resolution`
+  wording ("ACS may hold one more voucher for this order"), once per claim
+  (`metadata["late_unknown_alerted"]`). It sets no state and adds no
+  dashboard count: there is no number to list.
+  The note and alert say to delete any voucher the shipment does not use, so
+  staff must first let the new request finish (worst case about 78 s at the
+  default `ACS_HTTP_TIMEOUT`, `worst_case_request_seconds`; the mint claim TTL
+  is 300 s): a new request's voucher can be visible at ACS before the shipment
+  saves it, and deleting it would leave a dead number on the shipment.
 - `reset_shipment_for_remint` clears the column beside a real voucher and
-  keeps it on a shipment with no voucher.
+  keeps it on a shipment with no voucher. It refuses while a mint claim is
+  younger than its TTL (the shipment was canceled with a request out: a
+  stale answer would now be deleted, and a refused re-mint would leave no
+  voucher). An expired claim becomes the unknown state, committed, and the
+  reset raises `AcsVoucherRequestUnknownError`, so nothing is queued; the
+  admin's "Issue ACS voucher now" shows the check guidance
+  (`voucher_check_message`).
 
 **Vouchers matching no order.** A refused `ACS_Issue_Pickup_List` names every
 unprinted voucher of the account. A number that is neither a shipment's
@@ -788,9 +853,11 @@ move `Order.status`, which the carrier events drive separately.
 - **A pickup day with nothing live waiting is a `None`, not a raise**,
   and one live candidate is enough to make a refusal a failure again.
 - **A voucher request with an unknown outcome is never sent again by code.**
-  Only `adopt_voucher` or `request_voucher_again` ends it, both by staff,
-  and an expired mint claim enters it instead of minting. Only a retired
-  shipment or a canceled or refunded order may be closed without a voucher.
+  Staff end it with `adopt_voucher` or `request_voucher_again`, and a late
+  answer of the very request it belongs to ends it too (the mint's persist
+  phase clears it; any other late answer is deleted at ACS). An expired mint claim enters it, once detected, instead of
+  minting. Only a retired shipment or a canceled or refunded order may be
+  closed without a voucher.
 - **Exactly one task owns a dead voucher: `check_stale_acs_shipments`.**
   Every other task that trips over one defers to it rather than raising
   a second alarm.
