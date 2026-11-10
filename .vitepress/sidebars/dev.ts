@@ -56,6 +56,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
       { text: 'B2B', link: '/dev/flows/b2b' },
       { text: 'Loyalty', link: '/dev/flows/loyalty' },
       { text: 'Agentic commerce', link: '/dev/flows/agentic-commerce' },
+      { text: 'Store-admin tools over MCP', link: '/dev/flows/staff-mcp' },
       { text: 'Analytics & consent', link: '/dev/flows/analytics-and-consent' },
       { text: 'Store-editable texts', link: '/dev/flows/store-texts' },
       { text: 'Page builder foundation', link: '/dev/flows/page-builder' },

@@ -21,6 +21,8 @@ secrets.
 | `POST /chat` | First-party shopping chatbot, SSE |
 | `/internal/*` | Cluster-only: Django order events and feed invalidation |
 
+A store's own team has a separate server on `/mcp/admin`, with its own sign-in and read-only admin tools: [Store-admin tools over MCP](/dev/flows/staff-mcp).
+
 ## Diagram
 
 ```mermaid
