@@ -230,11 +230,12 @@ a slow ACS round trip let a second worker re-mint and leak an orphan
 voucher. A claim older than the TTL with no `voucher_no` means the request
 is still in flight or a worker stopped after it may have left. Expiry alone
 changes nothing: the shipment enters the unknown-outcome state below only
-when a detection path runs (`AcsService._record_expired_claims`, or the
-claim check of the next `create_voucher_for_order` for that order). The
-callers of `_record_expired_claims` are the pickup-list refusal hook
-(`_raise_unrecognised_vouchers`) and `delete_unrecognised_voucher`. Until
-one runs, the alert and the dashboard counter lag.
+when a detection path runs: the claim check of the next
+`create_voucher_for_order` for that order, `reset_shipment_for_remint` (the
+admin's "Issue ACS voucher now" on a canceled shipment), or
+`AcsService._record_expired_claims`, which the pickup-list refusal hook
+(`_raise_unrecognised_vouchers`) and `delete_unrecognised_voucher` call.
+Until one runs, the alert and the dashboard counter lag.
 
 ### A voucher request with an unknown outcome
 
@@ -310,9 +311,11 @@ stateDiagram-v2
   run again under the row lock, and a concurrent adopt of the same number gets
   the same refusal instead of an `IntegrityError`. No create is sent.
 
-  Observation, read-only on production, 2026-11-10 (8 vouchers; not a
-  guarantee of ACS's behaviour): `ACS_Trackingsummary` returned `recipient`
-  unmasked, and it matched the order's recipient name in 8 of 8. `consignee`
+  Observation, read-only on production, 2026-11-10 (not a guarantee of ACS's
+  behaviour). Source: the comment "After merge: what was checked, and where"
+  on grooveshop-django-api pull request 626, which records 8 vouchers.
+  `ACS_Trackingsummary` returned `recipient` unmasked, and it matched the
+  order's recipient name in 8 of 8. `consignee`
   is a different field (who received the parcel), not the recipient. A retired
   voucher returned an empty summary. The manual's own example masks every
   personal value, so the comparison stays a refusal-with-override, not an
@@ -338,11 +341,22 @@ stateDiagram-v2
   `_keep_unrecognised_vouchers` records it at once as an
   `AcsUnrecognisedVoucher` with `source=refused_delete` and `duplicate_of` the
   shipment. It reopens a row staff had marked `checked` (a `deleted` or
-  `adopted` row keeps its resolution and gains the link only).
-- **The remaining gap.** If staff delete the voucher in the ACS portal
-  *before* resolving the check, the check is still open when the late answer
-  arrives, so Phase 3 saves the dead number. The safe order, for staff, is
-  resolve in the admin first, then delete (portal or `Delete at ACS`).
+  `adopted` row keeps its resolution and gains the link only). That record is
+  best effort, after Phase 3 has committed: if it fails, an ERROR log
+  ("could not be recorded as a voucher matching no order", with the number)
+  and `metadata["orphan_vouchers"]` on the shipment are all that keep the
+  number, so the list of vouchers matching no order may miss it; search the
+  logs for that line or read `orphan_vouchers`.
+- **Gaps in `main` as written.** (1) If staff delete the voucher in the ACS
+  portal *before* resolving the check, the check is still open when the late
+  answer arrives, so Phase 3 saves the dead number; staff resolve first, then
+  delete (portal or `Delete at ACS`). (2) `resolved_meanwhile` compares only
+  `mint_started_at` and the column, not the identity of the request. After
+  "request again", if the new request also becomes unknown, the column is set
+  again, `resolved_meanwhile` is false, and a late answer to the *first*
+  request is saved, clearing the second request's unknown state while the
+  second voucher may still exist at ACS. A fix is being worked on in the API;
+  re-check this bullet against the merged code.
 - `reset_shipment_for_remint` clears the column beside a real voucher and
   keeps it on a shipment with no voucher. It refuses while a mint claim is
   younger than its TTL (the shipment was canceled with a request out: a

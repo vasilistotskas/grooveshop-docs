@@ -93,7 +93,7 @@ The voucher is issued a few seconds after the order. For card payments, as soon 
 
 For a card order that is not paid yet, the button does nothing: the voucher is issued by itself when the payment arrives. If the ACS login details are missing from the [Store profile](/admin/settings/store-profile), no voucher is issued until an Owner or Admin fills them in.
 
-If the button answers that the last voucher request may have reached ACS without an answer, do not press it again: follow the next section. On a canceled shipment, the button refuses while a voucher request for it is still in progress: try again in a few minutes. If that request has been out for too long, the button records the unknown outcome and shows the same guidance (check ACS, then adopt or request again) instead of saying a voucher is being created.
+If the button answers that the last voucher request may have reached ACS without an answer, do not press it again: follow the next section. On a canceled shipment, the button refuses while a voucher request for it is still in progress: try again in a few minutes. If that request has been out for too long, the button records the unknown outcome and shows the same guidance instead of saying a voucher is being created: check ACS, then adopt the voucher or request again, or, for a canceled shipment, close the check with **No voucher needed: close**.
 
 ### A voucher request that got no answer
 
@@ -108,11 +108,18 @@ How you are told:
 
 What to do:
 
+Look in ACS's portal first, then choose by what you found and by whether the order still needs a voucher. A shipment that was retired, or whose order was canceled or refunded, needs no voucher.
+
+| What you found at ACS | The order still needs a voucher | The order needs no voucher |
+|---|---|---|
+| A voucher for this order | **Adopt ACS voucher**, with its number. Do not delete it. | **No voucher needed: close**, then delete that voucher (see below). |
+| No voucher | **No voucher at ACS: request again** | **No voucher needed: close** |
+
+Steps:
+
 1. Open ACS's own portal and look for a voucher of this order. Its reference is the order number.
 2. Open the shipment in <span class="sidebar-path">Shipping → ACS Shipments</span>.
-3. If the portal has a voucher for the order, click **Adopt ACS voucher** and enter its number in **Voucher number**.
-4. If the portal has none, click **No voucher at ACS: request again** and write in **How you checked** where you looked.
-5. If the order no longer needs a voucher (the shipment was retired, or the order was canceled or refunded), click **No voucher needed: close** and write in **How you checked** what you did at ACS. If ACS holds the lost voucher, close the check first and delete the voucher afterwards (see "Delete a voucher in the right order" below).
+3. Click the action from the table. **Adopt ACS voucher** asks for **Voucher number**; the other two ask for **How you checked**, where you write where you looked and what you did at ACS.
 
 What each action does:
 
@@ -126,14 +133,9 @@ The three actions work only on a shipment that is waiting for this check; on any
 
 **When Adopt accepts the number by itself.** Only when ACS reports a recipient that matches the name the lost request sent (accents, capitals and extra spaces are ignored), and no other order that is still waiting was sent to the same recipient. In every other case Adopt refuses and tells you why: ACS names a different or masked recipient, gives no recipient, knows the voucher only from a refused pickup list, or another waiting order has the same recipient so the name cannot tell them apart. Then check in ACS's portal that the voucher is really this order's parcel, click **Adopt ACS voucher** again, and write in **Confirmed by hand** how you confirmed it. That text is kept on the order.
 
-**Delete a voucher in the right order.** The slow answer from ACS to the lost request can still arrive after you resolved the check. If you already requested again, closed the check or adopted another voucher, the shop no longer saves that answer: it deletes the voucher at ACS itself. If ACS refuses to delete it, the voucher appears at once in <span class="sidebar-path">Shipping → ACS vouchers matching no order</span> (**Found by**: **Our own unused voucher that ACS would not delete**), and you delete it from there. A voucher you had only marked as checked is reopened then, because it may be a live voucher nobody acts on.
+**Delete a voucher only after the check is closed.** A voucher found for an order that still needs one is adopted, never deleted and never answered with a new request. A voucher found for an order that needs none is deleted after you close the check here, in the portal or with **Delete at ACS** in <span class="sidebar-path">Shipping → ACS vouchers matching no order</span>. Do not delete it in the portal while the order is still waiting for the check: the slow answer to the lost request can still arrive and the shipment would save a voucher number that no longer exists.
 
-One case is still yours to avoid. If you delete the voucher in ACS's own portal and have **not** yet resolved the check here, a late answer can still arrive and the shipment would save a voucher number that no longer exists. So:
-
-1. First resolve the check here: **No voucher at ACS: request again** or **No voucher needed: close**.
-2. Only then delete the lost voucher, in the portal or with **Delete at ACS** in the list of vouchers that match no order.
-
-Never delete it in the portal while the order is still waiting for the check.
+What the shop does today with that slow answer once you have resolved the check: it does not save it. It deletes the voucher at ACS itself. If ACS refuses to delete it, the voucher appears at once in the list above (**Found by**: **Our own unused voucher that ACS would not delete**), and you delete it from there; a voucher you had only marked as checked is reopened then. This protection holds only while the check stays resolved. If you requested again and that new request is also lost, the check reopens, and an answer to the earlier request that arrives then can still be saved. Because of that, do not delete a voucher at ACS to make room for a new request.
 
 ### Vouchers that match no order
 
