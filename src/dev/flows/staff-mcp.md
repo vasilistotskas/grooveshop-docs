@@ -88,7 +88,7 @@ The scope table is `STAFF_SCOPE_PERMISSIONS` (`agent/staff.py`). The role column
 |---|---|
 | The store has not turned `staff_ai_access` on | 404 on `/mcp/admin`, its metadata and `/api/v1/agent/staff/*`; the consent refuses |
 | No bearer on `/mcp/admin` | 401, `scope="admin:orders:read …"`, `resource_metadata` |
-| Unknown, expired, revoked or refresh token; another store's token; not on the team; `is_staff` cleared | 401 `error="invalid_token"`: the client connects again |
+| An unknown, expired or revoked token; a refresh token sent as the bearer; another store's token; not on the team; `is_staff` cleared | 401 `error="invalid_token"`: the client connects again |
 | Scope not granted at consent | Tool error `not_granted`: disconnect and connect again, approving it |
 | Role does not open the area | Tool error `not_allowed` (Django: 403) |
 | An authorize request naming no store, or an unknown one | 400 page on the connect host, before sign-in |
@@ -105,7 +105,7 @@ Writes need the owner's approval, tool by tool. Each would carry `destructiveHin
 - order status, forward only;
 - product price.
 
-Refunds, payment capture or cancellation, order cancellation, deletions, customer-data edits, settings, team changes and replies to customers stay out of MCP. The list with risks and undo paths is in the design note.
+Refunds, payment capture or cancellation, order cancellation, deletions, customer-data edits, settings, team changes and replies to customers stay out of MCP. The list with risks and undo paths is in the owner's design note, `notes/grooveshop/admin-mcp-design-2026-11-09.md` in NotepadLLM, outside this repository.
 
 ## Source
 

@@ -21,7 +21,7 @@ Each person sees only what their [role](/admin/getting-started/roles-and-team) a
 |---|---|---|---|
 | Orders, with their lines, totals, payment and shipping | yes | yes | yes |
 | Products, prices and stock, including low stock | yes | yes | yes |
-| Customers: name, email, when they joined, their orders | yes | yes | yes |
+| Customers: name, email, when they joined, how many orders they placed and when the last one was | yes | yes | yes |
 | Product reviews | yes | yes | yes |
 | Contact messages | yes | yes | yes |
 | Sales and turnover, as in the **Turnover** report | no | yes | yes |
@@ -56,8 +56,8 @@ Every person on your team connects with their own account, so each one sees only
 
 - **Your customers' details go to the AI app's provider.** What the app reads (names, emails, orders, messages) is sent to the company behind it, under its own terms. Connect only an app your store has agreed to use, and only areas you need.
 - **What customers write is treated as text, not commands.** Reviews, contact messages and order notes are passed to the app marked as written by a customer. Still read the app's answer with care if a message asks it to do something.
-- **Not every app or plan supports connectors.** At the time of writing, ChatGPT offers custom connectors on its business plans; the Gemini app offers them only on the web, in some countries and in English. Check your app's own help pages.
-- **"Not allowed" or "not granted" answers.** "Not allowed" means your role does not include that area. "Not granted" means you did not approve it when connecting: remove the connector and connect again to approve it.
+- **Not every app or plan supports connectors.** Whether you can add your own connector depends on the app, your plan and sometimes your country. Check your app's own help pages.
+- **`not_allowed` or `not_granted` answers.** The app may show these codes, or explain them in its own words. `not_allowed` means your role does not include that area. `not_granted` means you did not approve it when connecting: remove the connector and connect again to approve it.
 - The app cannot sign you in to the admin, and the admin is not reachable through the app.
 
 ## Related
