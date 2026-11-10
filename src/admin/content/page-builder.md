@@ -35,6 +35,29 @@ Your store's look is its theme, and you change it in the editor.
 
 **Button colour** can keep its own colour or, with **Follows the primary colour** on, change along with the primary colour.
 
+## Set a page's title and description for search engines
+
+Every page has its own **Page settings**: how it appears in search results and, on the home page, its main heading.
+
+1. Open **Content → Edit storefront** and open the page.
+2. In the outline, click **Page settings: title and description in search**.
+3. Fill in the fields you need (each one counts its characters against its limit):
+
+| Field | What it does | Up to |
+|---|---|---|
+| **Search engine title** | The title on the browser tab and in search results. Empty: the title the page sets itself. | 70 characters |
+| **Search engine description** | The text under the title in search results, and when the page is shared. Empty: the description the page sets itself. | 300 characters |
+| **Keywords** | Kept with the page but not put on it, because search engines ignore keywords. | 255 characters |
+| **Main heading (h1)** | Home page only. The page's main heading, used unless a section on the page supplies it: a **Hero banner**, a **Hero carousel** whose first slide has a heading, or a **Contact** section. A heading in any other section does not count. Empty: the store's name. | 120 characters |
+
+4. Publish. Like any other change, the settings reach visitors only when the page is published.
+
+On the **Blog post** page, which adds sections under every post, these settings do nothing: each post keeps its own title and description.
+
+Each field is written per language. Switch the editor to another language of your store to write that language's text. A field you leave empty there uses the Greek text, which the field shows greyed out. Greek is the language every page is written in first, whatever your store's main language.
+
+The **Main heading (h1)** is not shown on the page, in either store design: the sections at the top of the home page are what visitors see. When it is used, search engines and screen readers read it as the page's main heading; when a section supplies the heading, they read that section's instead.
+
 ## Choose what a section lists
 
 Some sections show things from your store rather than words you type: **Product carousel**, **Product grid**, **Featured products**, **Blog post grid**, **Blog post list**, **Blog post carousel**, **Product categories**, **Blog categories** and **Offers**. Under **What it lists** you say what they show. The page reads the items for itself, so names, prices and pictures follow your catalogue within moments, with nothing to publish.

@@ -328,6 +328,86 @@ of the store, whatever the purge patterns name. The cached functions
 (`nitro:functions:`) key on the raw host, not the epoch, and are left to
 the patterns. That is why only a purge with `tenantConfig: true` moves it.
 
+### The feeds, the sitemap and publish dates
+
+**The RSS feeds.** `/rss.xml` (posts and, with the `catalogue` feature,
+products) and `/blog/rss.xml` (posts only), under `/<locale>` for every
+other language the store serves (`shared/constants/feeds.ts:
+RSS_FEED_PATHS`), are answered by `server/handlers/rss-feed.ts`, registered
+as static routes in `nuxt.config.ts` (`nitro.handlers`), and built by
+`server/utils/rssFeed.ts`. Every read is a cached function named
+`rss:<what>`: `rss:feed` (the XML, keyed by host, locale, kind, currency,
+catalogue and the tenant-config epoch), `rss:blog-posts`, `rss:products`,
+`rss:blog-category`, `rss:product-category`. All are `swr: false` with
+`RSS_CACHE_SECONDS` (five minutes): with `swr`, Nitro keeps an entry
+without a TTL and serves it stale with no age limit while it refreshes, and
+two nested SWR reads left the feed two builds behind Django, which on a
+feed few readers ask for was hours. The TTL bounds a purge that did not
+arrive only loosely: `rss:feed` can be rebuilt from an `rss:blog-posts`
+entry close to its own expiry, so the feed can lag Django by up to two
+TTLs, and Cloudflare's copy (`EDGE_CACHE_CONTROL`: fresh for a minute,
+then `stale-while-revalidate`) can answer stale once more while it
+refreshes.
+
+Django's `sitemap_seo` surface (`core/cache/surfaces.py:
+SITEMAP_SEO_SURFACE`, label "Sitemap & SEO") is what purges them: its Nuxt
+patterns are `_nuxt_functions("sitemap", "rss")` (so
+`cache:nitro:functions:rss*`), the `/sitemap.xml` route and the
+`nuxt-ai-ready` handlers, and its `invalidated_by` names the blog post,
+blog category, product, product category and content page models and their
+translations, with `ignored_update_fields` `stock` and `updated_at` so an
+order's stock decrement does not purge it. It is the surface itself that
+lists the blog models, not the `blog` surface: a post save marks both. A
+feed answer carries `edgeCacheHeaders(schema)` (`server/utils/edgeCache.ts`:
+the edge directive and the store's `Cache-Tag`), and because the surface
+has a route pattern (`/sitemap.xml`), `CacheService.purge` queues the
+store's edge purge after it, which clears Cloudflare's copy of the feeds
+too. A 404 (blog off, a language the store does not serve) and a 500 are
+`private, no-store`.
+
+**The sitemap.** `/sitemap.xml` is a route-rule cache (`swr` for a day,
+varying on `host` and `x-tenant-epoch`), purged by the same surface. The
+store's own URLs (posts, products, categories, content and custom pages) are
+added in-process by the `sitemap:sources` hook
+(`server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`),
+not fetched as an HTTP source. A sitemap built while one of its reads fails
+(a cold cache during a Django outage) or while
+`server/plugins/sitemap-tenant-gate.ts` cannot read the store's content or
+layout is marked incomplete (`server/utils/sitemapIncomplete.ts:
+markSitemapIncomplete`): it answers 503 with `Retry-After:
+SITEMAP_RETRY_AFTER_SECONDS`, so the route rule keeps the last good sitemap
+it holds, the edge and the browser keep nothing, and a crawler retries
+rather than reading the store's pages as gone. `test/e2e/sitemapOutage.ts`
+holds it on a real server.
+
+**Publish dates.** A post (any `core.models.PublishableModel`: blog posts,
+content pages, reviews) saved with `is_published=True` and a future
+`published_at` is served from that date with no write at that moment
+(`PublishedQuerySet.published` needs both; `is_published` defaults to
+false, so a draft stays hidden whatever its date), so no `post_save` purges anything.
+`core/publication.py: release_due_publications` notices: the beat entry
+`release-due-publications` (`settings.py`, `SCHEDULE_PRESETS["every_minute"]`)
+fans out per store (`tenant.tasks.fanout_release_due_publications`, then
+`core/tasks.py: release_due_publications_task`), and each run finds the
+published rows whose date fell in `(cursor, now]` and were not saved on or
+after it (`updated_at < published_at`). For each it sends `went_live`, which
+reindexes the post's translations in Meilisearch (`blog/signals.py`; a
+post's `meili_filter` keeps it out until then), queues the page for
+IndexNow when the store has `INDEXNOW_ENABLED` on and the row is a blog
+post or a product (`indexnow/signals.py: _queue_went_live`) and queues the page builder's pages that
+list it (`builder/data_purge.py: post_went_live`). That last queue is
+written after the commit by `record`, which logs "could not be queued for
+a purge" and drops the documents on an error, so it never fails the run:
+those pages keep their copy until their cache expires. It then purges every surface whose
+`invalidated_by` names the model (`blog` and `sitemap_seo` for a post)
+through `CacheService.purge` directly, not the batched queue, so a failed
+purge fails the run. The window is a durable per-store cursor
+(`core/sweeps.py`, sweep `publication-go-live`) that moves only after the
+work ran, so a failed run repeats its window; a store's first run looks
+back one day (`FIRST_WINDOW`). A scheduled post therefore reaches the
+pages, search and the feeds within about a minute of its date, and, with
+IndexNow on, the first half-hourly submission after the sweep queued it.
+
 ## Layer 4: media-stream image cache
 
 The media service keeps processed images in memory, Redis and on disk
@@ -540,6 +620,10 @@ PageSpeed runs while Traefik's counters never moved.
 | Google/Meta/TikTok feed stale | gateway feeds | `clear_cache products` (calls `invalidate_feeds`) |
 | Product missing or stale in search | Meilisearch | `meilisearch_sync_index` for the model |
 | `/_nuxt` 503s only in PageSpeed | Cloudflare Speed Brain | dashboard: Speed Brain off, `_nuxt` cache rule eligible |
+| A post missing from or stale in `/rss.xml` or `/blog/rss.xml` | Nitro `nitro:functions:rss*`, or the edge copy of the feed | `clear_cache sitemap_seo` (purges the functions and queues the store's edge purge) |
+| A scheduled post not live a few minutes after its date | not saved with `is_published` (a draft never goes live), or the go-live sweep failed | the post's **Is Published**; Celery log for `release_due_publications_task`, whose run repeats its window once it succeeds |
+| A post live everywhere but missing from a page-builder list (a blog post grid or list) | the builder purge was not queued (`builder/data_purge.py: record` logged "could not be queued for a purge"); the sweep does not retry it | Django log for that message; `clear_cache builder` |
+| `/sitemap.xml` answers 503 | a read the sitemap needs failed; the route rule keeps the last good sitemap | Django's health; the crawler retries after `Retry-After` |
 | Purge reports 0 keys | wrong pattern | `dryRun: true` with `*` to see the real key shapes |
 
 ## Invariants
@@ -579,6 +663,10 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook, once per storefront tag |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm-job.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/custom-page.ts` | Nitro page cache for custom pages |
+| `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
+| `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |
+| `grooveshop-django-api/core/models.py` (`PublishableModel`, `PublishedQuerySet`) | What counts as published: `is_published` and a past `published_at` |
+| `grooveshop-django-api/core/publication.py`, `core/sweeps.py`, `core/tasks.py` (`release_due_publications_task`), `blog/signals.py`, `indexnow/signals.py`, `builder/data_purge.py` | The go-live sweep and what `went_live` triggers |
 | `grooveshop-django-api/tenant/media_flush.py`, `tenant/tasks.py` | Media flush |
 | `grooveshop-django-api/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml` | Originals served only to media-stream; public requests redirected to it |

@@ -102,8 +102,8 @@ bypass list, and resolves the store. The bypass list
 (`server/utils/tenantBypass.ts`) has two kinds of path: tenant-free ones
 (the kubelet's probes, build assets, the server-to-server cache purge and
 text routes), for which nothing looks a store up, Nitro plugins included,
-and self-resolving ones (favicon, `robots.txt`, the manifest, the sitemap
-source, `/llms*.txt`, the `.md` mirrors), whose own handler needs the
+and self-resolving ones (favicon, `robots.txt`, the manifest,
+`/llms.txt`, the `.md` mirrors), whose own handler needs the
 store. **A request looks its store up once**: the middleware, every Nitro
 plugin and every route go through `requestTenantResult(event)`
 (`server/utils/requestTenant.ts`), which memoises the outcome on the
@@ -309,12 +309,22 @@ are the bugs it exists to catch.
   (`meili/models.py: get_meili_index_name`), with a per-tenant search
   client whose key is restricted to that prefix (`meili/_client.py`).
 - **AI discovery surfaces are served only on the platform storefront.**
-  `server/middleware/1.ai-ready-gate.ts` answers 404 for `/llms.txt`,
-  `/llms-full.txt` and direct `.md` mirrors on every other host, because
-  the module's index is a single per-pod store with no host column. The
-  platform storefront is the `Tenant` row with `is_platform_storefront`,
-  never a hostname comparison (`server/utils/aiSurfaces.ts:
-  servesAiSurfaces`).
+  `server/middleware/1.ai-ready-gate.ts` answers 404 for `/llms.txt` and
+  direct `.md` mirrors on every other host (`server/utils/aiSurfaces.ts:
+  isAiSurfacePath`), because the module builds `/llms.txt` through a cached
+  function whose key is not the store's host and lists pages from the
+  sitemap. The platform storefront is the `Tenant` row with
+  `is_platform_storefront`, never a hostname comparison
+  (`servesAiSurfaces`).
+- **`/llms-full.txt` and `/sitemap.md` are off for every store**
+  (`aiReady.llmsFullTxt: false`, `aiReady.sitemapMd: false` in
+  `nuxt.config.ts`). Both are built from prerendered pages or the module's
+  page database, and the storefront has neither: the database is off
+  (`aiReady.database: false`) because its page table keys on the route
+  alone, with no host or store column, so one store's pages would be served
+  as another's. Left on, every store served an empty file that `/llms.txt`
+  and each `.md` page linked to. `/llms.txt` and the per-page `.md` twins
+  are generated without the database and stay.
 - **A store's site config is its own on every response, and a store
   advertises only the surfaces it serves.** nuxt-ai-ready builds the
   `Link` header (a page's `.md` twin and `/llms.txt`) in a handler it
@@ -388,7 +398,8 @@ are the bugs it exists to catch.
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | Host resolution and bypass list |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.ai-ready-gate.ts` | Platform-only AI surfaces |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/tenant-site-config.ts` | The store's site config on `site-config:init`; drops AI-surface links a store does not serve |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/aiSurfaces.ts` | `servesAiSurfaces`, `withoutAiSurfaceLinks` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/aiSurfaces.ts` | `isAiSurfacePath`, `servesAiSurfaces`, `withoutAiSurfaceLinks` |
+| `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts` | `aiReady`: no page database, no `/llms-full.txt`, no `/sitemap.md` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | `getTenantConfig`, `tenantConfigEpoch`, `invalidateTenantConfigs` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | Per-tenant locale gate |
