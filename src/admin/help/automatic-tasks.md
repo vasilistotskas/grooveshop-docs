@@ -22,7 +22,7 @@ Automatic tasks have no screen of their own. You see their result on orders, on 
 | Stock held for a customer at checkout is released if they did not finish the order. | as soon as the time runs out | `STOCK_RESERVATION_TTL_MINUTES` (30 minutes) |
 | A signed-in customer who left checkout halfway gets a "Did you forget something?" email, once. | every day 06:00 | `CHECKOUT_ABANDONMENT_HOURS` (2 hours) |
 | An order that was delivered and is paid moves to "Completed". The customer gets no email. | every hour | — |
-| You get one email, at the **Contact Email**, about active products with low stock. Each product is listed once, until its stock rises above the threshold again. | every hour | the **Low Stock Threshold** field of each product (10; 0 stops it) |
+| You get one email, at the **Contact Email**, about active products that are low or out of stock. Each product is listed once, until its stock rises above the threshold again. | every hour | the **Low Stock Threshold** field of each product (10; 0 stops it) |
 | Empty guest carts are deleted. | every day 04:00 | `ABANDONED_CART_CLEANUP_DAYS` (7 days) |
 | Guest carts not opened for a long time are deleted. Registered customers' carts stay. | every day 06:00 | `OLD_GUEST_CART_CLEANUP_DAYS` (30 days) |
 
