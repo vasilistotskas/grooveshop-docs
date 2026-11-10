@@ -452,6 +452,14 @@ order through `OrderService.cancel_for_dead_shipment` instead, a real
 `cancel_order` (stock restored, reservation released, cancellation
 recorded) with `refund_payment=False`: nobody asked for it, so a paid
 order is logged at WARNING and left for staff to refund by hand.
+The courier is not asked to cancel, since the shipment already is: the
+order records `shipment_cancel = {attempted: false, dispatched: true}`
+(`SHIPMENT_ALREADY_CANCELED` in `order/services.py`), so no courier
+call runs inside the sync's transaction. An order whose status no
+longer allows a cancel raises `OrderNotCancelableError`, which BoxNow's
+sync drops with a warning; any other `OrderCancellationError` is a
+cancel that failed on the way and is not caught, so the parcel event
+rolls back and the next poll applies it again.
 BoxNow does the same for a `canceled` parcel event, only while the order
 is PENDING or PROCESSING; a bare status write stranded prod
 order 248 with its unit still counted as sold.
