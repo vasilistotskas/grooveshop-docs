@@ -159,9 +159,11 @@ A customer who ordered a week ago and still has no parcel is about to contact yo
 
 An order is flagged when it was placed at least 7 days ago and is still **Pending**, **Processing** or **Shipped**. The number of days is `ORDER_FOLLOW_UP_DAYS` under <span class="sidebar-path">Settings → Store Settings</span>. A card order still waiting for its payment is never flagged: it is an abandoned checkout.
 
+An order is also flagged at once, however recent, when its BoxNow parcel was canceled and the order is still **Pending** or **Processing**. The parcel is then marked **Canceled**, but the order keeps its status, its stock and its payment: nothing is cancelled or refunded for you. The reason reads "Needs follow-up: the parcel was canceled while the order is still open. Create a new parcel or cancel the order." See [Cancel a parcel](/admin/shipping/boxnow#cancel-a-parcel).
+
 You see the flag in the **Follow-up** column, in the **Needs follow-up** filter, on the **Order Information** tab with the reason and the courier's last update, and on the [Dashboard](/admin/getting-started/dashboard) as **Orders to follow up**.
 
-The flag disappears by itself once the order is delivered, completed, returned, cancelled or refunded. There is nothing to tick off.
+The flag disappears by itself once the order is delivered, completed, returned, cancelled or refunded, or, for a canceled parcel, once the order has a new parcel. There is nothing to tick off.
 
 ### Change the follow-up period
 1. Open <span class="sidebar-path">Settings → Store Settings</span> and search for `ORDER_FOLLOW_UP_DAYS`.
