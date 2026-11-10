@@ -260,7 +260,9 @@ courier could not be reached, so try again in a few minutes.
 These cancel first and ask the courier afterwards, through
 `OrderService.cancel_attached_shipment`, called by `cancel_order` itself:
 `cancel_order` is the only path that produces CANCELED, so every cancel
-reaches the courier. A customer cancel, which already asked, writes the
+of an order whose shipment is still alive reaches the courier. A
+dead-shipment cancel does not ask: the shipment is already canceled
+([Shipping](/dev/flows/shipping)). A customer cancel, which already asked, writes the
 `shipment_cancel` breadcrumb on the metadata before the save so the
 cascade skips. A carrier refusal never stops the cancel: it
 is logged, kept in `metadata["cancellation"]["shipment_cancel"]["error"]`,

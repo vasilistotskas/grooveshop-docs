@@ -459,7 +459,11 @@ call runs inside the sync's transaction. An order whose status no
 longer allows a cancel raises `OrderNotCancelableError`, which BoxNow's
 sync drops with a warning; any other `OrderCancellationError` is a
 cancel that failed on the way and is not caught, so the parcel event
-rolls back and the next poll applies it again.
+and the shipment's state roll back. BoxNow does not send the webhook
+again (the endpoint answered 200 before the event was applied): the
+operators are alerted, and the tracking poll, which keeps reading a
+shipment that is not in a final state (`poll_boxnow_tracking_batch` in
+`shipping_boxnow/tasks.py`), applies the event on a later run.
 BoxNow does the same for a `canceled` parcel event, only while the order
 is PENDING or PROCESSING; a bare status write stranded prod
 order 248 with its unit still counted as sold.
