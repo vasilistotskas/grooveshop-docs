@@ -30,7 +30,16 @@ Blog categories are separate from product categories, and blog tags are separate
 ### Add an author
 1. The author needs a user account. If they have none, create it first; see [Customers & addresses](/admin/customers/users-and-addresses).
 2. Open <span class="sidebar-path">Content → Blog → Blog Authors</span> and click **Add**.
-3. Pick the **User**, fill in a **Website** and a **Bio** in every language if you like, and save.
+3. Pick the **User**, fill in a **Website**, **Public profiles** and a **Bio** in every language if you like, and save.
+
+### Add the author's public profiles
+**Public profiles** are links to the author's profiles on other sites, such as LinkedIn, X or Instagram.
+
+1. Open the author in <span class="sidebar-path">Content → Blog → Blog Authors</span>.
+2. Under **Public profiles**, click **Add new item** and paste the full address of one profile, starting with `https://` (or `http://`).
+3. Add one item per profile, up to 10, and save.
+
+The links are not shown on the page. Search engines read them, together with the **Website**, on the author's page and on every post the author wrote, to tell who wrote the article and that it is the same person as on those profiles. Saving is refused for an address that is not a web page, or for more than 10 links.
 
 ### Add a tag
 1. Open <span class="sidebar-path">Content → Blog → Blog Tags</span> and click **Add**.
@@ -43,7 +52,7 @@ Blog categories are separate from product categories, and blog tags are separate
 - **The default store design shows no tag list** (some store designs do), and a tag's **Active** does not change the related posts. To stop a tag linking posts, remove it from them or delete it.
 - **The category list shows no indentation.** Dragging changes the order only among categories with the same parent; check the **Parent** column before you drag.
 - **Deleting a category also deletes its subcategories.** Their posts are left without a category, not deleted.
-- **The author's name** comes from their user account; correct it there. Only the **Bio** and **Website** come from this form.
+- **The author's name** comes from their user account; correct it there. Only the **Bio**, **Website** and **Public profiles** come from this form.
 - A user has at most one author profile, and cannot be deleted while they have it. Delete the profile first.
 - The **Posts** columns count drafts and scheduled posts too. The store counts published posts only.
 - Deleting a tag removes it from every post.

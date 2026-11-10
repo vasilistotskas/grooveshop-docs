@@ -34,8 +34,13 @@ For a draft, save without ticking **Is Published**.
 
 ### Schedule a post
 1. Tick **Is Published** and set **Published At** to a future date and time.
-2. Save. The list shows **Scheduled** and the post appears on its own at the moment you set.
+2. Save. The list shows **Scheduled**.
 3. Do not use **Publish selected posts** on it: that publishes at once, with today's date.
+
+Within about a minute of the date you set, the post appears on its own: on the blog, in the store's search and in its feeds. If `INDEXNOW_ENABLED` is on (see [Store settings](/admin/settings/store-settings)), the search engines hear of it in the store's next message to them, sent every half hour. You do not need to save it again or clear any cache.
+
+### Make a link open in a new tab
+In the **Body**, when you add or edit a link, choose in the editor's link window that it opens in a new window. The store keeps that choice. To open every link that leads to another site in a new tab, without choosing it link by link, switch on `EXTERNAL_LINKS_NEW_TAB_ENABLED` in [Store settings](/admin/settings/store-settings).
 
 ### Feature a post
 Tick **Featured**, in the list (then click **Save**) or inside the post. A featured post on the blog's first page is shown first, as a large card.
@@ -67,12 +72,23 @@ Untick **Is Published** and save, or select posts and choose **Unpublish selecte
 
 - **SEO Score**: it gets 25% for each of: a title of 11 to 59 characters, a subtitle, an image and at least one tag. It does not read the body or the SEO fields.
 - **Text that is refused**: if you paste something the store cannot show, e.g. code from **Source code**, saving stops with a message saying what is wrong.
-- **Text pasted from Word**: it keeps its bold, sizes, colours and alignment, but not its font. The store shows every post in its own fonts, so a font set in Word (Roboto, Calibri, ...) does not appear, and Word's hidden comment marks are left out.
-- **Search**: the store's search finds a scheduled post before its time, even though the blog pages still hide it. Keep posts with a distant date as drafts.
+- **Fonts and text size come from the store**: when you save, the font and the text size are removed from the text, so every post uses the typography of your store's theme. This also goes for text pasted from Word or from a web page (Roboto, Calibri, 14pt, ...), and Word's hidden formatting and comment marks go with it. Bold, italics, colours, alignment and spacing stay as you set them. The editor does not offer a font or a text size for the same reason; use a heading for larger text.
+- **Search**: a scheduled post stays out of the store's search until its time, as it does on the blog pages.
 - **Bulk actions**: **Publish selected posts** puts today's date on every selected post, even ones already published. Changes made by bulk actions reach the store on their own.
 - **Comments**: they cannot be closed per post. The `BLOG_COMMENTS_ENABLED` setting under <span class="sidebar-path">Settings → Store Settings</span> closes them for the whole blog; see [Comments](/admin/content/blog/comments).
 - **Deleting**: deleting a post does not erase its comments. Erase them first from [Comments](/admin/content/blog/comments) if they should go.
 - **A list for Excel**: select posts and choose **Export selected to CSV** or **Export selected to XML**.
+
+## Feeds for your readers
+
+Readers can follow your store in a feed reader (RSS). Each feed lists your published posts, newest first, with their full text:
+
+| Address | What it holds |
+|---|---|
+| `/rss.xml` | Your blog posts and, when your store shows products, your products too. |
+| `/blog/rss.xml` | Your blog posts only. |
+
+If your store is also in English, the English feeds are `/en/rss.xml` and `/en/blog/rss.xml`. Add the address to your store's domain, for example `https://your-domain/blog/rss.xml`. The feeds follow your changes by themselves: a new, changed or scheduled post appears in them without any clearing. Without the blog, there are no feeds.
 
 ## Related
 
