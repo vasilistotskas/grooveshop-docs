@@ -112,7 +112,7 @@ Look in ACS's portal first, then choose by what you found and by whether the ord
 
 | What you found at ACS | The order still needs a voucher | The order needs no voucher |
 |---|---|---|
-| A voucher for this order | **Adopt ACS voucher**, with its number. Do not delete it. | **No voucher needed: close**, then delete that voucher (see below). |
+| A voucher for this order | **Adopt ACS voucher**, with its number. Do not delete it. | **No voucher needed: close**, then delete the voucher you found (see below). |
 | No voucher | **No voucher at ACS: request again** | **No voucher needed: close** |
 
 Steps:
@@ -137,7 +137,7 @@ The three actions work only on a shipment that is waiting for this check; on any
 
 What the shop does today with that slow answer once you have resolved the check: it does not save it. It deletes the voucher at ACS itself. If ACS refuses to delete it, the voucher appears at once in the list above (**Found by**: **Our own unused voucher that ACS would not delete**), and you delete it from there; a voucher you had only marked as checked is reopened then. The same holds if you requested again and that new request is also lost: the check stays open for the new request, and an answer to the earlier request that arrives then is not saved either. It is deleted at ACS, or shown in the list as our own unused voucher if ACS refuses. The shop does not offer that earlier voucher for adoption; the voucher to look for is the new request's. If you find the earlier voucher at ACS and adopt it anyway, and it is on the list as our own unused voucher for this shipment, adopting it works with **Confirmed by hand** filled in, even when ACS reports nothing for it. Do not delete a voucher at ACS to make room for a new request.
 
-One more case. If a voucher request that was sent before you resolved the check ends without an answer afterwards, ACS may hold one more voucher for the order that nothing records, because there is no number to list. You get one note in the order's history and one email saying so, once for that request. It is not counted on the Dashboard. Check ACS's portal and delete any voucher the order's shipment does not use.
+One more case. If a voucher request that was sent before you resolved the check ends without an answer afterwards, ACS may hold one more voucher for the order that nothing records, because there is no number to list. You get one note in the order's history and one email saying so, once for that request. It is not counted on the Dashboard. **Do not delete anything at ACS yet.** After you requested again, the new request may still be in progress, and its voucher can already be visible at ACS before the shipment shows it: deleting it would leave the shipment with a number that no longer exists. First wait until the order's shipment shows its voucher number, or shows the check again (**Voucher request outcome unknown since**). With the default settings a request takes at most about 78 seconds, and the shop treats one with no result after 5 minutes (300 seconds) as lost, recording the check the next time it works on the order. Then delete only a voucher at ACS whose number is **different** from the one on the shipment. If the shipment shows the check again, decide by the table above.
 
 ### Vouchers that match no order
 

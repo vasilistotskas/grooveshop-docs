@@ -366,6 +366,11 @@ stateDiagram-v2
   wording ("ACS may hold one more voucher for this order"), once per claim
   (`metadata["late_unknown_alerted"]`). It sets no state and adds no
   dashboard count: there is no number to list.
+  The note and alert say to delete any voucher the shipment does not use, so
+  staff must first let the new request finish (worst case about 78 s at the
+  default `ACS_HTTP_TIMEOUT`, `worst_case_request_seconds`; the mint claim TTL
+  is 300 s): a new request's voucher can be visible at ACS before the shipment
+  saves it, and deleting it would leave a dead number on the shipment.
 - `reset_shipment_for_remint` clears the column beside a real voucher and
   keeps it on a shipment with no voucher. It refuses while a mint claim is
   younger than its TTL (the shipment was canceled with a request out: a
