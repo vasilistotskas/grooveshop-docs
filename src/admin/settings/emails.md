@@ -33,7 +33,7 @@ Each email is a card with:
 - A switch, for the emails you may turn off. A switched-off email is simply not sent, and only that one.
 - **Preview** and, if you may, **Send test**.
 
-The emails are grouped by area, for example Orders, Shipping, Products, Gift cards, Wholesale and Customer accounts. **To your team** holds the emails to you: a new order, a payment dispute, low stock, a new business application, a contact form message, and alerts when something needs a person (courier problems, a payment or refund that needs you).
+The emails are grouped by area, for example Orders, Shipping, Products, Gift cards, Wholesale and Customer accounts. **To your team** holds the emails to you: a new order, a payment dispute, low stock, a new business application, a contact form message, and alerts when something needs a person (courier problems, a payment or refund that needs you). Two of them concern ACS vouchers: **ACS voucher request with an unknown outcome** (a voucher request got no answer, so ACS may hold a voucher for the order) and **ACS vouchers matching no order** (ACS named vouchers that match none of your shipments). Both can be switched off like the others, and both are explained in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer).
 
 ## One email
 

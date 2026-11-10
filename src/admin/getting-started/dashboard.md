@@ -68,6 +68,8 @@ Work that is waiting. Each row opens its list already filtered to those records.
 | **Orders paid twice** | The customer paid more than the order is for: refund the extra payment. See [A customer paid twice](/admin/sales/orders#a-customer-paid-twice). |
 | **Lost disputes to settle** | You lost a card dispute and have not said yet whether the goods came back, so the receipt is not credited. See [Settle a lost dispute](/admin/sales/refunds-and-disputes#settle-a-lost-dispute). |
 | **COD cash ACS has not paid out** | Cash-on-delivery parcels delivered more than 10 days ago with no payout from ACS. |
+| **ACS voucher requests to check** | Orders whose voucher request to ACS got no answer, so ACS may already hold a voucher for them. Nothing more is sent for these orders until you adopt the voucher, ask again or close the check. An order that no longer needs a voucher stays counted until you close it. See [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer). |
+| **ACS vouchers matching no order** | Vouchers ACS named on a refused pickup list that match none of your shipments, which you have not yet adopted, deleted at ACS or marked as checked. See [ACS Courier](/admin/shipping/acs#vouchers-that-match-no-order). |
 | **Stale ACS shipments** | Parcels with no movement for three days, or orders still without a voucher (the courier's shipping label) one day on. |
 | **Running low on stock** | Active products that are **Low stock**: in stock, but at or below their own **Low Stock Threshold**. A product with a threshold of 0 is never counted. |
 | **Receipts rejected by myDATA** | Receipts to correct and send again. |

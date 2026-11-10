@@ -105,13 +105,15 @@ The emails that tell you something needs a person are not store settings. Each o
 
 Emails your customers or the law need, such as the order confirmation, show **Required** instead of a switch. An email marked **Off:** followed by a reason, for example a feature you have not turned on, is not sent whatever its switch says. The alerts go to the **Contact Email** and the owner's email on the [Store profile](/admin/settings/store-profile); a store with neither gets none of them.
 
-Even with an email off, some of the work stays in **Needs attention** on the [Dashboard](/admin/getting-started/dashboard): ACS parcels that are not moving, cash on delivery ACS has not paid out, ACS payouts that match no shipment, canceled orders that still hold a payment, and reviews waiting for approval. The other emails are the only warning.
+Even with an email off, some of the work stays in **Needs attention** on the [Dashboard](/admin/getting-started/dashboard): ACS parcels that are not moving, cash on delivery ACS has not paid out, ACS payouts that match no shipment, ACS voucher requests that got no answer, ACS vouchers that match no order, canceled orders that still hold a payment, and reviews waiting for approval. The other emails are the only warning.
 
 | The email comes when |
 |---|
 | Once a day, for ACS parcels without movement or without a voucher. |
 | ACS delivered a cash-on-delivery parcel and has not paid the money out. |
 | ACS paid out money that matches none of your shipments. |
+| A voucher request to ACS got no answer, so ACS may already hold a voucher for the order. It comes once per order. Details in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer). |
+| ACS named vouchers on a refused pickup list that match none of your shipments. It comes the first time ACS names each voucher. Details in [ACS Courier](/admin/shipping/acs#vouchers-that-match-no-order). |
 | A courier refused to create a shipment, for example because of a wrong address. The order also gets a note. |
 | BoxNow sent a parcel update the store could not apply. |
 | A payment arrived for an order already canceled, and you have to refund it. |

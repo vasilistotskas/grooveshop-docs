@@ -25,6 +25,8 @@ The screen appears only while ACS is active under [Shipping providers](/admin/se
 
 Filters: **Shipment state**, **Delivery kind**, **Label** (**Printed** / **Not printed**), **Needs attention** and **Created At**. Search finds a voucher number, an order number or a customer email.
 
+A shipment waiting for you to check its voucher at ACS (see [A voucher request that got no answer](#a-voucher-request-that-got-no-answer)) stays in **Pending creation**. Its **Voucher request outcome unknown since** field on the **Shipment** tab shows the time, and the filter **Needs attention: Voucher request with an unknown outcome** lists such shipments.
+
 The parcel states:
 
 | State | Meaning | The order becomes |
@@ -53,6 +55,9 @@ The buttons:
 | Bulk action | **Print labels for selected shipments** | Downloads one PDF with every selected label, in order-number order. |
 | Bulk action | **Re-poll tracking for selected shipments** | Asks for a fresh update on each selected parcel. |
 | Bulk action | **Retire selected shipments (mark CANCELED, stop polling)** | Marks the shipments cancelled here only, so the checks and alerts stop. It does not tell ACS and does not change the order. |
+| Shipment page | **Adopt ACS voucher** | Gives the shipment a voucher you found in ACS's portal. See [A voucher request that got no answer](#a-voucher-request-that-got-no-answer). |
+| Shipment page | **No voucher at ACS: request again** | Asks ACS for one new voucher, when the portal shows none for the order. See the same section. |
+| Shipment page | **No voucher needed: close** | Ends the check for a shipment that was retired, or whose order was canceled or refunded. See the same section. |
 | Shipment page | **Record COD received outside ACS** | See "Cash on delivery that never arrived". |
 | Shipment page | **Cancel ACS voucher** | Cancels only the voucher at ACS, with a reason; the order stays as it is. |
 
@@ -76,6 +81,7 @@ The pickup list is the record of the day's parcels at ACS. It is issued automati
 - **To issue it yourself:** print any missing labels first, then click **Issue ACS pickup list now** and read the message. If ACS refuses, the message gives its reason.
 - **A day with no new parcels:** the message says no vouchers are waiting. That is not an error.
 - A voucher already on a list can no longer be cancelled from here.
+- **A refusal can also name vouchers that belong to none of your orders.** They are kept in a list for you to check: see [Vouchers that match no order](#vouchers-that-match-no-order).
 
 ### A voucher that was not issued
 
@@ -86,6 +92,61 @@ The voucher is issued a few seconds after the order. For card payments, as soon 
 3. Come back here and click **Issue ACS voucher now** on the row.
 
 For a card order that is not paid yet, the button does nothing: the voucher is issued by itself when the payment arrives. If the ACS login details are missing from the [Store profile](/admin/settings/store-profile), no voucher is issued until an Owner or Admin fills them in.
+
+If the button answers that the last voucher request may have reached ACS without an answer, do not press it again: follow the next section.
+
+### A voucher request that got no answer
+
+Sometimes the request for a voucher is sent to ACS and no answer comes back: ACS takes too long, the connection drops, or ACS reports a server error. ACS may have created the voucher all the same, and sending the request again could create a second voucher for the same parcel. So in this case the shop **stops and asks you**: it sends nothing more for that order, neither by itself nor from **Issue ACS voucher now**, until you decide.
+
+How you are told:
+
+- One email, **ACS voucher request with an unknown outcome**, with the order number. It is sent once, not on every attempt.
+- A note in the order's history, which names the actions below.
+- On the [Dashboard](/admin/getting-started/dashboard), the row **ACS voucher requests to check** in **Needs attention**.
+- On the shipment, which stays **Pending creation**, the field **Voucher request outcome unknown since**. The filter **Needs attention: Voucher request with an unknown outcome** lists these shipments.
+
+What to do:
+
+1. Open ACS's own portal and look for a voucher of this order. Its reference is the order number.
+2. Open the shipment in <span class="sidebar-path">Shipping → ACS Shipments</span>.
+3. If the portal has a voucher for the order, click **Adopt ACS voucher** and enter its number in **Voucher number**.
+4. If the portal has none, click **No voucher at ACS: request again** and write in **How you checked** where you looked.
+5. If the order no longer needs a voucher (the shipment was retired, or the order was canceled or refunded), click **No voucher needed: close** and write in **How you checked** what you did at ACS. If ACS holds the lost voucher, delete it in ACS's portal first and say so.
+
+What each action does:
+
+| Action | What happens | When it is refused |
+|---|---|---|
+| **Adopt ACS voucher** | The shipment takes that voucher and becomes **New**. The order gets the voucher number as its tracking number and a note, and moves to **Processing** if it was **Pending**. No new request is sent. | ACS does not hold the voucher for your store. The number already belongs to another shipment. The order no longer needs a voucher. Or ACS's answer does not settle it by itself (see below) and **Confirmed by hand** is empty. |
+| **No voucher at ACS: request again** | The note is kept on the order, and exactly one new request is sent. | The note is empty, or the order no longer needs a voucher. **Be sure first:** if ACS did make a voucher, this creates a second one. |
+| **No voucher needed: close** | The check ends, the note is kept on the order, and nothing is sent to ACS. | The note is empty, or the order still needs its voucher (then adopt or request again). |
+
+The three actions work only on a shipment that is waiting for this check; on any other shipment they answer that they cannot be used. A shipment that was retired, or whose order was canceled or refunded, "needs no voucher": it stays counted on the Dashboard until you close it, and **Adopt ACS voucher** and **No voucher at ACS: request again** refuse it. If the slow answer from ACS arrives while you are checking, the shipment takes that voucher by itself and the wait ends.
+
+**When Adopt accepts the number by itself.** Only when ACS reports a recipient that matches the name the lost request sent (accents, capitals and extra spaces are ignored), and no other order that is still waiting was sent to the same recipient. In every other case Adopt refuses and tells you why: ACS names a different or masked recipient, gives no recipient, knows the voucher only from a refused pickup list, or another waiting order has the same recipient so the name cannot tell them apart. Then check in ACS's portal that the voucher is really this order's parcel, click **Adopt ACS voucher** again, and write in **Confirmed by hand** how you confirmed it. That text is kept on the order.
+
+### Vouchers that match no order
+
+<span class="sidebar-path">Shipping → ACS vouchers matching no order</span>
+
+When ACS refuses a pickup list, it names the unprinted vouchers it holds for your account. Any that belong to none of your shipments are no longer ignored: each is kept here, and you get one email, **ACS vouchers matching no order**, the first time ACS names it. The row **ACS vouchers matching no order** on the [Dashboard](/admin/getting-started/dashboard) counts those you have not dealt with. The list has the filter **Resolution** (**Not resolved** / **Resolved**).
+
+Such a voucher can be the lost answer of a request (see above), a second voucher for an order that already has one, or a voucher you made yourself in ACS's portal. The shop cannot tell which, so it deletes nothing by itself. While it stays unprinted at ACS, it keeps the pickup list refused. Open the voucher and choose:
+
+- **Adopt it:** if it belongs to an order waiting for a check, adopt it from that order's shipment, as above. The voucher is then marked **Adopted by a shipment**.
+- **Delete at ACS:** deletes the voucher at ACS and marks it deleted, keeping your note. It cannot be undone. A duplicate that the shop's own request deleted at ACS is closed by itself.
+- **Mark as checked:** for a voucher you know, for example one you made in the ACS portal. Write in the note what it is. It stops being counted and nothing is sent to ACS.
+
+**Delete at ACS** is refused:
+
+- while a voucher request is in progress, because the voucher may be its answer. Try again in a few minutes;
+- while an order that still needs a voucher is waiting for you to check its voucher request. The voucher may be that order's, and a deleted voucher can no longer be adopted, so the shop makes you resolve that order first. The message names the order. An order that no longer needs a voucher does not hold the delete back;
+- when a shipment already holds the voucher: cancel it from that shipment instead;
+- when ACS refuses, for example because the voucher is already on a pickup list;
+- when the voucher is already resolved.
+
+Both actions ask for a note, and both keep it on the voucher.
 
 ### Cancel a voucher
 
@@ -133,7 +194,7 @@ When BoxNow is switched off, the menu shows **ACS Stations** directly under **Sh
 
 ## Things to know
 
-- **ACS sometimes rejects a request.** The platform retries by itself. If the problem stays, tell the platform team.
+- **ACS sometimes rejects a request.** The platform retries by itself, as long as the request never reached ACS. A request that may have reached it without an answer is never sent again by itself: see [A voucher request that got no answer](#a-voucher-request-that-got-no-answer). If the problem stays, tell the platform team.
 - **A wrong address or Smartpoint** is not retried. You receive an email at once and a note is written on the order. The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store); the note is always written.
 - **One voucher, one parcel.** The platform sends every order as one parcel. The fields on the **Parcel & COD** tab are read only when the voucher is issued. If you change them later, ACS does not find out.
 - **Weight:** ACS charges at least 0.5 kg per parcel.
