@@ -55,9 +55,19 @@ be `memory`.
 **Media stream.** `pnpm install`, `pnpm run dev`; `BACKEND_URL` points at
 the image origin and Redis must be running.
 
-**Gateway.** Export the variables from `.env.example` (`DJANGO_BASE_URL`,
-`REDIS_URL`, `INTERNAL_EVENTS_SECRET`, `ASSETS_HOST`, `ENV=development`)
-and `go run ./cmd/gateway`.
+**Gateway.** Export the variables from `.env.example` (the seven required ones,
+`ENV=development`) and `go run ./cmd/gateway`. `ENV=development` is what lets
+the example's short `INTERNAL_EVENTS_SECRET` boot: production and staging refuse
+one under 32 characters. Every other value `config.Load` refuses at start is
+listed in [Agent gateway](/dev/gateway/#configuration).
+
+Set Django's `AGENT_GATEWAY_INTERNAL_SECRET` to the **same value** as the
+gateway's `INTERNAL_EVENTS_SECRET` (and `AGENT_GATEWAY_INTERNAL_URL` to the
+gateway's address). Django's `.env.example` leaves the secret empty, and Django
+then does not recognise the gateway on `tenant/resolve`
+(`tenant/views.py: _is_gateway`): it leaves the store's chat key and ACP bearer
+out of the answer, so `/chat` and `/acp` stay off for every store with no error
+anywhere. The same secret authenticates the order-event push the other way.
 
 ## Staging
 
