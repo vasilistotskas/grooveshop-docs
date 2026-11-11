@@ -537,8 +537,11 @@ The Go gateway caches the generated catalogue feeds per tenant.
 `AGENT_GATEWAY_INTERNAL_URL` + `/internal/feeds/invalidate` with
 `AGENT_GATEWAY_INTERNAL_SECRET`; `CacheService._purge_surface` calls it for
 every surface flagged `invalidates_gateway_feeds`, so a product purge also
-drops the feeds. There is no dry-run for this step. See
-[Agentic commerce](/dev/flows/agentic-commerce).
+drops the feeds. There is no dry-run for this step. The gateway drops both
+cached documents and the store's failure mark, and bumps a counter so a sweep
+already running cannot write pre-change data back as fresh. After a failed
+sweep the gateway waits a minute before the next, unless an invalidation
+arrives first. See [Agentic commerce](/dev/flows/agentic-commerce#catalog-feeds).
 
 ## Layer 6: Meilisearch
 

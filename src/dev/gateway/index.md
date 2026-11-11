@@ -54,7 +54,36 @@ golangci-lint run
 go run ./cmd/gateway                                    # export the .env.example variables first
 ```
 
-Do not add `-race` locally on a 32-bit toolchain; CI runs it.
+Do not add `-race` locally: it needs cgo, and the local Go builds with
+`CGO_ENABLED=0` and no C compiler, so it fails at once. CI runs it.
+
+## Configuration
+
+Settings are environment variables read once by `config.Load`
+(`internal/config/config.go`; `.env.example` lists them with their defaults).
+Per-tenant values (branding, locale, feature flags, keys) are never environment:
+they arrive on `tenant/resolve`. `Load` fails fast, so a value that would boot
+and then misbehave stops the pod at start instead:
+
+| Setting | Refused when |
+|---|---|
+| `ENV` | not `production`, `staging`, `development` or `test`. It also sets the UCP payment handler's environment (only `production` reads as production), whether local webhook endpoints are allowed, and the secret's minimum length |
+| `LOG_LEVEL` | not a level `slog` parses |
+| `DJANGO_BASE_URL`, `CHAT_BASE_URL` | not an absolute http or https URL with a host, or one carrying user info, a query or a fragment |
+| `DJANGO_PUBLIC_HOST`, `ASSETS_HOST`, `STAFF_CONNECT_HOST` | not a bare host: holding any of `/ ? # @` or a blank, as a scheme or a path would |
+| `STOREFRONT_DEFAULT_LOCALE` | not a lowercase language code such as `el` |
+| `CHAT_EFFORT` | not one of the chat-completions API's `reasoning_effort` values (`none` to `max`) |
+| `MEDIA_IMAGE_URL_TEMPLATE`, `FEED_IMAGE_URL_TEMPLATE` | missing `{assets_host}` or `{path}`, holding a placeholder other than those and `{schema}`, or not expanding (with `ASSETS_HOST`) to an absolute http or https URL |
+| `INTERNAL_EVENTS_SECRET` | not a valid header value (a control character, a leading or trailing blank), or, in production and staging, shorter than 32 characters |
+| `FEED_STALE_TTL` | shorter than `FEED_FRESH_TTL` |
+| Every TTL, timeout, rate and limit | zero, negative or malformed |
+
+`DJANGO_BASE_URL`, `DJANGO_PUBLIC_HOST`, `REDIS_URL`, `INTERNAL_EVENTS_SECRET`,
+`ASSETS_HOST`, `STOREFRONT_DEFAULT_LOCALE` and `STAFF_CONNECT_HOST` are
+required, and a missing one is named in the error. `ENV` defaults to
+`production`, and the `.env.example` placeholder for the secret is shorter than
+production and staging accept, so it boots only under `ENV=development` or
+`test`.
 
 ## Status of this section
 
