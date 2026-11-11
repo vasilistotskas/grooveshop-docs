@@ -14,7 +14,7 @@ SHIPPED while payment is still PENDING, and it is why nothing should ever
 derive one from the other.
 
 The exhaustive reference, including the audit history behind each rule,
-is [Order system](/dev/django/reference/order-system). This page is the
+is [Order system](/dev/django/reference/order/). This page is the
 operational view: who moves what, and what each move sets off.
 
 ## Diagram
@@ -290,8 +290,8 @@ beside a carrier-aware field listed orders whose own flag said no.
 Every refund, made in the admin, by a cancel or in a provider's dashboard,
 ends the same way: a REFUND row on the payment ledger, or value written
 back onto the order's gift cards and points, and `payment_status` derived
-from both. The exhaustive reference is §7.2 and §7.3 of
-[Order system](/dev/django/reference/order-system).
+from both. The exhaustive reference is §7.2 in [refunds](/dev/django/reference/order/refunds)
+and §7.3 in [the payment ledger](/dev/django/reference/order/payment-ledger).
 
 #### The payment ledger
 
@@ -355,8 +355,8 @@ refund; `Order.remaining_amount` is 0 once the payment is settled, so a
 refund never creates an amount owed (`src/order/models/order.py`).
 
 Orders paid before the ledger existed were backfilled from what their rows
-prove (`src/order/migrations/0067_backfill_payment_transactions.py`); §7.3 of
-[Order system](/dev/django/reference/order-system) lists what the backfill
+prove (`src/order/migrations/0067_backfill_payment_transactions.py`); §7.3 in
+[the payment ledger page](/dev/django/reference/order/payment-ledger) lists what the backfill
 could not reconstruct.
 
 #### Refund paths
@@ -526,7 +526,7 @@ retail credit carries exactly the lines' rates: returning one 13% item of a
 24%/13% order credits 13% only. A bare amount is a **goodwill refund**,
 allocated pro rata over the headroom as before. The full rule set is "Refund
 by lines" and "The Return and refund dialog" in §7.2 of
-[Order system](/dev/django/reference/order-system); this is the map.
+[the refunds page](/dev/django/reference/order/refunds); this is the map.
 
 ```mermaid
 flowchart TD
@@ -691,7 +691,7 @@ lock, and the credit is issued from it alone
 (`src/order/credit_documents.py: credit_breakdown(..., allocation)`). The order
 in which credits are issued can no longer change one. The full rule set, with
 every edge case, is the "VAT split" part of the credit documents section in
-[Order system](/dev/django/reference/order-system); the invariants are
+[the VAT split page](/dev/django/reference/order/fiscal-credit-vat-split); the invariants are
 replayed by `tests/integration/order/test_credit_invariants.py`.
 
 - **The rows.** `CreditAllocation` (`src/order/models/credit_allocation.py`,
@@ -829,7 +829,7 @@ admin offers `vat_rate` for correction only until the order's invoice
 carries a MARK; a correction rewrites the order's `OrderVatLine` rows
 (`src/order/vat_snapshot.py: write_vat_lines`), which the turnover report reads.
 The admin cannot add a line (see below). The full rationale, with the legal references, is in
-[Order system](/dev/django/reference/order-system).
+[section 3.5 of the order records page](/dev/django/reference/order/creation-records#_3-5-vat-on-an-order-orderitem-vat-rate-src-order-taxation-py).
 
 ### A placed order's lines are a record
 
@@ -911,7 +911,7 @@ by itself. The refund and
 dispute events find the order through the ledger's CHARGE row for the intent
 (`src/order/signals/handlers.py: _locked_order_for_stripe_intent`), so an event on
 the second intent reaches the ledger and moves the flag. The full rule is §7.3
-of [Order system](/dev/django/reference/order-system).
+of [the payment ledger page](/dev/django/reference/order/payment-ledger).
 
 ### Auto-cancel of stuck pending orders
 

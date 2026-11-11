@@ -280,7 +280,7 @@ the VAT rows of the order, taken from `src/order/taxation.py`, and four fields o
 `Order` record what was issued: `timologio_invoice_number`,
 `timologio_invoice_mark`, `timologio_credit_number`, `timologio_credit_mark`.
 The storefront's checkout fields and the buyer's `billing_*` snapshot are
-unchanged. See `docs/order-system.md` §7.4 in the Django repository for the
+unchanged. See [§7.4 of the order reference](/dev/django/reference/order/fiscal-mydata) (`docs/order/fiscal-mydata.md` in the Django repository) for the
 retail documents the platform does issue.
 
 ### Storefront

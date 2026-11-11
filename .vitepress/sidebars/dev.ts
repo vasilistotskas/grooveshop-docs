@@ -13,7 +13,14 @@ interface ManifestGroup {
   id: string
   title: string
   base: string
-  items: { text: string, link: string }[]
+  items: SidebarEntry[]
+}
+
+interface SidebarEntry {
+  text: string
+  link?: string
+  collapsed?: boolean
+  items?: SidebarEntry[]
 }
 
 function referenceGroups(): DefaultTheme.SidebarItem[] {
@@ -67,7 +74,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
   {
     text: 'Django API',
     items: [
-      { text: 'App map', link: '/dev/django/app-map' },
+      { text: 'App map', link: '/dev/django/reference/app-map' },
       { text: 'Base classes & patterns', link: '/dev/django/patterns' },
       { text: 'API conventions', link: '/dev/django/api-conventions' },
       { text: 'Admin (Unfold)', link: '/dev/django/admin' },
