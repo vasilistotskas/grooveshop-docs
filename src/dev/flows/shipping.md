@@ -256,7 +256,8 @@ raised (`AcsClient._exchange`, `_never_connected` in `shipping_acs/client.py`):
 |---|---|---|
 | A connect timeout; a connection refused or a failed DNS lookup (no connection ever existed); the request cap, raised before the POST | `AcsRetryableError` | released; Celery retries |
 | HTTP 403 / 406 | `AcsAuthError` | released; Celery retries |
-| An ACS refusal (`ACSExecution_HasError`, a value-row `Error_Message`, any other 4xx) | `AcsAPIError` | released; `ops.shipment_rejected`; no retry |
+| An ACS refusal (`ACSExecution_HasError`, a value-row `Error_Message`) | `AcsAPIError` | released; `ops.shipment_rejected`; no retry |
+| Any other HTTP 4xx (a proxy's or a gateway's: the manual has 200, 403 and 406 only) | `AcsUndocumentedHttpError`, an `AcsAPIError` | released; no retry; staff are told to send it again, not to fix an address (see the voucher hold below) |
 | A read timeout; any other connection error; any 5xx; a 200 whose body is not JSON | `AcsOutcomeUnknownError`, a subclass of `AcsRetryableError` so reads keep retrying | **unknown** |
 | An exception the client does not classify; a 200 with neither `Voucher_No` nor `Error_Message` | | **unknown** |
 | A claim older than its TTL | | **unknown once detected** (see the paragraph above): by itself it only marks the claim expired |
@@ -415,6 +416,207 @@ and `mark_checked`. The store dashboard counts both
 (`admin/dashboard/store/queries.py`, `acs_voucher_requests_unknown` and
 `acs_unrecognised_vouchers`); the cache key of that dict is versioned, so a
 pod never reads the old shape.
+
+### The voucher hold: requests wait while ACS is failing
+
+The previous section stops one order after one lost answer. An ACS that
+answers 5xx, or accepts connections and hangs, would do that to every order
+placed while it lasts: one portal check and one email each. So the first lost
+answer begins a **voucher hold** for the store, and while it is in force no
+`ACS_Create_Voucher` is sent. The waiting requests are a known outcome
+(nothing reached ACS), not an unknown one: they are stamped, not marked for
+a check, and a task sends them once ACS returns a voucher. The rule that an
+unknown request is never sent again by code is untouched, and every 5xx is
+still an unknown outcome.
+
+The state is one row, `AcsVoucherHold`, in the store's schema (the ACS
+credentials are per tenant, so one store's hold never holds another's). It is
+not a cache key: a cache flush or an unreachable Redis must not reopen it,
+staff read it in the admin, and each span stays as a record. At most one row is
+in force (`ended_at` empty), enforced by the constraint
+`acs_voucher_hold_one_in_force`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Closed: unknown outcome of a create this store sent
+    Closed --> OneFirst: wait over and ACS answers a read, or staff allow one request
+    OneFirst --> InFlight: a request takes the turn
+    InFlight --> OneFirst: refusal, or never reached ACS: turn free at once
+    InFlight --> Closed: lost answer, or a 4xx that is not ACS's: wait doubled
+    InFlight --> Ended: ACS returns a voucher to the request that has the turn
+    Ended --> [*]
+```
+
+`Closed` is `trial_allowed_at` empty: nothing is sent. `OneFirst` is
+`trial_allowed_at` set and no turn taken: the next request takes the turn.
+`InFlight` is the turn taken (`trial_request`, until `trial_until`): every
+other request is held. A hold with nothing left to send stays in `OneFirst`
+(the next order's request goes alone, and its voucher ends the hold) and is
+not a dashboard row.
+
+**What begins it.** Only the unknown outcome of a create this store *sent*
+(`AcsService._voucher_request_lost` calls `voucher_hold.record_unknown_outcome`).
+An expired claim does not: that is a worker that stopped at least 300 seconds
+ago and says nothing about ACS now. Other aliases are not held: the reads fail
+far more often and cost nothing, and `ACS_Delete_Voucher` and
+`ACS_Issue_Pickup_List` run once a day or by hand.
+
+**Where a request is held.** Twice, so an outage costs the requests in flight
+and not the ones queued behind them:
+
+1. Before the claim, in `create_voucher_for_order` Phase 1 (`voucher_hold.holding()`):
+   the shipment gets `voucher_request_held_at` (the first stamp stays: it is how
+   long the order has waited), no claim is taken, `AcsVoucherRequestHeldError`
+   is raised.
+2. Inside the request slot, as the last thing before the POST
+   (`AcsClient._admit_voucher_request` calls `voucher_hold.admit`): a request
+   that waited for its slot behind the one that failed is decided after that
+   failure was recorded. The claim it took is released and the shipment is
+   stamped in one save. A hold that cannot be read sends nothing and is
+   retried (`AcsVoucherRequestNotSentError`).
+
+`AcsVoucherRequestHeldError` is an `AcsVoucherRequestNotSentError`, which is an
+`AcsRetryableError`, so `_outcome_is_known` is true for it. It never sets
+`voucher_request_unknown_at`, writes no `last_error`, sends no alert, and
+writes no `AcsApiCall` row (a request stopped at its slot is not a call).
+`create_acs_voucher_for_order` returns `voucher_request_held` without using its
+retries, which an outage outlasts.
+
+#### The rule table
+
+The rule is the table in the docstring of `shipping_acs/voucher_hold.py`;
+`create_voucher_for_order` only reports which row happened. The last column is
+for the request that has the turn.
+
+| Outcome (function) | The order | The hold, when the request has the turn |
+|---|---|---|
+| ACS returns a voucher (`record_voucher`) | saved; the save clears `voucher_request_held_at` | **ends**: creating a voucher works |
+| ACS refuses in its own envelope: `ACSExecution_HasError`, a value-row `Error_Message` (`record_refusal`) | rejected, staff's to fix, no longer held | stays "one request first", the turn free at once |
+| An HTTP 4xx that is not ACS's envelope (`record_no_answer`) | a held order stays held while a hold is in force; with none, or if it was not held, rejected and staff are told to send it again | **closes again, the wait doubled**. Begins no hold |
+| Unknown outcome (`record_unknown_outcome`) | unknown state, no longer held | closes again, the wait doubled |
+| Never reached ACS: a connection never made, 403/406 (`record_not_sent`) | stays held if it was | stays "one request first", the turn free at once |
+| Stopped before its turn: the request cap, a hold that could not be read | stays held if it was | unchanged: it never had the turn |
+
+**The turn belongs to the request that took it.** `AcsVoucherHold.trial_request`
+is `<shipment pk>:<that request's mint claim>` (`AcsService._request_id`): the
+claim alone is a timestamp, unique per shipment only. `AcsClient.create_voucher`
+carries it as `request_id` to `voucher_hold.admit`, and every report to the hold
+names its request. Only the owner settles the turn (`_has_the_turn`). Another
+request of the store can still be out while the turn is taken (it left before
+the hold began, or its own turn ended with its lease and the next request took
+it). Its outcome is its own order's and leaves the hold as it is:
+
+- its voucher does not end the hold (a decision, not a measurement: it left
+  before the lost answer the hold began with, so it shows nothing newer);
+- its refusal, its 4xx and its "never reached ACS" free and double nothing;
+- its unknown outcome begins a hold when there is none. On a hold in force it is
+  only recorded as the last failure (a closed hold waits from it again).
+
+**The lease and the tick.** `admit` takes the turn for
+`client.worst_case_request_seconds` (78 seconds at the default
+`ACS_HTTP_TIMEOUT`, the slot's own lease), under a row lock
+(`select_for_update`, so across workers whoever locks first takes it and the
+rest are held). The sweep runs every 300 seconds, so a turn nobody gave back (a
+worker that stopped) is over before the next tick; a test fails if
+`ACS_HTTP_TIMEOUT` is raised to where that stops being true. Every known outcome
+gives the turn back at once. A request whose lease ran out still has the turn
+until another request takes it, so its late answer still decides.
+
+**The wait.** `AcsVoucherHold.retry_after` is `last_failure_at` plus
+`ACS_VOUCHER_HOLD_RETRY_SECONDS * 2 ** failed_trials`, capped at
+`ACS_VOUCHER_HOLD_RETRY_MAX_SECONDS` (300, 600, 1200, 2400, 3600 seconds at the
+defaults). Only a failure of the request that has the turn adds to
+`failed_trials`.
+
+#### The sweep: `issue_held_acs_vouchers`
+
+A held request outlives the task's retries, and there was no task that issues
+missing vouchers, so `shipping_acs/tasks.py: issue_held_acs_vouchers` is the
+one retry. Beat entry `issue-held-acs-vouchers` runs
+`tenant.tasks.fanout_issue_held_acs_vouchers` every 5 minutes per store
+(`expires: 240`); it skips a store without ACS credentials. Per store:
+
+- **Closed:** nothing before `retry_after`. Then
+  `AcsService.acs_answers_a_read()` asks `ACS_Get_Pickup_Lists` for today: it
+  writes nothing, needs nothing of ours and the store's key already calls it. A
+  day with no pickup list is an answer too (observed, read only). If it fails,
+  nothing else is sent. If it answers, `voucher_hold.allow_trial()` opens
+  "one request first".
+- **One request first, no request in flight:** dispatch **one** held request.
+- **One request first, turn taken (or closed again meanwhile):** dispatch
+  nothing.
+- **No hold:** dispatch every held request, at most `max_per_run` (100) a run,
+  spaced by `ACS_POLL_DISPATCH_SPACING_SECONDS` so they do not queue for a
+  request slot and spend their retries on it.
+
+The queue is `shipping_acs/attention.py: voucher_requests_held`: stamped,
+without a voucher, not of unknown outcome, not an order that no longer needs a
+voucher. **Rotation:** the sweep writes `AcsShipment.voucher_request_retried_at`
+before it dispatches and chooses the order tried longest ago (never tried first,
+then held longest, then pk). So no order is the one request sent first on every
+tick, whatever becomes of it. A separate column, not a re-stamp of
+`voucher_request_held_at`, which is how long the order has waited; it is
+excluded from the shipment's history like `last_polled_at`.
+
+**Staff.** `AcsVoucherHoldAdmin.allow_one_request` ("ACS answers again: send one
+request", `permissions=["change"]`, a POST dialog) calls `allow_trial()` and
+acts on its answer: a second press while one request is already allowed changes
+nothing, writes no admin log entry and dispatches nothing. Otherwise it writes
+the log entry and dispatches `issue_held_acs_vouchers` on commit. It skips the
+wait and the read, not the one-request rule. The shipment filter value
+`voucher_held` and the read-only `voucher_request_held_at` field are in
+`shipping_acs/admin.py`; the dashboard row is `acs_voucher_holds` in
+`admin/dashboard/store/queries.py` (cache key `store:attention:v3`), drawn while
+the hold is closed or requests wait behind it
+(`attention.voucher_holds_holding_requests`).
+
+#### With request identity (`unknown_request`)
+
+- A held request takes **no claim**, so no `unknown_request` can name it; held
+  before the claim, neither `_release_mint_claim` nor `_voucher_request_lost` is
+  called. Stopped at its slot, it releases only the claim it took a moment
+  earlier.
+- The request sent first is a mint like any other, with its own claim. If its
+  answer is lost, `_voucher_request_lost` reports it to the hold and
+  `_set_voucher_request_unknown` records `metadata["unknown_request"]` = that
+  claim and clears the held stamp.
+- `_release_mint_claim` settles the held stamp only while the row holds the
+  request's own claim, and of Phase 3's three outcomes only "saved" clears it
+  (together with the voucher). A stale answer saves nothing and leaves the
+  stamp, which by then belongs to a later request.
+- A held request is never "in flight" for the reset, the pickup-list run or a
+  delete (`AcsService._mint_in_flight()`).
+- `voucher_request_unknown_at`, `unknown_request` and `mint_started_at` are
+  written only where they were before.
+
+#### A bare HTTP 4xx: `AcsUndocumentedHttpError`
+
+The manual documents 200, 403 and 406, so a 400/401/404/429 is a proxy's or a
+gateway's. `AcsClient._exchange` raises `AcsUndocumentedHttpError`
+(`shipping_acs/exceptions.py`, an `AcsAPIError`) for any other 4xx, so it is
+no longer told from ACS's refusal by `raw` being empty. Like every 4xx it is a
+known outcome, but it says nothing about the order, so staff are not told to fix
+an address. While a hold is in force a held order stays held, and the task
+returns `voucher_request_held`. With no hold in force (or for an order that was
+not held) the stamp is cleared and `alert_admins_shipment_creation_failed` says
+to send the request again, so nothing is repeated tick after tick unnoticed.
+`record_no_answer` returns whether a hold is in force; a hold that cannot be
+read counts as in force.
+
+**Before the claim**, `create_voucher_for_order` ends with the stamp: kept for
+`AcsConfigError`, a claim inside its TTL, a hold, and any other error; cleared
+for `ShipmentAwaitingPaymentError` (raised after the block commits), an
+`AcsVoucherRequestUnknownError`, and the saved voucher.
+
+**Not verified.** ACS itself: everything runs against a fake HTTP session, so
+whether a real outage looks like the cases tested (which status, how long a
+hang) is unknown. That `ACS_Get_Pickup_Lists` keeps answering while
+`ACS_Create_Voucher` fails (or fails with it) was not observed; both are handled
+by sending one request first. What ACS sends for a refusal that is not a
+validation error is treated as a refusal. Two workers racing for the one request
+rely on the row lock and were tested on one connection only. A held order that
+gets the same 4xx from a proxy every time while a hold is in force is tried
+again at each turn it gets.
 
 ### The contract is cash-on-delivery only
 
@@ -852,6 +1054,11 @@ move `Order.status`, which the carrier events drive separately.
   failed task.
 - **A pickup day with nothing live waiting is a `None`, not a raise**,
   and one live candidate is enough to make a refusal a failure again.
+- **While a store's voucher hold is in force no `ACS_Create_Voucher` is sent.**
+  A request is held twice (before its claim and inside its request slot), and
+  only the request that has the turn, `AcsVoucherHold.trial_request`, settles
+  it; only its voucher ends the hold. The rule table is in
+  `shipping_acs/voucher_hold.py`.
 - **A voucher request with an unknown outcome is never sent again by code.**
   Staff end it with `adopt_voucher` or `request_voucher_again`, and a late
   answer of the very request it belongs to ends it too (the mint's persist
@@ -889,6 +1096,12 @@ move `Order.status`, which the carrier events drive separately.
   portal and adopt the voucher or request again (see above). A voucher
   that surfaces on a refused pickup list and matches no shipment becomes an
   `AcsUnrecognisedVoucher`.
+- **ACS is failing for everyone.** The first lost answer begins the hold and
+  is the only order that needs a check. The next requests are stamped
+  `voucher_request_held_at` and wait; `issue_held_acs_vouchers` asks ACS a read
+  after the wait, sends one request first, and sends the rest once a voucher
+  comes back (see "The voucher hold"). A lost answer of the first request
+  closes the hold again with the wait doubled, up to an hour.
 - **Pickup list not issued.** Three shapes. ACS rejected unprinted
   vouchers: routine, not a failure. The task returns `blocked_unprinted`
   and notes each held-back order with the ACS message; nobody is
@@ -949,7 +1162,9 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment`), `_REGISTRY`, `register_provider`, `all_payload_keys` |
 | `grooveshop-django-api/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
 | `grooveshop-django-api/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError` |
-| `grooveshop-django-api/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy, including `AcsOutcomeUnknownError`, `AcsVoucherRequestUnknownError` and `AcsVoucherResolutionError` |
+| `grooveshop-django-api/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy, including `AcsOutcomeUnknownError`, `AcsVoucherRequestUnknownError`, `AcsVoucherResolutionError`, `AcsUndocumentedHttpError`, `AcsVoucherRequestNotSentError` and `AcsVoucherRequestHeldError` |
+| `grooveshop-django-api/shipping_acs/voucher_hold.py` | The voucher hold's state machine and the rule table: `admit`, `allow_trial`, `record_voucher`, `record_refusal`, `record_no_answer`, `record_not_sent`, `record_unknown_outcome` |
+| `grooveshop-django-api/shipping_acs/models/voucher_hold.py` | `AcsVoucherHold`: the one-in-force constraint, `trial_request`, `retry_after`, `holds` |
 | `grooveshop-django-api/shipping_boxnow/exceptions.py` | BoxNow errors on the carrier hierarchy |
 | `grooveshop-django-api/shipping/models/provider.py` | `ShippingProvider` fields and kind-aware logo resolution |
 | `grooveshop-django-api/shipping/models/rate.py` | `ShippingRate`: fields, constraints, `clean()` |
@@ -964,12 +1179,14 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/shipping/utils.py` | `compute_total_weight_grams` |
 | `grooveshop-django-api/shipping/urls.py` | Options, free-shipping-info, providers |
 | `grooveshop-django-api/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
-| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` filter value, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`) and the `label_printed_at` empty filter |
+| `grooveshop-django-api/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` and `voucher_held` filter values, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`), `AcsVoucherHoldAdmin` (`allow_one_request`) and the `label_printed_at` empty filter |
 | `grooveshop-django-api/shipping_acs/client.py` | `AcsClient._exchange` and `_never_connected`: which transport failures are `AcsOutcomeUnknownError` |
-| `grooveshop-django-api/shipping_acs/attention.py` | `voucher_request_unknown_q`, `voucher_requests_unknown`, `voucher_requests_waiting`, `needs_no_voucher`, `unrecognised_vouchers` |
-| `grooveshop-django-api/shipping_acs/models/` | `AcsShipment.voucher_request_unknown_at`, `AcsUnrecognisedVoucher` |
-| `grooveshop-django-api/admin/dashboard/store/queries.py` | The two ACS counters of the dashboard |
-| `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts |
+| `grooveshop-django-api/shipping_acs/attention.py` | `voucher_request_unknown_q`, `voucher_requests_unknown`, `voucher_requests_waiting`, `needs_no_voucher`, `unrecognised_vouchers`, `voucher_request_held_q`, `voucher_requests_held`, `voucher_holds_holding_requests` |
+| `grooveshop-django-api/shipping_acs/models/` | `AcsShipment.voucher_request_unknown_at`, `voucher_request_held_at`, `voucher_request_retried_at`, `AcsUnrecognisedVoucher`, `AcsVoucherHold` |
+| `grooveshop-django-api/admin/dashboard/store/queries.py` | The ACS counters of the dashboard, including `acs_voucher_holds` and `acs_voucher_hold_since` |
+| `grooveshop-django-api/admin/navigation.py` | `store_sidebar`: the ACS voucher holds menu entry under Shipping |
+| `grooveshop-django-api/shipping_acs/tasks.py` | Every ACS beat task and its alerts, including `issue_held_acs_vouchers` |
+| `grooveshop-django-api/settings.py` | The `issue-held-acs-vouchers` beat entry, `ACS_VOUCHER_HOLD_RETRY_SECONDS`, `ACS_VOUCHER_HOLD_RETRY_MAX_SECONDS` |
 | `grooveshop-django-api/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
 | `grooveshop-django-api/shipping_acs/views/station.py` | The station routes the picker and the gateway read; 404 for a store without ACS credentials |
 | `grooveshop-django-api/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
