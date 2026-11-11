@@ -15,7 +15,8 @@ page.
 Source: `core/retention.py`, `core/tasks.py`, `core/history.py`,
 `tenant/tasks.py` (the `fanout_purge_*` wrappers), `settings.py`
 (`CELERY_BEAT_SCHEDULE`, the retention constants, `EXTRA_SETTINGS_DEFAULTS`),
-`shipping_acs/tasks.py`, `shipping_boxnow/tasks.py`,
+`shipping_acs/tasks.py`, `shipping_acs/models/voucher_hold.py`,
+`shipping_acs/voucher_hold.py`, `shipping_boxnow/tasks.py`,
 `recommendation/tasks.py`, `order/tasks.py`, `meta_capi/tasks.py`, `contact/tasks.py`,
 `emails/tasks.py`, `builder/tasks.py`,
 `search/tasks.py`, `search/middleware.py`.
@@ -83,6 +84,11 @@ records. A destroyed store's invoices are kept `TENANT_INVOICE_RETENTION_YEARS`
 by the platform. The simple-history sweep above does reach
 `HistoricalProduct`; the legal price record is `ProductPriceSpell`, not that
 table.
+
+ACS voucher holds (`AcsVoucherHold`): one row per span in which a store's
+voucher requests waited for ACS, holding times, a counter and the text of the
+last failure. No personal data and a handful of rows a year, so no sweep; they
+are the record of each outage.
 
 ## What is not recorded in the first place
 

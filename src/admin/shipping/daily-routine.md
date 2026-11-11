@@ -27,6 +27,8 @@ Open the [Dashboard](/admin/getting-started/dashboard) and look at the **Needs a
 
 Two rows ask you to look in ACS's own portal before you press anything. **ACS voucher requests to check** counts orders whose voucher request got no answer: ACS may already hold a voucher for them, so the shop sends nothing more until you adopt that voucher, ask again or close the check. **ACS vouchers matching no order** counts vouchers ACS named on a refused pickup list that match none of your shipments. Both are explained in [ACS Courier](/admin/shipping/acs#a-voucher-request-that-got-no-answer).
 
+One row needs no action: **ACS voucher requests are held** means ACS stopped answering and the voucher requests of new orders are waiting. They are sent by themselves once ACS answers again. Do not press **Issue ACS voucher now** on them. See [ACS Courier](/admin/shipping/acs#voucher-requests-waiting-for-acs).
+
 ### 2. ACS parcels
 
 1. In <span class="sidebar-path">Shipping → ACS Shipments</span>, filter **Label: Not printed**.
