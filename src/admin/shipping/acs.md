@@ -216,7 +216,7 @@ When ACS refuses a pickup list, it names the unprinted vouchers it holds for you
 Such a voucher can be the lost answer of a request (see above), a second voucher for an order that already has one, or a voucher you made yourself in ACS's portal. The shop cannot tell which, so it deletes nothing by itself. While it stays unprinted at ACS, it keeps the pickup list refused. Open the voucher and choose:
 
 - **Adopt it:** if it belongs to an order waiting for a check, adopt it from that order's shipment, as above. The voucher is then marked **Adopted by a shipment**.
-- **Delete at ACS:** deletes the voucher at ACS and marks it deleted, keeping your note. It cannot be undone. A duplicate that the shop's own request deleted at ACS is closed by itself.
+- **Delete at ACS:** deletes the voucher at ACS and marks it deleted, keeping your note. It cannot be undone. A duplicate that the shop's own request deleted at ACS is closed by itself. Only Owners and Admins can use it, because Staff cannot delete (see [Roles & team](/admin/getting-started/roles-and-team)).
 - **Mark as checked:** for a voucher you know, for example one you made in the ACS portal. Write in the note what it is. It stops being counted and nothing is sent to ACS.
 
 **Delete at ACS** is refused:
