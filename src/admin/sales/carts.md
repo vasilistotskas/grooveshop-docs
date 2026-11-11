@@ -73,6 +73,7 @@ The platform emails signed-in customers about an abandoned checkout on its own (
 - **A cart survives the card payment page.** If a shopper goes to Viva Wallet or Stripe and comes back without paying, the cart is still there. It empties only once the payment succeeds, or straight away for cash on delivery.
 - **Hiding the cart.** A store that is not selling yet can hide the cart from its storefront with `CART_ENABLED`. This screen keeps working.
 - A separate **Cart Items** screen, not in the menu, lists every cart line. Open it from the [command palette](/admin/getting-started/search-and-command-palette) with **Ctrl+K** (**⌘K** on a Mac).
+- **Changing a line's quantity.** On **Cart Items**, select lines and choose **Increase quantity by 1** or **Decrease quantity by 1**. Decreasing stops at 1: a line at quantity 1 stays, and a warning tells you to use **Remove from cart**. Only Owners and Admins see **Remove from cart**, because Staff cannot delete (see [Roles & team](/admin/getting-started/roles-and-team)).
 
 ## Related
 
