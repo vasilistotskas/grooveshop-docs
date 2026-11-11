@@ -61,6 +61,14 @@ the example's short `INTERNAL_EVENTS_SECRET` boot: production and staging refuse
 one under 32 characters. Every other value `config.Load` refuses at start is
 listed in [Agent gateway](/dev/gateway/#configuration).
 
+Set Django's `AGENT_GATEWAY_INTERNAL_SECRET` to the **same value** as the
+gateway's `INTERNAL_EVENTS_SECRET` (and `AGENT_GATEWAY_INTERNAL_URL` to the
+gateway's address). Django's `.env.example` leaves the secret empty, and Django
+then does not recognise the gateway on `tenant/resolve`
+(`tenant/views.py: _is_gateway`): it leaves the store's chat key and ACP bearer
+out of the answer, so `/chat` and `/acp` stay off for every store with no error
+anywhere. The same secret authenticates the order-event push the other way.
+
 ## Staging
 
 | Property | Value |

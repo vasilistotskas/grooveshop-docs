@@ -102,12 +102,15 @@ How a call is retried is decided in `internal/django/client.go`:
 - **A redirect is an error.** The client never follows one: a 3xx is
   `ErrUpstreamDown`, not retried, because following it would replay the call
   and a mutation Django redirected may already have run.
-- **Sent once:** every mutation, the `/readyz` ping, and `GetCart` when it
-  names no cart (`internal/django/client_cart.go`), because Django creates a
-  guest cart for that read and a retry would create another. `Idempotency-Key`
-  goes only on a call Django deduplicates by it (`add_to_cart` in the chat),
-  since net/http itself re-sends a GET, or a request carrying that header, when
-  a reused connection dies before the first response byte.
+- **One attempt by the gateway's client:** every mutation, the `/readyz` ping,
+  and `GetCart` when it names no cart (`internal/django/client_cart.go`),
+  because Django creates a guest cart for that read and the client's own retry
+  would create another. That is one attempt, not a promise of one request on
+  the wire: net/http itself re-sends a GET, or a request carrying
+  `Idempotency-Key`, once, when a reused keep-alive connection dies before the
+  first response byte. So `Idempotency-Key` goes only on a call Django
+  deduplicates by it (`add_to_cart` in the chat), and an unnamed-cart read can
+  still reach Django twice, in the rare case of a dead reused connection.
 
 Each attempt is counted once, by its outcome: the status, `error` for an
 outage, `canceled` for a caller that left. The error sentinels
@@ -483,11 +486,23 @@ a record an older pod wrote is a miss, never misread.
 - A **create** stores the response it sent (status and body) beside the key. A
   replay with the same body gets those bytes back with `Idempotent-Replayed:
   true` for the record's 24 hours, whether or not the session still lives:
-  nothing is executed again.
-- An **update, complete or cancel** replay renders the session as it is now,
-  with the same header.
-- The same key with another body is 422 `idempotency_conflict`. A key still in
-  flight is 409.
+  nothing is executed again. One exception: the record is written after the
+  session is saved, and if that write fails the handler logs it and still
+  answers 201. The in-flight claim then lapses after a minute, and a retry with
+  the same key creates another session instead of replaying.
+- An **update** or **cancel** replay renders the session as it is now, with the
+  same header.
+- A **complete** is judged by the session first: a session already completed
+  answers 200 with the session on every call, with no `Idempotent-Replayed`
+  header and whatever the body or key (gateway issue #128); in progress is 409
+  then 502, and canceled is 405. Only a complete of another status reads the
+  key, and a repeat of it renders the session with the header.
+- What a key is compared with is the decoded request, re-encoded, so a member
+  the gateway does not read does not count. A different one is 422
+  `idempotency_conflict` on create, update and complete (a complete of a
+  completed session excepted, above). A cancel has no body: its key is compared
+  with the session id, which its scope already names, so a repeat of a cancel
+  never conflicts. A key still in flight is 409.
 - A create is rendered before it is saved, and every refusal or failure
   releases its key, so a create that failed leaves no session and no record.
 - A complete that placed nothing releases its key; one that placed an order,
@@ -498,7 +513,7 @@ a record an older pod wrote is a miss, never misread.
 session: name, email, phone and delivery address, kept in Redis for 24 hours
 while the session itself lives 30 minutes when open, renewed by each call, and
 24 hours once completed or canceled (`internal/checkout/store.go`,
-`session.go`). Nothing else reads it. Count it when
+`internal/checkout/session.go`). Nothing else reads it. Count it when
 answering a data-retention question.
 
 #### Completing without the caller
@@ -531,7 +546,8 @@ catalog renders both.
 sweep reads the catalog in pages of 100 with four fetches in flight and a window
 of eight completed pages, up to 100 pages, so ten thousand products. A catalog
 past that is cut, logged as such. The RSS and the ACP document are each held
-entire, then compressed (`internal/feeds/pipeline.go`, `acp.go`). Two sweeps run
+entire, then compressed (`internal/feeds/pipeline.go`,
+`internal/feeds/acp.go`). Two sweeps run
 per pod at most, whichever tenants they belong to.
 
 **What is cached, and where.** Per format (`rss`, `acp`) Redis holds the gzipped
@@ -670,7 +686,7 @@ called, and again inside the turn:
   store's hour. A refused turn is 429 with the store's localized `rate_limited`
   message and a `Retry-After` until the full window resets.
 
-Inside a turn (`internal/chat/turn.go`, `modelerror.go`):
+Inside a turn (`internal/chat/turn.go`, `internal/chat/modelerror.go`):
 
 - At most `CHAT_MAX_ITERATIONS` model calls. The last one is sent
   `tool_choice: none`, and tool calls a provider returns there anyway are not
@@ -774,9 +790,9 @@ marked:
 
 The service writes named events through `sseWriter` (`internal/chat/sse.go`,
 which also defines the `error` and `done` payloads). The turn loop emits `delta`,
-`tool` and `products` (`turn.go`), the handler emits `done` and the shutdown
-`error` (`handler.go`), and a failed turn's `error` is built from the provider's
-failure in `modelerror.go`. Each event is `event: <name>` plus one JSON `data:`
+`tool` and `products` (`internal/chat/turn.go`), the handler emits `done` and
+the shutdown `error` (`internal/chat/handler.go`), and a failed turn's `error` is
+built from the provider's failure in `internal/chat/modelerror.go`. Each event is `event: <name>` plus one JSON `data:`
 line:
 
 | Event | Data | When |
@@ -1156,7 +1172,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/server/routes.go` | Mux assembly and middleware order |
 | `grooveshop-agent-gateway/internal/server/internalapi.go` | Order events, feed invalidation, token check |
 | `grooveshop-agent-gateway/internal/tenant/` | Resolver, middleware, feature requirements |
-| `grooveshop-agent-gateway/internal/django/client.go`, `errors.go` | `ResolveTenant`, retries, redirects, a caller that hung up, forwarded headers, the error sentinels |
+| `grooveshop-agent-gateway/internal/django/client.go`, `grooveshop-agent-gateway/internal/django/errors.go` | `ResolveTenant`, retries, redirects, a caller that hung up, forwarded headers, the error sentinels |
 | `grooveshop-agent-gateway/internal/django/client_cart.go` | The cart read sent once, `servedNamed`, `PlacedOrder` |
 | `grooveshop-agent-gateway/internal/django/dto.go` | `TenantConfig` and the gate accessors |
 | `grooveshop-agent-gateway/internal/django/client_agent.go` | `/agent/me` and the scoped resources |
@@ -1174,24 +1190,24 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/ucp/negotiate.go` | Capability intersection and authority binding |
 | `grooveshop-agent-gateway/internal/ucp/profiles.go` | Platform profile fetch, validation and cache |
 | `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
-| `grooveshop-agent-gateway/internal/acp/handler.go`, `types.go` | ACP routes, bearer auth, `API-Version`, errors, idempotency, `acp.Version` |
+| `grooveshop-agent-gateway/internal/acp/handler.go`, `grooveshop-agent-gateway/internal/acp/types.go` | ACP routes, bearer auth, `API-Version`, errors, idempotency, `acp.Version` |
 | `grooveshop-agent-gateway/internal/checkout/region.go` | `ResolveRegion`, shared by UCP and ACP |
 | `grooveshop-agent-gateway/internal/checkout/pricing.go` | `ComputePricing`, from the cart or, once placed, the order |
 | `grooveshop-agent-gateway/internal/mcpsrv/account_challenge.go` | `RequireLinkedAccount`, the challenge on an anonymous account tool |
 | `grooveshop-agent-gateway/internal/acp/render.go` | Session rendering, `capabilitiesOf` |
 | `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, charged and prior prices, skip rules, field limits |
 | `grooveshop-agent-gateway/internal/feeds/acp.go` | ACP feed shape |
-| `grooveshop-agent-gateway/internal/feeds/service.go`, `pipeline.go`, `handler.go` | The cache, the failure mark, invalidation, the catalog sweep, revalidation |
+| `grooveshop-agent-gateway/internal/feeds/service.go`, `grooveshop-agent-gateway/internal/feeds/pipeline.go`, `grooveshop-agent-gateway/internal/feeds/handler.go` | The cache, the failure mark, invalidation, the catalog sweep, revalidation |
 | `grooveshop-agent-gateway/internal/httphdr/httphdr.go` | `If-None-Match` and `Accept-Encoding` per RFC 9110 |
 | `grooveshop-agent-gateway/internal/obs/metrics.go` | `gateway_feed_generation_failures_total` |
 | `grooveshop-agent-gateway/internal/media/url.go` | Asset origin fallback |
-| `grooveshop-agent-gateway/internal/chat/handler.go`, `request.go`, `turn.go`, `sse.go`, `modelerror.go`, `quota.go` | Chatbot: the handler and its checks, request parsing, the turn loop and its bounds, the SSE writer and events, provider errors, the turn quota |
+| `grooveshop-agent-gateway/internal/chat/handler.go`, `grooveshop-agent-gateway/internal/chat/request.go`, `grooveshop-agent-gateway/internal/chat/turn.go`, `grooveshop-agent-gateway/internal/chat/sse.go`, `grooveshop-agent-gateway/internal/chat/modelerror.go`, `grooveshop-agent-gateway/internal/chat/quota.go` | Chatbot: the handler and its checks, request parsing, the turn loop and its bounds, the SSE writer and events, provider errors, the turn quota |
 | `grooveshop-agent-gateway/internal/chat/bridge.go` | The in-process MCP client and the withheld tools |
 | `grooveshop-agent-gateway/internal/chat/products.go` | The `products` event: extractors, dedup, card cap |
 | `grooveshop-agent-gateway/internal/chat/prompt.go` | The system prompt: turn language, grounding, policies |
 | `grooveshop-agent-gateway/internal/django/language.go` | `WithLanguage`, `Language`, `ServedLocales` |
 | `grooveshop-agent-gateway/internal/mcpsrv/helpers.go` | `linksFor` (a tool's links in the turn's language), `ToolError`, `upstreamErr`, `cartErr` |
-| `grooveshop-agent-gateway/internal/mcpsrv/cart.go`, `account.go` | Cart tool failures; `unauthorized` and `not_granted` on the account tools |
+| `grooveshop-agent-gateway/internal/mcpsrv/cart.go`, `grooveshop-agent-gateway/internal/mcpsrv/account.go` | Cart tool failures; `unauthorized` and `not_granted` on the account tools |
 | `grooveshop-agent-gateway/internal/mcpsrv/ucp_checkout.go` | UCP create and update: lookups before the first cart write |
 | `grooveshop-agent-gateway/internal/mcpsrv/shipping.go` | `find_pickup_points` over the store's pickup carriers |
 | `grooveshop-agent-gateway/internal/mcpsrv/policies.go` | `get_store_policies` |
@@ -1199,10 +1215,10 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useShopChat.ts`, `app/utils/sse.ts` | Chat stream client |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Chrome/AssistantProducts.vue`, `AssistantProductCard.vue` | Chat product cards |
 | `grooveshop-agent-gateway/internal/checkout/store.go` | Redis keys and TTLs |
-| `grooveshop-agent-gateway/internal/checkout/flow.go`, `internal/django/client_checkout.go` | Order placement without its caller, `CompletionDeadline`, and the `agentProtocol` attribution |
+| `grooveshop-agent-gateway/internal/checkout/flow.go`, `grooveshop-agent-gateway/internal/django/client_checkout.go` | Order placement without its caller, `CompletionDeadline`, and the `agentProtocol` attribution |
 | `grooveshop-agent-gateway/internal/checkout/cartlines.go`, `internal/checkout/session.go` | UCP/ACP cart adds and their `agentProtocol` attribution |
 | `grooveshop-agent-gateway/internal/mcpsrv/shopper_attribution.go`, `internal/mcpsrv/cart.go` | A chat turn's shopper attribution on `add_to_cart` |
-| `grooveshop-agent-gateway/internal/obs/health.go`, `log.go` | `/healthz`, `/readyz`, the request id and tenant on log lines |
+| `grooveshop-agent-gateway/internal/obs/health.go`, `grooveshop-agent-gateway/internal/obs/log.go` | `/healthz`, `/readyz`, the request id and tenant on log lines |
 | `grooveshop-agent-gateway/cmd/gateway/serve.go` | Shutdown windows, read and idle timeouts |
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
 | `grooveshop-django-api/tenant/views.py`, `tenant/serializers.py` | `tenant_resolve` and the folded gates |
