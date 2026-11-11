@@ -341,7 +341,7 @@ contract.
 
 ### Management commands and the deploy hook
 
-The sync and settings commands live in `meili/management/commands/` and are
+The sync and settings commands live in `src/meili/management/commands/` and are
 covered in depth at
 [Meilisearch management commands](/dev/django/reference/search/management-commands).
 The one to know here is `meilisearch_apply_settings --all-tenants`, which

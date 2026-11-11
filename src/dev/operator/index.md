@@ -25,8 +25,8 @@ flowchart TD
   H["Request Host header"] --> TMM["TenantMainMiddleware"]
   TMM -- "platform host row" --> PUB["public schema"]
   TMM -- "a store's TenantDomain row" --> TEN["tenant schema"]
-  PUB --> PUC["PUBLIC_SCHEMA_URLCONF, src/tenant/urls_public.py"]
-  TEN --> RUC["ROOT_URLCONF, src/core/urls.py"]
+  PUB --> PUC["PUBLIC_SCHEMA_URLCONF: tenant.urls_public"]
+  TEN --> RUC["ROOT_URLCONF: core.urls"]
   PUC --> PSITE["platform_admin_site"]
   RUC --> SSITE["admin.site (MyAdminSite)"]
   PSITE --> UP["UNFOLD_PLATFORM config"]
@@ -39,11 +39,12 @@ flowchart TD
 
 ### Two sites, selected by the host
 
-`src/settings.py` sets `PUBLIC_SCHEMA_URLCONF` to `src/tenant/urls_public.py`, and
-that module mounts `platform_admin_site.urls` at `admin/` **before**
-`public_shared_urlpatterns`, so on the public schema the platform site
-shadows the store admin that `src/core/urls.py` registers at the same path.
-A tenant host never loads that module at all.
+`src/settings.py` sets `PUBLIC_SCHEMA_URLCONF = "tenant.urls_public"`, and
+that module (`src/tenant/urls_public.py`) mounts `platform_admin_site.urls`
+at `admin/` **before** `public_shared_urlpatterns`, so on the public schema
+the platform site shadows the store admin that `ROOT_URLCONF = "core.urls"`
+(`src/core/urls.py`) registers at the same path.
+A tenant host never loads `tenant.urls_public` at all.
 
 `PlatformAdminSite` differs from a stock Unfold site in four places
 (`src/admin/platform_site.py`):

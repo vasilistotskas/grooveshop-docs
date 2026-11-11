@@ -8,7 +8,7 @@ description: "How a store's pages are edited, versioned and published: documents
 A store's theme, section groups (header, footer, announcement bar), templates
 and merchant-made pages are **documents**: versioned JSON that staff edit in
 the storefront's visual editor and publish together. The data, the versions,
-the permissions and the publish live in Django (`builder/`, a tenant app).
+the permissions and the publish live in Django (`src/builder/`, a tenant app).
 The **block catalogue belongs to the storefront**, as the texts catalogue
 does: each section or block is declared once there with its settings schema,
 and Django validates every write against it and adds the checks only it can

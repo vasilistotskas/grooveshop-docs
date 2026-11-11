@@ -21,9 +21,17 @@ import { fileURLToPath } from 'node:url'
 export const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 export const WORKSPACE = resolve(process.env.GROOVESHOP_WORKSPACE ?? join(REPO, '..'))
 
+/** What every `GROOVESHOP_<REPO>_DIR` name looks like, whichever repository it is for. */
+export const OVERRIDE_VARIABLE = /^GROOVESHOP_[A-Z0-9_]+_DIR$/
+
+/** The variable that points one repository elsewhere. */
+export function overrideVariable(name) {
+  const key = name.replace(/^grooveshop-/, '').toUpperCase().replace(/-/g, '_')
+  return `GROOVESHOP_${key}_DIR`
+}
+
 /** Absolute path of a sibling repository, honouring its `GROOVESHOP_<REPO>_DIR`. */
 export function repoDir(name) {
-  const key = name.replace(/^grooveshop-/, '').toUpperCase().replace(/-/g, '_')
-  const override = process.env[`GROOVESHOP_${key}_DIR`]
+  const override = process.env[overrideVariable(name)]
   return override ? resolve(override) : join(WORKSPACE, name)
 }

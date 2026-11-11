@@ -376,7 +376,7 @@ edge zone. See [Caches & purging](/dev/operations/caches).
   `admin/dashboard/`: the dashboards.
 - `src/core/templates/admin/clear_cache.html`, `platform_billing.html`: custom
   pages. The email pages (switches, preview and the htmx preview fragment) are
-  in `emails/templates/admin/emails/`.
+  in `src/emails/templates/admin/emails/`.
 - `admin/order/order_summary.html`, `product/apply_discount.html`,
   `product/stock_history.html`, `tenant/destroy_confirmation.html`.
 

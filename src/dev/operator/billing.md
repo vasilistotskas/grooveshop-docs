@@ -125,7 +125,7 @@ stateDiagram-v2
 stage from dates alone. `run_billing_cycle()` then compares it with what
 has already been notified.
 
-| Stage | Fires when | Email type (template in `core/templates/emails/billing/`) | Recipients |
+| Stage | Fires when | Email type (template in `src/core/templates/emails/billing/`) | Recipients |
 |---|---|---|---|
 | 1 | today is within `WARN_DAYS` of the term end | `platform.billing_expiring` (`expiring`) | the tenant's `owner_email` |
 | 2 | today is past the term end | `platform.billing_expired` (`expired`) | owner, **plus** `platform.billing_stage_copy` to `ADMINS` |

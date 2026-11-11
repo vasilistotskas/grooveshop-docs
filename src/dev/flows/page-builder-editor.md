@@ -708,7 +708,7 @@ keeps its name as the h1, as before.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBuilderPage.ts` | The live page's `seoTitle`, `seoDescription` and `heading` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/Home.vue`, `app/components/variants/webside/Storefront/Home.vue` | The home page's h1, both designs |
 | `grooveshop-django-api/src/builder/published.py` | `resolve_document`: the root settings with the language's overlay |
-| `grooveshop-django-api/src/builder/validation.py`, `src/builder/pointers.py` | `_check_root` registers `@document` only with `settings`; `_check_node_overlay` |
+| `grooveshop-django-api/src/builder/validation.py`, `src/builder/pointers.py` | `_check_root` registers `@document` for every kind that has a root, with or without `settings`; `_check_node_overlay` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/BlogPost.vue`, `app/components/variants/webside/Storefront/BlogPost.vue` | The `below-content` blog-post bands, which set no head tags |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/QueryField.vue` | A list setting |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Builder/RecordList.vue` | A hand-picked list |

@@ -1223,7 +1223,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
 | `grooveshop-django-api/src/tenant/views.py`, `src/tenant/serializers.py` | `tenant_resolve` and the folded gates |
 | `grooveshop-django-api/src/agent/views.py`, `src/agent/oidc.py` | Agent resources and scopes |
-| `grooveshop-django-api/src/core/templates/allauth/layouts/base.html`, `core/templates/allauth/elements/` | The store's frame for every allauth page: sign-in, consent, device flow |
+| `grooveshop-django-api/src/core/templates/allauth/layouts/base.html`, `src/core/templates/allauth/elements/` | The store's frame for every allauth page: sign-in, consent, device flow |
 | `grooveshop-django-api/src/core/templates/idp/oidc/authorization_form.html`, `src/core/templates/socialaccount/signup.html` | Consent and social sign-up naming the store |
 | `grooveshop-django-api/src/core/templatetags/store_brand.py` | The store's name, logo, favicon and colour for those pages |
 | `grooveshop-django-api/tailwind/input.css` | The `account-*` styles |

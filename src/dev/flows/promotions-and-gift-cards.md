@@ -762,7 +762,7 @@ whose plan enables it, and Django still gates the data.
   surface lists, so no signal, admin hook or save purges it. The signals in
   `src/promotion/signals.py` only queue the search index's `on_offer` reindex
   (see [Keeping the index in step](#keeping-the-index-in-step)), and nothing
-  under `promotion/` calls `CacheService.purge`.
+  under `src/promotion/` calls `CacheService.purge`.
   Its `django_patterns` is
   also empty, because both promotion views are plain `APIView`s with no
   response cache; the entries that exist are the Nuxt `PublicPromotionList`

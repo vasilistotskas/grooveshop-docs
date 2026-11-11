@@ -131,7 +131,7 @@ so every country is *selectable* in the rate inline, and only a rate
 makes it *shippable* for one store.
 
 **Destination VAT and customs are not handled.** VAT is one rate per
-product with no country dimension (`vat/`), so a rate to another EU
+product with no country dimension (`src/vat/`), so a rate to another EU
 country charges the product's own rate, not the destination's (no OSS),
 and a non-EU destination gets no customs data on the voucher. Opening
 such a country is a compliance decision that this code does not make
