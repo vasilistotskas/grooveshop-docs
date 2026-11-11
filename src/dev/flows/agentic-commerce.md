@@ -173,12 +173,15 @@ Store facts come from the store, never a default:
   with no pickup delivery gets an answer saying so, not an error. BOX NOW's
   `lockers/nearest` needs city, street AND postal code, so it is called only
   with all three, and the tool asks the model to collect the rest. When no
-  point was found, a lookup that failed is reported as the outage it is
-  (`unavailable`, with a retry hint) and never as "none found"; the one
-  exception is BOX NOW's 400, which Django answers for every refusal,
-  "no locker near that address" included, so it reads as no locker found.
-  With nothing found and nothing failed the call fails with a hint to try a
-  neighbouring postal code.
+  point was found, a lookup that failed goes through the usual `ToolError`
+  mapping (`upstreamErr`), so its code is what that maps to (an outage is
+  `unavailable` with a retry hint, an ACS 400 is `invalid`) and it is never
+  reported as "none found". The one exception is BOX NOW's 400, which Django
+  answers for every refusal, "no locker near that address" included, so it reads
+  as no locker found. With nothing found and nothing failed, the answer is an
+  ordinary text result saying no points are listed yet when BOX NOW still needs
+  the city and street, which the text asks for; only without that question to
+  ask does the call fail, with a hint to try a neighbouring postal code.
 - **`get_store_policies`** (`internal/mcpsrv/policies.go`) reads
   `RETURN_WINDOW_DAYS` and `RETURN_FEES` from `/settings/public` (Django's
   `PUBLIC_SETTING_KEYS`). `0` or `""` means not stated and is left out; a
@@ -216,8 +219,10 @@ business condition.
 A failure an agent acts on by its kind is a `ToolError`
 (`internal/mcpsrv/helpers.go`), rendered as JSON text: a `code`, the store's
 own `detail` when it gave one, `retryAfterSeconds` when a wait is known, and a
-`hint` saying what to do next. The code is Django's own `code` for a refusal,
-else the gateway's:
+`hint` saying what to do next. Django's own `code` replaces the gateway's only
+for a throttle, a conflict or a validation refusal (a refused coupon uses its
+reason); `not_found`, `unauthorized`, `not_granted` and `unavailable` are always
+the gateway's:
 
 | Code | When |
 |---|---|
@@ -226,9 +231,10 @@ else the gateway's:
 | `unauthorized` | No linked account on an account tool, or an expired token |
 | `not_granted` | The linked token lacks the scope the tool needs (`orders:read`, `loyalty:read`, `favourites:read`); re-authorise, do not retry |
 | `throttled` | Django's 429, with its `Retry-After` |
-| `conflict`, `invalid` | A 409 or a 4xx the store explained in `detail` |
+| `conflict` | A 409 |
+| `invalid` | Any other 4xx except 401, 403, 404 and 429, with the store's `detail` when it gave one |
 | a coupon's reason | A refused coupon: the rejection reason is the code (`discount_code_invalid` and its siblings) |
-| `unavailable` | A 5xx or network failure, and the checkout records being down: `retryAfterSeconds` and a hint to retry once, then tell the shopper |
+| `unavailable` | The default for everything else (a 5xx, a network failure), and the checkout records being down: `retryAfterSeconds` and a hint to retry once, then tell the shopper |
 
 Nothing but what Django wrote for a client reaches the agent: never a raw body,
 a status line or a 5xx's text. A checkout write that failed after another one
@@ -422,20 +428,22 @@ items. Completing a session that still misses data answers 400 `missing`.
 Every error the ACP handler writes is the spec's `Error` object (`type`,
 `code`, `message`, and `param` where one field is to blame), with the statuses
 and codes of the 2026-04-17 spec. Answers written before the handler is reached
-(rate limit, recover, the mux's own 404 and 405) are not. The table is derived
+are not: the rate limit, recover, the mux's own 404 and 405, and the tenant
+middleware's 404 `unknown store` and 503 `store temporarily unavailable`, which
+are `{"error": ...}` (`internal/tenant/middleware.go`; gateway issue #129). The table is derived
 from `internal/acp/handler.go`; the code wins.
 
 | Status | Code | When |
 |---|---|---|
 | 400 | `missing_api_version`, `unsupported_api_version` | The `API-Version` header (above) |
-| 400 | `idempotency_key_required` | A POST with no `Idempotency-Key`; `invalid` with `param: Idempotency-Key` when it is over 255 characters |
+| 400 | `idempotency_key_required` | A POST that changes a session, with no `Idempotency-Key`; `invalid` with `param: Idempotency-Key` when it is over 255 characters |
 | 400 | `invalid` | A body that is not JSON (or is over 256 KiB), `$.currency` other than the store's, or a refusal the store explained (its `detail` is the message) |
 | 400 | `missing` | `$.line_items` empty on a create, `$.payment_data` absent on a complete, or a complete of a session still missing buyer or fulfillment data |
 | 400 | `not_found` | A referenced product or cart the store does not have (an unknown item id, or a cart it no longer serves) |
 | 400 | `out_of_stock` | A complete refused for stock; the message names each product with what was requested and what is available |
 | 400 | `unsupported` | Delegated card payment (any `handler_id` or instrument), a pay way the store has no agent-completable method for, or no pay way at all |
 | 401 | `unauthorized` | No bearer, a wrong one, or a tenant with no `acpBearerToken` |
-| 404 | `not_found` | An unknown store, or `No such checkout session` |
+| 404 | `not_found` | `No such checkout session` |
 | 405 | `conflict` | An update or a cancel of a completed or canceled session, or a complete of a canceled one. It carries `Allow`: `GET, HEAD` for an update; empty for a complete or a cancel, which have no other method |
 | 409 | `idempotency_in_flight` | A key still in flight, another request holding the session's lock, or an order still being placed. Always with `Retry-After`, in whole seconds |
 | 422 | `idempotency_conflict` | A key reused with a different body |
@@ -446,7 +454,9 @@ from `internal/acp/handler.go`; the code wins.
 | 503 | `unavailable`, `upstream_unavailable`, `order_placed` | Redis or the render failed; the store's backend is down; or the order is placed but its session cannot be rendered right now, in which case read the session again |
 
 A complete of a session that is already completed is not an error: it answers
-200 with the session, whatever its body.
+200 with the session, as long as the body is valid JSON within the 256 KiB
+limit: the body is read first, so an empty, non-JSON or oversized one is a 400
+before that.
 
 An order being placed has a deadline: `checkout.Flow.CompletionDeadline` is the
 session's in-progress save plus three upstream timeouts. Until then a call on
@@ -459,7 +469,10 @@ it does.
 
 #### Idempotency
 
-Every POST needs an `Idempotency-Key` of at most 255 characters. The key is
+Every POST that changes a session needs an `Idempotency-Key` of at most 255
+characters. A complete reads it only after judging the session's status, so a
+complete of a session already completed (200), in progress (409, then 502) or
+canceled (405) is answered before the key is read. The key is
 claimed with `SET NX` under `ag:{schema}:acp:idem:{scope}:{key}`, where the
 scope is the endpoint: `create.v2` for a create, `update:{id}`, `complete:{id}`
 and `cancel:{id}` for a session's operations. A claim that its request never
@@ -483,7 +496,9 @@ a record an older pod wrote is a miss, never misread.
 
 **The stored create response holds the buyer's data.** It is the rendered
 session: name, email, phone and delivery address, kept in Redis for 24 hours
-while the session itself lives 30 minutes. Nothing else reads it. Count it when
+while the session itself lives 30 minutes when open, renewed by each call, and
+24 hours once completed or canceled (`internal/checkout/store.go`,
+`session.go`). Nothing else reads it. Count it when
 answering a data-retention question.
 
 #### Completing without the caller
@@ -1035,7 +1050,9 @@ yourself, then bumping the pin in the infrastructure repo.
   its cart, so a cart the store no longer serves is `not_found` with "that cart
   no longer exists; create a new one with `create_cart`" on `get_cart`,
   `add_to_cart` (which adds that the product is therefore not in it),
-  `get_checkout_link`, the coupon tools and `get_shipping_options` with a cart.
+  `get_checkout_link` and `get_shipping_options` with a cart. The coupon tools
+  are chat-only (`apply_coupon` and `remove_coupon` are never served on
+  `/mcp`), so they answer a gone cart as `cart_unreachable`, below.
   `update_cart_item` and `remove_cart_item` are `not_found` too, but their hint
   is the one for a missing line ("fetch the cart with `get_cart`"), which then
   reports the gone cart. In the chat the cart is the shopper's own
@@ -1098,9 +1115,11 @@ yourself, then bumping the pin in the infrastructure repo.
   answered `cart_unreachable`. The shopper's own cart is reached only through
   the `cartToken` the widget sends (`django.CartToken`; Django's
   `POST /cart/agent-token`); the gateway's calls are otherwise anonymous. Django
-  refused the token (expired or revoked), or the guest cart the widget named is
-  gone. The `done` event then carries `cartTokenRefused`, and the widget mints a
-  new token. Nothing was added to a cart nobody sees.
+  refused the token with a 401 (expired or revoked): the `done` event then
+  carries `cartTokenRefused`, and the widget mints a new token. A guest cart
+  the widget named that is gone gives the same `cart_unreachable` answer without
+  the flag and nothing is minted; reloading fetches a new cart. Either way
+  nothing was added to a cart nobody sees.
 - **A feed publishes broken image URLs.** Check `ASSETS_HOST` and the tenant's
   `assetsDomain`; an empty media host yields an empty URL by design, dropping
   the image rather than publishing an unreachable one, and a product with no

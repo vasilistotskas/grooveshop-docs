@@ -277,3 +277,4 @@ by a namespace regex.
 | `grooveshop-django-api/core/tasks.py` | `MonitoredTask`: the task completion and failure lines, with the task's duration and database cost, and the failure's traceback |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |
+| `grooveshop-agent-gateway/internal/obs/metrics.go` | The gateway's registry: `gateway_feed_generation_failures_total`, upstream outcomes, tenant cache |
