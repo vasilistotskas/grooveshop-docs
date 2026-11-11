@@ -55,9 +55,11 @@ be `memory`.
 **Media stream.** `pnpm install`, `pnpm run dev`; `BACKEND_URL` points at
 the image origin and Redis must be running.
 
-**Gateway.** Export the variables from `.env.example` (`DJANGO_BASE_URL`,
-`REDIS_URL`, `INTERNAL_EVENTS_SECRET`, `ASSETS_HOST`, `ENV=development`)
-and `go run ./cmd/gateway`.
+**Gateway.** Export the variables from `.env.example` (the seven required ones,
+`ENV=development`) and `go run ./cmd/gateway`. `ENV=development` is what lets
+the example's short `INTERNAL_EVENTS_SECRET` boot: production and staging refuse
+one under 32 characters. Every other value `config.Load` refuses at start is
+listed in [Agent gateway](/dev/gateway/#configuration).
 
 ## Staging
 
