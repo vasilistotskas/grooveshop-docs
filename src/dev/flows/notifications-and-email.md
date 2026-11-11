@@ -130,7 +130,7 @@ tabs in step.
 Every email is an **email type** (`src/emails/types.py: EmailType`), declared
 in its domain app's `emails.py` (`src/order/emails.py`, `src/product/emails.py`,
 `src/user/emails.py`, `src/tenant/emails.py`, ...) through `emails.declare`. A type
-names its template pair (`core/templates/emails/<directory>/<name>.html` and
+names its template pair (`src/core/templates/emails/<directory>/<name>.html` and
 `.txt`), its subject (a gettext msgid with named fields), the builder that
 reads the domain for its context, a `sample` the preview renders, its
 recipients and its gates. `EmailsConfig.ready` collects the declarations and
@@ -169,7 +169,7 @@ email page. `mail_admins` is not called anywhere in the project.
 reset, security notices, MFA and connected-account notices) are 19 email
 types, `account.*`, `mfa.*` and `social.*` (`src/user/emails.py`), required and
 customer-facing. Their templates live in
-`core/templates/emails/{account,mfa,social}/`, each an HTML and a text
+`src/core/templates/emails/{account,mfa,social}/`, each an HTML and a text
 file. `UserAccountAdapter.send_mail` maps allauth's template prefix to the
 type (an unmapped prefix raises, so a mail a later allauth adds cannot go
 out unbranded) and queues `send_allauth_email_task`, which calls
