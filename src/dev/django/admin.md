@@ -1,6 +1,6 @@
 ---
 title: Admin (Unfold)
-description: The two Unfold admin sites, BaseModelAdmin and the guarantees its tests enforce (filters, foreign keys, query growth, templates, inlines), withholding, actions and dialogs, datasets, JSON Schema fields, the dashboards, the per-request store sidebar and site menu, the ⌘K command palette, the header and footer, and how to add an admin section.
+description: The two Unfold admin sites, BaseModelAdmin and the guarantees its tests enforce (filters, foreign keys, query growth, templates, inlines), withholding, third-party admins, action permissions and dialogs, datasets, JSON Schema fields, the dashboards, the per-request store sidebar and site menu, the ⌘K command palette, the header and footer, and how to add an admin section.
 ---
 
 # Admin (Unfold)
@@ -84,13 +84,12 @@ one that does not. It sets the shared defaults once — `compressed_fields`,
 `warn_unsaved_form`, `list_fullwidth`, `list_filter_submit`,
 `list_filter_sheet`, `save_on_top`, `list_per_page = 25` — and:
 
-- **Action permissions.** `__init_subclass__` stamps
-  `allowed_permissions = ["change"]` on any action that declares none,
-  because Django and Unfold both fail open on an undeclared action. An
-  inherited action (a mixin's) gets its own wrapper on the inheriting
-  class, so one subclass cannot set the policy for every other. A
-  read-only action says `permissions=["view"]` (the CSV/XML export
-  actions do).
+- **No default action permission.** Every action names its own in its
+  decorator, `permissions=[...]`, because Unfold enforces only the
+  decorator's argument on an action's own URL. A base class cannot add
+  one afterwards: setting `allowed_permissions` on the function hides
+  the button and gates the bulk action, and leaves the URL open. See
+  [Actions](#actions).
 - **One kind of list filter.** `get_list_filter` turns every plain field
   name into its Unfold filter (`unfold_filter_for`: choices → dropdown,
   boolean → radio, date/datetime → range, relation → related dropdown,
@@ -145,6 +144,44 @@ Exceptions:
 `tests/integration/admin/test_tenant_host_model_visibility.py` walks the
 live registry to confirm both.
 
+## Third-party admins
+
+Packages register admins on the store site too: allauth's (`account`,
+`socialaccount`, `mfa`, `usersessions`, `allauth_idp_oidc`), `knox`,
+`sites` and dj-stripe (`djstripe`). They are platform-only. Each app is
+in `src/tenant/role_scopes.py: PLATFORM_ONLY_APP_LABELS`, so no store
+role holds any permission on it, and its changelist, forms and bulk
+actions answer 403 to every store role.
+`src/core/admin.py: override_third_party_admins` re-registers each of
+them but `allauth_idp_oidc` as a subclass of the package's class and
+Unfold's `ModelAdmin`, with `WithheldOnTenantHostModelAdmin` first in
+the bases.
+
+dj-stripe's admins are a platform superuser's.
+`src/admin/mixins.py: StripeMirrorModelAdmin` goes first in their bases.
+It is superuser-only (`IsSuperuserOnlyModelAdmin`), so a permission
+granted by hand does not open them either. It also serves dj-stripe's
+own action URL, `action/<action_name>/<model_name>/` (URL name
+`djstripe_custom_action`), which dj-stripe puts behind the admin login
+alone and which runs the action on whichever model the URL names. Here
+that URL runs an action only when the admin of the named model lets the
+request open its changelist and `get_actions` offers it the action, the
+rule Django's own changelist applies.
+
+`tests/unit/admin/test_actions_declare_permissions.py` holds the list:
+
+- `THIRD_PARTY_ADMINS` names, by app label, every package that
+  registers an admin on the store site, with why no store role reaches
+  it. Each app must be in `PLATFORM_ONLY_APP_LABELS`.
+- `THIRD_PARTY_URLS` names every URL such an admin serves beyond
+  Django's five and Unfold's action URLs, with the check in front of it.
+  Today that is `djstripe_custom_action`.
+- An Unfold action slot on a third-party admin must declare its
+  permission like ours.
+
+A new package admin, or a new URL of one, fails until it is named, and a
+stale entry fails too.
+
 ## Actions
 
 Unfold registers `actions_row`, `actions_list` and `actions_detail` as URL
@@ -153,6 +190,59 @@ action returns one on every path
 (`tests/unit/shipping_acs/test_admin_action_responses.py` checks by `ast`).
 An action over the whole table (ACS COD reconciliation, BoxNow locker
 sync) is an `actions_list` button, not a row action.
+
+**Permissions.** Every action passes `permissions=[...]` in its
+decorator, Unfold's `@action` or Django's `@admin.action`. Each action
+URL is wrapped in `admin_site.admin_view` (the admin login) and nothing
+else; the one check in front of the body is the `permissions` the
+decorator closed over. An action that declares none runs for any
+signed-in member of the store's staff, on a page their role may not
+even open. Django's changelist select reads `allowed_permissions`, which
+the decorator sets too, and offers an undeclared action to anyone who
+opens the changelist.
+
+Pick the permission by what the action does:
+
+- `change` for an edit, including one that calls a carrier, Stripe or
+  myDATA, or sends an email;
+- `add` for one that creates a row: `ProductAdmin.duplicate_product_row`;
+- `delete` for one that deletes rows: `BlogCommentAdmin.mark_as_spam`,
+  `CartItemAdmin.remove_from_cart`, `TenantAdmin.destroy_tenants`. STAFF
+  hold no `delete`, so they are not offered these;
+- `view` only for an action that reads and changes nothing. Each one is
+  named in `READ_ONLY` in the guard with its reason: the CSV and XML
+  exports, `OrderAdmin.view_customer_orders_row` and BoxNow's three
+  label downloads. Any other action that asks for `view` alone fails.
+
+An action declared with Unfold's `@action` runs only with every
+permission it lists, while Django's changelist offers a bulk action on
+any one of them. A bulk action listing two is then offered to a role
+holding one, and answers 403 when that role runs it. List one unless
+the action truly needs each.
+
+**Object-level checks.** Unfold calls a detail (or submit-line)
+action's `has_<name>_permission(request, object_id)` with the id from
+the URL, a string, and any other action's with the request alone. It
+never passes the object. Such a method must not treat its argument as an
+instance: look the row up by the id, as
+`OrderAdmin.has_confirm_payment_permission` does. A detail action that
+copies its object uses a method of its own, because
+`has_add_permission` takes no object:
+`PromotionAdmin.has_duplicate_permission` asks `has_add_permission`,
+and `duplicate_promotion` declares `permissions=["duplicate"]`.
+
+**Guards.** `tests/unit/admin/test_actions_declare_permissions.py`
+walks every module in `src/` by `ast`: a function decorated as an admin
+action, or a method a class lists in an action slot (a dropdown's
+`items` too), must pass a literal, non-empty `permissions=[...]`. It also
+walks the admin registry, which sees an action a class only inherits,
+and fails on a stale `READ_ONLY` entry.
+`tests/integration/admin/test_action_permissions.py` requests every URL
+action, GET and POST, as an identity holding only `view` on its model
+(nothing, for an action that asks for `view`) and expects 403. It checks
+that no bulk action is offered to that identity, and calls each detail
+action's permission methods with an id that fails the test if read as
+an object.
 
 **Dialogs.** `@action(dialog=ActionDialog(title=..., form_class=...))`
 opens an Unfold dialog; the decorator builds the form from `request.POST`
@@ -432,8 +522,9 @@ holds lazy strings evaluated after the request has reset the language.
 ## Adding a new admin section
 
 1. Write the `ModelAdmin` extending `BaseModelAdmin` (or
-   `BaseTranslatableAdmin`); give custom actions `permissions=[...]` where
-   `change` is wrong; make URL-backed actions return a response.
+   `BaseTranslatableAdmin`); give every action `permissions=[...]` in its
+   decorator, chosen by what it does (see [Actions](#actions)); make
+   URL-backed actions return a response.
 2. Keep it flat in queries (`list_select_related`, prefetches, annotations
    read through `__dict__`), large foreign keys as autocompletes, filters
    as field names or Unfold filter classes. The guards above say what
@@ -471,8 +562,12 @@ holds lazy strings evaluated after the request has reset the language.
 | `grooveshop-django-api/src/admin/platform_site.py` | `PlatformAdminSite`, `register_platform_models`, `PLATFORM_ADMIN_CLASSES` |
 | `grooveshop-django-api/src/user/admin.py` | `UserAdmin` (store) and `PlatformUserAdmin` (platform identities) |
 | `grooveshop-django-api/src/tenant/deletion.py` | `PublicSchemaDeletionMixin`, deletes that skip tenant-only tables |
-| `grooveshop-django-api/src/admin/base.py` | `BaseModelAdmin`, action permissions, filter mapping, JSON Schema editor |
-| `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `AdminSiteLoginNextMixin`, `AdminFooterMixin` |
+| `grooveshop-django-api/src/admin/base.py` | `BaseModelAdmin`, filter mapping, JSON Schema editor |
+| `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `StripeMirrorModelAdmin`, `AdminSiteLoginNextMixin`, `AdminFooterMixin` |
+| `grooveshop-django-api/src/core/admin.py` | `override_third_party_admins`: the package admins re-registered on the store site |
+| `grooveshop-django-api/src/promotion/admin.py` | `PromotionAdmin.has_duplicate_permission`, a copy's own permission method |
+| `grooveshop-django-api/tests/unit/admin/test_actions_declare_permissions.py` | Every action declares its permission; `READ_ONLY`, `THIRD_PARTY_ADMINS`, `THIRD_PARTY_URLS` |
+| `grooveshop-django-api/tests/integration/admin/test_action_permissions.py` | Every action refused without its permission; detail-action permission methods read no object |
 | `grooveshop-django-api/src/admin/displays.py`, `src/admin/filters.py`, `src/admin/datasets.py` | Shared displays, filters, datasets |
 | `grooveshop-django-api/src/admin/dashboard/` | Dashboard widgets and the cached queries |
 | `grooveshop-django-api/src/admin/navigation.py` | Per-request store sidebar, `changelist_link`, site menu, storefront link |
