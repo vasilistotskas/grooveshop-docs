@@ -68,9 +68,9 @@ A text is identified by `(namespace, key)`.
 
 Only string leaves are texts; a boolean in a block is data and is left out.
 Django stores the pair as given and treats it as opaque: there is no foreign
-key, and the overrides body is not camelCased (`texts/views.py`).
+key, and the overrides body is not camelCased (`src/texts/views.py`).
 
-`surface` is a third part of the id on the Django side (`texts/models.py:
+`surface` is a third part of the id on the Django side (`src/texts/models.py:
 TextSurface`); `storefront` is the only one today.
 
 ### 2. The catalogue, built with the storefront
@@ -116,7 +116,7 @@ returns every entry, for tooling. Each view has its own hash, so the ETag
 varies by schema. `POST /api/texts/validate` takes the same `schema` and
 answers `unknown_key` for a namespace that store does not render
 (`findTextEntry`). Django always passes the current schema
-(`texts/storefront.py`, `texts/services.py: _schema`).
+(`src/texts/storefront.py`, `src/texts/services.py: _schema`).
 
 ### 4. The locked list
 
@@ -142,21 +142,21 @@ it. Django does not hold the list.
 ### 5. The editor
 
 The store sidebar entry is `page("texts.TextOverride", _("Storefront Texts"),
-"translate")` in the **Content** group (`admin/navigation.py`).
-`texts/admin.py: TextOverrideAdmin` replaces the changelist with one editor
-page (`texts/templates/admin/texts/editor.html`) and adds htmx endpoints
+"translate")` in the **Content** group (`src/admin/navigation.py`).
+`src/texts/admin.py: TextOverrideAdmin` replaces the changelist with one editor
+page (`src/texts/templates/admin/texts/editor.html`) and adds htmx endpoints
 `validate/`, `save/`, `reset/`, `history/` and `restore/`. The model has no
 add, change or delete form: a form would bypass the storefront's validation.
 
-- `texts/editor.py` merges the catalogue with the store's rows and does the
+- `src/texts/editor.py` merges the catalogue with the store's rows and does the
   search (every word in namespace, key, defaults and the store's values,
   case-folded), the filters (area, changed only, missing a translation) and
   paging (`PER_PAGE`).
-- `texts/areas.py: AREAS` is the one table mapping namespaces (with any
+- `src/texts/areas.py: AREAS` is the one table mapping namespaces (with any
   `variants/<schema>` segment dropped) and `global` key heads onto human
   areas, each with an optional storefront preview path. Unclaimed texts are
   **Common**.
-- `texts/storefront.py: fetch_catalogue` holds the catalogue per process and
+- `src/texts/storefront.py: fetch_catalogue` holds the catalogue per process and
   revalidates it with `If-None-Match` every
   `TEXTS_CATALOGUE_REVALIDATE_SECONDS`; requests time out after
   `TEXTS_STOREFRONT_TIMEOUT_SECONDS`. The base URL is
@@ -164,15 +164,15 @@ add, change or delete form: a form would bypass the storefront's validation.
 
 ### 6. Validate and save
 
-`texts/services.py` is the only writer, for save, reset and restore:
+`src/texts/services.py` is the only writer, for save, reset and restore:
 
-1. **Permission.** `texts.change_textoverride`. `tenant/role_scopes.py` puts
+1. **Permission.** `texts.change_textoverride`. `src/tenant/role_scopes.py` puts
    `texts` in `STORE_SETTINGS_APP_LABELS` (Staff's operational grant leaves
    it out) and in `STAFF_READ_ONLY_APP_LABELS` (Staff gets `view`), applied
-   in `tenant/auth_backends.py`. So Admin and Owner edit; Staff opens the
+   in `src/tenant/auth_backends.py`. So Admin and Owner edit; Staff opens the
    editor read-only. The `validate/` endpoint needs the change permission
    too.
-2. **Normalise and cap** (`texts/validation.py: check_value`): CRLF to LF,
+2. **Normalise and cap** (`src/texts/validation.py: check_value`): CRLF to LF,
    strip; blank refused (`value_blank`); `TEXTS_MAX_VALUE_LENGTH`
    (`value_too_long`).
 3. **The storefront's verdict.** `POST /api/texts/validate`
@@ -192,23 +192,23 @@ admin's language; the storefront's English detail travels in
 
 ### 7. What a save moves
 
-- `tenant/signals.py: bump_generation_on_text_override_change` (post_save and
+- `src/tenant/signals.py: bump_generation_on_text_override_change` (post_save and
   post_delete) bumps the store's `Tenant.cache_generation`. The public read
   is cached under `texts:overrides:<cache_generation>:<language>`
-  (`texts/views.py: overrides_cache_key`), so Django serves the new value at
+  (`src/texts/views.py: overrides_cache_key`), so Django serves the new value at
   once.
-- `core/cache/surfaces.py` registers the `store_texts` surface with
+- `src/core/cache/surfaces.py` registers the `store_texts` surface with
   `invalidated_by=("texts.TextOverride",)`: `_nuxt("textOverrides")` (the
   storefront handler's Redis keys `cache:nitro:handlers:textOverrides…`),
   every cached route of the store (`cache:nitro:routes:_:*`), and
   `invalidates_tenant_config=True`, which moves the storefront's tenant
-  epoch. `core/cache/invalidation.py` batches the purge after commit and
+  epoch. `src/core/cache/invalidation.py` batches the purge after commit and
   queues it about ten seconds later (`PURGE_DELAY_SECONDS`), followed by the
   Cloudflare edge purge.
 
 ### 8. The overrides route (storefront #268)
 
-`GET /api/v1/texts/overrides?language=<code>` (`texts/views.py:
+`GET /api/v1/texts/overrides?language=<code>` (`src/texts/views.py:
 public_text_overrides`, AllowAny) returns `{namespace: {key: text}}` for the
 current store. It reads the database and the cache only and never calls the
 storefront, so a slow storefront pod cannot fail text delivery; `400
@@ -278,16 +278,16 @@ ships to browsers.
 - **The storefront is the only authority** on keys, defaults, placeholders,
   syntax and locks. Django has no fallback: when the storefront cannot answer
   the catalogue or validate, nothing is saved (`storefront_unavailable`,
-  `texts/validation.py`) and the editor says so.
+  `src/texts/validation.py`) and the editor says so.
 - **Overrides are sparse.** No row means the platform default, so an
   untouched text follows every storefront release; an edited one stays as
   written.
 - **Every stored override was validated** against the build that was live
   when it was saved. Only a later build can make it stale, which is why the
   merge, not Django, drops locked and unknown keys.
-- **The public read never calls the storefront** (`texts/views.py`).
+- **The public read never calls the storefront** (`src/texts/views.py`).
 - **The handler name `textOverrides` is a contract.** Django's purge names it
-  (`core/cache/surfaces.py`, `_nuxt("textOverrides")`). Renaming the cached
+  (`src/core/cache/surfaces.py`, `_nuxt("textOverrides")`). Renaming the cached
   route without changing the surface leaves edits invisible until the TTL
   runs out.
 - **A namespace is the component's own path**, enforced by the source rule;
@@ -299,7 +299,7 @@ ships to browsers.
 
 - **Storefront unreachable from Django.** The editor shows that the list is
   unavailable; save, history and restore answer with a warning in the
-  page's alert region (`HX-Retarget`, `texts/admin.py:
+  page's alert region (`HX-Retarget`, `src/texts/admin.py:
   _unavailable_response`). Nothing is written.
 - **Overrides fetch fails during SSR (#268).** The page renders with the
   build's defaults rather than failing: one endpoint's outage must not take
@@ -351,17 +351,17 @@ ships to browsers.
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts` | Edge cache headers per response; restores a degraded render's status and marks it `private, no-store` |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/degradedRender.ts` | `markDegradedRender`: keeps a defaults-only render out of the page cache |
 | `grooveshop-storefront-ui-node-nuxt/shared/constants/degradedRender.ts` | The 503 a degraded render carries inside the page cache |
-| `grooveshop-django-api/texts/models.py` | `TextOverride`, `TextSurface` |
-| `grooveshop-django-api/texts/storefront.py` | Catalogue and validate client |
-| `grooveshop-django-api/texts/validation.py` | `check_value`, refusal codes and messages |
-| `grooveshop-django-api/texts/services.py` | `save_texts`, `reset_text`, `restore_text` |
-| `grooveshop-django-api/texts/editor.py` | Search, filters, history for the editor |
-| `grooveshop-django-api/texts/areas.py` | `AREAS`: namespaces to human areas |
-| `grooveshop-django-api/texts/admin.py` | `TextOverrideAdmin`: editor page and htmx endpoints |
-| `grooveshop-django-api/texts/views.py` | `public_text_overrides` |
-| `grooveshop-django-api/admin/navigation.py` | Sidebar entry under Content |
-| `grooveshop-django-api/tenant/role_scopes.py` | `STORE_SETTINGS_APP_LABELS`, `STAFF_READ_ONLY_APP_LABELS` |
-| `grooveshop-django-api/tenant/signals.py` | `bump_generation_on_text_override_change` |
-| `grooveshop-django-api/core/cache/surfaces.py` | `store_texts` surface |
-| `grooveshop-django-api/core/cache/invalidation.py` | Batched purge after commit |
-| `grooveshop-django-api/settings.py` | `TEXTS_*` settings |
+| `grooveshop-django-api/src/texts/models.py` | `TextOverride`, `TextSurface` |
+| `grooveshop-django-api/src/texts/storefront.py` | Catalogue and validate client |
+| `grooveshop-django-api/src/texts/validation.py` | `check_value`, refusal codes and messages |
+| `grooveshop-django-api/src/texts/services.py` | `save_texts`, `reset_text`, `restore_text` |
+| `grooveshop-django-api/src/texts/editor.py` | Search, filters, history for the editor |
+| `grooveshop-django-api/src/texts/areas.py` | `AREAS`: namespaces to human areas |
+| `grooveshop-django-api/src/texts/admin.py` | `TextOverrideAdmin`: editor page and htmx endpoints |
+| `grooveshop-django-api/src/texts/views.py` | `public_text_overrides` |
+| `grooveshop-django-api/src/admin/navigation.py` | Sidebar entry under Content |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | `STORE_SETTINGS_APP_LABELS`, `STAFF_READ_ONLY_APP_LABELS` |
+| `grooveshop-django-api/src/tenant/signals.py` | `bump_generation_on_text_override_change` |
+| `grooveshop-django-api/src/core/cache/surfaces.py` | `store_texts` surface |
+| `grooveshop-django-api/src/core/cache/invalidation.py` | Batched purge after commit |
+| `grooveshop-django-api/src/settings.py` | `TEXTS_*` settings |

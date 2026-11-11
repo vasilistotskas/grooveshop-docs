@@ -7,19 +7,19 @@ description: What the platform deletes on a schedule, when, from which setting, 
 
 Every table that grows without a business reason to keep its history has a
 periodic sweep. Each sweep deletes by primary-key batch through
-`core/retention.py:delete_in_batches`, so a first run on a large backlog
+`src/core/retention.py:delete_in_batches`, so a first run on a large backlog
 holds no long lock and loads no table into memory, and it goes through the
 ORM so cascades and file-removal signals still run. The code wins over this
 page.
 
-Source: `core/retention.py`, `core/tasks.py`, `core/history.py`,
-`tenant/tasks.py` (the `fanout_purge_*` wrappers), `settings.py`
+Source: `src/core/retention.py`, `src/core/tasks.py`, `src/core/history.py`,
+`src/tenant/tasks.py` (the `fanout_purge_*` wrappers), `src/settings.py`
 (`CELERY_BEAT_SCHEDULE`, the retention constants, `EXTRA_SETTINGS_DEFAULTS`),
-`shipping_acs/tasks.py`, `shipping_acs/models/voucher_hold.py`,
-`shipping_acs/voucher_hold.py`, `shipping_boxnow/tasks.py`,
-`recommendation/tasks.py`, `order/tasks.py`, `meta_capi/tasks.py`, `contact/tasks.py`,
-`emails/tasks.py`, `builder/tasks.py`,
-`search/tasks.py`, `search/middleware.py`.
+`src/shipping_acs/tasks.py`, `src/shipping_acs/models/voucher_hold.py`,
+`src/shipping_acs/voucher_hold.py`, `src/shipping_boxnow/tasks.py`,
+`src/recommendation/tasks.py`, `src/order/tasks.py`, `src/meta_capi/tasks.py`, `src/contact/tasks.py`,
+`src/emails/tasks.py`, `src/builder/tasks.py`,
+`src/search/tasks.py`, `src/search/middleware.py`.
 
 ## What is deleted
 
@@ -62,7 +62,7 @@ shipment is in a terminal state (`shipping_acs.enum.shipment_state.TERMINAL_STAT
 is also the replay guard for that webhook, so replay protection does not rest
 on the rows alone: `BoxNowService.apply_webhook_event` ignores an event whose
 HMAC-signed `data.time` is older than `BOXNOW_WEBHOOK_MAX_EVENT_AGE_DAYS`
-(env, 90 days), and `settings.py` refuses a window that is not shorter than
+(env, 90 days), and `src/settings.py` refuses a window that is not shorter than
 `CARRIER_TRACKING_EVENT_RETENTION_DAYS`. Every event the window admits still
 meets its row, because a row lives at least that period from the event.
 
@@ -104,11 +104,11 @@ are the record of each outage.
 
 1. A task in the owning app, a batched delete through `delete_in_batches`,
    `MonitoredTask` or `TenantTask` as its neighbours.
-2. A `fanout_purge_*` wrapper in `tenant/tasks.py` with
+2. A `fanout_purge_*` wrapper in `src/tenant/tasks.py` with
    `include_suspended=True` when the table is per store; a public-schema table
    gets its own beat entry and an entry in
    `PUBLIC_SCHEMA_TASKS` (`tests/unit/tenant/test_celery_fanout.py`).
-3. A beat entry in `settings.py`, a platform env constant or a store setting
+3. A beat entry in `src/settings.py`, a platform env constant or a store setting
    in `EXTRA_SETTINGS_DEFAULTS`, and a row in the table above (and in the
    admin guide's *Automatic tasks* page when a store owner can see the data).
 4. A test for the batch, the boundary and, for a store setting, one store's

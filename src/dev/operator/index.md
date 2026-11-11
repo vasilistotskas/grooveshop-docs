@@ -7,7 +7,7 @@ description: "The platform console: a second admin site on the public schema, wh
 
 The platform console is a **second Django admin site**, not the store admin
 with extra permissions. It is its own `AdminSite` subclass
-(`admin/platform_site.py: PlatformAdminSite`), mounted on its own URL conf,
+(`src/admin/platform_site.py: PlatformAdminSite`), mounted on its own URL conf,
 with its own Unfold configuration, sidebar, dashboard and login. It is
 served only on the platform host and only ever touches public-schema
 tables; a store's admin is served on that store's own hosts and reads that
@@ -25,13 +25,13 @@ flowchart TD
   H["Request Host header"] --> TMM["TenantMainMiddleware"]
   TMM -- "platform host row" --> PUB["public schema"]
   TMM -- "a store's TenantDomain row" --> TEN["tenant schema"]
-  PUB --> PUC["PUBLIC_SCHEMA_URLCONF, tenant/urls_public.py"]
-  TEN --> RUC["ROOT_URLCONF, core/urls.py"]
+  PUB --> PUC["PUBLIC_SCHEMA_URLCONF: tenant.urls_public"]
+  TEN --> RUC["ROOT_URLCONF: core.urls"]
   PUC --> PSITE["platform_admin_site"]
   RUC --> SSITE["admin.site (MyAdminSite)"]
   PSITE --> UP["UNFOLD_PLATFORM config"]
   SSITE --> UF["UNFOLD config"]
-  PSITE --> PDASH["admin/dashboard/platform.py"]
+  PSITE --> PDASH["src/admin/dashboard/platform.py"]
   SSITE --> SDASH["admin/dashboard/store/"]
 ```
 
@@ -39,14 +39,15 @@ flowchart TD
 
 ### Two sites, selected by the host
 
-`settings.py` sets `PUBLIC_SCHEMA_URLCONF` to `tenant/urls_public.py`, and
-that module mounts `platform_admin_site.urls` at `admin/` **before**
-`public_shared_urlpatterns`, so on the public schema the platform site
-shadows the store admin that `core/urls.py` registers at the same path.
-A tenant host never loads that module at all.
+`src/settings.py` sets `PUBLIC_SCHEMA_URLCONF = "tenant.urls_public"`, and
+that module (`src/tenant/urls_public.py`) mounts `platform_admin_site.urls`
+at `admin/` **before** `public_shared_urlpatterns`, so on the public schema
+the platform site shadows the store admin that `ROOT_URLCONF = "core.urls"`
+(`src/core/urls.py`) registers at the same path.
+A tenant host never loads `tenant.urls_public` at all.
 
 `PlatformAdminSite` differs from a stock Unfold site in four places
-(`admin/platform_site.py`):
+(`src/admin/platform_site.py`):
 
 | Attribute | Value | Why |
 |---|---|---|
@@ -55,18 +56,18 @@ A tenant host never loads that module at all.
 | `login_form` | `PlatformAdminAuthenticationForm` | Credentials are always checked against the public schema's user table |
 | `get_urls()` | prepends `plan-billing/` | `AdminSite.get_urls` ends in an `<app_label>/` catch-all that would 404 the custom page first |
 
-`UNFOLD_PLATFORM` (`settings.py`) declares only the differences from a
+`UNFOLD_PLATFORM` (`src/settings.py`) declares only the differences from a
 stock install: the `Control plane` subheader, the `hub` symbol,
-`ENVIRONMENT` pointing at `admin/permissions.py: platform_environment`
+`ENVIRONMENT` pointing at `src/admin/permissions.py: platform_environment`
 (which renders a permanent amber **Control plane** badge, because the two
 consoles look alike enough to edit the wrong one), a `COMMAND` block that
 only turns on the ⌘K palette's history (what the palette finds is
-`admin/search.py: CommandSearchMixin`, shared with the store site; see
+`src/admin/search.py: CommandSearchMixin`, shared with the store site; see
 [Admin (Unfold)](/dev/django/admin#command-palette)), and the sidebar below. `SITE_DROPDOWN` is
-`admin/navigation.py: ops_site_dropdown`, shared with the store site: the
+`src/admin/navigation.py: ops_site_dropdown`, shared with the store site: the
 `ADMIN_OPS_LINKS` consoles (Flower, Mailpit, Meilisearch, RabbitMQ), each
 only when its `ADMIN_*_URL` is set. The **Help & Guides** link sits in the
-footer that `admin/mixins.py: AdminFooterMixin` gives both sites, next to
+footer that `src/admin/mixins.py: AdminFooterMixin` gives both sites, next to
 the running `RELEASE_VERSION`, and only when `ADMIN_DOCS_URL` is set, so a
 local checkout renders no link at all. The same footer links **API docs**
 (`PlatformAdminSite.api_docs_url_name = "swagger-ui"`, which the public
@@ -74,8 +75,8 @@ URLconf serves too) for platform superusers.
 
 ### Registration is copied, not re-declared
 
-`register_platform_models()` (`admin/platform_site.py`), called from
-`MyAdminConfig.ready()` in `admin/apps.py` after `admin.autodiscover()`,
+`register_platform_models()` (`src/admin/platform_site.py`), called from
+`MyAdminConfig.ready()` in `src/admin/apps.py` after `admin.autodiscover()`,
 walks the default site's registry and re-registers **the same ModelAdmin
 class** on the platform site for every model whose app label is in
 `PLATFORM_APP_LABELS` and whose label is not in `PLATFORM_EXCLUDED_MODELS`.
@@ -110,9 +111,9 @@ host (`tests/unit/tenant/test_platform_host_serves_only_the_platform_admin.py`).
 
 The other direction needs a guard, because a store host does serve the
 store site, where platform models are registered too.
-`admin/mixins.py: WithheldOnTenantHostModelAdmin` fires when
+`src/admin/mixins.py: WithheldOnTenantHostModelAdmin` fires when
 `request.tenant` is positively a real store and withholds every model whose
-app is in `tenant/app_labels.py: shared_only_app_labels()` (in
+app is in `src/tenant/app_labels.py: shared_only_app_labels()` (in
 `SHARED_APPS`, not in `TENANT_APPS`): `django_site` lists every store's
 domain, and `core_cachepurgelog` records every purge across the estate,
 actor column included. It gates `has_module_permission` (removing the
@@ -123,9 +124,9 @@ tests, management commands and Celery work, where no tenant is bound.
 
 `country` and `region` are reference data a store's forms pick from, so
 they stay viewable (not editable) on a store host
-(`tenant/role_scopes.py: REFERENCE_DATA_APP_LABELS`).
+(`src/tenant/role_scopes.py: REFERENCE_DATA_APP_LABELS`).
 
-One exemption, `admin/mixins.py: STORE_SELF_SERVICE_APP_LABELS`: the
+One exemption, `src/admin/mixins.py: STORE_SELF_SERVICE_APP_LABELS`: the
 `tenant` app is **not** withheld from a store's admin, because
 `TenantAdmin.get_queryset` scopes a merchant to their own row and
 `get_readonly_fields` allowlists only their own fields. That is the
@@ -157,7 +158,7 @@ tenant host, by module permission and by view permission.
 `PlatformAdminSite.has_permission` requires three things in order:
 
 1. Django's own `AdminSite.has_permission` — authenticated and `is_staff`.
-2. `tenant/auth_backends.py: is_platform_staff_session(request)` — the
+2. `src/tenant/auth_backends.py: is_platform_staff_session(request)` — the
    session was authenticated by `PlatformStaffBackend` against the public
    schema, not by a customer login in some store's schema.
 3. `request.user.is_superuser`.
@@ -183,7 +184,7 @@ renaming the console is a row change, not a code change.
 
 ## The sidebar
 
-Four groups, twenty links (`admin/navigation.py: platform_sidebar`, which
+Four groups, twenty links (`src/admin/navigation.py: platform_sidebar`, which
 `UNFOLD_PLATFORM["SIDEBAR"]["navigation"]` names as a dotted path).
 `tests/integration/admin/test_store_navigation.py:
 test_every_platform_page_is_in_the_platform_sidebar` fails when a model
@@ -199,7 +200,7 @@ namespace.
 |---|---|---|
 | **Dashboard** | `platform_admin:index` | Estate counters and the store table — see below |
 | **Tenants** | `tenant.Tenant` | The store record: identity, branding, locales, plan flags, credentials, and the suspend/activate/destroy actions. [The tenant record](/dev/operator/tenants), [Suspend, export & destroy](/dev/operator/lifecycle) |
-| **Plan & Billing** | `admin/platform_billing.py: PlanBillingView` | A custom Unfold page mounted only here. Documents how plans actually work and classifies every store with the same `tenant/billing.py: billing_state` the nightly dunning task acts on, so the page can never disagree with the automation. [Plans, billing & dunning](/dev/operator/billing) |
+| **Plan & Billing** | `src/admin/platform_billing.py: PlanBillingView` | A custom Unfold page mounted only here. Documents how plans actually work and classifies every store with the same `src/tenant/billing.py: billing_state` the nightly dunning task acts on, so the page can never disagree with the automation. [Plans, billing & dunning](/dev/operator/billing) |
 | **Tenant Domains** | `tenant.TenantDomain` | Every hostname the platform serves, and which store it resolves to. [Domains & certificates](/dev/operator/domains) |
 | **Memberships** | `tenant.UserTenantMembership` | Staff grants: which public identity may operate which store, and in what role. [Platform staff & access](/dev/operator/team) |
 | **Tenant Archives** | `tenant.TenantArchive` | What offboarding kept of a destroyed store: the erasure record and the retained invoices' legal basis and expiry. Read-only. [Suspend, export & destroy](/dev/operator/lifecycle) |
@@ -218,8 +219,8 @@ namespace.
 |---|---|---|
 | **Countries** | `country.Country` | Shared reference data. One merchant editing it changes it for every store, which is why it is here and not in a store's admin |
 | **Regions** | `region.Region` | Same |
-| **Cache Purge Log** | `core/cache/models.py: CachePurgeLog` | One public-schema row per purge across the whole estate. [Caches & purging](/dev/operations/caches) |
-| **Sites** | `sites.Site` | One `django_site` row per store domain, minted by `tenant/provisioning.py: ensure_site`. This is what allauth resolves a per-store `SocialApp` against |
+| **Cache Purge Log** | `src/core/cache/models.py: CachePurgeLog` | One public-schema row per purge across the whole estate. [Caches & purging](/dev/operations/caches) |
+| **Sites** | `sites.Site` | One `django_site` row per store domain, minted by `src/tenant/provisioning.py: ensure_site`. This is what allauth resolves a per-store `SocialApp` against |
 
 ### Background Jobs
 
@@ -243,8 +244,8 @@ failure log for the whole estate, not a task history. See
 
 ## The dashboard
 
-`core/templates/admin/platform_index.html` lays out two Unfold component
-widgets from `admin/dashboard/platform.py`. The page reads the public
+`src/core/templates/admin/platform_index.html` lays out two Unfold component
+widgets from `src/admin/dashboard/platform.py`. The page reads the public
 schema only.
 
 `PlatformEstateCards`, four cards:
@@ -258,11 +259,11 @@ schema only.
 
 `PlatformStoresTable`, one row per store: **Store** (links to the tenant),
 **Domain**, **Plan**, **Status** (the badges from
-`tenant/admin_labels.py`, shared with the Tenants list and the Plan &
+`src/tenant/admin_labels.py`, shared with the Tenants list and the Plan &
 Billing page), **Orders**, **Revenue** and **Last order**.
 
 Orders, revenue and last order come from `tenant.TenantStatsSnapshot`, not
-from the stores' schemas. `tenant/tasks.py: fanout_refresh_stats_snapshots`
+from the stores' schemas. `src/tenant/tasks.py: fanout_refresh_stats_snapshots`
 runs every 30 minutes (beat entry `refresh-tenant-stats`) and dispatches
 `refresh_stats_snapshot` into each store's schema, which writes the store's
 order count, paid revenue (`payment_status=COMPLETED`, the store
@@ -271,11 +272,11 @@ snapshot row. The page used to switch into every store's schema twice per
 view. A store without a snapshot yet shows `—`: not read is not no sales.
 
 Cells are plain strings, `{"content", "class"}` dicts or rendered Unfold
-components (`admin/displays.py: link_cell`), because the table component
+components (`src/admin/displays.py: link_cell`), because the table component
 escapes `content` — a tenant-supplied store name can never inject markup.
 
 The header carries **New store** (the `Tenant` add form, which provisions
-through `tenant/provisioning.py` — see
+through `src/tenant/provisioning.py` — see
 [Onboarding a store](/dev/operator/onboarding)), **Plan & Billing** and
 **Domains**.
 
@@ -326,25 +327,25 @@ through `tenant/provisioning.py` — see
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/admin/platform_site.py` | `PlatformAdminSite`, `PLATFORM_APP_LABELS`, `PLATFORM_EXCLUDED_MODELS`, `register_platform_models` |
-| `grooveshop-django-api/admin/dashboard/platform.py` | Estate cards and the store table |
-| `grooveshop-django-api/core/templates/admin/platform_index.html` | The dashboard layout |
-| `grooveshop-django-api/tenant/models.py`, `tenant/tasks.py` | `TenantStatsSnapshot`, `refresh_stats_snapshot`, `fanout_refresh_stats_snapshots` |
-| `grooveshop-django-api/tenant/admin_labels.py` | Plan, status and billing badges |
-| `grooveshop-django-api/admin/platform_billing.py` | The Plan & Billing page mounted by `get_urls` |
-| `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `AdminSiteLoginNextMixin` |
-| `grooveshop-django-api/admin/permissions.py` | `platform_environment` badge |
-| `grooveshop-django-api/admin/apps.py` | Calls `register_platform_models()` after autodiscovery |
-| `grooveshop-django-api/tenant/app_labels.py` | `tenant_only_app_labels`, `shared_only_app_labels` |
-| `grooveshop-django-api/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS` — role scope, not the withhold set |
-| `grooveshop-django-api/core/admin.py` | `override_third_party_admins()` and `CachePurgeLogAdmin` — two of the three mixin application points |
+| `grooveshop-django-api/src/admin/platform_site.py` | `PlatformAdminSite`, `PLATFORM_APP_LABELS`, `PLATFORM_EXCLUDED_MODELS`, `register_platform_models` |
+| `grooveshop-django-api/src/admin/dashboard/platform.py` | Estate cards and the store table |
+| `grooveshop-django-api/src/core/templates/admin/platform_index.html` | The dashboard layout |
+| `grooveshop-django-api/src/tenant/models.py`, `src/tenant/tasks.py` | `TenantStatsSnapshot`, `refresh_stats_snapshot`, `fanout_refresh_stats_snapshots` |
+| `grooveshop-django-api/src/tenant/admin_labels.py` | Plan, status and billing badges |
+| `grooveshop-django-api/src/admin/platform_billing.py` | The Plan & Billing page mounted by `get_urls` |
+| `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `AdminSiteLoginNextMixin` |
+| `grooveshop-django-api/src/admin/permissions.py` | `platform_environment` badge |
+| `grooveshop-django-api/src/admin/apps.py` | Calls `register_platform_models()` after autodiscovery |
+| `grooveshop-django-api/src/tenant/app_labels.py` | `tenant_only_app_labels`, `shared_only_app_labels` |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS` — role scope, not the withhold set |
+| `grooveshop-django-api/src/core/admin.py` | `override_third_party_admins()` and `CachePurgeLogAdmin` — two of the three mixin application points |
 | `grooveshop-django-api/tests/integration/admin/test_tenant_host_model_visibility.py` | Registry-walking coverage for the tenant-host guard |
 | `grooveshop-django-api/tests/integration/admin/test_platform_console.py` | Pins the store/control-plane sidebar split |
-| `grooveshop-django-api/tenant/urls_public.py` | Mounts the site and the platform API on `PUBLIC_SCHEMA_URLCONF` |
-| `grooveshop-django-api/tenant/auth_backends.py` | `PlatformStaffBackend`, `is_platform_staff_session` |
-| `grooveshop-django-api/tenant/management/commands/bootstrap_platform.py` | The public tenant row and its host |
-| `grooveshop-django-api/admin/navigation.py` | `platform_sidebar` |
-| `grooveshop-django-api/settings.py` | `UNFOLD_PLATFORM`, `PUBLIC_SCHEMA_URLCONF`, Celery result settings |
-| `grooveshop-django-api/core/cache/models.py` | `CachePurgeLog` |
+| `grooveshop-django-api/src/tenant/urls_public.py` | Mounts the site and the platform API on `PUBLIC_SCHEMA_URLCONF` |
+| `grooveshop-django-api/src/tenant/auth_backends.py` | `PlatformStaffBackend`, `is_platform_staff_session` |
+| `grooveshop-django-api/src/tenant/management/commands/bootstrap_platform.py` | The public tenant row and its host |
+| `grooveshop-django-api/src/admin/navigation.py` | `platform_sidebar` |
+| `grooveshop-django-api/src/settings.py` | `UNFOLD_PLATFORM`, `PUBLIC_SCHEMA_URLCONF`, Celery result settings |
+| `grooveshop-django-api/src/core/cache/models.py` | `CachePurgeLog` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-platform.yaml` | The platform host, its certificate and basic auth |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` | Celery result backend, left at the `django-db` default |

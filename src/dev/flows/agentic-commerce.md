@@ -136,7 +136,7 @@ accessors — they encode the subordination.
 
 Store features follow the same rule one level down. `features` on
 `tenant/resolve` (`TenantConfig.Features`) is each optional store feature's
-effective state, which Django folds in `tenant/features.py:
+effective state, which Django folds in `src/tenant/features.py:
 effective_features` from the same permission classes that answer 404 for it.
 The gateway decodes the four that something of it serves, and reads nothing
 else for them:
@@ -208,7 +208,7 @@ Account tools, which need a linked credential: `my_orders`,
 `my_loyalty_points`, `my_favourites`.
 
 A rating is the average of the product's review rates, on Django's 1–10
-scale (`product/enum/review.py: RateEnum`).
+scale (`src/product/enum/review.py: RateEnum`).
 
 The UCP checkout capability's five canonical tools plus `get_order`:
 `create_checkout`, `get_checkout`, `update_checkout`, `complete_checkout`,
@@ -335,7 +335,7 @@ calls send it:
 Django believes `agentProtocol` only alongside the gateway's shared secret,
 which both calls already carry as `X-Internal-Gateway` (`cartHeaders`,
 `internal/django/client_cart.go`; checked by
-`order/services.py: OrderAttributionService.input_from_request`). With it,
+`src/order/services.py: OrderAttributionService.input_from_request`). With it,
 Django books the source type `agent` ahead of every other signal, so the
 cart and the order read "AI agent (UCP)" or "AI agent (ACP)" in the admin;
 see [Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).
@@ -354,7 +354,7 @@ cart read would answer a new one. Lines are then named by product, as
 
 The gateway reads its own orders through Django's private route
 `GET /api/v1/agent/internal/order/{uuid}` (`PlacedOrder` in
-`internal/django/client_cart.go`; `agent/urls.py` in Django), which takes
+`internal/django/client_cart.go`; `src/agent/urls.py` in Django), which takes
 `X-Internal-Token` and opens only orders an agent placed. The guest route
 `GET /order/uuid/{uuid}` stops opening an order `GUEST_ORDER_ACCESS_DAYS`
 after it was placed, and the gateway works on its orders for longer. `get_order`
@@ -860,33 +860,33 @@ consent screen. The rest of `/mcp` stays open.
 
 The sign-in (`/accounts/login/`) and the consent (`/identity/o/authorize`)
 are allauth pages Django serves on the store's API host. Every allauth page
-there renders in `core/templates/allauth/layouts/base.html`, which wears the
-store's name, logo, favicon and primary colour (`core/templatetags/store_brand.py`,
+there renders in `src/core/templates/allauth/layouts/base.html`, which wears the
+store's name, logo, favicon and primary colour (`src/core/templatetags/store_brand.py`,
 through the same helpers email and the admin use) and follows the visitor's
 light or dark scheme; the styles are the `account-*` components in
 `tailwind/input.css`. The consent page and the social-account sign-up name the
-store (`core/templates/idp/oidc/authorization_form.html`,
-`core/templates/socialaccount/signup.html`), never `django.contrib.sites`'
+store (`src/core/templates/idp/oidc/authorization_form.html`,
+`src/core/templates/socialaccount/signup.html`), never `django.contrib.sites`'
 `SITE_ID` site, which is one row for every store.
 
 A client may register with no `scope`. allauth would store `openid` alone for
 it and refuse the account scopes at sign-in, so
-`agent/oidc.py: AgentOIDCAdapter.validate_client_registration` registers it for
+`src/agent/oidc.py: AgentOIDCAdapter.validate_client_registration` registers it for
 `LINKING_SCOPES`, and `populate_server_metadata` lists the same scopes in the
 OAuth metadata.
 
 Account tools forward the bearer to `/api/v1/agent/*` and **Django enforces
-the scopes**. `agent/views.py` accepts OIDC bearer tokens only — never Knox,
+the scopes**. `src/agent/views.py` accepts OIDC bearer tokens only — never Knox,
 never session auth — and tenant scoping is structural rather than a
 permission: the OIDC token tables live in the tenant schema, so a token
 issued by one store cannot be found on another's host.
 
 A client binds its token to the store's MCP server, as MCP requires (RFC 8707),
 and the gateway forwards that token to an API with a different URL. So
-`agent/views.py: AgentTokenAuthentication` compares the token's resources with
+`src/agent/views.py: AgentTokenAuthentication` compares the token's resources with
 `<store>/mcp`, on the store's primary domain, not with the URL it reached. A
 token bound to anything else gets 401, so the client links again.
-`agent/oidc.py: AgentOIDCAdapter` applies the same comparison when a token is
+`src/agent/oidc.py: AgentOIDCAdapter` applies the same comparison when a token is
 requested, so such a token is normally never issued.
 
 `openid` needs `IDP_OIDC_PRIVATE_KEY` to sign the ID token, and clients request
@@ -935,7 +935,7 @@ the storefront serves neither.
 
 ### Order events
 
-`order/tasks.py` POSTs to `/internal/events/order-status` with the shared
+`src/order/tasks.py` POSTs to `/internal/events/order-status` with the shared
 `X-Internal-Token`, carrying `schemaName`, `orderUuid`, `status`,
 `paymentStatus` and `trackingNumber`. The schema comes from the live
 connection, because the task runs inside the schema captured at dispatch.
@@ -968,7 +968,7 @@ are claimed by another after the visibility timeout — never while the pod
 that holds them is still delivering.
 
 Django can also drop a tenant's cached feeds through
-`POST /internal/feeds/invalidate` (`core/cache/gateway.py`), which requires
+`POST /internal/feeds/invalidate` (`src/core/cache/gateway.py`), which requires
 the schema **explicitly** — guessing would drop another tenant's feeds.
 
 ### Health
@@ -1180,7 +1180,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/mcpsrv/server.go` | Tool registration, `onlyWith`, `toolNamesFor`, `Offered`, `EveryFeature`, `representativeQueries` |
 | `grooveshop-agent-gateway/internal/mcpsrv/catalog.go` | Catalog tools, `ratingOf` |
 | `grooveshop-agent-gateway/internal/checkout/discounts.go` | `ApplyDiscountCodes`, shared by UCP and ACP |
-| `grooveshop-django-api/tenant/features.py` | `STORE_FEATURES`, `effective_features` |
+| `grooveshop-django-api/src/tenant/features.py` | `STORE_FEATURES`, `effective_features` |
 | `grooveshop-agent-gateway/internal/mcpsrv/discovery.go` | `storeEntry`, `ARDHandler`, `AICatalogHandler` |
 | `grooveshop-agent-gateway/internal/mcpsrv/servercard.go` | `ServerCardHandler`, `IdentityFor`, `publisher`, `publicDocument` |
 | `grooveshop-agent-gateway/internal/storefront/urls.go` | `Site.Links` (page links in a language), `MCPServerCard` and the gateway's own endpoints |
@@ -1221,13 +1221,13 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/obs/health.go`, `grooveshop-agent-gateway/internal/obs/log.go` | `/healthz`, `/readyz`, the request id and tenant on log lines |
 | `grooveshop-agent-gateway/cmd/gateway/serve.go` | Shutdown windows, read and idle timeouts |
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
-| `grooveshop-django-api/tenant/views.py`, `tenant/serializers.py` | `tenant_resolve` and the folded gates |
-| `grooveshop-django-api/agent/views.py`, `agent/oidc.py` | Agent resources and scopes |
-| `grooveshop-django-api/core/templates/allauth/layouts/base.html`, `core/templates/allauth/elements/` | The store's frame for every allauth page: sign-in, consent, device flow |
-| `grooveshop-django-api/core/templates/idp/oidc/authorization_form.html`, `core/templates/socialaccount/signup.html` | Consent and social sign-up naming the store |
-| `grooveshop-django-api/core/templatetags/store_brand.py` | The store's name, logo, favicon and colour for those pages |
+| `grooveshop-django-api/src/tenant/views.py`, `src/tenant/serializers.py` | `tenant_resolve` and the folded gates |
+| `grooveshop-django-api/src/agent/views.py`, `src/agent/oidc.py` | Agent resources and scopes |
+| `grooveshop-django-api/src/core/templates/allauth/layouts/base.html`, `src/core/templates/allauth/elements/` | The store's frame for every allauth page: sign-in, consent, device flow |
+| `grooveshop-django-api/src/core/templates/idp/oidc/authorization_form.html`, `src/core/templates/socialaccount/signup.html` | Consent and social sign-up naming the store |
+| `grooveshop-django-api/src/core/templatetags/store_brand.py` | The store's name, logo, favicon and colour for those pages |
 | `grooveshop-django-api/tailwind/input.css` | The `account-*` styles |
-| `grooveshop-django-api/order/tasks.py` | Order-event push |
-| `grooveshop-django-api/core/cache/gateway.py` | Feed invalidation call |
+| `grooveshop-django-api/src/order/tasks.py` | Order-event push |
+| `grooveshop-django-api/src/core/cache/gateway.py` | Feed invalidation call |
 | `grooveshop-storefront-ui-node-nuxt/server/routes/.well-known/oauth-protected-resource/mcp.get.ts` | OAuth protected-resource metadata for `/mcp` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml` | Path routing |

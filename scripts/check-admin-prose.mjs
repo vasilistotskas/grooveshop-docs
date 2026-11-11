@@ -19,11 +19,9 @@
  * Exit 1 on any violation. Run: pnpm check:admin
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join, relative } from 'node:path'
+import { REPO, repoDir } from './workspace.mjs'
 
-const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const WORKSPACE = resolve(process.env.GROOVESHOP_WORKSPACE ?? join(REPO, '..'))
 const ROOTS = [join(REPO, 'src', 'admin'), join(REPO, 'src', 'el', 'admin')]
 
 const SKIP_DIRS = new Set(['node_modules', '.git', '.venv', 'dist', '.output', '.nuxt', 'staticfiles', '__pycache__'])
@@ -52,11 +50,20 @@ function* walk(dir, match = /\.md$/) {
  * allowed.
  */
 function allowedUppercaseTokens() {
-  const djangoRoot = join(WORKSPACE, 'grooveshop-django-api')
+  const django = repoDir('grooveshop-django-api')
+  if (!existsSync(django)) {
+    console.warn(`check-admin-prose: ${django} not found, skipping the uppercase-token check`)
+    return null
+  }
+  // The Django repository keeps its apps and settings under src/. With the
+  // repository present a missing file is not a partial checkout: the source
+  // moved and this reader did not follow. Skipping would let every uppercase
+  // token through unchecked, so it fails.
+  const djangoRoot = join(django, 'src')
   const settings = join(djangoRoot, 'settings.py')
   if (!existsSync(settings)) {
-    console.warn(`check-admin-prose: ${settings} not found — skipping the uppercase-token check`)
-    return null
+    console.error(`check-admin-prose: ${settings} not found: the Django sources moved, so update allowedUppercaseTokens() in scripts/check-admin-prose.mjs`)
+    process.exit(1)
   }
   const allowed = new Set()
 
@@ -66,6 +73,10 @@ function allowedUppercaseTokens() {
     for (const m of text.slice(start, start + 120_000).matchAll(/"name":\s*"([A-Z][A-Z0-9_]+)"/g)) {
       allowed.add(m[1])
     }
+  }
+  if (!allowed.size) {
+    console.error(`check-admin-prose: no EXTRA_SETTINGS_DEFAULTS names read from ${settings}: its shape changed, so update allowedUppercaseTokens() in scripts/check-admin-prose.mjs`)
+    process.exit(1)
   }
 
   // TextChoices / Choices members: `PAY_ON_DELIVERY = "PAY_ON_DELIVERY", _("…")`
@@ -77,14 +88,12 @@ function allowedUppercaseTokens() {
     }
   }
 
-  // A PARTIAL checkout must not half-apply this rule. `settings.py` sits at the
-  // repository root, so a sparse checkout of `docs/` still exposes it while the
-  // per-app enum modules are absent — which allowlisted the setting keys but
-  // not the stored choice values, and failed CI on prose that is correct.
-  // Either the whole source is present or the uppercase rule is skipped.
+  // The stored choice values come from the per-app enum modules. The rule is
+  // applied whole or not at all, and a repository that is present but yields
+  // none has moved them: fail rather than allow only the setting keys.
   if (!enumFiles) {
-    console.warn('check-admin-prose: no enum modules found (partial checkout?) — skipping the uppercase-token check')
-    return null
+    console.error(`check-admin-prose: no enum modules found under ${djangoRoot}: they moved, so update allowedUppercaseTokens() in scripts/check-admin-prose.mjs`)
+    process.exit(1)
   }
   return allowed
 }

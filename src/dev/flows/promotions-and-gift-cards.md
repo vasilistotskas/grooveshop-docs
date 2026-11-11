@@ -12,7 +12,7 @@ A gift card is a **payment instrument**: an accounting liability with an
 append-only ledger, redeemed against the amount due, never against the goods
 value.
 
-The order they apply in is fixed and stated in `promotion/services.py`:
+The order they apply in is fixed and stated in `src/promotion/services.py`:
 product markdown (already inside `Product.final_price`) → promotions →
 loyalty redemption → gift-card payment.
 
@@ -62,7 +62,7 @@ order-create recomputation with the lock held is the source of truth.
 
 ### What a promotion is
 
-`promotion/models/promotion.py: Promotion` is a translatable rule with:
+`src/promotion/models/promotion.py: Promotion` is a translatable rule with:
 
 | Axis | Field | Values |
 |---|---|---|
@@ -284,7 +284,7 @@ refused attached code goes under `discounts.rejected`, never `applied`
 ### Discovery: three surfaces, one rule
 
 "May a shopper be told about this promotion?" has exactly one answer, in
-`PromotionQuerySet.publicly_listable` (`promotion/managers/promotion.py`):
+`PromotionQuerySet.publicly_listable` (`src/promotion/managers/promotion.py`):
 every live automatic promotion, plus code promotions with at least one
 **publicly advertisable** code (`publishable_code_q` — not personal, not a
 single-use bulk code), minus anything that has hit `usage_limit_total`. All
@@ -298,7 +298,7 @@ colour, and the translated ACP rejection vocabulary).
 
 #### The offers page
 
-`GET /api/v1/promotion` (`promotion/views.py: PublicPromotionListView`).
+`GET /api/v1/promotion` (`src/promotion/views.py: PublicPromotionListView`).
 Results are ordered `priority, id` — the same order the engine applies them
 in, so the page reads top to bottom the way a cart accumulates.
 
@@ -312,10 +312,10 @@ every tenant an empty list).
 #### The product page panel
 
 `GET /api/v1/promotion/product/{productId}`
-(`promotion/views.py: ProductPromotionListView` →
-`promotion/services.py: ProductPromotionService`) answers the narrower
+(`src/promotion/views.py: ProductPromotionListView` →
+`src/promotion/services.py: ProductPromotionService`) answers the narrower
 question a shopper actually has: what is running **for this item**. Each row
-carries a `relation` (`promotion/enum.py: ProductPromotionRelation`) saying
+carries a `relation` (`src/promotion/enum.py: ProductPromotionRelation`) saying
 why it is relevant, because `target_scope` alone cannot express it:
 
 | `relation` | Meaning |
@@ -344,8 +344,8 @@ shopper.
 
 #### The checkout coupon picker
 
-`GET /api/v1/cart/coupons` (`cart/views/cart.py: list_coupons` →
-`promotion/services.py: CouponPickerService`) lists the advertisable codes
+`GET /api/v1/cart/coupons` (`src/cart/views/cart.py: list_coupons` →
+`src/promotion/services.py: CouponPickerService`) lists the advertisable codes
 **plus the personal coupons assigned to a signed-in customer** — the one
 code a shopper is most likely to be holding is the one `/offers`
 deliberately never shows them. Guests get only the public set: a guest cart
@@ -406,7 +406,7 @@ one of them means adding it to this table.
 
 The three surfaces above describe promotions. The catalogue asks a different,
 per-product question: **is this product on offer right now?** One SQL
-expression answers it, `promotion/offers.py: offer_kind_expression`, and gives
+expression answers it, `src/promotion/offers.py: offer_kind_expression`, and gives
 one of three values:
 
 | `offerKind` | When |
@@ -441,13 +441,13 @@ badge a card shows cannot disagree:
 
 - **Product list and detail.** `offerKind` comes from the
   `ProductQuerySet.with_offer_kind()` annotation
-  (`product/managers/product.py`), which `product/views/product.py` applies.
-  `product/serializers/product.py` reads the annotation and nothing else.
+  (`src/product/managers/product.py`), which `src/product/views/product.py` applies.
+  `src/product/serializers/product.py` reads the annotation and nothing else.
 - **Search index.** `ProductTranslation` indexes a filterable `on_offer`
-  (`product/models/product.py`). The bulk queryset annotates it once per sync
+  (`src/product/models/product.py`). The bulk queryset annotates it once per sync
   (`get_meilisearch_queryset`, `indexed_offer_kind`), and
-  `search/views.py` filters on it when the request carries `onOffer=true`.
-- **Search result cards.** `search/serializers.py` resolves `offer_kind` from
+  `src/search/views.py` filters on it when the request carries `onOffer=true`.
+- **Search result cards.** `src/search/serializers.py` resolves `offer_kind` from
   the product.
 
 #### Storefront
@@ -473,9 +473,9 @@ it no longer depends on Meilisearch being online.
 
 `on_offer` can go stale without any Product being saved: an admin edits a
 promotion, a window opens or closes, or a usage limit is reached. Three
-producers feed one coalescing queue in `promotion/offer_sync.py`.
+producers feed one coalescing queue in `src/promotion/offer_sync.py`.
 
-**Signals** (`promotion/signals.py`) fire on:
+**Signals** (`src/promotion/signals.py`) fire on:
 - a promotion save or delete;
 - its four scope M2M sets;
 - a redemption that moves it across `usage_limit_total`.
@@ -487,7 +487,7 @@ What each signal records:
   records the **product ids** at once, while those rows still exist.
 
 **The window sweep** is the beat entry `reindex-offer-window-changes`
-(`settings.py`, every 5 minutes). It runs
+(`src/settings.py`, every 5 minutes). It runs
 `tenant.tasks.fanout_reindex_offer_window_changes` →
 `refresh_window_changes`:
 - It refreshes (price records, then the index) the products of every active
@@ -503,10 +503,10 @@ What each signal records:
   refreshes once.
 
 Switching promotions off or on moves every promoted price at once, so it
-does not mark products: `promotion/signals.py` registers
-`tenant/switches.py: on_switch_change` to queue the store's whole
+does not mark products: `src/promotion/signals.py` registers
+`src/tenant/switches.py: on_switch_change` to queue the store's whole
 `product.tasks.reevaluate_price_episodes` sweep (through
-`tenant/celery.py: dispatch_on_commit`, schema pinned) when a save in a
+`src/tenant/celery.py: dispatch_on_commit`, schema pinned) when a save in a
 tenant schema changes the merchant's stored `PROMOTIONS_ENABLED`, or when a
 `Tenant` save changes `promotions_enabled`. `pre_save` snapshots of the
 stored values tell a real change from an unrelated or unchanged save
@@ -539,7 +539,7 @@ What is recorded:
   `final_price` minus what the **unconditional automatic promotions** take off.
   `Product.prior_price` is the frozen reference and
   `Product.reduction_started_at` marks the reduction in force. All three are
-  derived columns, written only by `product/pricing/service.py`.
+  derived columns, written only by `src/product/pricing/service.py`.
 
 What counts as a reduction:
 - a product markdown (`discount_percent > 0`), or
@@ -553,7 +553,7 @@ unit discount is computed by the cart's own rules over a one-line cart
 (`PromotionEngine.single_unit_discount`), so a listing and the cart agree to the
 cent.
 
-How `evaluate_reduction` decides (pure, `product/pricing/evaluation.py`):
+How `evaluate_reduction` decides (pure, `src/product/pricing/evaluation.py`):
 - The reference is the minimum price of the 30 days **before** the reduction
   started, fixed at the start, never rolling.
 - A product on sale for less than 30 days announces nothing.
@@ -578,7 +578,7 @@ for one release. Full reference:
 
 ### Gift cards: a ledger, not a balance column
 
-`giftcard/models.py` is explicit: balance is **always** derived by summing
+`src/giftcard/models.py` is explicit: balance is **always** derived by summing
 `GiftCardTransaction.amount`, floored at zero. There is no cached balance
 column to drift.
 
@@ -630,10 +630,10 @@ queues the buyer's receipt, and queues delivery **only when there is no
 `deliver_at` or it has already passed**.
 
 Refunds go back to the source cards, **whole and once**.
-`giftcard/signals.py` listens on `order_canceled` and on `order_refunded`,
+`src/giftcard/signals.py` listens on `order_canceled` and on `order_refunded`,
 and for a refund acts only when the order's `payment_status` is REFUNDED,
 that is with the refund that leaves nothing to refund. The payment
-ledger decides that (`order/payment_ledger.py: PaymentLedger.refund_status`,
+ledger decides that (`src/order/payment_ledger.py: PaymentLedger.refund_status`,
 refunded against captured), however many refunds it took. It queues
 `credit_refund_to_gift_cards(order_id)`, and
 `GiftCardService.credit_refund` writes one `REFUND_CREDIT` per card for
@@ -648,7 +648,7 @@ total, over the order's life. The provider refund only ever covers the
 provider-charged remainder.
 
 A refund of a gift-card **purchase** is a Viva 1797 against the purchase
-(`order/views/viva_webhook.py: _process_gift_card_purchase_event`),
+(`src/order/views/viva_webhook.py: _process_gift_card_purchase_event`),
 verified by the same `_verify_viva_reversal` as an order refund but bound
 to the purchase's own order code, since that code is visible to the buyer.
 A Refund Claimed type (the cardholder's bank taking the money back) voids
@@ -677,12 +677,12 @@ false (the delivery and reminder tasks return `skipped`,
 nothing expires or is announced.
 
 The time gift cards are off does not count against a card either.
-`giftcard.models.GiftCardPause` (on `core/models.py: FeaturePauseModel`, at
+`giftcard.models.GiftCardPause` (on `src/core/models.py: FeaturePauseModel`, at
 most one open span, a partial unique constraint) records each span the
 store had them off. `GiftCardService.sync_pause` opens a span while they are
 off and, when they are back on, closes it and moves `expires_at` forward by
 its length for every `ACTIVE` card whose expiry is after the span began.
-`tenant/switches.py: on_switch_change` queues `sync_gift_card_pause` in the
+`src/tenant/switches.py: on_switch_change` queues `sync_gift_card_pause` in the
 store's schema whenever `GIFT_CARDS_ENABLED` or `Tenant.gift_cards_enabled`
 really changes, and `expire_cards` syncs first too, which opens a span for a
 store that was already off before spans were recorded. Scheduled cards then
@@ -709,7 +709,7 @@ feature gate at all: the shopper polling it has already paid, and a store
 that never sold cards has no purchase to find. Everything but `mine` is
 `AllowAny` and relies on a tight throttle instead.
 
-While promotions are off, `cart/serializers/cart.py` lists no applied coupon
+While promotions are off, `src/cart/serializers/cart.py` lists no applied coupon
 (`applied_coupon_codes` and `applied_coupons` are empty): no code applies, and
 one listed with no discount could not be removed. The `CartPromotionCode`
 rows stay for when the store turns promotions back on.
@@ -756,13 +756,13 @@ whose plan enables it, and Django still gates the data.
   exact (`_teaser_holds` simulates it).
 
 - **The offers page is stale after editing a promotion.** The `promotions`
-  cache surface in `core/cache/surfaces.py` declares **no `invalidated_by` at
+  cache surface in `src/core/cache/surfaces.py` declares **no `invalidated_by` at
   all**, so it takes the `CacheSurface` default of an empty tuple. Signal
-  wiring in `core/cache/invalidation.py` only ever connects the models a
+  wiring in `src/core/cache/invalidation.py` only ever connects the models a
   surface lists, so no signal, admin hook or save purges it. The signals in
-  `promotion/signals.py` only queue the search index's `on_offer` reindex
+  `src/promotion/signals.py` only queue the search index's `on_offer` reindex
   (see [Keeping the index in step](#keeping-the-index-in-step)), and nothing
-  under `promotion/` calls `CacheService.purge`.
+  under `src/promotion/` calls `CacheService.purge`.
   Its `django_patterns` is
   also empty, because both promotion views are plain `APIView`s with no
   response cache; the entries that exist are the Nuxt `PublicPromotionList`
@@ -773,7 +773,7 @@ whose plan enables it, and Django still gates the data.
   old one for the whole SWR window. **Purging is a manual operator action**
   after any promotion, code, scope or schedule edit. Contrast the
   `recommendations` surface, which lists four models in `invalidated_by`.
-- **An admin-issued gift card is never emailed.** `giftcard/admin.py:
+- **An admin-issued gift card is never emailed.** `src/giftcard/admin.py:
   save_model` routes a new card through `GiftCardService.issue`, which mints
   the code and the `ISSUE` row and sends nothing. `deliver_scheduled_gift_cards`
   only picks up cards with a **non-null** `deliver_at` in the past, so a card
@@ -783,7 +783,7 @@ whose plan enables it, and Django still gates the data.
   a `deliver_at` so the sweep finds it. Purchased cards are unaffected —
   `complete_purchase` dispatches delivery itself.
 - **The demo store's published gift card refills every night.** Visitors
-  may spend `DEMO-GIFT-25` (`devtools/demo_account.py: GIFT_CARD_CODE`), and
+  may spend `DEMO-GIFT-25` (`src/devtools/demo_account.py: GIFT_CARD_CODE`), and
   the nightly `reset_demo_account` returns it to its seeded balance: the
   issued value less the demo shopper's seeded order spend
   (`GIFT_CARD_SPENT`), so the account page shows a part-spent card. One
@@ -823,43 +823,43 @@ whose plan enables it, and Django still gates the data.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/promotion/models/promotion.py` | `Promotion`, conditions, `clean()`, `is_live` |
-| `grooveshop-django-api/promotion/models/code.py` | `PromotionCode`, assignment, usage limit |
-| `grooveshop-django-api/promotion/models/cart_code.py` | `CartPromotionCode`, one-per-cart in v1 |
-| `grooveshop-django-api/promotion/models/redemption.py` | `PromotionRedemption`, the usage ledger |
-| `grooveshop-django-api/promotion/enum.py` | Trigger, benefit, scope, rejection vocabulary |
-| `grooveshop-django-api/promotion/managers/promotion.py` | `publicly_listable`, `publishable_code_q` — the ONE advertisability rule |
-| `grooveshop-django-api/promotion/services.py` | `PromotionEngine`, `CouponService`, `ProductPromotionService`, `CouponPickerService` |
-| `grooveshop-django-api/promotion/offers.py` | `offer_kind_expression`, `live_offer_promotions`, `price_reducing_promotions`, `scope_product_ids` — the ONE on-offer rule |
-| `grooveshop-django-api/promotion/offer_sync.py` | Coalesced refresh queue (price records, then `on_offer` reindex) and the window sweep |
-| `grooveshop-django-api/promotion/signals.py` | Promotion, scope and usage-limit changes that queue the reindex |
-| `grooveshop-django-api/promotion/tasks.py` | `reindex_offer_products_task`, `reindex_offer_window_changes_task` |
-| `grooveshop-django-api/product/models/price_spell.py` | `ProductPriceSpell`, the append-only price record |
-| `grooveshop-django-api/product/pricing/evaluation.py` | `evaluate_reduction`, `announced_discount_percent` — the Omnibus rule |
-| `grooveshop-django-api/product/pricing/service.py` | The one writer of spells and the derived `Product` columns |
-| `grooveshop-django-api/product/tasks.py` | `reevaluate_price_episodes`, `sync_price_records` |
-| `grooveshop-django-api/product/managers/product.py` | `ProductQuerySet.with_offer_kind()` |
-| `grooveshop-django-api/product/models/product.py` | `Product.offer_kind`, the indexed `on_offer` field, `get_meilisearch_queryset` |
-| `grooveshop-django-api/search/views.py` | The `onOffer` search filter |
-| `grooveshop-django-api/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
-| `grooveshop-django-api/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
-| `grooveshop-django-api/order/services.py` | Locked evaluation, `record`, `clear_after_order`, `free_shipping_progress`, `FreeShippingProgress` |
-| `grooveshop-django-api/shipping/services.py` | `free_threshold_rates`, `initial_country_code` |
-| `grooveshop-django-api/cart/serializers/cart.py` | `free_shipping_progress`, `promotion_near_miss` (with `freeShipping`) |
+| `grooveshop-django-api/src/promotion/models/promotion.py` | `Promotion`, conditions, `clean()`, `is_live` |
+| `grooveshop-django-api/src/promotion/models/code.py` | `PromotionCode`, assignment, usage limit |
+| `grooveshop-django-api/src/promotion/models/cart_code.py` | `CartPromotionCode`, one-per-cart in v1 |
+| `grooveshop-django-api/src/promotion/models/redemption.py` | `PromotionRedemption`, the usage ledger |
+| `grooveshop-django-api/src/promotion/enum.py` | Trigger, benefit, scope, rejection vocabulary |
+| `grooveshop-django-api/src/promotion/managers/promotion.py` | `publicly_listable`, `publishable_code_q` — the ONE advertisability rule |
+| `grooveshop-django-api/src/promotion/services.py` | `PromotionEngine`, `CouponService`, `ProductPromotionService`, `CouponPickerService` |
+| `grooveshop-django-api/src/promotion/offers.py` | `offer_kind_expression`, `live_offer_promotions`, `price_reducing_promotions`, `scope_product_ids` — the ONE on-offer rule |
+| `grooveshop-django-api/src/promotion/offer_sync.py` | Coalesced refresh queue (price records, then `on_offer` reindex) and the window sweep |
+| `grooveshop-django-api/src/promotion/signals.py` | Promotion, scope and usage-limit changes that queue the reindex |
+| `grooveshop-django-api/src/promotion/tasks.py` | `reindex_offer_products_task`, `reindex_offer_window_changes_task` |
+| `grooveshop-django-api/src/product/models/price_spell.py` | `ProductPriceSpell`, the append-only price record |
+| `grooveshop-django-api/src/product/pricing/evaluation.py` | `evaluate_reduction`, `announced_discount_percent` — the Omnibus rule |
+| `grooveshop-django-api/src/product/pricing/service.py` | The one writer of spells and the derived `Product` columns |
+| `grooveshop-django-api/src/product/tasks.py` | `reevaluate_price_episodes`, `sync_price_records` |
+| `grooveshop-django-api/src/product/managers/product.py` | `ProductQuerySet.with_offer_kind()` |
+| `grooveshop-django-api/src/product/models/product.py` | `Product.offer_kind`, the indexed `on_offer` field, `get_meilisearch_queryset` |
+| `grooveshop-django-api/src/search/views.py` | The `onOffer` search filter |
+| `grooveshop-django-api/src/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
+| `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
+| `grooveshop-django-api/src/order/services.py` | Locked evaluation, `record`, `clear_after_order`, `free_shipping_progress`, `FreeShippingProgress` |
+| `grooveshop-django-api/src/shipping/services.py` | `free_threshold_rates`, `initial_country_code` |
+| `grooveshop-django-api/src/cart/serializers/cart.py` | `free_shipping_progress`, `promotion_near_miss` (with `freeShipping`) |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Shipping/FreeShippingNotice.vue` | The default free-shipping line and meter |
 | `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Shipping/FreeShippingNotice.vue` | Webside's free-shipping line |
 | `grooveshop-storefront-ui-node-nuxt/app/stores/cart.ts` | `getOfferNearMisses`: the teasers less the free-shipping ones |
-| `grooveshop-django-api/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` (`refunded_amount`), `GiftCardPause` |
-| `grooveshop-django-api/giftcard/services.py` | Issue, plan, record, `credit_refund`, `handle_purchase_reversal`, expiry, `sync_pause` |
-| `grooveshop-django-api/giftcard/signals.py` | Cancel credit-back, and refund credit-back only on REFUNDED |
-| `grooveshop-django-api/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED |
-| `grooveshop-django-api/order/views/viva_webhook.py` | `_process_gift_card_purchase_event`: purchase refunds accumulated, card voided at the purchase amount |
-| `grooveshop-django-api/giftcard/tasks.py` | Delivery, receipts, reminders, expiry, refund credit |
-| `grooveshop-django-api/giftcard/admin.py` | `save_model` issuing, Resend delivery action |
-| `grooveshop-django-api/giftcard/views.py` | `check`, `purchase`, `purchase_status`, `mine` |
-| `grooveshop-django-api/core/cache/surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
-| `grooveshop-django-api/tenant/permissions.py` | The plan and runtime permission classes |
-| `grooveshop-django-api/tenant/switches.py` | `on_switch_change`: reprice on the promotions switch, pause sync on the gift-cards switch |
+| `grooveshop-django-api/src/giftcard/models.py` | `GiftCard`, `GiftCardTransaction`, `GiftCardPurchase` (`refunded_amount`), `GiftCardPause` |
+| `grooveshop-django-api/src/giftcard/services.py` | Issue, plan, record, `credit_refund`, `handle_purchase_reversal`, expiry, `sync_pause` |
+| `grooveshop-django-api/src/giftcard/signals.py` | Cancel credit-back, and refund credit-back only on REFUNDED |
+| `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED |
+| `grooveshop-django-api/src/order/views/viva_webhook.py` | `_process_gift_card_purchase_event`: purchase refunds accumulated, card voided at the purchase amount |
+| `grooveshop-django-api/src/giftcard/tasks.py` | Delivery, receipts, reminders, expiry, refund credit |
+| `grooveshop-django-api/src/giftcard/admin.py` | `save_model` issuing, Resend delivery action |
+| `grooveshop-django-api/src/giftcard/views.py` | `check`, `purchase`, `purchase_status`, `mine` |
+| `grooveshop-django-api/src/core/cache/surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
+| `grooveshop-django-api/src/tenant/permissions.py` | The plan and runtime permission classes |
+| `grooveshop-django-api/src/tenant/switches.py` | `on_switch_change`: reprice on the promotions switch, pause sync on the gift-cards switch |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/offers/index.vue` | The offers page |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Offers/Card.vue` | One offer card |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/usePromotionOffer.ts` | Headline, conditions, expiry, rejection copy — shared by all three surfaces |

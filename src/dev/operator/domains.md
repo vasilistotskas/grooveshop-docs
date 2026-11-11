@@ -38,12 +38,12 @@ flowchart TD
 
 ## The `TenantDomain` row
 
-`tenant/models.py: TenantDomain` adds nothing but `Meta` and `__str__` to
+`src/tenant/models.py: TenantDomain` adds nothing but `Meta` and `__str__` to
 django-tenants' `DomainMixin`, so the fields are that mixin's:
 
 | Field | Shape |
 |---|---|
-| `domain` | `CharField(max_length=253)`, **unique**, indexed. A bare lowercase hostname: `tenant/validators.py: validate_store_hostname` refuses a scheme or path, a port, a trailing dot, uppercase, a single label, an invalid RFC 1123 label and an IP address, each with its own error code. It runs in the admin forms (field validator) and in `TenantDomain.save()`, so `create` and `get_or_create` in the provisioning commands are covered; `QuerySet.update` and `bulk_create` are not, and nothing uses them on this model. Routing matches the text exactly, so a stored variant would be a store that never resolves |
+| `domain` | `CharField(max_length=253)`, **unique**, indexed. A bare lowercase hostname: `src/tenant/validators.py: validate_store_hostname` refuses a scheme or path, a port, a trailing dot, uppercase, a single label, an invalid RFC 1123 label and an IP address, each with its own error code. It runs in the admin forms (field validator) and in `TenantDomain.save()`, so `create` and `get_or_create` in the provisioning commands are covered; `QuerySet.update` and `bulk_create` are not, and nothing uses them on this model. Routing matches the text exactly, so a stored variant would be a store that never resolves |
 | `tenant` | FK to `Tenant`, `related_name="domains"`, `on_delete=CASCADE` |
 | `is_primary` | `BooleanField(default=True)`, indexed |
 
@@ -67,23 +67,23 @@ reports and what canonical URLs, RSS and OAuth metadata are built from.
 
 `django_tenants.middleware.main.TenantMainMiddleware` looks the request
 host up in `TenantDomain` and switches the connection's search path. It is
-third in `MIDDLEWARE` (`settings.py`), after two middlewares that must
-answer before any tenant exists: `core/middleware/health_probe.py` (kubelet
+third in `MIDDLEWARE` (`src/settings.py`), after two middlewares that must
+answer before any tenant exists: `src/core/middleware/health_probe.py` (kubelet
 probes carry a pod IP as `Host`, which no row can match) and
-`tenant/internal.py: InternalDomainsMiddleware` (the cluster-internal
+`src/tenant/internal.py: InternalDomainsMiddleware` (the cluster-internal
 domains feed). Matching is **exact** — a host that looks derivable but has
 no row is a host Django refuses to serve.
 
 Immediately after resolution:
 
-- `tenant/middleware.py: SuspendedTenantMiddleware` answers **503** for a
+- `src/tenant/middleware.py: SuspendedTenantMiddleware` answers **503** for a
   store whose `is_active` is false. django-tenants resolves the host with a
   bare `domain=` lookup that ignores `is_active`, so without this a
   suspended store kept serving its API in full — catalogue reads, cart
   mutations, order creation and payment-intent creation against its own
   live provider keys. 503 rather than 404 because the domain is known and
   the condition is temporary.
-- `tenant/middleware.py: TenantCookieDomainMiddleware` rewrites the
+- `src/tenant/middleware.py: TenantCookieDomainMiddleware` rewrites the
   `Domain` attribute of the session and CSRF cookies from the request host:
   it strips a leading `api.` or `www.` and dot-prefixes the rest, so
   `api.example.com`, `www.example.com` and `example.com` all scope to
@@ -93,7 +93,7 @@ Immediately after resolution:
   bare stand-in by the time the response phase unwinds. Hosts with no dot
   are internal service names and keep the configured value.
 
-On the WebSocket path `tenant/middleware_ws.py: TenantWebsocketMiddleware`
+On the WebSocket path `src/tenant/middleware_ws.py: TenantWebsocketMiddleware`
 does the same lookup and closes with code **4004** when no active tenant
 matches.
 
@@ -103,14 +103,14 @@ The public schema is served only on the platform host, through
 
 ### The resolve endpoint
 
-`GET /api/v1/tenant/resolve?domain=<host>` (`tenant/views.py:
-tenant_resolve`, routed in `tenant/urls.py`) is anonymous and lives in the
+`GET /api/v1/tenant/resolve?domain=<host>` (`src/tenant/views.py:
+tenant_resolve`, routed in `src/tenant/urls.py`) is anonymous and lives in the
 shared URL patterns, so it answers on **any** host and can be asked about a
 host other than the caller's own. It queries
 `TenantDomain.objects.filter(domain=domain, tenant__is_active=True)` and
 returns `TenantConfigSerializer`, or `404 Store not found`.
 
-The payload is cached for an hour under `tenant/cache.py:
+The payload is cached for an hour under `src/tenant/cache.py:
 tenant_resolve_key(domain, tenant)` — a `global:` key that is
 schema-independent (the endpoint is called through one tenant's domain to
 resolve another's), that fingerprints the serializer's field names, so a
@@ -145,7 +145,7 @@ internal token.
 
 ### Cache invalidation
 
-`tenant/signals.py: bump_generation_on_domain_change` fires on every
+`src/tenant/signals.py: bump_generation_on_domain_change` fires on every
 `TenantDomain` save **and** delete and bumps the owning tenant's
 `cache_generation`, in the same transaction. Every key of that tenant —
 each sibling domain's resolve payload and the domain set behind CORS and
@@ -167,7 +167,7 @@ five-minute copy still has to expire on its own.
 
 ### Why the `api.` row is mandatory
 
-`core/utils/tenant_urls.py: resolve_tenant_api_domain` **derives** the
+`src/core/utils/tenant_urls.py: resolve_tenant_api_domain` **derives** the
 API host when no explicit `api*` row exists (`derive_api_domain`:
 `api.<primary>`, or `api-<label>.grooveshop.space` for a store on a platform
 subdomain, so Cloudflare's Universal SSL covers it), and the storefront
@@ -177,7 +177,7 @@ deceptive: the storefront looks perfectly healthy while real-time
 notifications close 4004 on every attempt and every social login 404s at
 the form POST.
 
-`tenant/provisioning.py: ensure_api_domain` is what stops that happening.
+`src/tenant/provisioning.py: ensure_api_domain` is what stops that happening.
 It finds the primary domain, derives the API host the same way, and `get_or_create`s
 the row with `is_primary=False`. It runs from both entry points — the
 `tenant_create` management command and `TenantAdmin.save_related` on the
@@ -187,13 +187,13 @@ that differently (a `CommandError` for the CLI, a warning message in the
 admin).
 
 The prefix match has a boundary rule
-(`core/utils/tenant_urls.py: _has_prefix_boundary`): a row counts as the
+(`src/core/utils/tenant_urls.py: _has_prefix_boundary`): a row counts as the
 `api` host only if the prefix is followed by `.` or `-`. Both are in real
 use — `api.example.com` in production and an `api-staging.` shape on
 staging — and without the rule a store on a domain merely *starting* with
 those letters resolved its own storefront domain as its API host.
 
-`tenant/provisioning.py: ensure_site` is the second provisioning step that
+`src/tenant/provisioning.py: ensure_site` is the second provisioning step that
 depends on the primary domain. It creates a `django.contrib.sites` `Site`
 for it, **in the public schema**, because `sites` is in `SHARED_APPS` only
 and its rows are platform-global. That row is what
@@ -230,7 +230,7 @@ Opting a store into white-label asset URLs is four steps, all required:
 
 ### CORS, CSRF and the domain set
 
-`tenant/middleware.py: origin_belongs_to_tenant` is the single rule both
+`src/tenant/middleware.py: origin_belongs_to_tenant` is the single rule both
 CORS and CSRF use, built from `tenant_domain_set(tenant)`: a browser on the
 store's registered domains may make credentialed requests to that store's
 API, and nobody else may. Adding a host to a store therefore widens its
@@ -435,18 +435,18 @@ brand domain, or the white-label asset hosts):
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/tenant/models.py` | `TenantDomain` |
-| `grooveshop-django-api/tenant/middleware.py` | `SuspendedTenantMiddleware`, `TenantCookieDomainMiddleware`, `origin_belongs_to_tenant`, `tenant_domain_set` |
-| `grooveshop-django-api/tenant/middleware_ws.py` | WebSocket resolution, close code 4004 |
-| `grooveshop-django-api/tenant/views.py` | `tenant_resolve`, the internal-token variant |
-| `grooveshop-django-api/tenant/urls.py`, `tenant/urls_public.py` | Where the resolve endpoint and the control plane are mounted |
-| `grooveshop-django-api/tenant/provisioning.py` | `ensure_api_domain`, `ensure_site` |
-| `grooveshop-django-api/tenant/serializers.py` | `primary_domain`, `api_domain`, `assets_domain`, `static_domain` |
-| `grooveshop-django-api/tenant/cache.py` | `tenant_resolve_key` |
-| `grooveshop-django-api/tenant/signals.py` | `invalidate_domain_caches` and the sibling purge |
-| `grooveshop-django-api/tenant/internal.py` | The internal domains feed |
-| `grooveshop-django-api/core/utils/tenant_urls.py` | `_resolve_prefixed_service_domain`, `_has_prefix_boundary`, the three resolvers |
-| `grooveshop-django-api/settings.py` | `MIDDLEWARE` order, `PUBLIC_SCHEMA_URLCONF` |
+| `grooveshop-django-api/src/tenant/models.py` | `TenantDomain` |
+| `grooveshop-django-api/src/tenant/middleware.py` | `SuspendedTenantMiddleware`, `TenantCookieDomainMiddleware`, `origin_belongs_to_tenant`, `tenant_domain_set` |
+| `grooveshop-django-api/src/tenant/middleware_ws.py` | WebSocket resolution, close code 4004 |
+| `grooveshop-django-api/src/tenant/views.py` | `tenant_resolve`, the internal-token variant |
+| `grooveshop-django-api/src/tenant/urls.py`, `src/tenant/urls_public.py` | Where the resolve endpoint and the control plane are mounted |
+| `grooveshop-django-api/src/tenant/provisioning.py` | `ensure_api_domain`, `ensure_site` |
+| `grooveshop-django-api/src/tenant/serializers.py` | `primary_domain`, `api_domain`, `assets_domain`, `static_domain` |
+| `grooveshop-django-api/src/tenant/cache.py` | `tenant_resolve_key` |
+| `grooveshop-django-api/src/tenant/signals.py` | `invalidate_domain_caches` and the sibling purge |
+| `grooveshop-django-api/src/tenant/internal.py` | The internal domains feed |
+| `grooveshop-django-api/src/core/utils/tenant_urls.py` | `_resolve_prefixed_service_domain`, `_has_prefix_boundary`, the three resolvers |
+| `grooveshop-django-api/src/settings.py` | `MIDDLEWARE` order, `PUBLIC_SCHEMA_URLCONF` |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts`, `server/utils/tenant.ts` | Host resolution and the five-minute cache |
 | `grooveshop-agent-gateway/internal/tenant/middleware.go` | Host-only resolution in the gateway |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/` | The tenant overlay: `ingress.yaml`, `kustomization.yaml`, `README.md` |

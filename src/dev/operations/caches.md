@@ -16,7 +16,7 @@ symptom table at the end of this page.
 
 ```mermaid
 flowchart LR
-  A[Admin edit] -->|post_save| I[core/cache/invalidation.py]
+  A[Admin edit] -->|post_save| I[src/core/cache/invalidation.py]
   I -->|CacheService.purge| S[CacheSurface registry]
   S -->|django_patterns| R1[(Redis: Django CustomCache)]
   S -->|nuxt_patterns + host| N[/Nuxt /api/admin/cache/purge/]
@@ -47,7 +47,7 @@ FLUSHDB. `failing_persistence_statuses()` reads `INFO persistence` so the
 health monitor can see a full volume that a `set`/`get` round-trip cannot.
 
 The `tenant_resolve` entry is keyed by the shape of
-`TenantConfigSerializer` (`tenant/cache.py: tenant_resolve_key()`): a
+`TenantConfigSerializer` (`src/tenant/cache.py: tenant_resolve_key()`): a
 release that adds a field reads a new key, so a cached pre-release payload
 is never served against a Zod schema that requires the new field.
 
@@ -56,7 +56,7 @@ Both tenant families are invalidated by **generation, never by delete**.
 `tenant_domains_key`), and every write that changes what they hold bumps it
 in the database inside the write's own transaction: `Tenant.save` in the
 same UPDATE, `TenantDomain` saves and deletes and the folded pay-way and
-agent-setting writes through `bump_cache_generation` (`tenant/signals.py`).
+agent-setting writes through `bump_cache_generation` (`src/tenant/signals.py`).
 After the commit every reader builds a new key; the old entry is never read
 again and ages out on its TTL. The reason is the fail-open backend: during
 a Redis outage a `delete` is a logged no-op, so a purge-by-delete left the
@@ -68,10 +68,10 @@ move it back. Resolve therefore reads the domain's tenant row on every call
 copies still expire on their own: Nuxt's five-minute tenant config and the
 gateway's tenant cache.
 
-The ViewSet response cache (`cache_methods` in `core/utils/views.py`,
+The ViewSet response cache (`cache_methods` in `src/core/utils/views.py`,
 Django's `cache_page`) is scoped to the running release.
 `response_cache_key_prefix()` leads every key prefix with
-`settings.RELEASE_VERSION`, which `settings.py` reads from the
+`settings.RELEASE_VERSION`, which `src/settings.py` reads from the
 `pyproject.toml` the image ships (semantic-release bumps it in the release
 commit). A deploy therefore never serves a body an earlier release cached;
 the old entries are never read again and expire on the timeout each
@@ -85,9 +85,9 @@ match inside the key and reach every release's entries.
 
 ## Layer 2: cache surfaces and `CacheService`
 
-`core/cache/registry.py` holds `CacheSurface` objects, each with a `code`,
+`src/core/cache/registry.py` holds `CacheSurface` objects, each with a `code`,
 Django key patterns, Nuxt key patterns, an optional `invalidated_by` list
-of model labels and `related` surfaces. `core/cache/surfaces.py` registers
+of model labels and `related` surfaces. `src/core/cache/surfaces.py` registers
 the core set: `pay_way`, `recommendations`, `shipping`, `products`,
 `categories`, `blog`, `regions_countries`, `loyalty`, `page_config`,
 `store_texts`, `builder`,
@@ -97,17 +97,17 @@ translations surface: translated lists prefetch their translations. Apps
 may add their own in `AppConfig.ready()`.
 
 `CacheService.purge(codes, dry_run=, actor=, include_related=)`
-(`core/cache/service.py`) expands related surfaces, runs each surface's
+(`src/core/cache/service.py`) expands related surfaces, runs each surface's
 Django patterns against `CustomCache`, posts the Nuxt patterns to the
 storefront's purge endpoint, calls the gateway's feed invalidation for
 catalogue surfaces, filters out anything matching
-`core/cache/protected.py: PROTECTED_FRAGMENTS` (throttles, allauth state,
+`src/core/cache/protected.py: PROTECTED_FRAGMENTS` (throttles, allauth state,
 Knox, sessions, bull queues, image cache, circuit breakers, dj-stripe,
 carrier tokens, celery results) **after** SCAN so a misregistered surface
 can never wipe security state, and writes a `CachePurgeLog` row
-(`core/cache/models.py`) with actor, surfaces, counts and detail.
+(`src/core/cache/models.py`) with actor, surfaces, counts and detail.
 
-`core/cache/invalidation.py` connects `post_save` / `post_delete` for every
+`src/core/cache/invalidation.py` connects `post_save` / `post_delete` for every
 model named in a surface's `invalidated_by`: the merchant-edited models of
 products, categories, blog, content pages, the page builder's releases,
 promotions, tags, pay-ways and recommendations. User-generated rows
@@ -125,19 +125,19 @@ reported success, which is why the surface file carries the exact names.
 A **store feature switch** purges `store_pages`: the storefront's
 settings read (`settingsPublic`) and every page it has rendered for the
 store, since the navigation, footer and product cards of every page show
-what the store offers. `tenant/signals.py` registers
-`tenant/switches.py: on_switch_change` over every setting and plan flag in
-`tenant/features.py: STORE_FEATURES`, which queues
-`core/tasks.py: purge_store_pages_task` in the store's schema on a real
+what the store offers. `src/tenant/signals.py` registers
+`src/tenant/switches.py: on_switch_change` over every setting and plan flag in
+`src/tenant/features.py: STORE_FEATURES`, which queues
+`src/core/tasks.py: purge_store_pages_task` in the store's schema on a real
 change. A store setting purges at once. A plan flag waits
 `STOREFRONT_TENANT_CACHE_SECONDS` (300 by default, `plan_countdown` in
-`tenant/signals.py`), the lifetime of each storefront pod's in-memory copy
+`src/tenant/signals.py`), the lifetime of each storefront pod's in-memory copy
 of the resolve payload (`server/utils/tenant.ts`).
 
 `store_pages` and `settings` are the two surfaces registered with
-`invalidates_tenant_config=True` (`core/cache/registry.py: CacheSurface`).
+`invalidates_tenant_config=True` (`src/core/cache/registry.py: CacheSurface`).
 `CacheService._purge_surface` passes it to
-`core/cache/nuxt.py: request_purge(..., tenant_config=)`, which adds
+`src/core/cache/nuxt.py: request_purge(..., tenant_config=)`, which adds
 `tenantConfig: true` to the purge body only for them. The storefront then
 drops the store's tenant config on every pod and moves its cache epoch
 before it deletes anything (see [The tenant-config epoch](#the-tenant-config-epoch)),
@@ -147,13 +147,13 @@ Every other surface's purge leaves the tenant config and the epoch alone.
 ### Ways to invoke it
 
 - **Admin**: the store sidebar's **Settings → Cache** entry
-  (`admin/navigation.py: store_sidebar`, listed for `core.purge_cache`
+  (`src/admin/navigation.py: store_sidebar`, listed for `core.purge_cache`
   holders; `admin:clear-cache`,
-  `admin/admin.py: MyAdminSite.clear_cache_view`) lists every surface
+  `src/admin/admin.py: MyAdminSite.clear_cache_view`) lists every surface
   with a live key count, purges the selection, and shows the result. On a
   tenant host the purge is scoped to that tenant's storefront host; on the
   platform host it is deliberately global. The **Cache purge logs** model
-  (superuser-only, `core/admin.py: CachePurgeLogAdmin`) is the audit trail.
+  (superuser-only, `src/core/admin.py: CachePurgeLogAdmin`) is the audit trail.
 - **Management command**:
 
 ```bash
@@ -271,7 +271,7 @@ the tenant config and moves the store's epoch, or the platform-wide epoch
 when there is no `host`. Any other purge leaves both alone, because moving
 the epoch orphans everything cached for the store, not just what the
 patterns name. Only a trailing `*` is a prefix; a mid-pattern
-`*` becomes a regex post-filter. Django's `core/cache/nuxt.py` calls it
+`*` becomes a regex post-filter. Django's `src/core/cache/nuxt.py` calls it
 through `NUXT_INTERNAL_BASE_URL` (the in-cluster Service) with the same
 token, passing the current tenant's primary domain as `host`, and
 `tenantConfig: true` only for a surface with `invalidates_tenant_config`.
@@ -349,7 +349,7 @@ TTLs, and Cloudflare's copy (`EDGE_CACHE_CONTROL`: fresh for a minute,
 then `stale-while-revalidate`) can answer stale once more while it
 refreshes.
 
-Django's `sitemap_seo` surface (`core/cache/surfaces.py:
+Django's `sitemap_seo` surface (`src/core/cache/surfaces.py:
 SITEMAP_SEO_SURFACE`, label "Sitemap & SEO") is what purges them: its Nuxt
 patterns are `_nuxt_functions("sitemap", "rss")` (so
 `cache:nitro:functions:rss*`), the `/sitemap.xml` route and the
@@ -385,24 +385,24 @@ content pages, reviews) saved with `is_published=True` and a future
 `published_at` is served from that date with no write at that moment
 (`PublishedQuerySet.published` needs both; `is_published` defaults to
 false, so a draft stays hidden whatever its date), so no `post_save` purges anything.
-`core/publication.py: release_due_publications` notices: the beat entry
-`release-due-publications` (`settings.py`, `SCHEDULE_PRESETS["every_minute"]`)
+`src/core/publication.py: release_due_publications` notices: the beat entry
+`release-due-publications` (`src/settings.py`, `SCHEDULE_PRESETS["every_minute"]`)
 fans out per store (`tenant.tasks.fanout_release_due_publications`, then
-`core/tasks.py: release_due_publications_task`), and each run finds the
+`src/core/tasks.py: release_due_publications_task`), and each run finds the
 published rows whose date fell in `(cursor, now]` and were not saved on or
 after it (`updated_at < published_at`). For each it sends `went_live`, which
-reindexes the post's translations in Meilisearch (`blog/signals.py`; a
+reindexes the post's translations in Meilisearch (`src/blog/signals.py`; a
 post's `meili_filter` keeps it out until then), queues the page for
 IndexNow when the store has `INDEXNOW_ENABLED` on and the row is a blog
-post or a product (`indexnow/signals.py: _queue_went_live`) and queues the page builder's pages that
-list it (`builder/data_purge.py: post_went_live`). That last queue is
+post or a product (`src/indexnow/signals.py: _queue_went_live`) and queues the page builder's pages that
+list it (`src/builder/data_purge.py: post_went_live`). That last queue is
 written after the commit by `record`, which logs "could not be queued for
 a purge" and drops the documents on an error, so it never fails the run:
 those pages keep their copy until their cache expires. It then purges every surface whose
 `invalidated_by` names the model (`blog` and `sitemap_seo` for a post)
 through `CacheService.purge` directly, not the batched queue, so a failed
 purge fails the run. The window is a durable per-store cursor
-(`core/sweeps.py`, sweep `publication-go-live`) that moves only after the
+(`src/core/sweeps.py`, sweep `publication-go-live`) that moves only after the
 work ran, so a failed run repeats its window; a store's first run looks
 back one day (`FIRST_WINDOW`). A scheduled post therefore reaches the
 pages, search and the feeds within about a minute of its date, and, with
@@ -428,10 +428,10 @@ it. The flush is per tenant: `POST /admin/cache/flush-tenant` with body
 every cache layer and deletes the tenant's objects from the rendition store
 (the R2 bucket, prefix `{schema}/`), because the store is read directly and
 would otherwise resurrect the entry.
-Django calls it from `tenant/media_flush.py` through
+Django calls it from `src/tenant/media_flush.py` through
 `tenant.tasks.flush_tenant_media_task`, using `MEDIA_STREAM_INTERNAL_URL`
 and `MEDIA_STREAM_INTERNAL_SECRET`; suspending a tenant
-(`tenant/lifecycle.py: suspend_tenant`) and destroying one (`destroy_tenant`)
+(`src/tenant/lifecycle.py: suspend_tenant`) and destroying one (`destroy_tenant`)
 queue it. Do it by hand from a backend pod:
 
 ```bash
@@ -469,7 +469,7 @@ count: its tenant is unknown and a pair without a valid sidecar is never
 served.
 
 **media-stream refuses a suspended store.** Django's internal tenant feed
-(`tenant/internal.py: build_domains_payload`) lists the suspended stores in
+(`src/tenant/internal.py: build_domains_payload`) lists the suspended stores in
 `suspendedSchemas`, by `SuspendedTenantMiddleware`'s rule (`is_active`).
 media-stream refuses an image of one before reading any cache tier: **503**
 `TENANT_SUSPENDED` with `Cache-Control: no-store`, logged at WARN,
@@ -504,7 +504,7 @@ Cloudflare keeps each processed image for a year (`s-maxage` 360 days, no
 leaves the edge copies of a suspended or destroyed tenant's images in place. The same Celery task purges
 the edge **after** the flush, never before, because a purge that ran
 first would let the edge refetch images media-stream still holds. It
-purges by URL prefix (`core/cache/edge.py: tenant_media_purges`,
+purges by URL prefix (`src/core/cache/edge.py: tenant_media_purges`,
 `purge_media`): the processed images at
 `{assets-host}/media_stream-image/media/{schema}/`. A static host is not
 purged: it serves no original in public, so the edge holds only redirects
@@ -533,7 +533,7 @@ one suspend or destroy sends one request per zone.
 ## Layer 5: agent gateway feeds
 
 The Go gateway caches the generated catalogue feeds per tenant.
-`core/cache/gateway.py: invalidate_feeds()` posts to
+`src/core/cache/gateway.py: invalidate_feeds()` posts to
 `AGENT_GATEWAY_INTERNAL_URL` + `/internal/feeds/invalidate` with
 `AGENT_GATEWAY_INTERNAL_SECRET`; `CacheService._purge_surface` calls it for
 every surface flagged `invalidates_gateway_feeds`, so a product purge also
@@ -546,7 +546,7 @@ arrives first. See [Agentic commerce](/dev/flows/agentic-commerce#catalog-feeds)
 ## Layer 6: Meilisearch
 
 Not a cache in the TTL sense, but a copy that drifts. `IndexMixin` signals
-update documents on save through `meili/tasks.py`; a bulk change, a
+update documents on save through `src/meili/tasks.py`; a bulk change, a
 `MeiliMeta` edit or a restore needs a resync:
 
 ```bash
@@ -574,7 +574,7 @@ checkout, account pages and a 404 or 5xx are never stored, whatever a
 Cache Rule's path list says. Cacheable pages get `Cache-Control: no-cache`
 for browsers, which revalidate against the edge.
 
-Two purges keep the edge honest (`core/cache/edge.py`):
+Two purges keep the edge honest (`src/core/cache/edge.py`):
 
 - **After an edit.** When `CacheService` purges a surface with page
   renders, it queues one purge of the store's tag, about 30 seconds later,
@@ -625,18 +625,18 @@ PageSpeed runs while Traefik's counters never moved.
 | `/_nuxt` 503s only in PageSpeed | Cloudflare Speed Brain | dashboard: Speed Brain off, `_nuxt` cache rule eligible |
 | A post missing from or stale in `/rss.xml` or `/blog/rss.xml` | Nitro `nitro:functions:rss*`, or the edge copy of the feed | `clear_cache sitemap_seo` (purges the functions and queues the store's edge purge) |
 | A scheduled post not live a few minutes after its date | not saved with `is_published` (a draft never goes live), or the go-live sweep failed | the post's **Is Published**; Celery log for `release_due_publications_task`, whose run repeats its window once it succeeds |
-| A post live everywhere but missing from a page-builder list (a blog post grid or list) | the builder purge was not queued (`builder/data_purge.py: record` logged "could not be queued for a purge"); the sweep does not retry it | Django log for that message; `clear_cache builder` |
+| A post live everywhere but missing from a page-builder list (a blog post grid or list) | the builder purge was not queued (`src/builder/data_purge.py: record` logged "could not be queued for a purge"); the sweep does not retry it | Django log for that message; `clear_cache builder` |
 | `/sitemap.xml` answers 503 | a read the sitemap needs failed; the route rule keeps the last good sitemap | Django's health; the crawler retries after `Retry-After` |
 | Purge reports 0 keys | wrong pattern | `dryRun: true` with `*` to see the real key shapes |
 
 ## Invariants
 
 - Every Django key carries the schema prefix or the `global:` marker
-  (`tenant/cache.py`).
+  (`src/tenant/cache.py`).
 - Protected fragments are filtered after SCAN, never before
-  (`core/cache/service.py`, `core/cache/protected.py`).
+  (`src/core/cache/service.py`, `src/core/cache/protected.py`).
 - A tenant-host purge passes its primary domain as `host`; only the
-  platform host purges globally (`core/cache/nuxt.py`). On the Nuxt side
+  platform host purges globally (`src/core/cache/nuxt.py`). On the Nuxt side
   the host is matched per key family, never as a substring
   (`server/utils/cacheKey.ts: cacheKeyBelongsToHost`).
 - The Nitro cache is namespaced by build id (`server/plugins/storage.ts`);
@@ -648,7 +648,7 @@ PageSpeed runs while Traefik's counters never moved.
   edge's stale-while-revalidate.
 - The page builder's Nitro handlers are `builderPage` (a page) and
   `builderChrome` (the menus), both purged by the `builder` surface
-  (`core/cache/surfaces.py`).
+  (`src/core/cache/surfaces.py`).
 - Purge tokens and internal secrets never leave the cluster; run purges
   from inside a pod.
 
@@ -656,32 +656,32 @@ PageSpeed runs while Traefik's counters never moved.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/core/caches.py` | `CustomCache`, resilience options, SCAN helpers |
-| `grooveshop-django-api/tenant/cache.py`, `tenant/signals.py`, `tenant/models.py` | `make_tenant_key`, `tenant_resolve_key`, `tenant_domains_key`, `bump_cache_generation`, `Tenant.cache_generation` |
-| `grooveshop-django-api/core/cache/registry.py`, `surfaces.py`, `service.py`, `invalidation.py`, `protected.py`, `nuxt.py`, `gateway.py`, `models.py` | Surface registry, purge service, signal wiring, Nuxt and gateway clients, `CachePurgeLog` |
-| `grooveshop-django-api/admin/admin.py`, `core/admin.py` | Cache tool and purge log admin |
-| `grooveshop-django-api/core/management/commands/clear_cache.py` | Command |
-| `grooveshop-django-api/core/cache/edge.py`, `core/tasks.py` (`purge_edge_cache_task`), `core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy; by prefix for a tenant's media (`tenant_media_purges`, `purge_media`) |
+| `grooveshop-django-api/src/core/caches.py` | `CustomCache`, resilience options, SCAN helpers |
+| `grooveshop-django-api/src/tenant/cache.py`, `src/tenant/signals.py`, `src/tenant/models.py` | `make_tenant_key`, `tenant_resolve_key`, `tenant_domains_key`, `bump_cache_generation`, `Tenant.cache_generation` |
+| `grooveshop-django-api/src/core/cache/registry.py`, `surfaces.py`, `service.py`, `invalidation.py`, `protected.py`, `nuxt.py`, `gateway.py`, `models.py` | Surface registry, purge service, signal wiring, Nuxt and gateway clients, `CachePurgeLog` |
+| `grooveshop-django-api/src/admin/admin.py`, `src/core/admin.py` | Cache tool and purge log admin |
+| `grooveshop-django-api/src/core/management/commands/clear_cache.py` | Command |
+| `grooveshop-django-api/src/core/cache/edge.py`, `src/core/tasks.py` (`purge_edge_cache_task`), `src/core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy; by prefix for a tenant's media (`tenant_media_purges`, `purge_media`) |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook, once per storefront tag |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm-job.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/custom-page.ts` | Nitro page cache for custom pages |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |
-| `grooveshop-django-api/core/models.py` (`PublishableModel`, `PublishedQuerySet`) | What counts as published: `is_published` and a past `published_at` |
-| `grooveshop-django-api/core/publication.py`, `core/sweeps.py`, `core/tasks.py` (`release_due_publications_task`), `blog/signals.py`, `indexnow/signals.py`, `builder/data_purge.py` | The go-live sweep and what `went_live` triggers |
-| `grooveshop-django-api/tenant/media_flush.py`, `tenant/tasks.py` | Media flush |
-| `grooveshop-django-api/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |
+| `grooveshop-django-api/src/core/models.py` (`PublishableModel`, `PublishedQuerySet`) | What counts as published: `is_published` and a past `published_at` |
+| `grooveshop-django-api/src/core/publication.py`, `src/core/sweeps.py`, `src/core/tasks.py` (`release_due_publications_task`), `src/blog/signals.py`, `src/indexnow/signals.py`, `src/builder/data_purge.py` | The go-live sweep and what `went_live` triggers |
+| `grooveshop-django-api/src/tenant/media_flush.py`, `src/tenant/tasks.py` | Media flush |
+| `grooveshop-django-api/src/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/src/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml` | Originals served only to media-stream; public requests redirected to it |
-| `grooveshop-django-api/core/urls.py` | Dev/CI media route, which refuses dot-segment paths like the static nginx |
-| `grooveshop-django-api/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
-| `grooveshop-django-api/tenant/switches.py`, `tenant/features.py`, `core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
+| `grooveshop-django-api/src/core/urls.py` | Dev/CI media route, which refuses dot-segment paths like the static nginx |
+| `grooveshop-django-api/src/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
+| `grooveshop-django-api/src/tenant/switches.py`, `src/tenant/features.py`, `src/core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The storefront's in-memory copy of the resolve payload; `invalidateTenantConfigs`, `tenantConfigEpoch`, `EPOCH_CHECK_MS` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` (ends with the epoch), `cacheKeyBelongsToHost` |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.tenant-epoch.ts` | Stamps `x-tenant-epoch` for the page cache's `varies` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/admin/cache/purge.post.ts` | Nitro purge endpoint, `tenantConfig` |
 | `grooveshop-storefront-ui-node-nuxt/nuxt.config.ts`, `shared/constants/prerender.ts` | SWR route rules, `CACHED_PAGE_VARIES` |
-| `grooveshop-django-api/core/cache/registry.py`, `core/cache/nuxt.py`, `core/cache/service.py` | `CacheSurface.invalidates_tenant_config`, `request_purge(..., tenant_config=)` |
+| `grooveshop-django-api/src/core/cache/registry.py`, `src/core/cache/nuxt.py`, `src/core/cache/service.py` | `CacheSurface.invalidates_tenant_config`, `request_purge(..., tenant_config=)` |
 | `grooveshop-media-stream/src/MediaStream/Cache/controllers/admin-cache.controller.ts` | `flush-tenant` |
-| `grooveshop-django-api/meili/management/commands/` | Meilisearch commands |
+| `grooveshop-django-api/src/meili/management/commands/` | Meilisearch commands |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend-config.yaml` | Internal service URLs |

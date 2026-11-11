@@ -44,9 +44,9 @@ changed afterwards without recreating the store.
 | Decision | Rule | Changeable later |
 |---|---|---|
 | Slug | URL-safe, unique (`Tenant.slug`) | Yes |
-| Schema name | PostgreSQL identifier, at most 63 chars; rejected if reserved or `pg_`-prefixed (`tenant/validators.py: validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES`). Convention: the slug with dashes as underscores | **No** — it names the Postgres schema and every media path |
-| Primary domain | The storefront host. The API host is derived from it: `api.<domain>`, or `api-<label>.grooveshop.space` for a store on a platform subdomain (`core/utils/tenant_urls.py: derive_api_domain`) | **No, in practice** — it anchors the API host, the Site row and every issued certificate |
-| Owner email | Receives the OWNER membership (`tenant/provisioning.py: provision_owner_membership`) | Yes |
+| Schema name | PostgreSQL identifier, at most 63 chars; rejected if reserved or `pg_`-prefixed (`src/tenant/validators.py: validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES`). Convention: the slug with dashes as underscores | **No** — it names the Postgres schema and every media path |
+| Primary domain | The storefront host. The API host is derived from it: `api.<domain>`, or `api-<label>.grooveshop.space` for a store on a platform subdomain (`src/core/utils/tenant_urls.py: derive_api_domain`) | **No, in practice** — it anchors the API host, the Site row and every issued certificate |
+| Owner email | Receives the OWNER membership (`src/tenant/provisioning.py: provision_owner_membership`) | Yes |
 | Plan | One of `TenantPlan` — `trial`, `basic`, `pro`, `enterprise` | Yes |
 | Trial length | `--trial-days` (default 30) sets `paid_until` so dunning covers the trial from day one; `0` means never expires. It applies **only** when `--plan trial` — a paid plan is created with no term, and staff record `paid_until` when the first payment lands | Yes |
 | Vertical | `StoreVertical` — picks the recommendation preset the store starts from | Yes, but see below |
@@ -58,7 +58,7 @@ choose the recommendation preset, and `tenant_create` has no `--vertical`
 flag — a store created from the CLI is seeded as `general` whatever you
 set afterwards. The admin "New Store" form does carry the field. Fixing
 it later means the slot admin's **Reset to preset**
-(`recommendation/presets.py: reset_slot_to_preset`), slot by slot.
+(`src/recommendation/presets.py: reset_slot_to_preset`), slot by slot.
 
 ## Order that must not change
 
@@ -69,7 +69,7 @@ it later means the slot admin's **Reset to preset**
    limit.
 2. **Primary domain before provisioning.** `ensure_api_domain` and
    `ensure_site` both return `None` and do nothing when the tenant has no
-   primary domain (`tenant/provisioning.py`). On the admin path the
+   primary domain (`src/tenant/provisioning.py`). On the admin path the
    domain inline must be filled on the same save; on the CLI path
    `--domain` is required, so it cannot go wrong there.
 3. **Credentials before the first order.** A blank ACS or BoxNow
@@ -130,9 +130,9 @@ ingress step has not happened yet.
 ## 2. Create the tenant record
 
 Two entry points, one implementation. Both end in
-`tenant/provisioning.py` so they cannot drift.
+`src/tenant/provisioning.py` so they cannot drift.
 
-**CLI** (`tenant/management/commands/tenant_create.py`):
+**CLI** (`src/tenant/management/commands/tenant_create.py`):
 
 ```bash
 kubectl exec -n grooveshop deploy/backend -- \
@@ -172,7 +172,7 @@ provisioning path itself is shared, so nothing is lost.
 ### What provisioning does for you
 
 `provision_tenant` runs four things and returns a summary the caller turns
-into operator messages (`tenant/provisioning.py`):
+into operator messages (`src/tenant/provisioning.py`):
 
 | Step | What it does | If it cannot |
 |---|---|---|
@@ -184,8 +184,8 @@ into operator messages (`tenant/provisioning.py`):
 Seeding detail worth knowing:
 
 - **The page builder** seeds its default documents as release 1
-  (`builder/seeding.py: seed_store`; today the home page). Of the
-  **content pages** (`page_config/content_pages.py: seed_content_pages`),
+  (`src/builder/seeding.py: seed_store`; today the home page). Of the
+  **content pages** (`src/page_config/content_pages.py: seed_content_pages`),
   the three legal documents seed published with the platform's text,
   and the rest unpublished with a prompt. A new store therefore has a
   composed homepage, its terms, privacy and cookie policies, and a set
@@ -193,23 +193,23 @@ Seeding detail worth knowing:
   publishes them.
 - **Legal text is versioned.** The seeded legal pages are stamped
   `ContentPage.legal_text_revision = LEGAL_TEXT_REVISION`
-  (`page_config/legal_documents.py`). A later change to the platform
+  (`src/page_config/legal_documents.py`). A later change to the platform
   text is a new `LEGAL_TEXT_UPDATES` entry plus a data migration that
   rewrites only pages still byte-identical to the previous platform
-  text (`page_config/migrations/0032_privacy_server_logs_section.py`
+  text (`src/page_config/migrations/0032_privacy_server_logs_section.py`
   is the first). Any other page keeps its text, stays below the
   revision, and is flagged to the merchant (dashboard banner, content
   page list and form, `pending_legal_reviews` in
-  `page_config/content_pages.py`) until they run the admin action that marks
+  `src/page_config/content_pages.py`) until they run the admin action that marks
   it reviewed. `manage.py legal_text_status` lists, per tenant, the
   pages still behind.
 - **The flat-rate carrier** is switched on (`_activate_default_carrier`)
   so checkout has a delivery option before any courier contract. Its
   price is the GR home-delivery `ShippingRate` that
-  `shipping/migrations/0011_convert_legacy_pricing_to_rates.py` creates
+  `src/shipping/migrations/0011_convert_legacy_pricing_to_rates.py` creates
   when the new schema migrates; without an active rate the carrier
   would offer nothing.
-- **The default newsletter topic** (`user/services/subscription.py:
+- **The default newsletter topic** (`src/user/services/subscription.py:
   ensure_default_newsletter_topic`) is what the default layout's
   newsletter band subscribes to; without it the band renders nothing.
   It is double opt-in, written in `el` and `en`, and never replaces a
@@ -240,7 +240,7 @@ the platform admin. Onboarding needs no ConfigMap change and — see step 5
 **Configuration fields fall back.** `store_name`, `default_locale`,
 `contact_email`, the branding fields and similar resolve
 `Tenant` row → `settings.<NAME>` → ConfigMap env, through
-`tenant/credentials.py: _get_tenant_field` with a `settings_fallback`.
+`src/tenant/credentials.py: _get_tenant_field` with a `settings_fallback`.
 
 **Third-party credentials do not.** Every Stripe, Viva Wallet, ACS,
 BoxNow and Meta CAPI value, plus the analytics ids, the chat key and the
@@ -256,9 +256,9 @@ naming convention:
 
 | Class | Examples | Served where |
 |---|---|---|
-| Public-safe | `store_name`, `favicon_url`, `logo_light_url`/`logo_dark_url`, `default_locale`, `available_locales`, `ga_tracking_id`, `meta_pixel_id`, `tiktok_pixel_id`, `clarity_project_id`, `box_now_partner_id`, the `socials_*` fields, `seo_author`, `google_site_verification` | `GET /api/v1/tenant/resolve` — in every browser (`tenant/views.py: tenant_resolve`) |
+| Public-safe | `store_name`, `favicon_url`, `logo_light_url`/`logo_dark_url`, `default_locale`, `available_locales`, `ga_tracking_id`, `meta_pixel_id`, `tiktok_pixel_id`, `clarity_project_id`, `box_now_partner_id`, the `socials_*` fields, `seo_author`, `google_site_verification` | `GET /api/v1/tenant/resolve` — in every browser (`src/tenant/views.py: tenant_resolve`) |
 | Internal-only | `chat_api_key`, `acp_bearer_token` | Only on a resolve response authenticated with the internal token, never cached (`Cache-Control: private, no-store`) |
-| Secret | Viva Wallet, Stripe, ACS and BoxNow credentials, `meta_capi_access_token`, webhook secrets | Never serialised to any API response; read server-side through `tenant/credentials.py` |
+| Secret | Viva Wallet, Stripe, ACS and BoxNow credentials, `meta_capi_access_token`, webhook secrets | Never serialised to any API response; read server-side through `src/tenant/credentials.py` |
 
 Two traps:
 
@@ -266,7 +266,7 @@ Two traps:
   the platform ticks `from_email_verified`, which may be done **after**
   the store's sending domain is authenticated on the mail relay — SPF and
   DKIM published and confirmed. Until then
-  `emails/sender.py: from_address` builds
+  `src/emails/sender.py: from_address` builds
   `"{store name}" <DEFAULT_FROM_EMAIL>` and the merchant's own address
   rides in `Reply-To`, which is `contact_email`. Ticking the flag early
   makes every message from that store fail DMARC, so onboarding leaves it
@@ -274,7 +274,7 @@ Two traps:
 - `default_currency` is not merchant-editable and should stay `EUR`: the
   storefront reads it for price formatting while every backend money path
   uses `settings.DEFAULT_CURRENCY`, so a mismatch renders one currency and
-  charges another (`tenant/role_scopes.py`).
+  charges another (`src/tenant/role_scopes.py`).
 
 ## 4. Provision the Stripe webhook
 
@@ -292,7 +292,7 @@ and both are idempotent:
 It registers the dj-stripe `APIKey` row and creates the endpoint on
 Stripe at the tenant's own API host, resolved the way the storefront
 resolves it (explicit `api*` domain row first, derived `api.<primary>`
-otherwise) — `core/utils/tenant_urls.py: resolve_tenant_api_domain`. An
+otherwise) — `src/core/utils/tenant_urls.py: resolve_tenant_api_domain`. An
 existing endpoint is reported, not replaced; rotation stays a CLI
 operation because the old endpoint must be disabled in the Stripe
 dashboard first.
@@ -301,7 +301,7 @@ Viva Wallet is registered by hand in the Viva portal, at
 `https://api.example.com/viva-wallet/webhook/`. Because the URL is on the
 store's own host, the GET verification challenge is answered with that
 store's own `viva_wallet_webhook_verification_key`. Subscribe the URL to
-the four events the handler processes (`order/views/viva_webhook.py`),
+the four events the handler processes (`src/order/views/viva_webhook.py`),
 one subscription per event type under Settings > API Access > Webhooks:
 *Transaction Payment Created* (1796), *Transaction Reversal Created*
 (1797), *Transaction Failed* (1798) and *Account Transaction Created*
@@ -407,7 +407,7 @@ kubectl -n grooveshop get certificate | grep "<store-slug>"
 
 | Service | What to register | Optional |
 |---|---|---|
-| Social OAuth providers | The allauth callback on the store's **API** host, `https://api.example.com/accounts/<provider>/login/callback/` (allauth is mounted at `accounts/`, `core/urls.py`). The browser flow POSTs to the tenant's own API origin — `app/composables/useAllAuthAuthentication.ts` — precisely so the OAuth flow runs in that store's schema | No, if the store offers social login |
+| Social OAuth providers | The allauth callback on the store's **API** host, `https://api.example.com/accounts/<provider>/login/callback/` (allauth is mounted at `accounts/`, `src/core/urls.py`). The browser flow POSTs to the tenant's own API origin — `app/composables/useAllAuthAuthentication.ts` — precisely so the OAuth flow runs in that store's schema | No, if the store offers social login |
 | Stripe | Nothing by hand; step 4 creates the endpoint on the merchant's own account | — |
 | Viva Wallet | The webhook URL on the store's API host, subscribed to events 1796, 1797, 1798 and 2054 (step 4); without 2054 card disputes are not followed | No, if Viva is enabled |
 | Google Analytics / Meta / TikTok | The merchant's own property or pixel, then the id on the tenant row | Yes |
@@ -416,7 +416,7 @@ kubectl -n grooveshop get certificate | grep "<store-slug>"
 Two related facts, because the infrastructure runbook still says
 otherwise: per-tenant OAuth applications **are** supported — a `SocialApp`
 linked to the store's Site row wins over the platform credentials
-(`tenant/allauth_adapter.py: TenantSocialAccountAdapter.get_app`), which
+(`src/tenant/allauth_adapter.py: TenantSocialAccountAdapter.get_app`), which
 is what `ensure_site` exists for — and each store runs its **own** Stripe
 account, not Stripe Connect. `Tenant.stripe_connect_account_id` is dormant
 and reserved; the model comment explains why dj-stripe's per-schema
@@ -443,7 +443,7 @@ Run after the sync completes and the certificates are `Ready=True`.
    The 301 is Nuxt's own, not a Traefik middleware.
 5. **Isolation.** A customer registered on this store cannot sign in on
    another: customers live in their store's schema, so their credentials
-   simply do not exist elsewhere (`tenant/allauth_adapter.py:
+   simply do not exist elsewhere (`src/tenant/allauth_adapter.py:
    TenantAccountAdapter.pre_login`). Expect a normal invalid-credentials
    failure, not a special message.
 6. **Search works.** A search request that returns HTTP 400 is the
@@ -451,7 +451,7 @@ Run after the sync completes and the certificates are `Ready=True`.
    rather than waiting for the nightly sync.
 7. **Email.** Trigger a password reset: the link must point at
    `https://example.com/account/password/reset…`, built from the store's
-   own primary domain (`core/utils/tenant_urls.py`). The `From:` header
+   own primary domain (`src/core/utils/tenant_urls.py`). The `From:` header
    is the platform sender with the store name as display name — correct
    for any store whose `from_email_verified` is not ticked, which is every
    store at onboarding.
@@ -494,7 +494,7 @@ and manifests, these parts of it are wrong today:
 
 | It says | Actually |
 |---|---|
-| Set `defaultFromEmail` so outbound email shows the tenant's address; verify the `From:` header matches | There is no `defaultFromEmail` field. `Tenant.from_email` is honoured only once the platform ticks `from_email_verified` — until then mail goes out as `DEFAULT_FROM_EMAIL` with the store name as display name, for DMARC alignment (`emails/sender.py: from_address`) |
+| Set `defaultFromEmail` so outbound email shows the tenant's address; verify the `From:` header matches | There is no `defaultFromEmail` field. `Tenant.from_email` is honoured only once the platform ticks `from_email_verified` — until then mail goes out as `DEFAULT_FROM_EMAIL` with the store name as display name, for DMARC alignment (`src/emails/sender.py: from_address`) |
 | The ingress template produces four Ingress objects | Five — the contact-attachment body-limit router was added, and every chain now includes `compress-responses` |
 | OAuth uses a single platform-level client; per-tenant apps would need a migration | Per-tenant `SocialApp` rows already work, keyed on the Site row `ensure_site` creates |
 | Register `https://<domain>/auth/callback/<provider>` | The callback is allauth's, on the **API** host: `https://api.<domain>/accounts/<provider>/login/callback/` |
@@ -520,25 +520,25 @@ Applications.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/tenant/provisioning.py` | `provision_tenant`, `ensure_api_domain`, `ensure_site`, `provision_owner_membership`, `provision_stripe`, `seed_tenant_defaults` |
-| `grooveshop-django-api/tenant/management/commands/tenant_create.py` | CLI entry point, arguments, single transaction |
-| `grooveshop-django-api/tenant/management/commands/bootstrap_stripe.py` | `--schema`, `--all-tenants`, `--dry-run`, `--rotate-endpoint` |
-| `grooveshop-django-api/tenant/admin.py` | `TenantAdmin.save_related` provisioning, `provision_stripe_webhook` action |
-| `grooveshop-django-api/tenant/models.py` | `Tenant` fields, `TenantPlan`, `StoreVertical`, `TenantDomain`, `available_locales`, `stripe_connect_account_id` |
-| `grooveshop-django-api/tenant/validators.py` | `validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES` |
-| `grooveshop-django-api/tenant/credentials.py` | Fallback policy, `tenant_contact_email` |
-| `grooveshop-django-api/emails/sender.py` | `from_address`, the `From` of every email |
-| `grooveshop-django-api/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, why `default_currency` is platform-only |
-| `grooveshop-django-api/tenant/views.py` | `tenant_resolve` payload and the internal-token variant |
-| `grooveshop-django-api/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app`, `pre_login` |
-| `grooveshop-django-api/builder/seeding.py` | `seed_store`: the page builder's default documents as release 1 |
-| `grooveshop-django-api/page_config/content_pages.py` | `seed_content_pages` (legal documents published, the rest unpublished), `pending_legal_reviews` |
-| `grooveshop-django-api/page_config/legal_documents.py` | The seeded legal text, `LEGAL_TEXT_UPDATES`, `LEGAL_TEXT_REVISION` |
-| `grooveshop-django-api/page_config/management/commands/legal_text_status.py` | Which tenants have legal pages behind the platform text |
-| `grooveshop-django-api/recommendation/presets.py` | `seed_recommendation_slots`, `reset_slot_to_preset` |
-| `grooveshop-django-api/core/utils/tenant_urls.py` | `resolve_tenant_api_domain`, tenant-scoped link building |
-| `grooveshop-django-api/order/views/viva_webhook.py` | The Viva events the webhook processes: 1796, 1797, 1798, and 2054 for disputes (`_handle_account_transaction_event`) |
-| `grooveshop-django-api/core/urls.py` | allauth mounted at `accounts/` |
+| `grooveshop-django-api/src/tenant/provisioning.py` | `provision_tenant`, `ensure_api_domain`, `ensure_site`, `provision_owner_membership`, `provision_stripe`, `seed_tenant_defaults` |
+| `grooveshop-django-api/src/tenant/management/commands/tenant_create.py` | CLI entry point, arguments, single transaction |
+| `grooveshop-django-api/src/tenant/management/commands/bootstrap_stripe.py` | `--schema`, `--all-tenants`, `--dry-run`, `--rotate-endpoint` |
+| `grooveshop-django-api/src/tenant/admin.py` | `TenantAdmin.save_related` provisioning, `provision_stripe_webhook` action |
+| `grooveshop-django-api/src/tenant/models.py` | `Tenant` fields, `TenantPlan`, `StoreVertical`, `TenantDomain`, `available_locales`, `stripe_connect_account_id` |
+| `grooveshop-django-api/src/tenant/validators.py` | `validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES` |
+| `grooveshop-django-api/src/tenant/credentials.py` | Fallback policy, `tenant_contact_email` |
+| `grooveshop-django-api/src/emails/sender.py` | `from_address`, the `From` of every email |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS`, why `default_currency` is platform-only |
+| `grooveshop-django-api/src/tenant/views.py` | `tenant_resolve` payload and the internal-token variant |
+| `grooveshop-django-api/src/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app`, `pre_login` |
+| `grooveshop-django-api/src/builder/seeding.py` | `seed_store`: the page builder's default documents as release 1 |
+| `grooveshop-django-api/src/page_config/content_pages.py` | `seed_content_pages` (legal documents published, the rest unpublished), `pending_legal_reviews` |
+| `grooveshop-django-api/src/page_config/legal_documents.py` | The seeded legal text, `LEGAL_TEXT_UPDATES`, `LEGAL_TEXT_REVISION` |
+| `grooveshop-django-api/src/page_config/management/commands/legal_text_status.py` | Which tenants have legal pages behind the platform text |
+| `grooveshop-django-api/src/recommendation/presets.py` | `seed_recommendation_slots`, `reset_slot_to_preset` |
+| `grooveshop-django-api/src/core/utils/tenant_urls.py` | `resolve_tenant_api_domain`, tenant-scoped link building |
+| `grooveshop-django-api/src/order/views/viva_webhook.py` | The Viva events the webhook processes: 1796, 1797, 1798, and 2054 for disputes (`_handle_account_transaction_event`) |
+| `grooveshop-django-api/src/core/urls.py` | allauth mounted at `accounts/` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useAllAuthAuthentication.ts` | Social login posts to the tenant's own API origin |
 | `grooveshop-agent-gateway/internal/chat/handler.go` | Chat is off, not broken, when the tenant has no chat key |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/` | Ingress template, kustomization, onboarding checklist |

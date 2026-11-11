@@ -8,18 +8,23 @@ page templates and the list of facts to verify.
 1. **Write from the code, not from memory.** Open the admin classes
    (`*/admin.py`), models (`*/models.py`, `help_text`), serializers, views,
    tasks, settings and templates in `../grooveshop-django-api/` and the other
-   repos before writing a claim. If you cannot find it in code, leave it out.
+   repos before writing a claim. The Django apps and `settings.py` live in its
+   `src/`, so a path is written `src/order/models.py` (a module is still
+   `order.models`). To check a page against a branch of a sibling repository,
+   point the gates at a checkout of it with `GROOVESHOP_<REPO>_DIR`, for
+   example `GROOVESHOP_DJANGO_API_DIR=../.wt-django pnpm check:claims`
+   (`scripts/workspace.mjs` lists the names). If you cannot find it in code, leave it out.
 2. **Every page has frontmatter** with `title` and `description` (one
    sentence, plain text). Both feed search and `llms.txt`.
 3. **Admin guide pages exist twice**: `src/admin/<path>.md` (English) and
    `src/el/admin/<path>.md` (Greek), same headings in the same order. Write the
    Greek natively for a Greek shop owner; do not transliterate English jargon
    when a normal Greek term exists, but keep the admin's own UI labels as they
-   appear on screen (the admin UI is translated through `locale/el/…/django.po`
+   appear on screen (the admin UI is translated through `src/locale/el/…/django.po`
    in the Django repo — use the `msgstr` there for the on-screen label when one
    exists, otherwise the English label).
 4. **Name sidebar locations exactly** as the store sidebar
-   (`grooveshop-django-api/admin/navigation.py: store_sidebar`) renders
+   (`grooveshop-django-api/src/admin/navigation.py: store_sidebar`) renders
    them, every level of a sub-menu included, wrapped as
    `<span class="sidebar-path">Sales → Orders</span>` or
    `<span class="sidebar-path">Customers → Wholesale → Business Customers</span>`.
@@ -152,7 +157,7 @@ Numbered steps or sections; each names the code path
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/order/models.py` | `Order`, status choices |
+| `grooveshop-django-api/src/order/models.py` | `Order`, status choices |
 ```
 
 ## Facts to verify before you rely on them

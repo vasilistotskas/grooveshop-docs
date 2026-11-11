@@ -70,10 +70,10 @@ as if the browser had called it directly:
 
 | Header | Why |
 |---|---|
-| `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `settings.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
-| `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`settings.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
-| `X-Real-IP` | The visitor's IP, from Cloudflare's `CF-Connecting-IP`. Django believes it only together with a correct `X-Origin-Verify`, which is relayed alongside (`core/client_ip.py`: `trusted_client_ip`); without it, limits key on the peer Traefik saw (`client_ip_or_peer`) |
-| `X-Language` | The page's locale (`event.context.locale`); Django answers in it on `/api/` and `/_allauth/` (`core/middleware/locale.py`) — see Multi-tenancy → Request language |
+| `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `src/settings.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
+| `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`src/settings.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
+| `X-Real-IP` | The visitor's IP, from Cloudflare's `CF-Connecting-IP`. Django believes it only together with a correct `X-Origin-Verify`, which is relayed alongside (`src/core/client_ip.py`: `trusted_client_ip`); without it, limits key on the peer Traefik saw (`client_ip_or_peer`) |
+| `X-Language` | The page's locale (`event.context.locale`); Django answers in it on `/api/` and `/_allauth/` (`src/core/middleware/locale.py`) — see Multi-tenancy → Request language |
 | `Authorization: Bearer <knox token>` | The customer's API token from the Nuxt session |
 
 Every Django call goes through `useBackendFetch(event)`
@@ -99,20 +99,20 @@ anonymous; only `/api/v1/agent/*` forwards the agent's bearer.
 ### Browser to Django directly
 
 Two things bypass Nuxt: the notifications WebSocket at `ws/notifications/`
-(`grooveshop-django-api/asgi/__init__.py`) and the allauth social-login
+(`grooveshop-django-api/src/asgi/__init__.py`) and the allauth social-login
 redirect. Both dial the tenant's own API host (`TenantConfig.apiDomain`),
 never the platform host.
 
 ### Background work
 
 Celery workers consume the `celery` and `meilisearch` queues from RabbitMQ;
-beat schedules the periodic tasks defined in `settings.py:
+beat schedules the periodic tasks defined in `src/settings.py:
 get_celery_beat_schedule`. Tasks are tenant-aware through `TenantTask`
-(`grooveshop-django-api/tenant/celery.py`), which binds the schema the task
+(`grooveshop-django-api/src/tenant/celery.py`), which binds the schema the task
 was dispatched from. Django pushes order events and feed invalidations to
 the gateway's `/internal/*` routes with a shared secret, and purges the
 Nuxt SSR cache through `/api/admin/cache/purge` with
-`NUXT_CACHE_PURGE_TOKEN` (`grooveshop-django-api/core/cache/nuxt.py`).
+`NUXT_CACHE_PURGE_TOKEN` (`grooveshop-django-api/src/core/cache/nuxt.py`).
 
 ## The OpenAPI contract
 
@@ -126,7 +126,7 @@ flowchart LR
 
 - drf-spectacular generates the schema with the camel-case post-processing
   hook, so the contract is camelCase like the wire format
-  (`settings.py: SPECTACULAR_SETTINGS`).
+  (`src/settings.py: SPECTACULAR_SETTINGS`).
 - `openapi-ts.config.ts` in the Nuxt repo emits TypeScript types and Zod
   schemas (requests, responses, definitions) into `shared/openapi/`. Nothing
   in that directory is hand-edited.
@@ -162,7 +162,7 @@ admission control and per-resource deduplication.
 
 | Layer | Store | Key shape | Notes |
 |---|---|---|---|
-| Django cache | Redis via `core/caches.py: CustomCache` | `{schema}:{prefix}:{version}:{key}` from `tenant/cache.py: make_tenant_key` (registered as `KEY_FUNCTION`) | A `global:` key prefix opts out of schema scoping for families like `tenant_resolve`, which any schema reads |
+| Django cache | Redis via `src/core/caches.py: CustomCache` | `{schema}:{prefix}:{version}:{key}` from `src/tenant/cache.py: make_tenant_key` (registered as `KEY_FUNCTION`) | A `global:` key prefix opts out of schema scoping for families like `tenant_resolve`, which any schema reads |
 | Tenant resolve | Django cache, 1 hour | `global:tenant_resolve:{shape}:{tenant pk}.{generation}:{domain}` | The shape fingerprint of `TenantConfigSerializer` is part of the key, so adding a field never serves a stale shape; `Tenant.cache_generation` is bumped by every write the payload depends on, so invalidation never relies on a Redis delete |
 | Nuxt tenant config | Process memory, 5 minutes, dropped early when the store's epoch moves | host | `server/utils/tenant.ts`; negative results are never cached. Each pod re-reads the store's tenant-config epoch from the shared cache storage at most every 5 s (`EPOCH_CHECK_MS`); a purge sent with `tenantConfig: true` moves it (`invalidateTenantConfigs`) |
 | Nuxt route cache | Nitro cache in Redis | `tenantCacheKey(event, ...)` from `server/utils/cacheKey.ts`: `host__locale__key__e<epoch>` | Every tenant-specific `defineCachedEventHandler` must use it; the locale keeps an English entry from being served to a Greek page, the epoch keeps an entry rendered from an old tenant config from being read after a purge, and the key carries a hash because Nitro strips punctuation |
@@ -177,7 +177,7 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 
 | Service | Container port | In-cluster Service | Local dev |
 |---|---|---|---|
-| Django API | 8000 | `backend-service:80` | `uv run uvicorn asgi:application --reload` |
+| Django API | 8000 | `backend-service:80` | `PYTHONPATH=src uv run uvicorn asgi:application --reload` |
 | Nuxt storefront | 3000 | `frontend-nuxt-service:80` | `pnpm dev` |
 | Media stream | 3003 | `media-stream-service:80` | `pnpm run dev` |
 | Agent gateway | 8080 | `agent-gateway-service:80` | `go run ./cmd/gateway` |
@@ -224,11 +224,11 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.tenant-epoch.ts` | The `x-tenant-epoch` request header the page cache varies on |
 | `grooveshop-storefront-ui-node-nuxt/app/providers/media-stream.ts` | Image URL builder |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | Type and Zod generation |
-| `grooveshop-django-api/settings.py` | `USE_X_FORWARDED_HOST`, `SECURE_PROXY_SSL_HEADER`, `SPECTACULAR_SETTINGS`, `CACHES` |
-| `grooveshop-django-api/tenant/cache.py` | `make_tenant_key`, `tenant_resolve_key` |
-| `grooveshop-django-api/core/caches.py` | `CustomCache` |
-| `grooveshop-django-api/core/cache/nuxt.py` | SSR cache purge client |
-| `grooveshop-django-api/asgi/__init__.py` | HTTP and WebSocket routing |
+| `grooveshop-django-api/src/settings.py` | `USE_X_FORWARDED_HOST`, `SECURE_PROXY_SSL_HEADER`, `SPECTACULAR_SETTINGS`, `CACHES` |
+| `grooveshop-django-api/src/tenant/cache.py` | `make_tenant_key`, `tenant_resolve_key` |
+| `grooveshop-django-api/src/core/caches.py` | `CustomCache` |
+| `grooveshop-django-api/src/core/cache/nuxt.py` | SSR cache purge client |
+| `grooveshop-django-api/src/asgi/__init__.py` | HTTP and WebSocket routing |
 | `grooveshop-agent-gateway/internal/server/routes.go` | Gateway route table |
 | `grooveshop-agent-gateway/internal/obs/health.go` | `/healthz`, `/readyz` |
 | `grooveshop-media-stream/src/MediaStream/API/config/image-sources.config.ts` | Route patterns |

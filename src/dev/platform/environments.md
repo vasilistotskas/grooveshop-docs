@@ -23,19 +23,20 @@ docker compose -f infra.compose.yml up -d
 cp .env.example .env
 uv sync --locked --all-extras --dev
 uv run python manage.py migrate     # django-tenants' migrate: every schema
+export PYTHONPATH=src   # the apps are imported from src/ by their bare names
 uv run uvicorn asgi:application --reload
 uv run celery --app core worker --queues celery,meilisearch --loglevel=info
 uv run celery --app core beat --loglevel=info
 ```
 
-The API is an ASGI application (`asgi/__init__.py`): uvicorn serves HTTP
+The API is an ASGI application (`src/asgi/__init__.py`): uvicorn serves HTTP
 and the `ws/notifications/` WebSocket on port 8000, as the `backend`
 service in `app.compose.yml` does. `manage.py runserver` is not the dev
 server: the project has no WSGI module, so it falls back to Django's
 default WSGI handler and serves no WebSocket. The worker must consume the
 `meilisearch` queue as well as `celery`, or search-index tasks never run.
 
-Configuration is a single `.env` read by `settings.py`; `SYSTEM_ENV` is
+Configuration is a single `.env` read by `src/settings.py`; `SYSTEM_ENV` is
 `dev`, `staging`, `production` or `ci`. Every request needs a tenant: `localhost`
 must exist as a `TenantDomain` row (`server/utils/tenant.ts` strips the
 port before resolving), so create the platform row and a store, then
@@ -65,7 +66,7 @@ Set Django's `AGENT_GATEWAY_INTERNAL_SECRET` to the **same value** as the
 gateway's `INTERNAL_EVENTS_SECRET` (and `AGENT_GATEWAY_INTERNAL_URL` to the
 gateway's address). Django's `.env.example` leaves the secret empty, and Django
 then does not recognise the gateway on `tenant/resolve`
-(`tenant/views.py: _is_gateway`): it leaves the store's chat key and ACP bearer
+(`src/tenant/views.py: _is_gateway`): it leaves the store's chat key and ACP bearer
 out of the answer, so `/chat` and `/acp` stay off for every store with no error
 anywhere. The same secret authenticates the order-event push the other way.
 
@@ -191,10 +192,10 @@ the sealed `frontend-secrets`
 | File | Role |
 |---|---|
 | `grooveshop-django-api/docker-compose.yml`, `infra.compose.yml`, `app.compose.yml` | Local stack |
-| `grooveshop-django-api/.env.example`, `settings.py` | Django configuration keys, `SYSTEM_ENV` |
-| `grooveshop-django-api/asgi/__init__.py` | The ASGI application uvicorn serves |
-| `grooveshop-django-api/tenant/management/commands/bootstrap_platform.py`, `tenant_create.py` | Local and production provisioning |
-| `grooveshop-django-api/devtools/management/commands/seed_all.py` | Local sample data |
+| `grooveshop-django-api/.env.example`, `src/settings.py` | Django configuration keys, `SYSTEM_ENV` |
+| `grooveshop-django-api/src/asgi/__init__.py` | The ASGI application uvicorn serves |
+| `grooveshop-django-api/src/tenant/management/commands/bootstrap_platform.py`, `tenant_create.py` | Local and production provisioning |
+| `grooveshop-django-api/src/devtools/management/commands/seed_all.py` | Local sample data |
 | `grooveshop-storefront-ui-node-nuxt/.env.example`, `nuxt.config.ts` | Storefront configuration |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/docker.yml` | Build-time versus runtime secrets |
 | `grooveshop-agent-gateway/.env.example`, `internal/config` | Gateway configuration, `ENV` handling |

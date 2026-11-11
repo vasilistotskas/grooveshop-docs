@@ -5,12 +5,12 @@ description: The abstract models, base ViewSet, managers, filters, pagination, p
 
 # Base classes and patterns
 
-Every domain app composes the same small set of base classes from `core/`.
+Every domain app composes the same small set of base classes from `src/core/`.
 Learn these once and any app's `models.py`, `views.py` and `serializers.py`
 reads the same way. Each section below names the file and quotes the real
 code.
 
-## Abstract models (`core/models.py`)
+## Abstract models (`src/core/models.py`)
 
 Domain models compose several mixins; `Product` is the widest example:
 `Product(SoftDeleteModel, TranslatableModel, TimeStampMixinModel, UUIDModel,
@@ -47,7 +47,7 @@ description. An explicit `TranslatedFieldsModel` subclass inherits it
 `TranslatedFields(...)` declaration, which cannot
 take a base class, spreads `**SeoTranslationModel.translated_fields()`
 (`ProductCategory`). `seo_description` is a `PlainTextField`
-(`core/fields/plain_text.py`) because it lands verbatim inside a `<meta>` tag.
+(`src/core/fields/plain_text.py`) because it lands verbatim inside a `<meta>` tag.
 The API ships the fields inside `translations` like any other translated
 field.
 
@@ -95,9 +95,9 @@ class SoftDeleteManager(models.Manager):
 
 `SoftDeleteQuerySet` adds `restore()` and `hard_delete()`. Which rows a
 soft-delete model exposes is decided in the ViewSet's `get_queryset()`,
-not in a filter (see the module docstring of `core/filters/core.py`).
+not in a filter (see the module docstring of `src/core/filters/core.py`).
 
-## Base ViewSet (`core/api/views.py`)
+## Base ViewSet (`src/core/api/views.py`)
 
 `BaseModelViewSet` combines three mixins:
 
@@ -116,7 +116,7 @@ class BaseModelViewSet(
   request serializer and answer with the response serializer, inside
   `transaction.atomic()`.
 - `TranslationsModelViewSet` runs `TranslationsProcessingMixin`
-  (`core/utils/views.py`), which folds multipart keys shaped
+  (`src/core/utils/views.py`), which folds multipart keys shaped
   `translations.<lang>.<field>` back into a `translations` dict before
   validation.
 - `PaginationModelViewSet` picks the paginator from `?pagination_type=`:
@@ -139,7 +139,7 @@ self._paginator = paginator_mapping.get(
 `unpaginated_actions` (today the country list and `/giftcard/mine`); every
 other list ignores it and keeps the pagination envelope.
 
-## `ActionConfig`, `crud_config`, `create_schema_view_config` (`core/utils/serializers.py`)
+## `ActionConfig`, `crud_config`, `create_schema_view_config` (`src/core/utils/serializers.py`)
 
 `ActionConfig` is a dataclass with `request`, `response`, `responses`
 (status-code overrides, including `(status, media_type)` pairs for
@@ -163,7 +163,7 @@ def crud_config(*, list, detail, write=None) -> SerializersConfig:
 `create_schema_view_config()` iterates every key of `serializers_config`,
 including custom actions, and generates the `@extend_schema` entries for
 `@extend_schema_view` from the model's verbose names. A typical ViewSet
-(`tag/views/tag.py`):
+(`src/tag/views/tag.py`):
 
 ```python
 @extend_schema_view(
@@ -181,7 +181,7 @@ class TagViewSet(BaseModelViewSet):
     filterset_class = TagFilter
 ```
 
-## Optimized managers (`core/managers/base.py`, `core/managers/tree.py`)
+## Optimized managers (`src/core/managers/base.py`, `src/core/managers/tree.py`)
 
 ViewSets never hand-build `select_related` chains. Each model's queryset
 class overrides `for_list()` and `for_detail()`, and the ViewSet calls
@@ -207,12 +207,12 @@ class OptimizedQuerySet(models.QuerySet):
 `TreeTranslatableManager` combines MPTT and parler for the two category
 models.
 
-## Composable filter sets (`core/filters/`)
+## Composable filter sets (`src/core/filters/`)
 
 A mixin that *declares filters* must be a `FilterSet` subclass, never a
 plain class; django-filter only collects declared filters from bases that
 already carry `declared_filters`, so a plain-class mixin is silently
-dropped. The module docstring of `core/filters/core.py` records that this
+dropped. The module docstring of `src/core/filters/core.py` records that this
 happened and that `PublishableFilterMixin`, `SoftDeleteFilterMixin` and
 the `Base*FilterSet` classes were deleted rather than repaired. The four
 mixins that remain are all `FilterSet` subclasses:
@@ -227,14 +227,14 @@ class TimeStampFilterMixin(filters.FilterSet):
 
 plus `UUIDFilterMixin`, `SortableFilterMixin` and `MetaDataFilterMixin`.
 
-`CamelCaseFilterMixin` (`core/filters/camel_case_filters.py`) is the one
+`CamelCaseFilterMixin` (`src/core/filters/camel_case_filters.py`) is the one
 deliberate plain class in the package, and it is safe because it declares
 no filters: it rewrites incoming query keys to snake_case and republishes
 `base_filters` under camelCase names. It is always paired with a
 `FilterSet` base, which is what `CamelCaseTimeStampFilterSet` and
 `CamelCasePublishableTimeStampFilterSet` are for. Both now inherit the
 timestamp filters from `TimeStampFilterMixin` instead of restating them.
-`CamelCaseOrderingFilter` (`core/filters/camel_case_ordering.py`) does the
+`CamelCaseOrderingFilter` (`src/core/filters/camel_case_ordering.py`) does the
 same rewrite for `?ordering=`, and decides per action which keys it
 honours (`ordering_for`): a standard action uses the viewset's
 `ordering_fields` / `ordering`; an extra `@action` sorts nothing unless the
@@ -246,7 +246,7 @@ exactly the keys the action accepts — until 2026-09-18 every such action
 blanked its fields instead and the storefront's sort controls on author,
 category and account pages changed nothing.
 
-## Pagination envelope (`core/pagination/`)
+## Pagination envelope (`src/core/pagination/`)
 
 All three paginators return the same shape:
 
@@ -267,7 +267,7 @@ return Response(
 `page_size_query_param` is `page_size`, `max_page_size` is 100, and the
 default `PAGE_SIZE` in `REST_FRAMEWORK` is 12.
 
-## Translations (`core/api/serializers.py`)
+## Translations (`src/core/api/serializers.py`)
 
 Parler treats translations as optional. A write serializer that needs the
 default language present mixes in `RequiredDefaultTranslationMixin` and
@@ -286,21 +286,21 @@ class RequiredDefaultTranslationMixin:
 
 Never hardcode a language code. The default is `el`
 (`PARLER_DEFAULT_LANGUAGE_CODE`) and the locale set is `el`, `en`, `de`;
-both can change in `settings.py` without touching serializers.
+both can change in `src/settings.py` without touching serializers.
 
-## Custom fields (`core/fields/`)
+## Custom fields (`src/core/fields/`)
 
-- `ImageAndSvgField` (`core/fields/image.py`): an `ImageField` whose form
+- `ImageAndSvgField` (`src/core/fields/image.py`): an `ImageField` whose form
   field also accepts SVG.
-- `MeasurementField` (`core/fields/measurement.py`): a `FloatField` that
+- `MeasurementField` (`src/core/fields/measurement.py`): a `FloatField` that
   stores a physical measurement with unit conversion; the DRF side is
-  `MeasurementSerializerField` in `core/api/serializers.py`, serialised as
+  `MeasurementSerializerField` in `src/core/api/serializers.py`, serialised as
   `{"unit": "kg", "value": 1.0}`. A zero value is a real value, not
   absence; treat `0` and `None` differently.
-- `PlainTextField` (`core/fields/plain_text.py`): a `TextField` that strips
+- `PlainTextField` (`src/core/fields/plain_text.py`): a `TextField` that strips
   markup on save.
 
-## Permissions (`core/api/permissions.py`)
+## Permissions (`src/core/api/permissions.py`)
 
 `request.user.is_staff` is never an authorization signal on an API request:
 on a tenant-schema row it is customer residue from the id-preserving
@@ -325,7 +325,7 @@ class IsOwnerOrAdminOrGuest(IsOwnerMixin, BasePermission):
   are reachable with the matching `uuid`.
 - `StoreStaffModelPermissions`: DRF's `DjangoModelPermissions` with `view`
   required on reads; the permission set comes from the tenant role backend,
-  the same policy the admin uses (`tenant/role_scopes.py`).
+  the same policy the admin uses (`src/tenant/role_scopes.py`).
 - `StoreStaffChangePermission`: for custom POST actions that change rather
   than add.
 - `IsStoreStaff` / `IsPlatformSuperuser`: the plain predicates for
@@ -334,7 +334,7 @@ class IsOwnerOrAdminOrGuest(IsOwnerMixin, BasePermission):
 ## Computed properties via `__dict__`
 
 Models that expose counts or averages read an annotation first and only
-fall back to a query when it is absent (`product/models/product.py`):
+fall back to a query when it is absent (`src/product/models/product.py`):
 
 ```python
 @property
@@ -351,7 +351,7 @@ def likes_count(self, value):
 The setter lets `annotate(likes_count=...)` populate the property. Pair
 this with a `with_counts()` queryset method in the model's manager.
 
-## Meilisearch `IndexMixin` (`meili/models.py`)
+## Meilisearch `IndexMixin` (`src/meili/models.py`)
 
 A searchable model inherits `IndexMixin` and declares a `MeiliMeta`:
 
@@ -371,11 +371,11 @@ class IndexMixin(models.Model):
 `meili_filter()` decides whether an instance is indexed at all,
 `get_additional_meili_fields()` adds computed fields, and
 `Model.meilisearch` is a queryset-like search descriptor. Greeklish shadow
-fields are produced at index time by `search/transliteration.py`. Keep
+fields are produced at index time by `src/search/transliteration.py`. Keep
 `minWordSizeForTypos` identical across indexes; the storefront shows
 product and blog results for one query side by side. See [Search](/dev/flows/search).
 
-## Factories (`devtools/factories.py`)
+## Factories (`src/devtools/factories.py`)
 
 Every factory extends `CustomDjangoModelFactory`:
 
@@ -396,36 +396,36 @@ class CustomDjangoModelFactory(
 `auto_translations` creates a translation for every configured language on
 parler models; `unique_model_fields` generates collision-free values;
 `@factory.post_generation` hooks add images, reviews and cart items.
-`core/helpers/factory.py: get_or_create_instance()` resolves a model or
+`src/core/helpers/factory.py: get_or_create_instance()` resolves a model or
 factory by name.
 
 ## Invariants
 
 - A ViewSet never calls a serializer class directly; it goes through
   `serializers_config` so the OpenAPI schema and the runtime agree
-  (`core/api/views.py`).
+  (`src/core/api/views.py`).
 - A filter mixin that declares filters subclasses `FilterSet`
-  (`core/filters/core.py`).
+  (`src/core/filters/core.py`).
 - `sort_order` is read-only on the API even though the model field is
   editable (serializer `read_only_fields`).
 - Language codes come from `settings.PARLER_DEFAULT_LANGUAGE_CODE`, never
-  literals (`core/api/serializers.py`).
+  literals (`src/core/api/serializers.py`).
 - Staff checks go through `is_store_staff`, never `is_staff`
-  (`core/api/permissions.py`, `tenant/membership.py`).
+  (`src/core/api/permissions.py`, `src/tenant/membership.py`).
 
 ## Source
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/core/models.py` | Abstract models, `Translation` |
-| `grooveshop-django-api/core/api/views.py` | `BaseModelViewSet` and its mixins, health views, settings views |
-| `grooveshop-django-api/core/utils/views.py` | `TranslationsProcessingMixin`, `cache_methods` |
-| `grooveshop-django-api/core/utils/serializers.py` | `ActionConfig`, `crud_config`, `create_schema_view_config` |
-| `grooveshop-django-api/core/api/serializers.py` | `RequiredDefaultTranslationMixin`, `ErrorResponseSerializer`, `MeasurementSerializerField` |
-| `grooveshop-django-api/core/managers/base.py`, `core/managers/tree.py` | Optimized managers |
-| `grooveshop-django-api/core/filters/` | Filter mixins, camelCase filters and ordering |
-| `grooveshop-django-api/core/pagination/` | Three paginators, one envelope |
-| `grooveshop-django-api/core/fields/` | `ImageAndSvgField`, `MeasurementField`, `PlainTextField` |
-| `grooveshop-django-api/core/api/permissions.py`, `tenant/membership.py` | Permission classes and `is_store_staff` |
-| `grooveshop-django-api/meili/models.py` | `IndexMixin`, `MeiliMeta` |
-| `grooveshop-django-api/devtools/factories.py` | `CustomDjangoModelFactory` |
+| `grooveshop-django-api/src/core/models.py` | Abstract models, `Translation` |
+| `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet` and its mixins, health views, settings views |
+| `grooveshop-django-api/src/core/utils/views.py` | `TranslationsProcessingMixin`, `cache_methods` |
+| `grooveshop-django-api/src/core/utils/serializers.py` | `ActionConfig`, `crud_config`, `create_schema_view_config` |
+| `grooveshop-django-api/src/core/api/serializers.py` | `RequiredDefaultTranslationMixin`, `ErrorResponseSerializer`, `MeasurementSerializerField` |
+| `grooveshop-django-api/src/core/managers/base.py`, `src/core/managers/tree.py` | Optimized managers |
+| `grooveshop-django-api/src/core/filters/` | Filter mixins, camelCase filters and ordering |
+| `grooveshop-django-api/src/core/pagination/` | Three paginators, one envelope |
+| `grooveshop-django-api/src/core/fields/` | `ImageAndSvgField`, `MeasurementField`, `PlainTextField` |
+| `grooveshop-django-api/src/core/api/permissions.py`, `src/tenant/membership.py` | Permission classes and `is_store_staff` |
+| `grooveshop-django-api/src/meili/models.py` | `IndexMixin`, `MeiliMeta` |
+| `grooveshop-django-api/src/devtools/factories.py` | `CustomDjangoModelFactory` |

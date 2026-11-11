@@ -6,7 +6,7 @@ description: The four superuser-only screens under System → Reconciliation on 
 # Reconciliation
 
 The **System → Reconciliation** menu of a store's admin holds four
-screens, all `IsSuperuserOnlyModelAdmin` (`admin/mixins.py`), so only a
+screens, all `IsSuperuserOnlyModelAdmin` (`src/admin/mixins.py`), so only a
 platform superuser can open them and a store role is refused by URL too.
 Merchants see the effect of these routines on their orders and shipments;
 they ask the platform for anything here through
@@ -19,7 +19,7 @@ This page covers the screens.
 
 ## ACS Pickup Lists
 
-`shipping_acs/admin.py: AcsPickupListAdmin`. One row per list ACS
+`src/shipping_acs/admin.py: AcsPickupListAdmin`. One row per list ACS
 accepted: **Pickup list no**, **Issued at**, **Voucher count**, **Issued
 by** (empty when the 16:30 task issued it). Search by number; every field
 is read-only, and the detail page adds the billing code and ACS's raw
@@ -34,7 +34,7 @@ here, so the person printing labels can reach it.
 
 ## ACS COD Payouts
 
-`shipping_acs/admin.py: AcsCodPayoutAdmin`, a read-only ledger of
+`src/shipping_acs/admin.py: AcsCodPayoutAdmin`, a read-only ledger of
 `AcsCodPayout` rows, one per voucher and payout date.
 
 - Columns: **Voucher no**, **Parcel delivery date**, **COD amount total**,
@@ -69,9 +69,9 @@ unremitted-COD email (03:00, after `ACS_COD_REMITTANCE_ALERT_DAYS`, default
 
 ## Receipt Counter and Credit Counter
 
-`order/admin.py: InvoiceCounterAdmin` and `CreditCounterAdmin`, over
-`order/models/invoice.py: InvoiceCounter` and
-`order/models/retail_credit.py: CreditCounter`. One row per year with
+`src/order/admin.py: InvoiceCounterAdmin` and `CreditCounterAdmin`, over
+`src/order/models/invoice.py: InvoiceCounter` and
+`src/order/models/retail_credit.py: CreditCounter`. One row per year with
 **Year** (unique) and **Next Number**. `allocate()` takes the row with
 `select_for_update()` (creating it on the year's first document), returns
 the current number and stores the next, so concurrent documents never
@@ -88,12 +88,12 @@ gapless.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/admin/navigation.py` | `store_sidebar`, the **System → Reconciliation** menu |
-| `grooveshop-django-api/admin/mixins.py` | `IsSuperuserOnlyModelAdmin` |
-| `grooveshop-django-api/shipping_acs/admin.py` | `AcsPickupListAdmin`, `AcsCodPayoutAdmin`, `UnattributedPayoutFilter`, `ReconciledPayoutFilter`, the shipment actions |
-| `grooveshop-django-api/shipping_acs/services.py` | `reconcile_cod_payout`, `issue_daily_pickup_list` |
-| `grooveshop-django-api/shipping_acs/tasks.py` | `reconcile_acs_cod_payouts`, `alert_unremitted_cod_payouts`, `issue_daily_acs_pickup_list` |
-| `grooveshop-django-api/shipping_acs/attention.py` | `cod_remittance_days`, the dashboard rules |
-| `grooveshop-django-api/order/admin.py` | `InvoiceCounterAdmin`, `CreditCounterAdmin` |
-| `grooveshop-django-api/order/models/invoice.py` | `InvoiceCounter.allocate` |
-| `grooveshop-django-api/order/models/retail_credit.py` | `CreditCounter.allocate` |
+| `grooveshop-django-api/src/admin/navigation.py` | `store_sidebar`, the **System → Reconciliation** menu |
+| `grooveshop-django-api/src/admin/mixins.py` | `IsSuperuserOnlyModelAdmin` |
+| `grooveshop-django-api/src/shipping_acs/admin.py` | `AcsPickupListAdmin`, `AcsCodPayoutAdmin`, `UnattributedPayoutFilter`, `ReconciledPayoutFilter`, the shipment actions |
+| `grooveshop-django-api/src/shipping_acs/services.py` | `reconcile_cod_payout`, `issue_daily_pickup_list` |
+| `grooveshop-django-api/src/shipping_acs/tasks.py` | `reconcile_acs_cod_payouts`, `alert_unremitted_cod_payouts`, `issue_daily_acs_pickup_list` |
+| `grooveshop-django-api/src/shipping_acs/attention.py` | `cod_remittance_days`, the dashboard rules |
+| `grooveshop-django-api/src/order/admin.py` | `InvoiceCounterAdmin`, `CreditCounterAdmin` |
+| `grooveshop-django-api/src/order/models/invoice.py` | `InvoiceCounter.allocate` |
+| `grooveshop-django-api/src/order/models/retail_credit.py` | `CreditCounter.allocate` |

@@ -93,7 +93,7 @@ field `required`, so:
 - **A field added in Django** is harmless until a Zod schema expects it.
   The dangerous case is the cached `tenant_resolve` payload: the storefront
   validated a pre-release cached shape against a Zod that required the new
-  field and answered 404 on every route. `tenant/cache.py:
+  field and answered 404 on every route. `src/tenant/cache.py:
   tenant_resolve_key()` now derives the key from the serializer's field
   names, so a changed shape reads a fresh key.
 
@@ -138,14 +138,14 @@ started at the workspace root; subproject sessions do not see the root
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/settings.py` | `SPECTACULAR_SETTINGS` (camelize hook, enum overrides) |
+| `grooveshop-django-api/src/settings.py` | `SPECTACULAR_SETTINGS` (camelize hook, enum overrides) |
 | `grooveshop-django-api/schema.yml` | Committed Django schema |
-| `grooveshop-django-api/core/utils/serializers.py` | `create_schema_view_config` |
-| `grooveshop-django-api/core/json_schema.py` | `wire_schema` (camelizing published JSON Schemas) |
+| `grooveshop-django-api/src/core/utils/serializers.py` | `create_schema_view_config` |
+| `grooveshop-django-api/src/core/json_schema.py` | `wire_schema` (camelizing published JSON Schemas) |
 | `grooveshop-storefront-ui-node-nuxt/scripts/fetch-schema.mjs` | `pnpm generate:schema` |
 | `grooveshop-storefront-ui-node-nuxt/scripts/sync-schema-yml.mjs` | `pnpm sync:schema` |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | `pnpm openapi-ts` |
 | `grooveshop-storefront-ui-node-nuxt/shared/openapi/types.gen.ts`, `zod.gen.ts` | Generated output |
 | `grooveshop-storefront-ui-node-nuxt/.github/workflows/ci.yml` | `schema-freshness` job |
-| `grooveshop-django-api/tenant/cache.py` | Shape-keyed `tenant_resolve_key` |
+| `grooveshop-django-api/src/tenant/cache.py` | Shape-keyed `tenant_resolve_key` |
 | `.claude/skills/schema-sync/SKILL.md`, `.claude/agents/schema-drift-detector.md` | Workspace-root tooling |

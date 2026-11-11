@@ -34,7 +34,9 @@ pnpm test             # synced reference pages build whatever HTML-looking text 
 
 `sync:sources` expects every GrooveShop repository checked out as a sibling
 of this one (the local monorepo layout); set `GROOVESHOP_WORKSPACE` to point
-elsewhere, and `GROOVESHOP_SOURCES` to read the synced docs from a different
+elsewhere, and `GROOVESHOP_<REPO>_DIR` (`GROOVESHOP_DJANGO_API_DIR`, ...; see
+`scripts/workspace.mjs`) to read one repository from another checkout, such as a
+worktree of an unmerged branch, and `GROOVESHOP_SOURCES` to read the synced docs from a different
 root than the gates read the code from (CI does). Sources are declared in
 `.vitepress/sources.ts`; what a release publishes is pinned in
 `sources.lock.json` (see Deployment).
@@ -57,7 +59,7 @@ These are the quality gate that makes the docs usable by AI agents. They are not
 - **No dependency versions in prose** (workspace rule). Name a major only where it changes how code is written.
 - **Greek is written natively**, never machine-translated, and every Greek admin page has the same path as its English twin under `/el/`. Add a page to both sidebars in the same change.
 - **The admin guide names NOTHING from the codebase.** No file paths, module, class, constant or app-label names, no "built by"/"rendered by" phrasing. The reader is a shop owner. On-screen labels, sidebar paths, admin URLs and the keys listed in Settings → Store Settings are allowed, because the reader sees those. Full rule and rewrite examples in `AUTHORING.md`. Developer pages are the opposite and must cite sources.
-- **Admin how-tos name the sidebar path exactly as Unfold renders it**, e.g. `Sales → Orders` or `Customers → Wholesale → Business Customers`. The store sidebar is built per request in the Django repo's `admin/navigation.py` (`store_sidebar`); the platform console's is `platform_sidebar` in the same module. If a title there changes, the docs change; Greek pages use the title's `msgstr` from `locale/el/LC_MESSAGES/django.po`.
+- **Admin how-tos name the sidebar path exactly as Unfold renders it**, e.g. `Sales → Orders` or `Customers → Wholesale → Business Customers`. The store sidebar is built per request in the Django repo's `src/admin/navigation.py` (`store_sidebar`); the platform console's is `platform_sidebar` in the same module. If a title there changes, the docs change; Greek pages use the title's `msgstr` from `src/locale/el/LC_MESSAGES/django.po`.
 - **Screenshots are optional and never load-bearing.** The text must be correct on its own.
 - **Dead links fail the build.** Keep it that way; the only exemption is the synced `reference/` trees, whose links point at source files in their own repository.
 - **Synced reference pages are read-only here.** Edit them in the owning repository (`grooveshop-django-api/docs/…`); the next build picks them up.

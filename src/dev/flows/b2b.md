@@ -46,7 +46,7 @@ flowchart TD
 
 ### The profile
 
-`b2b/models/profile.py: BusinessProfile` is a one-to-one on the customer
+`src/b2b/models/profile.py: BusinessProfile` is a one-to-one on the customer
 account inside the tenant schema, carrying the Greek invoice requisites
 (`company_name`, `vat_id` normalised to nine digits with no `EL`/`GR` prefix,
 `tax_office`, `activity`), an optional billing address, a frozen VIES
@@ -75,7 +75,7 @@ Identity fields are `company_name`, `vat_id`, `tax_office`, `activity`.
 Address edits keep wholesale access. Leaving suspension is a merchant
 decision, never a self-service edit.
 
-The VIES call (`b2b/vies.py: ViesClient`) runs **before** the row lock so a
+The VIES call (`src/b2b/vies.py: ViesClient`) runs **before** the row lock so a
 five-second upstream timeout never holds a transaction open, and it is
 skipped entirely when identity is unchanged, the last verdict is fresh
 (`VIES_RECHECK_AFTER`), a check has actually happened before, and that
@@ -109,13 +109,13 @@ approval without one.
 
 ### Groups and price lists
 
-`b2b/models/group.py: CustomerGroup` is a wholesale segment with a
+`src/b2b/models/group.py: CustomerGroup` is a wholesale segment with a
 `discount_percent` off the retail **net** (VAT-exclusive) price, an
 `is_active` flag, and a `min_order_value` (VAT-inclusive items total, 0
 disables). It is admin-internal and deliberately not translated — customers
 never see the name outside their own account badge.
 
-`b2b/models/price.py: PriceListItem` is a fixed **net** price for one
+`src/b2b/models/price.py: PriceListItem` is a fixed **net** price for one
 (group, product), unique on that pair, and it **wins over the group's
 percent**. Two guards live on the field and are re-enforced at read time in
 `B2BPricingService._usable_override`, because form validators are bypassed by
@@ -155,7 +155,7 @@ and updated counts plus a per-line error list.
    "clamps a final price from ABOVE (at retail) and from nowhere else".
 
 All rounding is two decimal places, `ROUND_HALF_UP`, through
-`product/models/product.py: _quantize_cents`, the same convention every other
+`src/product/models/product.py: _quantize_cents`, the same convention every other
 money path uses.
 
 ### The binding, and every call site
@@ -180,10 +180,10 @@ that carry an existing context onto a re-materialised instance:
 
 | Where | What it does |
 |---|---|
-| `cart/services.py: CartService._bind_pricing` | Both materialisation methods route through here, so every instance a cart view receives is bound: retrieve, update, destroy, coupon apply and remove, payment-intent creation |
-| `order/services.py` (both order-create paths) | `bind_cart(cart, user)` at the top of the transaction, before any pricing maths |
-| `cart/views/cart.py: _carry_b2b_pricing` (three call sites) | The `for_detail()` reloads exist for prefetching; a fresh instance would price at retail, so the context is transplanted when the primary keys match — and the prefetched items are re-pointed at the bound cart, because `CartItem.objects.for_list()`'s `select_related("cart")` hands every line its own unbound cart |
-| `cart/views/item.py: _repoint_to_bound_cart` (two call sites) | Same problem on the item endpoints, for `get_object` and `list`; only items of the request's own cart are re-pointed, so staff listings of other carts stay untouched |
+| `src/cart/services.py: CartService._bind_pricing` | Both materialisation methods route through here, so every instance a cart view receives is bound: retrieve, update, destroy, coupon apply and remove, payment-intent creation |
+| `src/order/services.py` (both order-create paths) | `bind_cart(cart, user)` at the top of the transaction, before any pricing maths |
+| `src/cart/views/cart.py: _carry_b2b_pricing` (three call sites) | The `for_detail()` reloads exist for prefetching; a fresh instance would price at retail, so the context is transplanted when the primary keys match — and the prefetched items are re-pointed at the bound cart, because `CartItem.objects.for_list()`'s `select_related("cart")` hands every line its own unbound cart |
+| `src/cart/views/item.py: _repoint_to_bound_cart` (two call sites) | Same problem on the item endpoints, for `get_object` and `list`; only items of the request's own cart are re-pointed, so staff listings of other carts stay untouched |
 
 **One path materialises a cart and does not bind.**
 `OrderService.reorder_to_cart`, behind `POST /api/v1/order/{id}/reorder`,
@@ -206,7 +206,7 @@ drift on wholesale reorders, not money lost.
 **A wholesale order's lines keep the group price they were placed at.**
 Lines are priced only at checkout: no admin surface or API route adds a
 line to a placed order or changes one's product, quantity or price (the
-staff `order-items` write routes were removed; `order/urls.py`). See
+staff `order-items` write routes were removed; `src/order/urls.py`). See
 [Order lifecycle](/dev/flows/order-lifecycle#a-placed-order-s-lines-are-a-record).
 
 `CartItem.price` and `CartItem.final_price` read
@@ -232,8 +232,8 @@ Loyalty is covered on its own page; the short version is that
 points basis is the retail price. `suppresses_loyalty(cart)` is true only for
 a cart actually bound to wholesale pricing while the merchant keeps wholesale
 out of the program, and it is applied at payment-intent creation
-(`cart/views/cart.py`) and at the top of both order-create paths
-(`order/services.py`). On the order-create paths it runs before any pricing
+(`src/cart/views/cart.py`) and at the top of both order-create paths
+(`src/order/services.py`). On the order-create paths it runs before any pricing
 maths; at payment-intent creation it runs after promotions, shipping and the
 pay-way fee, but still before the loyalty maths. Either way the verified
 intent amount, the order total and the redemption agree.
@@ -255,7 +255,7 @@ Invoice-at-checkout is **not** behind the B2B plan flag. The comment on
 rather than a foreign key, because guests have no account, the snapshot must
 survive later profile edits, and the tax register attaches to the order row.
 
-`order/serializers/order.py` validates the cross-field rules:
+`src/order/serializers/order.py` validates the cross-field rules:
 
 1. `document_type = INVOICE` while `B2B_INVOICING_ENABLED` is off is
    **rejected**, so the API cannot be used while the UI hides the toggle.
@@ -269,14 +269,14 @@ survive later profile edits, and the tax register attaches to the order row.
 **The platform issues no invoice.** AADE decision Α.1128/2025 art. 1(2)
 requires 1.1 and 5.1 documents, from 2.11.2026, to come from a licensed
 provider or the free timologio app, and an invoice sent over the ERP channel
-counts as not issued. `order/mydata/builder.py` therefore builds 11.1 and 11.4
+counts as not issued. `src/order/mydata/builder.py` therefore builds 11.1 and 11.4
 only, and a `document_type = INVOICE` order never gets an `Invoice` row, a
-PDF, an email or a myDATA submission (`order/invoicing.py: receipt_issuable`
+PDF, an email or a myDATA submission (`src/order/invoicing.py: receipt_issuable`
 refuses it). The order confirmation says an invoice was *requested*.
 
 Staff issue the invoice by hand in timologio. The order admin's
-`OrderAdmin.timologio_summary` (`order/admin.py`) lists the buyer identity and
-the VAT rows of the order, taken from `order/taxation.py`, and four fields on
+`OrderAdmin.timologio_summary` (`src/order/admin.py`) lists the buyer identity and
+the VAT rows of the order, taken from `src/order/taxation.py`, and four fields on
 `Order` record what was issued: `timologio_invoice_number`,
 `timologio_invoice_mark`, `timologio_credit_number`, `timologio_credit_mark`.
 The storefront's checkout fields and the buyer's `billing_*` snapshot are
@@ -348,7 +348,7 @@ points-earned promise and the redemption widget.
 
 - **A wholesale customer sees retail prices on one screen.** Almost always a
   cart instance that was materialised without a binding or without the
-  transplant. Start at `cart/services.py: _bind_pricing` and the two
+  transplant. Start at `src/cart/services.py: _bind_pricing` and the two
   re-pointing helpers.
 - **Preview and charge disagree for a wholesale cart.** Same cause, one step
   later: the preview was bound and the intent was not, or the reverse. Both
@@ -382,25 +382,25 @@ points-earned promise and the redemption widget.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/b2b/models/profile.py` | `BusinessProfile`, VIES snapshot, review fields |
-| `grooveshop-django-api/b2b/models/group.py` | `CustomerGroup`, discount percent, minimum order value |
-| `grooveshop-django-api/b2b/models/price.py` | `PriceListItem`, net override, field guards |
-| `grooveshop-django-api/b2b/enum.py` | `BusinessProfileStatus`, `ViesStatus` |
-| `grooveshop-django-api/b2b/services.py` | Gates, profile workflow, `B2BPricingService`, binding |
-| `grooveshop-django-api/b2b/vies.py` | VIES client and its unavailable path |
-| `grooveshop-django-api/b2b/views.py` | `profile`, `submit_profile`, `prices` and their gates |
-| `grooveshop-django-api/b2b/admin.py` | Approve, reject, suspend, import prices |
-| `grooveshop-django-api/cart/services.py` | `_bind_pricing` — the materialisation hook |
-| `grooveshop-django-api/cart/views/cart.py` | `_carry_b2b_pricing`, minimum-order refusal |
-| `grooveshop-django-api/cart/views/item.py` | `_repoint_to_bound_cart` |
-| `grooveshop-django-api/cart/models/item.py` | `_b2b_resolved`, `price`, `final_price` |
-| `grooveshop-django-api/cart/serializers/cart.py` | The `b2bPricing` payload |
-| `grooveshop-django-api/order/services.py` | Binding, loyalty suppression, minimum gate, metadata marker |
-| `grooveshop-django-api/order/urls.py` | `order-items`: read-only, so a placed wholesale order's lines are never repriced |
-| `grooveshop-django-api/order/models/order.py` | Billing snapshot columns |
-| `grooveshop-django-api/order/serializers/order.py` | Invoice cross-field validation |
-| `grooveshop-django-api/order/admin.py` | `OrderAdmin.timologio_summary`, the `timologio_*` fields |
-| `grooveshop-django-api/tenant/models.py` | `b2b_enabled` and the invoicing exception |
+| `grooveshop-django-api/src/b2b/models/profile.py` | `BusinessProfile`, VIES snapshot, review fields |
+| `grooveshop-django-api/src/b2b/models/group.py` | `CustomerGroup`, discount percent, minimum order value |
+| `grooveshop-django-api/src/b2b/models/price.py` | `PriceListItem`, net override, field guards |
+| `grooveshop-django-api/src/b2b/enum.py` | `BusinessProfileStatus`, `ViesStatus` |
+| `grooveshop-django-api/src/b2b/services.py` | Gates, profile workflow, `B2BPricingService`, binding |
+| `grooveshop-django-api/src/b2b/vies.py` | VIES client and its unavailable path |
+| `grooveshop-django-api/src/b2b/views.py` | `profile`, `submit_profile`, `prices` and their gates |
+| `grooveshop-django-api/src/b2b/admin.py` | Approve, reject, suspend, import prices |
+| `grooveshop-django-api/src/cart/services.py` | `_bind_pricing` — the materialisation hook |
+| `grooveshop-django-api/src/cart/views/cart.py` | `_carry_b2b_pricing`, minimum-order refusal |
+| `grooveshop-django-api/src/cart/views/item.py` | `_repoint_to_bound_cart` |
+| `grooveshop-django-api/src/cart/models/item.py` | `_b2b_resolved`, `price`, `final_price` |
+| `grooveshop-django-api/src/cart/serializers/cart.py` | The `b2bPricing` payload |
+| `grooveshop-django-api/src/order/services.py` | Binding, loyalty suppression, minimum gate, metadata marker |
+| `grooveshop-django-api/src/order/urls.py` | `order-items`: read-only, so a placed wholesale order's lines are never repriced |
+| `grooveshop-django-api/src/order/models/order.py` | Billing snapshot columns |
+| `grooveshop-django-api/src/order/serializers/order.py` | Invoice cross-field validation |
+| `grooveshop-django-api/src/order/admin.py` | `OrderAdmin.timologio_summary`, the `timologio_*` fields |
+| `grooveshop-django-api/src/tenant/models.py` | `b2b_enabled` and the invoicing exception |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/b2b-enabled.ts` | Fail-closed two-tier gate |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useB2BPricing.ts` | Post-hydration price swap |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/account/business/index.vue` | Profile page |

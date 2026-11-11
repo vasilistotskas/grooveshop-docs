@@ -5,7 +5,7 @@ description: "How every GrooveShop REST endpoint behaves: camelCase bodies, auth
 
 # API conventions
 
-Everything is mounted under `api/v1/` from `core/urls.py`, served by DRF
+Everything is mounted under `api/v1/` from `src/core/urls.py`, served by DRF
 ViewSets built on `BaseModelViewSet`, and described by drf-spectacular. The
 Nuxt storefront never calls Django directly from the browser; its server
 routes proxy and validate against the generated contract
@@ -14,14 +14,14 @@ routes proxy and validate against the generated contract
 ## camelCase everywhere
 
 Request and response bodies are camelCase on the wire and snake_case in
-Python. `settings.py` wires `djangorestframework-camel-case` at every
+Python. `src/settings.py` wires `djangorestframework-camel-case` at every
 layer: `CamelCaseJSONRenderer` and `CamelCaseBrowsableAPIRenderer` in
 `DEFAULT_RENDERER_CLASSES`, the three `CamelCase*Parser` classes in
 `DEFAULT_PARSER_CLASSES`, `CamelCaseMiddleWare` in `MIDDLEWARE`, and the
 `camelize_serializer_fields` post-processing hook in
 `SPECTACULAR_SETTINGS`, so the schema is camelCase too. Query parameters
 follow through `CamelCaseFilterMixin` and `CamelCaseOrderingFilter`
-(`core/filters/`). Write `created_at` in Python; the client sends and
+(`src/core/filters/`). Write `created_at` in Python; the client sends and
 receives `createdAt`.
 
 ## Authentication
@@ -46,8 +46,8 @@ authenticators, in this order:
 
 Login, signup, email verification, MFA, passkeys and social providers are
 django-allauth headless, mounted at `_allauth/` outside `i18n_patterns`
-(`core/urls.py`) with `HEADLESS_CLIENTS = ("app",)` and a custom token
-strategy (`core/api/tokens.py: SessionTokenStrategy`). Social providers
+(`src/core/urls.py`) with `HEADLESS_CLIENTS = ("app",)` and a custom token
+strategy (`src/core/api/tokens.py: SessionTokenStrategy`). Social providers
 configured in `TENANT_APPS`: Google, Facebook, GitHub, Discord.
 
 ## Permissions
@@ -64,7 +64,7 @@ routes use `StoreStaffModelPermissions`; object ownership uses
 Throttling is global (`AnonRateThrottle`, `UserRateThrottle`, disabled when
 `DEBUG`) plus named scopes for contact, feedback, attachments, payment,
 cart mutation and order creation (`DEFAULT_THROTTLE_RATES`, applied by the
-classes in `core/api/throttling.py`). `NUM_PROXIES` is 1 because Traefik
+classes in `src/core/api/throttling.py`). `NUM_PROXIES` is 1 because Traefik
 is the single trusted hop.
 
 ## Pagination
@@ -89,7 +89,7 @@ is the same envelope:
 ```
 
 The schema for the envelope comes from each paginator's
-`get_paginated_response_schema()` (`core/pagination/`).
+`get_paginated_response_schema()` (`src/core/pagination/`).
 
 ## Translations
 
@@ -97,7 +97,7 @@ Translatable models expose a `translations` object keyed by language
 code. JSON clients send it as nested JSON; multipart clients (image
 uploads) send `translations.<lang>.<field>` keys, which
 `TranslationsProcessingMixin.process_translations_data()`
-(`core/utils/views.py`) folds back into the nested shape before
+(`src/core/utils/views.py`) folds back into the nested shape before
 validation. The default language translation is required where the
 serializer mixes in `RequiredDefaultTranslationMixin`; other languages are
 optional.
@@ -114,7 +114,7 @@ schema and the runtime agree.
 ## Error shape
 
 `REST_FRAMEWORK["EXCEPTION_HANDLER"]` is
-`core/api/exception_handler.py: exception_handler`. It keeps the body DRF
+`src/core/api/exception_handler.py: exception_handler`. It keeps the body DRF
 gives an error (`{"detail": "..."}` for a plain error, the field keys for
 a validation error) and adds:
 
@@ -137,11 +137,11 @@ raised outside a serializer, and any exception that is not an
 `APIException`, which Django logs as a 500 with no body of ours. The
 OpenAPI schema publishes the shapes as the `ApiError`, `ApiValidationError`,
 `ApiFieldError` and `ApiFieldErrors` components
-(`core/api/schema.py: publish_error_schemas`, a postprocessing hook), and
+(`src/core/api/schema.py: publish_error_schemas`, a postprocessing hook), and
 the storefront's `describeApiError` reads them.
 
 Per operation, the schema still documents non-2xx responses with
-`ErrorResponseSerializer` (`core/api/serializers.py`):
+`ErrorResponseSerializer` (`src/core/api/serializers.py`):
 
 ```python
 class ErrorResponseSerializer(DetailSerializer):
@@ -155,7 +155,7 @@ attaches it to 400, 401, 403, 404 and 500 for every action.
 
 - `@extend_schema_view(**create_schema_view_config(...))` on a ViewSet
   generates one `@extend_schema` per `serializers_config` key from the
-  model's verbose names (`core/utils/serializers.py`).
+  model's verbose names (`src/core/utils/serializers.py`).
 - `@extend_schema(...)` directly on function views and on actions that need
   a bespoke summary, parameters or a binary response.
 - `@extend_schema(exclude=True)` hides infrastructure endpoints such as
@@ -170,12 +170,12 @@ attaches it to 400, 401, 403, 404 and 500 for every action.
 
 The schema itself is served at `/api/v1/schema`, with Swagger UI at
 `/api/v1/schema/swagger-ui` and Redoc at `/api/v1/schema/redoc`
-(`core/urls.py`). Outside `DEBUG` these require authentication
+(`src/core/urls.py`). Outside `DEBUG` these require authentication
 (`SERVE_PERMISSIONS`).
 
 ## Health endpoints
 
-- `GET /api/v1/health` (`core/api/views.py: health_check`) pings the
+- `GET /api/v1/health` (`src/core/api/views.py: health_check`) pings the
   database, Redis and Celery workers and returns
   `{"database": bool, "redis": bool, "celery": bool}`. Suitable for a
   startup gate.
@@ -183,21 +183,21 @@ The schema itself is served at `/api/v1/schema`, with Swagger UI at
   no authentication and no throttle, and is what the Kubernetes probes use
   so a slow dependency can never de-register a healthy worker.
 - The ASGI layer answers `/health/` before Django is involved
-  (`asgi/__init__.py`).
+  (`src/asgi/__init__.py`).
 
 ## WebSocket
 
-`ws/notifications/` (`asgi/__init__.py`) is the only socket. The client
+`ws/notifications/` (`src/asgi/__init__.py`) is the only socket. The client
 first calls `POST /api/v1/notification/websocket/ticket`
-(`notification/views/websocket.py`, `IsAuthenticated`) and connects with
-`?ticket=<token>`; `core/middleware/channels.py: TokenAuthMiddleware`
+(`src/notification/views/websocket.py`, `IsAuthenticated`) and connects with
+`?ticket=<token>`; `src/core/middleware/channels.py: TokenAuthMiddleware`
 consumes the ticket atomically from Redis. Knox tokens and session cookies
 are not accepted on the socket. Groups are `tenant_{schema}_user_{id}`
-(`notification/groups.py`).
+(`src/notification/groups.py`).
 
 ## Versioning
 
-There is one version, `api/v1`, as a URL prefix in `core/urls.py`. There is
+There is one version, `api/v1`, as a URL prefix in `src/core/urls.py`. There is
 no DRF versioning class and no header negotiation. Breaking changes are
 managed through the OpenAPI contract and a coordinated storefront release,
 not a second prefix.
@@ -205,29 +205,29 @@ not a second prefix.
 ## Invariants
 
 - Two `Bearer` authenticators cannot coexist; platform staff use
-  `StaffBearer` (`settings.py`, `tenant/api_tokens.py`).
-- Anonymous writes are opt-in per ViewSet with `AllowAny` (`settings.py`,
+  `StaffBearer` (`src/settings.py`, `src/tenant/api_tokens.py`).
+- Anonymous writes are opt-in per ViewSet with `AllowAny` (`src/settings.py`,
   comment on `DEFAULT_PERMISSION_CLASSES`).
 - The paginated envelope has the same seven keys for all three paginators
-  (`core/pagination/`).
+  (`src/core/pagination/`).
 - Webhook receivers (`stripe/`, `viva-wallet/webhook/`, `boxnow/webhook/`)
   and allauth headless are mounted at the root, outside the locale prefix,
-  on both hosts (`core/urls.py`).
+  on both hosts (`src/core/urls.py`).
 
 ## Source
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/settings.py` | `REST_FRAMEWORK`, `REST_KNOX`, `HEADLESS_*`, `SPECTACULAR_SETTINGS`, `MIDDLEWARE` |
-| `grooveshop-django-api/core/urls.py` | `api/v1/` mounts, schema and health routes, `_allauth/` |
-| `grooveshop-django-api/core/api/tokens.py` | `BoundedTokenAuthentication`, `SessionTokenStrategy` |
-| `grooveshop-django-api/tenant/api_tokens.py` | `PlatformStaffTokenAuthentication` |
-| `grooveshop-django-api/core/api/permissions.py` | Permission classes |
-| `grooveshop-django-api/core/api/throttling.py` | Scoped throttles |
-| `grooveshop-django-api/core/pagination/` | Envelope |
-| `grooveshop-django-api/core/utils/views.py` | Multipart translation folding |
-| `grooveshop-django-api/core/api/exception_handler.py` | The one DRF exception handler: `code` and `fields` |
-| `grooveshop-django-api/core/api/schema.py` | `ERROR_SCHEMAS`, `publish_error_schemas` |
-| `grooveshop-django-api/core/api/serializers.py` | `ErrorResponseSerializer`, `HealthCheckResponseSerializer` |
-| `grooveshop-django-api/core/api/views.py` | `health_check`, `health_live`, `unpaginated_actions` |
-| `grooveshop-django-api/notification/views/websocket.py`, `core/middleware/channels.py` | WebSocket ticket and auth |
+| `grooveshop-django-api/src/settings.py` | `REST_FRAMEWORK`, `REST_KNOX`, `HEADLESS_*`, `SPECTACULAR_SETTINGS`, `MIDDLEWARE` |
+| `grooveshop-django-api/src/core/urls.py` | `api/v1/` mounts, schema and health routes, `_allauth/` |
+| `grooveshop-django-api/src/core/api/tokens.py` | `BoundedTokenAuthentication`, `SessionTokenStrategy` |
+| `grooveshop-django-api/src/tenant/api_tokens.py` | `PlatformStaffTokenAuthentication` |
+| `grooveshop-django-api/src/core/api/permissions.py` | Permission classes |
+| `grooveshop-django-api/src/core/api/throttling.py` | Scoped throttles |
+| `grooveshop-django-api/src/core/pagination/` | Envelope |
+| `grooveshop-django-api/src/core/utils/views.py` | Multipart translation folding |
+| `grooveshop-django-api/src/core/api/exception_handler.py` | The one DRF exception handler: `code` and `fields` |
+| `grooveshop-django-api/src/core/api/schema.py` | `ERROR_SCHEMAS`, `publish_error_schemas` |
+| `grooveshop-django-api/src/core/api/serializers.py` | `ErrorResponseSerializer`, `HealthCheckResponseSerializer` |
+| `grooveshop-django-api/src/core/api/views.py` | `health_check`, `health_live`, `unpaginated_actions` |
+| `grooveshop-django-api/src/notification/views/websocket.py`, `src/core/middleware/channels.py` | WebSocket ticket and auth |

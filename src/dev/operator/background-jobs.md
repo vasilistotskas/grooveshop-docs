@@ -10,7 +10,7 @@ platform console, and that is the point: one Celery schedule drives every
 store, one failure list covers the estate, one set of countries and regions
 is shared by all of them. None of it is a merchant's to see or change, and
 each screen is withheld from a store host by
-`WithheldOnTenantHostModelAdmin` (`admin/mixins.py`) as well as by the role
+`WithheldOnTenantHostModelAdmin` (`src/admin/mixins.py`) as well as by the role
 scopes that never grant a store operator a permission on a platform app.
 
 For the mechanics behind the schedule — the app factory, `TenantTask`,
@@ -21,17 +21,17 @@ screens.
 ## Periodic Tasks
 
 <span class="sidebar-path">Background Jobs → Periodic Tasks</span> is
-`scheduler/admin.py: PeriodicTaskAdmin`. It is for reading the schedule,
+`src/scheduler/admin.py: PeriodicTaskAdmin`. It is for reading the schedule,
 switching an entry off or on, and running one by hand. Nothing else can be
 edited, and a row cannot be added or deleted.
 
 The full reference is the Django repository's `docs/scheduler.md`. In short:
 
-- **The schedule is code.** `get_celery_beat_schedule()` in `settings.py` declares
+- **The schedule is code.** `get_celery_beat_schedule()` in `src/settings.py` declares
   every entry, and most fall back to hourly when `DEBUG` is on. To change when a
   job runs, change it there and deploy. To remove a job, remove its entry.
 - **A row is state.** `scheduler.PeriodicTask` holds whether an entry is on, when
-  it last ran and how many times. `scheduler/beat.py: CodeOwnedScheduler`, a
+  it last ran and how many times. `src/scheduler/beat.py: CodeOwnedScheduler`, a
   `celery.beat.Scheduler` subclass and the value of `CELERY_BEAT_SCHEDULER`,
   deletes every row the declaration does not name when it starts. So a database
   cloned from production sheds production's extra entries at the next beat start.
@@ -41,7 +41,7 @@ The full reference is the Django repository's `docs/scheduler.md`. In short:
 
 ### When it fires
 
-Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `settings.py` reads
+Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `src/settings.py` reads
 `TIME_ZONE`, default `Europe/Athens`, with `CELERY_ENABLE_UTC = True`.
 
 - **A restart loses nothing.** Beat runs as one pod with the `Recreate` strategy
@@ -79,7 +79,7 @@ changelist. Two facts govern how to read it.
 
 ### Only failures are stored
 
-`settings.py` sets:
+`src/settings.py` sets:
 
 ```python
 CELERY_TASK_IGNORE_RESULT = True
@@ -95,7 +95,7 @@ falls back to `store_errors_even_if_ignored` *precisely* when a task is
 ignored, so the row is still written — with the traceback, and with the
 task name and arguments because `CELERY_RESULT_EXTENDED = True`.
 
-The reason is stated in `settings.py`: nothing in this codebase reads a
+The reason is stated in `src/settings.py`: nothing in this codebase reads a
 task's return value — no `AsyncResult`, no `.get()`, no chord, no group —
 so every stored success was write amplification nobody consumed. Failures are worth keeping durably and queryably, because a silent
 failure here is an order confirmation nobody receives or a courier voucher that
@@ -107,7 +107,7 @@ than `.apply()`, which hard-codes `ignore_result: False` and so could never
 observe the behaviour.
 
 The result backend is `core.result_backend.TenantDatabaseBackend`, fixed by
-`CELERY_RESULT_BACKEND` in `settings.py`, and **no Deployment overrides it**.
+`CELERY_RESULT_BACKEND` in `src/settings.py`, and **no Deployment overrides it**.
 All four backend containers in
 `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`
 carry an explicit comment saying so.
@@ -121,7 +121,7 @@ can read every store's in one list, and `celery.backend_cleanup` — which
 beat dispatches with no tenant header, so it runs in `public` — can
 actually prune it. Per-tenant tables would be written by tenant-context
 tasks, invisible here, and never cleaned.
-`tenant/migrations/0039_drop_tenant_celery_result_tables.py` drops the ones
+`src/tenant/migrations/0039_drop_tenant_celery_result_tables.py` drops the ones
 an earlier `TENANT_APPS` entry created, and
 `tests_mt/test_celery_results_are_public_only.py` asserts a newly
 provisioned tenant never grows its own copy.
@@ -132,7 +132,7 @@ It means **no task has failed inside the retention window**, which is
 `CELERY_RESULT_EXPIRES = 30 days`. It does not mean nothing ran: successes
 were never written. "Did the nightly job run at all?" is answered by
 `PeriodicTask.last_run_at` on the Periodic Tasks screen, or by
-`MonitoredTask`'s own success log line (`core/tasks.py`) — never from this
+`MonitoredTask`'s own success log line (`src/core/tasks.py`) — never from this
 table.
 
 Pruning is `celery.backend_cleanup`, which Celery's scheduler installs on
@@ -142,7 +142,7 @@ on the Periodic Tasks screen even though it is not in
 
 **Group Results** is the sibling table for `GroupResult` rows. Nothing in
 this codebase constructs a `group()` or a `chord()` — the only `chain()` is
-in `core/tasks.py` and links an immutable `.si()` signature that celery
+in `src/core/tasks.py` and links an immutable `.si()` signature that celery
 dispatches from `task_request.chain` without touching the backend — so that
 list stays empty. If a chord or group is ever added it needs real results:
 set `ignore_result=False` on that task rather than flipping the global
@@ -151,7 +151,7 @@ setting.
 ## Cache Purge Log
 
 <span class="sidebar-path">Platform → Cache Purge Log</span> is one row per purge, written by
-`CacheService.purge()` (`core/cache/service.py: _log_audit`) on every call,
+`CacheService.purge()` (`src/core/cache/service.py: _log_audit`) on every call,
 dry runs included.
 
 | Column | From |
@@ -171,8 +171,8 @@ and never fails the purge it records.
 
 The purge itself is a **store** operation. **Cache Management** is reached
 from the store sidebar's **Settings → Cache** entry
-(`admin/navigation.py: store_sidebar` → `admin:clear-cache`, served by
-`MyAdminSite.clear_cache_view` in `admin/admin.py`), and that page shows
+(`src/admin/navigation.py: store_sidebar` → `admin:clear-cache`, served by
+`MyAdminSite.clear_cache_view` in `src/admin/admin.py`), and that page shows
 the twenty most recent log rows inline so the operator sees the effect of
 what they just did.
 
@@ -193,7 +193,7 @@ Which surfaces exist, what each one matches and when to purge is
 
 Three tables under **Platform** are shared by every store. A merchant can
 reach none of them: `country`, `region` and `sites` are all in
-`PLATFORM_ONLY_APP_LABELS` (`tenant/role_scopes.py`), so no role ever
+`PLATFORM_ONLY_APP_LABELS` (`src/tenant/role_scopes.py`), so no role ever
 receives a permission on them, and all three are `SHARED_APPS`-only, so
 `WithheldOnTenantHostModelAdmin` also removes them from a store host. The
 role-scope comment states the reason for the first two plainly:
@@ -202,14 +202,14 @@ it changes it for all".
 
 ### Countries
 
-`country/models.py: Country` — a translatable, sortable model keyed by
+`src/country/models.py: Country` — a translatable, sortable model keyed by
 **`alpha_2` as the primary key** (uppercased in `save()`), with `alpha_3`,
 `iso_cc`, an optional `phone_code`, a flag image and a translated `name`
 (el / en / de through django-parler).
 
 What reads it: `user.Address.country` and `Order.country` are foreign keys
 into this table from inside every tenant schema
-(`user/models/address.py`, `order/models/order.py`), both
+(`src/user/models/address.py`, `src/order/models/order.py`), both
 `on_delete=SET_NULL`.
 
 What breaks when a row is wrong:
@@ -226,7 +226,7 @@ What breaks when a row is wrong:
 
 ### Regions
 
-`region/models.py: Region` — keyed by `alpha`, with a mandatory
+`src/region/models.py: Region` — keyed by `alpha`, with a mandatory
 `country` foreign key (`on_delete=CASCADE`) and a translated `name`.
 `Address.region` and `Order.region` point at it, again `SET_NULL`.
 
@@ -244,20 +244,20 @@ estate — which is exactly why opening it on a store host would show that
 merchant every other store's domain, the second case named in the
 withholding mixin's docstring.
 
-Rows are minted at provisioning by `tenant/provisioning.py: ensure_site()`,
+Rows are minted at provisioning by `src/tenant/provisioning.py: ensure_site()`,
 a `get_or_create` on the tenant's primary domain that never rewrites an
 existing row's name (an operator may have set it deliberately) and returns
 `None` when the tenant has no primary domain yet.
 
 What it controls: `TenantSocialAccountAdapter.get_app()`
-(`tenant/allauth_adapter.py`) resolves a **per-tenant `SocialApp`** by
+(`src/tenant/allauth_adapter.py`) resolves a **per-tenant `SocialApp`** by
 finding the Site whose `domain` matches the tenant's primary domain, then
 filtering `SocialApp` on it.
 
 What breaks when a row is missing or wrong:
 
 - **No Site for the domain** — the lookup always misses and the adapter
-  falls back to the platform-wide OAuth credentials from `settings.py`. The
+  falls back to the platform-wide OAuth credentials from `src/settings.py`. The
   merchant fills in their own client id and secret and nothing uses them;
   there is no error.
 - **A `SocialApp` attached to the auto-created `example.com` (pk 1)** —
@@ -266,7 +266,7 @@ What breaks when a row is missing or wrong:
   breaking social login for that provider on that tenant. `ensure_site`
   exists partly to remove that latent 500.
 
-`SITE_ID` defaults to `1` (`settings.py`), which is the auto-created
+`SITE_ID` defaults to `1` (`src/settings.py`), which is the auto-created
 `example.com` row — so anything that resolves the "current" site by that
 setting gets a row belonging to no store. First-party code never does:
 the only two places that query `Site` at all are `ensure_site` and the
@@ -282,7 +282,7 @@ half.
   queued still runs. Beat reloads the change at its next wake-up, about a minute
   at most with the every-minute entries, and sends nothing more for that entry.
 - **A row disappeared.** Its name is not in `get_celery_beat_schedule()` for
-  this environment, so `scheduler/beat.py` deleted it when beat started.
+  this environment, so `src/scheduler/beat.py` deleted it when beat started.
 - **Task Results is empty and you expected history.** It only ever holds
   failures, for 30 days. Read `last_run_at` for "did it run".
 - **Task Results is empty on a tenant host.** You are looking in the wrong
@@ -308,21 +308,21 @@ half.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/scheduler/beat.py` | The scheduler: deletes undeclared rows, saves runs, follows the switches |
-| `grooveshop-django-api/scheduler/models.py` | `PeriodicTask`, `switch_on`, `switch_off` |
-| `grooveshop-django-api/scheduler/admin.py` | `PeriodicTaskAdmin` and its actions |
-| `grooveshop-django-api/settings.py` | `get_celery_beat_schedule()`, `SCHEDULE_PRESETS`, `CELERY_BEAT_SCHEDULER`, `CELERY_TASK_IGNORE_RESULT`, `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED`, `CELERY_RESULT_EXPIRES`, `CELERY_RESULT_EXTENDED`, `SHARED_APPS`/`TENANT_APPS`, `SITE_ID` |
-| `grooveshop-django-api/core/admin.py` | `CachePurgeLogAdmin`, `override_third_party_admins()` |
-| `grooveshop-django-api/core/celery.py` | App factory |
+| `grooveshop-django-api/src/scheduler/beat.py` | The scheduler: deletes undeclared rows, saves runs, follows the switches |
+| `grooveshop-django-api/src/scheduler/models.py` | `PeriodicTask`, `switch_on`, `switch_off` |
+| `grooveshop-django-api/src/scheduler/admin.py` | `PeriodicTaskAdmin` and its actions |
+| `grooveshop-django-api/src/settings.py` | `get_celery_beat_schedule()`, `SCHEDULE_PRESETS`, `CELERY_BEAT_SCHEDULER`, `CELERY_TASK_IGNORE_RESULT`, `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED`, `CELERY_RESULT_EXPIRES`, `CELERY_RESULT_EXTENDED`, `SHARED_APPS`/`TENANT_APPS`, `SITE_ID` |
+| `grooveshop-django-api/src/core/admin.py` | `CachePurgeLogAdmin`, `override_third_party_admins()` |
+| `grooveshop-django-api/src/core/celery.py` | App factory |
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | `GrooveShopBeatSilent` |
-| `grooveshop-django-api/core/cache/models.py` | `CachePurgeLog` |
-| `grooveshop-django-api/core/cache/service.py` | `CacheService.purge`, `_log_audit` |
-| `grooveshop-django-api/admin/admin.py` | `clear_cache_view` (**Cache Management**) and its recent-log panel |
-| `grooveshop-django-api/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin` |
-| `grooveshop-django-api/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS` |
-| `grooveshop-django-api/tenant/app_labels.py` | `shared_only_app_labels()` — what "platform-side" is derived from |
-| `grooveshop-django-api/country/models.py`, `region/models.py` | `Country`, `Region` |
-| `grooveshop-django-api/tenant/provisioning.py` | `ensure_site()` |
-| `grooveshop-django-api/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app()` |
+| `grooveshop-django-api/src/core/cache/models.py` | `CachePurgeLog` |
+| `grooveshop-django-api/src/core/cache/service.py` | `CacheService.purge`, `_log_audit` |
+| `grooveshop-django-api/src/admin/admin.py` | `clear_cache_view` (**Cache Management**) and its recent-log panel |
+| `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin` |
+| `grooveshop-django-api/src/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS` |
+| `grooveshop-django-api/src/tenant/app_labels.py` | `shared_only_app_labels()` — what "platform-side" is derived from |
+| `grooveshop-django-api/src/country/models.py`, `src/region/models.py` | `Country`, `Region` |
+| `grooveshop-django-api/src/tenant/provisioning.py` | `ensure_site()` |
+| `grooveshop-django-api/src/tenant/allauth_adapter.py` | `TenantSocialAccountAdapter.get_app()` |
 | `grooveshop-django-api/tests/integration/core/test_celery_result_storage.py` | Pins failures-only storage |
 | `grooveshop-infrastructure/.../base/backend.yaml` | The four "no `CELERY_RESULT_BACKEND` override" comments |
