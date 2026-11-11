@@ -30,7 +30,7 @@ Search looks in the comment text, the commenter's name and email, and the post t
 The post updates on its own within about ten seconds.
 
 ### Erase spam
-Select the comments and choose **Mark as spam and delete**. They are erased for good, with all their replies. This cannot be undone; if in doubt, just hide the comment.
+Select the comments and choose **Mark as spam and delete**. They are erased for good, with all their replies. This cannot be undone; if in doubt, just hide the comment. Only Owners and Admins see this action, because Staff cannot delete (see [Roles & team](/admin/getting-started/roles-and-team)).
 
 ### Bring a hidden comment back
 Filter **Approved** to "No", select the comment and choose **Approve selected comments**.
