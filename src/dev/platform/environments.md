@@ -36,7 +36,7 @@ server: the project has no WSGI module, so it falls back to Django's
 default WSGI handler and serves no WebSocket. The worker must consume the
 `meilisearch` queue as well as `celery`, or search-index tasks never run.
 
-Configuration is a single `.env` read by `settings.py`; `SYSTEM_ENV` is
+Configuration is a single `.env` read by `src/settings.py`; `SYSTEM_ENV` is
 `dev`, `staging`, `production` or `ci`. Every request needs a tenant: `localhost`
 must exist as a `TenantDomain` row (`server/utils/tenant.ts` strips the
 port before resolving), so create the platform row and a store, then

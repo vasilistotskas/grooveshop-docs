@@ -114,7 +114,7 @@ placeholders may be present at build time. The same applies to any
 - **`SECRET_KEY`**: seal the old value as `SECRET_KEY_FALLBACK`, deploy,
   seal the new `SECRET_KEY`, deploy, remove the fallback once sessions,
   Knox tokens, password-reset links and signed cookies have re-issued.
-  `settings.py` reads both.
+  `src/settings.py` reads both.
 - **The sealing key itself**: the controller's active RSA key in the
   `sealed-secrets` namespace is the one secret that decrypts every other.
   Export it with `scripts/export-sealed-secrets-key.sh` into an encrypted
@@ -130,7 +130,7 @@ placeholders may be present at build time. The same applies to any
 - `untracked/` is gitignored; `seal.sh` reads from it and writes into the
   overlay (`.gitignore`, `untracked/secrets/seal.sh`).
 - The backend refuses to start in production without `SECRET_KEY` and
-  `CELERY_BROKER_URL` (`settings.py`); Flower refuses to start without
+  `CELERY_BROKER_URL` (`src/settings.py`); Flower refuses to start without
   `FLOWER_BASIC_AUTH` (`base/backend.yaml`).
 - Merchant credentials have no env fallback (`src/tenant/credentials.py`).
 - Purge and internal-admin tokens are used only from inside the cluster.

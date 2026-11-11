@@ -14,7 +14,7 @@ data is dispatched into each tenant schema by a fan-out wrapper.
 ## The app (`src/core/celery.py`)
 
 `create_celery_app()` builds `Celery("core")` and loads the `CELERY_*`
-namespace from `settings.py`, where every Celery option lives. Add options
+namespace from `src/settings.py`, where every Celery option lives. Add options
 there, because a `conf.update()` here would not win: `config_from_object` with
 `namespace="CELERY"` resolves the prefixed key from every configuration source
 before a bare lowercase one, whatever the call order. The task time limits are
@@ -74,7 +74,7 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   the operator-generated `backend-message-broker-default-user` secret
   (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`).
   Workers consume the `celery` and `meilisearch` queues.
-- Results: `CELERY_RESULT_BACKEND` is fixed in `settings.py` to
+- Results: `CELERY_RESULT_BACKEND` is fixed in `src/settings.py` to
   `core.result_backend.TenantDatabaseBackend`, the database backend plus the
   store a failure belongs to. `django_celery_results` is in `SHARED_APPS` **only**, and `TENANT_APPS`
   carries a comment saying it is deliberately absent: task results are
@@ -86,7 +86,7 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   **No Deployment overrides the backend** — `base/backend.yaml` carries an
   explicit comment saying so on all four backend containers, because the
   results used to go to Redis DB 1 and shared one `allkeys-lru` budget
-  with the Django cache. `settings.py` then narrows what gets
+  with the Django cache. `src/settings.py` then narrows what gets
   written: `CELERY_TASK_IGNORE_RESULT` with
   `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` keeps failures and drops
   successes.
@@ -124,7 +124,7 @@ the empty public schema and report success.
 
 ## Scheduled jobs
 
-From `settings.py: get_celery_beat_schedule()`, one row per entry in the
+From `src/settings.py: get_celery_beat_schedule()`, one row per entry in the
 order the settings declare them. Times are Athens local. A cadence marked
 † falls back to hourly when `DEBUG` is on; the others run on the same
 schedule everywhere. **Runs in** says where the work happens: `public` (beat

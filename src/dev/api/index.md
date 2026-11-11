@@ -21,7 +21,7 @@ Served by the API itself on every tenant's API host:
 | ReDoc | `https://<api-host>/api/v1/schema/redoc` |
 
 Outside `DEBUG` the schema endpoints require an authenticated session or
-token (`settings.py: SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"]`). The
+token (`src/settings.py: SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"]`). The
 committed copy is `grooveshop-django-api/schema.yml`, regenerated with:
 
 ```bash
@@ -51,7 +51,7 @@ inside the cluster). There is no tenant parameter.
 
 - **camelCase bodies and query parameters.** Django works in snake_case;
   `djangorestframework-camel-case` renders, parses and converts filter
-  names on the way in and out (`settings.py: REST_FRAMEWORK`
+  names on the way in and out (`src/settings.py: REST_FRAMEWORK`
   renderer and parser classes; `src/core/filters/` camel-case mixins).
 - **Pagination.** `?paginationType=` selects `pageNumber` (default),
   `cursor` or `limitOffset` (`src/core/pagination/`). Every strategy returns

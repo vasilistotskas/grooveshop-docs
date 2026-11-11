@@ -359,7 +359,7 @@ index in place.
 
 ### The search key
 
-`settings.py` reads `MEILI_SEARCH_KEY` into `MEILISEARCH["SEARCH_KEY"]`, and
+`src/settings.py` reads `MEILI_SEARCH_KEY` into `MEILISEARCH["SEARCH_KEY"]`, and
 `src/meili/_settings.py` falls back to the master key when it is unset so local
 and CI keep working. The `Client` builds two engine clients: a master-key
 one for administration and indexing, and a read-only `search_client` for

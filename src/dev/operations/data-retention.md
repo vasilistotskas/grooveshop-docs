@@ -13,7 +13,7 @@ ORM so cascades and file-removal signals still run. The code wins over this
 page.
 
 Source: `src/core/retention.py`, `src/core/tasks.py`, `src/core/history.py`,
-`src/tenant/tasks.py` (the `fanout_purge_*` wrappers), `settings.py`
+`src/tenant/tasks.py` (the `fanout_purge_*` wrappers), `src/settings.py`
 (`CELERY_BEAT_SCHEDULE`, the retention constants, `EXTRA_SETTINGS_DEFAULTS`),
 `src/shipping_acs/tasks.py`, `src/shipping_acs/models/voucher_hold.py`,
 `src/shipping_acs/voucher_hold.py`, `src/shipping_boxnow/tasks.py`,
@@ -62,7 +62,7 @@ shipment is in a terminal state (`shipping_acs.enum.shipment_state.TERMINAL_STAT
 is also the replay guard for that webhook, so replay protection does not rest
 on the rows alone: `BoxNowService.apply_webhook_event` ignores an event whose
 HMAC-signed `data.time` is older than `BOXNOW_WEBHOOK_MAX_EVENT_AGE_DAYS`
-(env, 90 days), and `settings.py` refuses a window that is not shorter than
+(env, 90 days), and `src/settings.py` refuses a window that is not shorter than
 `CARRIER_TRACKING_EVENT_RETENTION_DAYS`. Every event the window admits still
 meets its row, because a row lives at least that period from the event.
 
@@ -108,7 +108,7 @@ are the record of each outage.
    `include_suspended=True` when the table is per store; a public-schema table
    gets its own beat entry and an entry in
    `PUBLIC_SCHEMA_TASKS` (`tests/unit/tenant/test_celery_fanout.py`).
-3. A beat entry in `settings.py`, a platform env constant or a store setting
+3. A beat entry in `src/settings.py`, a platform env constant or a store setting
    in `EXTRA_SETTINGS_DEFAULTS`, and a row in the table above (and in the
    admin guide's *Automatic tasks* page when a store owner can see the data).
 4. A test for the batch, the boundary and, for a store setting, one store's

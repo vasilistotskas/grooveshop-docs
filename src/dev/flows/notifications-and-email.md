@@ -547,7 +547,7 @@ by a key that drifts back into `backend-secrets`. Since Django 6.1 those
 `EMAIL_*` variables fill `settings.MAILERS` rather than Django's `EMAIL_*`
 settings: the `default` mailer, `core.mail.DemoRecipientSuppressingBackend`,
 hands every send to the `relay` mailer, whose options they set
-(`settings.py`). The variable names did not change.
+(`src/settings.py`). The variable names did not change.
 
 Three details are counter-intuitive enough to be worth stating, each of
 which cost a production incident:
@@ -559,18 +559,18 @@ which cost a production incident:
   byte, with none of the plaintext-EHLO or STARTTLS-stripping surface that
   moving to 587 would have introduced. `EMAIL_USE_SSL=True` and
   `EMAIL_USE_TLS=False` are both set explicitly, because Django treats
-  them as mutually exclusive and `settings.py` refuses to boot if both are
+  them as mutually exclusive and `src/settings.py` refuses to boot if both are
   on.
 - **`EMAIL_TIMEOUT` must be set.** Django's default is `None`, meaning no
   socket timeout at all: a relay that accepts the connection and then goes
   quiet blocks the Celery worker that ran the send, forever, with nothing
-  in the logs and no failed task result. `settings.py` defaults it to 20s
+  in the logs and no failed task result. `src/settings.py` defaults it to 20s
   so no deployment can inherit the `None`. The Resend request uses the same
   value (`EMAIL_SEND_TIMEOUT`) as its connect and read timeout. Both bound
   each wait, not the whole message: a relay that keeps sending bytes slowly
   can run past it.
 - **The relay credential is a boot dependency of every management
-  command.** `settings.py` raises `ImproperlyConfigured` when
+  command.** `src/settings.py` raises `ImproperlyConfigured` when
   `EMAIL_HOST_PASSWORD` is still `changeme` under
   `SYSTEM_ENV=production`, so the Argo PreSync hook — which sends no mail —
   names the `resend-smtp` Secret explicitly. It used to receive the

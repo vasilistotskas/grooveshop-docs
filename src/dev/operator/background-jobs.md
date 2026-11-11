@@ -27,7 +27,7 @@ edited, and a row cannot be added or deleted.
 
 The full reference is the Django repository's `docs/scheduler.md`. In short:
 
-- **The schedule is code.** `get_celery_beat_schedule()` in `settings.py` declares
+- **The schedule is code.** `get_celery_beat_schedule()` in `src/settings.py` declares
   every entry, and most fall back to hourly when `DEBUG` is on. To change when a
   job runs, change it there and deploy. To remove a job, remove its entry.
 - **A row is state.** `scheduler.PeriodicTask` holds whether an entry is on, when
@@ -41,7 +41,7 @@ The full reference is the Django repository's `docs/scheduler.md`. In short:
 
 ### When it fires
 
-Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `settings.py` reads
+Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `src/settings.py` reads
 `TIME_ZONE`, default `Europe/Athens`, with `CELERY_ENABLE_UTC = True`.
 
 - **A restart loses nothing.** Beat runs as one pod with the `Recreate` strategy
@@ -79,7 +79,7 @@ changelist. Two facts govern how to read it.
 
 ### Only failures are stored
 
-`settings.py` sets:
+`src/settings.py` sets:
 
 ```python
 CELERY_TASK_IGNORE_RESULT = True
@@ -95,7 +95,7 @@ falls back to `store_errors_even_if_ignored` *precisely* when a task is
 ignored, so the row is still written — with the traceback, and with the
 task name and arguments because `CELERY_RESULT_EXTENDED = True`.
 
-The reason is stated in `settings.py`: nothing in this codebase reads a
+The reason is stated in `src/settings.py`: nothing in this codebase reads a
 task's return value — no `AsyncResult`, no `.get()`, no chord, no group —
 so every stored success was write amplification nobody consumed. Failures are worth keeping durably and queryably, because a silent
 failure here is an order confirmation nobody receives or a courier voucher that
@@ -107,7 +107,7 @@ than `.apply()`, which hard-codes `ignore_result: False` and so could never
 observe the behaviour.
 
 The result backend is `core.result_backend.TenantDatabaseBackend`, fixed by
-`CELERY_RESULT_BACKEND` in `settings.py`, and **no Deployment overrides it**.
+`CELERY_RESULT_BACKEND` in `src/settings.py`, and **no Deployment overrides it**.
 All four backend containers in
 `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`
 carry an explicit comment saying so.
@@ -257,7 +257,7 @@ filtering `SocialApp` on it.
 What breaks when a row is missing or wrong:
 
 - **No Site for the domain** — the lookup always misses and the adapter
-  falls back to the platform-wide OAuth credentials from `settings.py`. The
+  falls back to the platform-wide OAuth credentials from `src/settings.py`. The
   merchant fills in their own client id and secret and nothing uses them;
   there is no error.
 - **A `SocialApp` attached to the auto-created `example.com` (pk 1)** —
@@ -266,7 +266,7 @@ What breaks when a row is missing or wrong:
   breaking social login for that provider on that tenant. `ensure_site`
   exists partly to remove that latent 500.
 
-`SITE_ID` defaults to `1` (`settings.py`), which is the auto-created
+`SITE_ID` defaults to `1` (`src/settings.py`), which is the auto-created
 `example.com` row — so anything that resolves the "current" site by that
 setting gets a row belonging to no store. First-party code never does:
 the only two places that query `Site` at all are `ensure_site` and the

@@ -625,7 +625,7 @@ only.
 #### Unknown outcomes
 
 A provider attempt still `PENDING` after `REFUND_RECONCILE_AFTER_MINUTES`
-(`settings.py`, an env setting, default 60; it must stay under the 24 hours
+(`src/settings.py`, an env setting, default 60; it must stay under the 24 hours
 Stripe remembers an idempotency key) is **overdue**
 (`src/order/models/refund_attempt.py: reconcile_after`,
 `RefundAttempt.objects.overdue()`, `RefundAttempt.is_overdue`). The window
@@ -916,7 +916,7 @@ of [Order system](/dev/django/reference/order-system).
 ### Auto-cancel of stuck pending orders
 
 `src/order/tasks.py: auto_cancel_stuck_pending_orders` runs every 15 minutes
-through the tenant fanout (`settings.py`, beat entry
+through the tenant fanout (`src/settings.py`, beat entry
 `auto-cancel-stuck-pending-orders`). Two buckets, and only the second is
 restricted to online settlement:
 
@@ -941,7 +941,7 @@ open for its webhook. After each sweep, `ORDER_UNPAID_ONLINE_ALERT_THRESHOLD`
 (default 25, `0` off) or more still-unpaid online orders log
 `orders:unpaid_online_spike` at WARNING.
 
-Both windows are `EXTRA_SETTINGS_DEFAULTS` rows (`settings.py`), read
+Both windows are `EXTRA_SETTINGS_DEFAULTS` rows (`src/settings.py`), read
 through `Setting.get`, so a merchant can change them without a deploy.
 
 Collect-on-delivery orders are excluded from the **never-completed**

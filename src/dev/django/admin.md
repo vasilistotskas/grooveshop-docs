@@ -20,7 +20,7 @@ URLs, dashboards, sidebars or settings blocks.
 | Class | `src/admin/admin.py: MyAdminSite` | `src/admin/platform_site.py: PlatformAdminSite` |
 | Instance name | `admin` | `platform_admin` |
 | Mounted by | `src/core/urls.py` (`ROOT_URLCONF`, locale-prefixed `admin/`) | `src/tenant/urls_public.py` (`PUBLIC_SCHEMA_URLCONF`, locale-prefixed `admin/`) |
-| Unfold settings | `UNFOLD` in `settings.py` | `UNFOLD_PLATFORM` (`settings_name = "UNFOLD_PLATFORM"`) |
+| Unfold settings | `UNFOLD` in `src/settings.py` | `UNFOLD_PLATFORM` (`settings_name = "UNFOLD_PLATFORM"`) |
 | Dashboard | `admin/index.html`, widgets in `src/admin/dashboard/store/` | `admin/platform_index.html`, widgets in `src/admin/dashboard/platform.py` |
 | Who passes `has_permission` | a platform-staff session with an active staff-capable `UserTenantMembership` in the current tenant, or a superuser | a platform-staff session that is a superuser |
 

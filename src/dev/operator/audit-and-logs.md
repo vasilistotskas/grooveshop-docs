@@ -32,7 +32,7 @@ merchant what to ask for is
 | User Data Exports | `user.UserDataExport` | `src/user/services/gdpr.py`, `src/user/tasks.py` | none; the customer downloads from the storefront |
 
 The order changelist also carries **Stock Logs** and **Order History** tabs
-in its `UNFOLD["TABS"]` group (`settings.py`), each with
+in its `UNFOLD["TABS"]` group (`src/settings.py`), each with
 `"permission": "admin.permissions.is_superuser"`, so they render for
 platform staff only.
 

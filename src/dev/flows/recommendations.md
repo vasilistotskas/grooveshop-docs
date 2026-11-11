@@ -260,7 +260,7 @@ kinds with `keepalive: true` and swallows failures. The Nuxt proxy
 the storage driver's default is the hour-long cache TTL and would silently
 widen the window — and forwards the cart headers so the event carries the
 same identity the basket does. Django throttles the same endpoint
-independently at 120 per minute (`recommendation_event` in `settings.py`),
+independently at 120 per minute (`recommendation_event` in `src/settings.py`),
 so the proxy limit is the one that bites first.
 
 ### Carried-impression attribution

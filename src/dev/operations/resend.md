@@ -14,7 +14,7 @@ is made; staging stays on Mailpit. The code wins over this page.
 Source: `src/emails/transport.py`, `src/emails/resend.py`, `src/emails/sender.py`
 (`own_sender`), `src/tenant/credentials.py` (`tenant_resend_api_key`),
 `src/tenant/models.py` (`Tenant.resend_api_key`, `Tenant.resend_webhook_secret`),
-`settings.py` (`EMAIL_TRANSPORT`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`),
+`src/settings.py` (`EMAIL_TRANSPORT`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`),
 `src/emails/webhooks.py`, `src/emails/events.py`, `src/emails/suppression.py`, `docs/emails.md` in the
 Django repository, [Secrets](/dev/operations/secrets).
 
@@ -87,7 +87,7 @@ The checklist:
    below: a production process with `EMAIL_TRANSPORT=resend` and no key
    refuses to start, and the PreSync hook is such a process.
 3. Set `EMAIL_TRANSPORT=resend` on the backend, worker, beat and flower
-   containers (the same four that carry the relay settings). `settings.py`
+   containers (the same four that carry the relay settings). `src/settings.py`
    then requires `RESEND_API_KEY` and no longer requires
    `EMAIL_HOST_PASSWORD`.
 4. Deploy. If a verified store still has no key the PreSync hook fails with

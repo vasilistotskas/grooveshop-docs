@@ -36,7 +36,7 @@ flowchart TD
 
 ### Schemas: public versus tenant
 
-`settings.py` splits apps into `SHARED_APPS` (the public schema) and
+`src/settings.py` splits apps into `SHARED_APPS` (the public schema) and
 `TENANT_APPS` (one copy per store). Apps that appear in both lists exist in
 both places, and that duplication is deliberate:
 

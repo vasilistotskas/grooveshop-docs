@@ -487,7 +487,7 @@ What each signal records:
   records the **product ids** at once, while those rows still exist.
 
 **The window sweep** is the beat entry `reindex-offer-window-changes`
-(`settings.py`, every 5 minutes). It runs
+(`src/settings.py`, every 5 minutes). It runs
 `tenant.tasks.fanout_reindex_offer_window_changes` →
 `refresh_window_changes`:
 - It refreshes (price records, then the index) the products of every active

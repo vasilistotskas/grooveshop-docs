@@ -70,8 +70,8 @@ as if the browser had called it directly:
 
 | Header | Why |
 |---|---|
-| `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `settings.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
-| `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`settings.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
+| `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `src/settings.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
+| `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`src/settings.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
 | `X-Real-IP` | The visitor's IP, from Cloudflare's `CF-Connecting-IP`. Django believes it only together with a correct `X-Origin-Verify`, which is relayed alongside (`src/core/client_ip.py`: `trusted_client_ip`); without it, limits key on the peer Traefik saw (`client_ip_or_peer`) |
 | `X-Language` | The page's locale (`event.context.locale`); Django answers in it on `/api/` and `/_allauth/` (`src/core/middleware/locale.py`) — see Multi-tenancy → Request language |
 | `Authorization: Bearer <knox token>` | The customer's API token from the Nuxt session |
@@ -106,7 +106,7 @@ never the platform host.
 ### Background work
 
 Celery workers consume the `celery` and `meilisearch` queues from RabbitMQ;
-beat schedules the periodic tasks defined in `settings.py:
+beat schedules the periodic tasks defined in `src/settings.py:
 get_celery_beat_schedule`. Tasks are tenant-aware through `TenantTask`
 (`grooveshop-django-api/src/tenant/celery.py`), which binds the schema the task
 was dispatched from. Django pushes order events and feed invalidations to
@@ -126,7 +126,7 @@ flowchart LR
 
 - drf-spectacular generates the schema with the camel-case post-processing
   hook, so the contract is camelCase like the wire format
-  (`settings.py: SPECTACULAR_SETTINGS`).
+  (`src/settings.py: SPECTACULAR_SETTINGS`).
 - `openapi-ts.config.ts` in the Nuxt repo emits TypeScript types and Zod
   schemas (requests, responses, definitions) into `shared/openapi/`. Nothing
   in that directory is hand-edited.

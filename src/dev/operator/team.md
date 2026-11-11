@@ -27,7 +27,7 @@ the page starts by separating them.
 | Who creates it | a platform superuser | a platform superuser, or the store's own admin/owner |
 
 `UserAccount` is in **both** `SHARED_APPS` and `TENANT_APPS`
-(`settings.py`), so the same table name exists in `public` and in every
+(`src/settings.py`), so the same table name exists in `public` and in every
 tenant schema, distinguished only by the Postgres search path. That is
 why every check on this page is about *provenance*, not about a primary
 key or an email address: a tenant-schema customer can share a pk with a

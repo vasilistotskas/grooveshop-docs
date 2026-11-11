@@ -10,7 +10,7 @@ Every app is a top-level package in `src/` of the Django repository, next to
 import is `order.services`, never `src.order.services`. `manage.py`,
 `pyproject.toml`, `tests/`, `tests_mt/`, `docs/` and `api-contract/` stay at the
 repository root.
-Apps split into two lists in `settings.py` because the platform is
+Apps split into two lists in `src/settings.py` because the platform is
 multi-tenant: `SHARED_APPS` migrate into the `public` schema, `TENANT_APPS`
 into every store's own schema, and `INSTALLED_APPS` is the union
 (`src/settings.py`, `SHARED_APPS` / `TENANT_APPS` / `INSTALLED_APPS`). Which list

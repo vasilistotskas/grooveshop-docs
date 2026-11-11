@@ -147,7 +147,7 @@ a translated subject (`[{site}] Tenant billing stage {stage}: {schema}`) in
 the platform's language (`LANGUAGE_CODE`). A failure of the copy is logged and
 never fails the owner's notice it follows, and with `ADMINS` empty there is
 nobody to write to and it is skipped (`ADMINS` is built from the `ADMIN_EMAIL`
-environment variable in `settings.py`).
+environment variable in `src/settings.py`).
 
 ### How a run advances
 
@@ -190,7 +190,7 @@ TENANT_BILLING = {
 }
 ```
 
-`settings.py`. Verified across the cluster manifests: **no Deployment,
+`src/settings.py`. Verified across the cluster manifests: **no Deployment,
 ConfigMap or Secret in `grooveshop-infrastructure` sets any of these three
 variables**, so every environment runs on the defaults above. The only
 place they appear at all is `grooveshop-django-api/.env.example`, where
@@ -278,7 +278,7 @@ Nothing is deleted.
 
 | | |
 |---|---|
-| Beat entry | `process-tenant-billing` in `settings.py: get_celery_beat_schedule()` |
+| Beat entry | `process-tenant-billing` in `src/settings.py: get_celery_beat_schedule()` |
 | Task | `tenant.tasks.process_tenant_billing` → `tenant.billing.run_billing_cycle` |
 | Cadence | daily 06:00 Athens; hourly when `DEBUG` |
 | Schema | `public` — **not** a fan-out |

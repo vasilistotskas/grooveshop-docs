@@ -39,7 +39,7 @@ flowchart TD
 
 ### Two sites, selected by the host
 
-`settings.py` sets `PUBLIC_SCHEMA_URLCONF` to `src/tenant/urls_public.py`, and
+`src/settings.py` sets `PUBLIC_SCHEMA_URLCONF` to `src/tenant/urls_public.py`, and
 that module mounts `platform_admin_site.urls` at `admin/` **before**
 `public_shared_urlpatterns`, so on the public schema the platform site
 shadows the store admin that `src/core/urls.py` registers at the same path.
@@ -55,7 +55,7 @@ A tenant host never loads that module at all.
 | `login_form` | `PlatformAdminAuthenticationForm` | Credentials are always checked against the public schema's user table |
 | `get_urls()` | prepends `plan-billing/` | `AdminSite.get_urls` ends in an `<app_label>/` catch-all that would 404 the custom page first |
 
-`UNFOLD_PLATFORM` (`settings.py`) declares only the differences from a
+`UNFOLD_PLATFORM` (`src/settings.py`) declares only the differences from a
 stock install: the `Control plane` subheader, the `hub` symbol,
 `ENVIRONMENT` pointing at `src/admin/permissions.py: platform_environment`
 (which renders a permanent amber **Control plane** badge, because the two

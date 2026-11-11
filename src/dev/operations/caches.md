@@ -71,7 +71,7 @@ gateway's tenant cache.
 The ViewSet response cache (`cache_methods` in `src/core/utils/views.py`,
 Django's `cache_page`) is scoped to the running release.
 `response_cache_key_prefix()` leads every key prefix with
-`settings.RELEASE_VERSION`, which `settings.py` reads from the
+`settings.RELEASE_VERSION`, which `src/settings.py` reads from the
 `pyproject.toml` the image ships (semantic-release bumps it in the release
 commit). A deploy therefore never serves a body an earlier release cached;
 the old entries are never read again and expire on the timeout each
@@ -386,7 +386,7 @@ content pages, reviews) saved with `is_published=True` and a future
 (`PublishedQuerySet.published` needs both; `is_published` defaults to
 false, so a draft stays hidden whatever its date), so no `post_save` purges anything.
 `src/core/publication.py: release_due_publications` notices: the beat entry
-`release-due-publications` (`settings.py`, `SCHEDULE_PRESETS["every_minute"]`)
+`release-due-publications` (`src/settings.py`, `SCHEDULE_PRESETS["every_minute"]`)
 fans out per store (`tenant.tasks.fanout_release_due_publications`, then
 `src/core/tasks.py: release_due_publications_task`), and each run finds the
 published rows whose date fell in `(cursor, now]` and were not saved on or

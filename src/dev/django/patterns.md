@@ -286,7 +286,7 @@ class RequiredDefaultTranslationMixin:
 
 Never hardcode a language code. The default is `el`
 (`PARLER_DEFAULT_LANGUAGE_CODE`) and the locale set is `el`, `en`, `de`;
-both can change in `settings.py` without touching serializers.
+both can change in `src/settings.py` without touching serializers.
 
 ## Custom fields (`src/core/fields/`)
 

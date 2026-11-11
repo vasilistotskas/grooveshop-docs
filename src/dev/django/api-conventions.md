@@ -14,7 +14,7 @@ routes proxy and validate against the generated contract
 ## camelCase everywhere
 
 Request and response bodies are camelCase on the wire and snake_case in
-Python. `settings.py` wires `djangorestframework-camel-case` at every
+Python. `src/settings.py` wires `djangorestframework-camel-case` at every
 layer: `CamelCaseJSONRenderer` and `CamelCaseBrowsableAPIRenderer` in
 `DEFAULT_RENDERER_CLASSES`, the three `CamelCase*Parser` classes in
 `DEFAULT_PARSER_CLASSES`, `CamelCaseMiddleWare` in `MIDDLEWARE`, and the
@@ -205,8 +205,8 @@ not a second prefix.
 ## Invariants
 
 - Two `Bearer` authenticators cannot coexist; platform staff use
-  `StaffBearer` (`settings.py`, `src/tenant/api_tokens.py`).
-- Anonymous writes are opt-in per ViewSet with `AllowAny` (`settings.py`,
+  `StaffBearer` (`src/settings.py`, `src/tenant/api_tokens.py`).
+- Anonymous writes are opt-in per ViewSet with `AllowAny` (`src/settings.py`,
   comment on `DEFAULT_PERMISSION_CLASSES`).
 - The paginated envelope has the same seven keys for all three paginators
   (`src/core/pagination/`).
