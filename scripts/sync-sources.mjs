@@ -56,6 +56,37 @@ function wrapVPre(text) {
   return `${head}:::: v-pre\n${body.trim()}\n::::\n`
 }
 
+/**
+ * A subfolder that has its own `index.md` is one reference in several
+ * files (docs/order/ in the Django repository): the sidebar shows it as a
+ * collapsed group, its index first and the rest in the order the index
+ * links them. A subfolder without an index stays flat in the group.
+ */
+function sidebarItems(copied, items) {
+  const byDir = new Map()
+  const flat = []
+  copied.forEach((file, i) => {
+    const slash = file.rel.indexOf('/')
+    if (slash === -1) return flat.push({ at: file.rel, item: items[i] })
+    const dir = file.rel.slice(0, slash)
+    if (!byDir.has(dir)) byDir.set(dir, [])
+    byDir.get(dir).push({ ...file, item: items[i] })
+  })
+  const out = flat.map(({ at, item }) => ({ at, item }))
+  for (const [dir, files] of byDir) {
+    const index = files.find(f => f.rel === `${dir}/index.md`)
+    if (!index) {
+      for (const f of files) out.push({ at: f.rel, item: f.item })
+      continue
+    }
+    const linked = [...index.text.matchAll(/\]\(([\w-]+)\.md\)/g)].map(m => `${dir}/${m[1]}.md`)
+    const rank = f => (f.rel === index.rel ? -1 : linked.includes(f.rel) ? linked.indexOf(f.rel) : linked.length)
+    const sorted = [...files].sort((a, b) => rank(a) - rank(b) || a.rel.localeCompare(b.rel))
+    out.push({ at: `${dir}/`, item: { text: index.title, collapsed: true, items: sorted.map(f => f.item) } })
+  }
+  return out.sort((a, b) => a.at.localeCompare(b.at)).map(o => o.item)
+}
+
 const manifest = []
 
 for (const source of DOC_SOURCES) {
@@ -80,7 +111,7 @@ for (const source of DOC_SOURCES) {
     const dest = join(to, rel)
     mkdirSync(dirname(dest), { recursive: true })
     writeFileSync(dest, wrapVPre(text))
-    copied.push({ rel, title: titleOf(text, rel.replace(/\.md$/, '')) })
+    copied.push({ rel, text, title: titleOf(text, rel.replace(/\.md$/, '')) })
   }
   copied.sort((a, b) => a.rel.localeCompare(b.rel))
 
@@ -107,7 +138,7 @@ for (const source of DOC_SOURCES) {
   ].join('\n')
   writeFileSync(join(to, 'index.md'), index)
 
-  manifest.push({ id: source.id, title: source.title, base, items: [{ text: 'Index', link: base }, ...items] })
+  manifest.push({ id: source.id, title: source.title, base, items: [{ text: 'Index', link: base }, ...sidebarItems(copied, items)] })
   console.log(`sync-sources: ${source.id} — ${copied.length} file(s) → ${relative(REPO, to)}`)
 }
 

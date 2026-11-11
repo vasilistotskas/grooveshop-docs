@@ -316,7 +316,7 @@ while one is open, and a lost one is booked only if Viva reports it as a
 1797 refund-claim type (13, 46, 83, 90), which Viva does not document;
 otherwise the dispute reaches the merchant only through Viva's own
 email. The full lifecycle is in the Django reference,
-[Dispute lifecycle per provider](/dev/django/reference/order-system#dispute-lifecycle-per-provider).
+[Dispute lifecycle per provider](/dev/django/reference/order/payments#dispute-lifecycle-per-provider).
 BoxNow needs no
 per-tenant URL: the handler resolves the tenant from the signed parcel id
 before verifying the HMAC with that store's `box_now_webhook_secret`.
