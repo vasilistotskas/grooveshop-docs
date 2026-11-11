@@ -94,7 +94,7 @@ The voucher is issued a few seconds after the order. For card payments, as soon 
 2. Fix it on the order, in the **Shipping Address** tab.
 3. Come back here and click **Issue ACS voucher now** on the row.
 
-If many orders stay **Pending creation** at once and the Dashboard shows **ACS voucher requests are held**, they are waiting for ACS: do not press the button on them, see [Voucher requests waiting for ACS](#voucher-requests-waiting-for-acs).
+If the Dashboard shows **ACS voucher requests are held**, not every order that is **Pending creation** is waiting for ACS. Only the shipments listed by the filter **Needs attention: Voucher request held while ACS is failing** are: do not press the button on those, see [Voucher requests waiting for ACS](#voucher-requests-waiting-for-acs). A pending order that is not in that list, for example one ACS refused, follows the steps above: fix it and press the button.
 
 For a card order that is not paid yet, the button does nothing: the voucher is issued by itself when the payment arrives. If the ACS login details are missing from the [Store profile](/admin/settings/store-profile), no voucher is issued until an Owner or Admin fills them in.
 
@@ -102,7 +102,7 @@ If the button answers that the last voucher request may have reached ACS without
 
 ### A voucher request that got no answer
 
-Sometimes the request for a voucher is sent to ACS and no answer comes back: ACS takes too long, the connection drops, or ACS reports a server error. ACS may have created the voucher all the same, and sending the request again could create a second voucher for the same parcel. So in this case the shop **stops and asks you**: it sends nothing more for that order, neither by itself nor from **Issue ACS voucher now**, until you decide. When ACS is failing for everyone, only the first order ends up here: the voucher requests of the orders that follow wait, as described in [Voucher requests waiting for ACS](#voucher-requests-waiting-for-acs).
+Sometimes the request for a voucher is sent to ACS and no answer comes back: ACS takes too long, the connection drops, or ACS reports a server error. ACS may have created the voucher all the same, and sending the request again could create a second voucher for the same parcel. So in this case the shop **stops and asks you**: it sends nothing more for that order, neither by itself nor from **Issue ACS voucher now**, until you decide. When ACS is failing for everyone, the requests that follow the first lost answer wait instead, as described in [Voucher requests waiting for ACS](#voucher-requests-waiting-for-acs). A request that was already out when the trouble began, or a later request sent first that also loses its answer, can still end here: each is its own order to check.
 
 How you are told:
 
@@ -172,9 +172,9 @@ The **State** of a hold says where it is:
 
 #### The one action: ACS answers again
 
-If you know ACS is working again and do not want to wait, open the current hold in <span class="sidebar-path">Shipping → ACS voucher holds</span> and click **ACS answers again: send one request**. The dialog **Send one voucher request to ACS now** asks you to confirm. It skips the wait and the question to ACS, not the rule that only one request goes first. You see it only if you may edit; each use is written in the admin's history.
+If you know ACS is working again and do not want to wait, open the current hold in <span class="sidebar-path">Shipping → ACS voucher holds</span> and click **ACS answers again: send one request**. The dialog **Send one voucher request to ACS now** asks you to confirm. It skips the wait and the question to ACS, not the rule that only one request goes first. You see it only if you may edit; a press that changes something is written in the admin's history. A repeat press changes nothing and writes nothing.
 
-- The message **One held voucher request is being sent to ACS. The others follow once ACS answers it.** means the request went.
+- The message **One held voucher request is being sent to ACS. The others follow once ACS answers it.** means one request is now allowed to go first and the check that sends it was started. It does not prove the request was sent: the check sends nothing for a store whose ACS login details are missing from the [Store profile](/admin/settings/store-profile). Watch the **State** of the hold and the shipment's **Voucher request held since** field.
 - A second press while that request is already allowed says **One voucher request was already allowed to go first. Nothing more was sent.** and changes nothing.
 - **This hold is no longer in force.** means ACS answered in the meantime.
 
@@ -189,19 +189,19 @@ If the answer to that first request is lost too, that one order moves to **ACS v
 | The answer is lost | Needs a check, as in the previous section. | Closes again, the wait doubles. |
 | It never reached ACS, or something other than ACS answered (for example a gateway error) | Stays waiting. | A request that never reached ACS leaves the hold at **One request first**, and the next goes at the next check. An answer that did not come from ACS closes it again. |
 
-One refused order never holds up the others. If you see the hold sit at **One request first** for a while, look for a waiting order that ACS refuses: fix its address.
+One refused order never holds up the others. A hold that sits at **One request first** for a long time means the requests are not getting an answer from ACS: a connection that never gets through, or ACS rejecting the login (the waiting orders stay waiting and another is tried at each check), or ACS refusing one order after another (each refused order leaves the waiting list with its own email). Check that the ACS login details in the [Store profile](/admin/settings/store-profile) are filled in and [tell the platform team](/admin/help/contact-support).
 
 #### What not to do
 
 **Do not click Issue ACS voucher now on each waiting order.** It does not make them go faster. While the hold is closed it sends nothing: the shop answers that ACS voucher requests are held since (time) and that the order is sent automatically once ACS answers again. While one request is allowed, only one goes, whichever order you click. The waiting orders need no action.
 
-Do not use **Adopt ACS voucher**, **No voucher at ACS: request again** or **No voucher needed: close** on a waiting order either. They are for orders that need a check: nothing reached ACS for a waiting order, so there is nothing to look for in ACS's portal.
+Do not use **Adopt ACS voucher**, **No voucher at ACS: request again** or **No voucher needed: close** on a waiting order either. They are for orders that need a check: a waiting order has not been sent, so there is nothing to look for in ACS's portal. If the request sent first loses its answer, that order moves to the check described above.
 
 #### Waiting, or needs a check?
 
 | | Waiting for ACS | Needs a check |
 |---|---|---|
-| Did the request reach ACS? | No. | Maybe: ACS may hold a voucher. |
+| Did the request reach ACS? | No, except the one request sent first, while it is out. | Maybe: ACS may hold a voucher. |
 | Dashboard row | **ACS voucher requests are held** (one row for all) | **ACS voucher requests to check** (one count for the orders) |
 | Shipment field | **Voucher request held since** | **Voucher request outcome unknown since** |
 | Email and order note | None. | One email and a note. |

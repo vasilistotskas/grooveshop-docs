@@ -41,7 +41,7 @@ Cash on delivery and other offline payments are never cancelled automatically. N
 |---|---|---|
 | The progress of ACS and BoxNow parcels is updated. | every 15 minutes | — |
 | The day's ACS pickup list is issued. | Monday–Friday 16:30 | — |
-| While ACS is not answering, the voucher requests that waited are sent: first one, and the rest once ACS answers it. See [ACS Courier](/admin/shipping/acs#voucher-requests-waiting-for-acs). | every 5 minutes | the action **ACS answers again: send one request** |
+| A check for waiting voucher requests runs. It sends nothing while the wait is on. Once the wait is over and ACS answers a simple question, it sends one waiting request. The others are sent only after ACS returns a voucher for that one, not when it refuses it. See [ACS Courier](/admin/shipping/acs#voucher-requests-waiting-for-acs). | every 5 minutes | the action **ACS answers again: send one request** |
 | You get an email about ACS parcels with no movement for three days. | every day 09:00 | the email can be [switched off](#stop-an-email-to-the-store) |
 | The cash-on-delivery money ACS paid out the day before is recorded. The order becomes paid. | every day 02:30 | — |
 | You get an email about cash-on-delivery parcels delivered more than ten days ago that ACS has not paid out yet. | every day 03:00 | the email can be [switched off](#stop-an-email-to-the-store) |

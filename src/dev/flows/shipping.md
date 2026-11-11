@@ -422,8 +422,9 @@ pod never reads the old shape.
 The previous section stops one order after one lost answer. An ACS that
 answers 5xx, or accepts connections and hangs, would do that to every order
 placed while it lasts: one portal check and one email each. So the first lost
-answer begins a **voucher hold** for the store, and while it is in force no
-`ACS_Create_Voucher` is sent. The waiting requests are a known outcome
+answer begins a **voucher hold** for the store. While it is closed no
+`ACS_Create_Voucher` is sent; once one request first is allowed, only the
+request that takes the turn is. The waiting requests are a known outcome
 (nothing reached ACS), not an unknown one: they are stamped, not marked for
 a check, and a task sends them once ACS returns a voucher. The rule that an
 unknown request is never sent again by code is untouched, and every 5xx is
@@ -1054,7 +1055,8 @@ move `Order.status`, which the carrier events drive separately.
   failed task.
 - **A pickup day with nothing live waiting is a `None`, not a raise**,
   and one live candidate is enough to make a refusal a failure again.
-- **While a store's voucher hold is in force no `ACS_Create_Voucher` is sent.**
+- **While a store's voucher hold is closed no `ACS_Create_Voucher` is sent,
+  and once one request first is allowed only one is.**
   A request is held twice (before its claim and inside its request slot), and
   only the request that has the turn, `AcsVoucherHold.trial_request`, settles
   it; only its voucher ends the hold. The rule table is in
@@ -1097,7 +1099,9 @@ move `Order.status`, which the carrier events drive separately.
   that surfaces on a refused pickup list and matches no shipment becomes an
   `AcsUnrecognisedVoucher`.
 - **ACS is failing for everyone.** The first lost answer begins the hold and
-  is the only order that needs a check. The next requests are stamped
+  needs a check. A request already in flight when the hold began, and a later
+  request sent first that also loses its answer, each end unknown too: every
+  one is its own order to check at the portal. The next requests are stamped
   `voucher_request_held_at` and wait; `issue_held_acs_vouchers` asks ACS a read
   after the wait, sends one request first, and sends the rest once a voucher
   comes back (see "The voucher hold"). A lost answer of the first request

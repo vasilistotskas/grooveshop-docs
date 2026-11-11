@@ -15,7 +15,8 @@ page.
 Source: `core/retention.py`, `core/tasks.py`, `core/history.py`,
 `tenant/tasks.py` (the `fanout_purge_*` wrappers), `settings.py`
 (`CELERY_BEAT_SCHEDULE`, the retention constants, `EXTRA_SETTINGS_DEFAULTS`),
-`shipping_acs/tasks.py`, `shipping_boxnow/tasks.py`,
+`shipping_acs/tasks.py`, `shipping_acs/models/voucher_hold.py`,
+`shipping_acs/voucher_hold.py`, `shipping_boxnow/tasks.py`,
 `recommendation/tasks.py`, `order/tasks.py`, `meta_capi/tasks.py`, `contact/tasks.py`,
 `emails/tasks.py`, `builder/tasks.py`,
 `search/tasks.py`, `search/middleware.py`.
