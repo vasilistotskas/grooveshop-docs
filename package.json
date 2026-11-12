@@ -11,7 +11,7 @@
   "scripts": {
     "sync:sources": "node scripts/sync-sources.mjs",
     "dev": "pnpm sync:sources && vitepress dev",
-    "build": "vitepress build && node scripts/postbuild.mjs && node scripts/check-initial-load.mjs",
+    "build": "vitepress build && node scripts/postbuild.mjs && node scripts/check-fragments.mjs && node scripts/check-initial-load.mjs",
     "build:full": "pnpm sync:sources && pnpm build",
     "preview": "vitepress preview",
     "check:admin": "node scripts/check-admin-prose.mjs",
