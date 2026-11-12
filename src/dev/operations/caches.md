@@ -297,6 +297,14 @@ total; `nitro:routes:*` and `nitro:handlers:*` match nothing because the
 stored keys carry the `cache:` mount and escaping. Entries refill on the
 next request.
 
+### Keys of cached list routes
+
+A cached list route keys its entry by every parameter it forwards to Django, read
+off the route's validated query schema (`server/utils/queryCacheKey.ts:
+queryCacheKey`), so a read at `page=2` is never answered from the entry for page 1.
+Nine routes use it; the list and the reasoning are in
+[Storefront rendering contracts](/dev/nuxt/rendering#cache-keys-of-list-routes).
+
 ### Stock flips and the page builder
 
 A sale saves `stock` and `updated_at` alone (`src/order/stock.py`), and a surface's
@@ -733,6 +741,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |
 | `grooveshop-django-api/src/core/models.py` (`PublishableModel`, `PublishedQuerySet`) | What counts as published: `is_published` and a past `published_at` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/queryCacheKey.ts` | `queryCacheKey`: a cached list's key from every parameter it forwards |
 | `grooveshop-django-api/src/product/availability.py`, `src/builder/data_purge.py`, `src/core/cache/invalidation.py` (`register_significant_save`), `src/core/cache/service.py` (`_documents_last`) | The stock-flip rule shared by the surfaces and the builder purge |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderDocumentPurge.ts`, `server/api/admin/cache/purge.post.ts` | `builderRecordDataMatchers` and `builderDocumentMatchers`, run in order |
 | `grooveshop-django-api/src/core/publication.py`, `src/core/sweeps.py`, `src/core/tasks.py` (`release_due_publications_task`), `src/blog/signals.py`, `src/indexnow/signals.py`, `src/builder/data_purge.py` | The go-live sweep and what `went_live` triggers |

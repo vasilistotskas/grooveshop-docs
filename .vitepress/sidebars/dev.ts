@@ -124,6 +124,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
     collapsed: true,
     items: [
       { text: 'Storefront (Nuxt)', link: '/dev/nuxt/' },
+      { text: 'Storefront rendering contracts', link: '/dev/nuxt/rendering' },
       { text: 'Agent gateway (Go)', link: '/dev/gateway/' },
       { text: 'Media stream (NestJS)', link: '/dev/media/' },
       { text: 'Infrastructure', link: '/dev/infra/' },
