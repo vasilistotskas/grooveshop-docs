@@ -92,6 +92,18 @@ A **Hand-picked** list has no **Stock** choice: it shows exactly what you chose.
 - The automatic "see all" button of a **Product carousel**, **Product grid** or **Featured products** section opens the products page sorted as the section is (for example newest first). Set to **In stock only**, it opens the page already showing only what is in stock. The **Button text** you write changes only the words. Only a **Button link** you set yourself sends it somewhere else.
 - When a product sells out, or comes back in stock, the pages that list products are refreshed within moments.
 
+### Show articles as a list on a phone
+
+A **Blog post grid** section has the setting **Layout on a phone**. It takes three choices:
+
+| Choice | What a phone shows |
+|---|---|
+| **Default** | The same as **Row to swipe**. |
+| **Row to swipe** | The articles as cards in a row that the visitor swipes sideways. |
+| **List** | The articles one under another as compact rows: a small picture on the left, and beside it the category and the reading time ("Tips · 4 min read") with the article's title under them. The whole row is one link. |
+
+From tablet width up the section looks the same whichever you choose. It applies to the **Blog post grid** only, not to the **Blog post list** or the **Blog post carousel**.
+
 ### Let visitors load more posts
 
 A **Blog post list** can go on past the posts it first shows. Turn on **Load more button**, and publish. Visitors get a button under the posts that adds the next ones of the same list, for as long as it has more.
@@ -148,6 +160,18 @@ What does not show:
 
 A line the store has no data for is left out, and the section disappears when no line is left, so a store without shipping rates shows no empty strip. A store whose cart or product catalogue is switched off does not get the section at all. The section does not follow `PRODUCT_ASSURANCES_ENABLED`: that setting is only for the box on the product page.
 
+## Show a newsletter sign-up
+
+**Newsletter sign-up** puts a short sign-up form in a section: a heading, a line of description, the email field and a button. Add it from **Content → Edit storefront** like any section. Its settings are **Heading**, **Description**, **Placeholder**, **Button text** and **Background** (**Basic** or **Muted**), and:
+
+| Setting | What it does |
+|---|---|
+| **Heading colour** | **Default** and **Heading** draw the heading in the colour your theme uses for headings. **Accent** draws it in your theme's accent colour, the same colour as the second line of the **Hero with picture and search**. The accent colour comes from the theme, so check it reads well on the section's background under **Theme: colours, corners, fonts**. |
+
+The section draws nothing when the newsletter is switched off or the store has no default newsletter topic (see [Newsletter subscriptions](/admin/customers/subscriptions#put-a-newsletter-form-on-the-store)).
+
+**A page shows one newsletter form.** The footer of your store has a newsletter form too. On a page that has a **Newsletter sign-up** section, the footer's form is not shown, so the visitor sees one form and not two. Every other page keeps the footer's form. This holds in both designs.
+
 ## Show blog categories as tiles
 
 **Blog categories** shows the blog's categories as a row you slide (**Slider**, the default) or, with **Layout** set to **Tiles**, as a grid of tiles. Each tile has the category's icon, its name and how many articles it holds ("12 articles"), and opens the category. The grid has two columns on a phone and four on a desk. In a narrow tile (on a small phone) the icon sits above the name instead of beside it, so a long name has the tile's whole width.
@@ -156,7 +180,7 @@ Both layouts take a **Title**, a **Subheading**, a **Button text** and a **Butto
 
 ## Draw a band light or dark
 
-**Colour scheme** forces a section into the **Light** or the **Dark** colours of your theme, whichever mode the visitor's page is in. The choices are **Light** and **Dark**; clear the choice and the field is empty, which means the section follows the page. There is no separate "as the page" choice.
+**Colour scheme** forces a section into the **Light** or the **Dark** colours of your theme, whichever mode the visitor's page is in. The choices are **Default**, **Light** and **Dark**. **Default** leaves the setting empty, and the section then follows the page.
 
 It is a setting of **Product carousel**, **Product grid**, **Featured products**, **Blog post grid**, **Blog post list**, **Blog post carousel** and **Hero with picture and search**. The colours are the ones you set under **Theme: colours, corners, fonts**, light or dark.
 

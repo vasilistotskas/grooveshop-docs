@@ -225,6 +225,25 @@ has not said it (no rate with delivery days, no threshold, `returnWindowDays` of
 0, no active pay way), its row is left out, and the section draws nothing when
 no row is left. The block declares `feature: 'cart'`, so a store without the
 cart does not get it, and the facts make no request for such a store.
+`newsletter_signup` (`app/blocks/newsletter_signup.block.ts`,
+`app/components/PageSection/NewsletterSignup.vue`) takes an optional
+`headingColor` (`default` | `accent`): `accent` paints the h2 with `text-accent`,
+the token the hero's accent line uses, and empty keeps `text-highlighted`. It is
+one component in every design, so both draw it. `blog_posts_grid`
+(`app/blocks/blog_posts_grid.block.ts`) takes an optional `phoneLayout`
+(`row` | `list`), passed by `PageSection/BlogPosts.vue` to `Blog/Rail.vue`: below
+`sm`, `list` draws the posts as compact rows (a grid per row: the thumbnail spans
+two rows beside "category · reading time" and the title, each row one link at
+least 92px tall) and from `sm` up the band is the swipe row or the grid as ever.
+The list sets `data-phone-layout="list"` on the `<ul>`, and it is off for a
+`stacked` rail (the load-more band), so only the grid block offers it; the
+`ekfyseosfyteias` variant of the grid ignores it. Both settings are optional,
+so no block version bump and no upgrade: a stored node without the key is the
+old look. In the editor an optional enum with up to
+`BUILDER_SEGMENTED_CHOICE_MAX` choices draws as segmented buttons with
+**Default** first, which stores no key (`Builder/SettingField.vue`), and the
+choices are named under `options.headingColor` and `options.phoneLayout` in
+`app/builder/labels/{el,en}.json`.
 `blog_categories` is at version 2: a `layout` (`slider` or `tiles`),
 `subheading`, `ctaText` and `ctaLink` beside its `title`; `upgradeBlogCategories`
 carries a version 1 node over. The `tiles` layout is the platform's
@@ -557,6 +576,17 @@ alone also `max-sm:min-w-11`), one floating over a picture keeps its size and
 takes a 44px hit area from an `::after`;
 `test/unit/source-rules/product-page-targets.spec.ts` checks both designs' pages
 and galleries.
+
+**The default gallery's position.** `Product/Images.vue` no longer sets `dots` on
+its carousel: Nuxt UI's dots are buttons 6px wide and 6px apart, no target a
+finger can hit. Below `lg` it draws plain marks (`data-slot="position"`, a `<div>`
+of `<span>`s, `aria-hidden`, the current one `data-current`, following the
+carousel's `select` event), which are neither buttons nor focusable. The position
+is read as words instead: each slide holds an `sr-only` "Image N of M"
+(`position` in the component's `<i18n>`), as the hero carousel does. Swiping, the
+zoom viewer and the thumbnails move between photographs as before. Webside's
+gallery draws no dots (thumbnails and arrows) and is unchanged. The rule above
+fails a gallery carousel that sets `dots`.
 
 ## Invariants
 
