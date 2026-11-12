@@ -127,6 +127,30 @@ without its caller asking, because the pages are cached anonymously. The files:
 - The heart keeps one accessible name in both states, `Favourite: <product>`, and
   says its state in `aria-pressed`.
 
+## One newsletter form a page
+
+A page that draws the newsletter section (`PageSection/NewsletterSignup.vue`)
+shows no footer form, in both designs; every other page keeps the footer's. It is
+decided by the server's HTML and one CSS rule, not by component state:
+
+- The section marks its band `data-newsletter-section`, and only when it is
+  drawn (`available`: the feature on, the form available), so a section that
+  draws nothing marks nothing.
+- Every footer form carries `data-footer-newsletter`: the default design's
+  `Chrome/FooterNewsletter.vue`, webside's `Footer/Newsletter.vue` and the phone
+  wrapper in webside's `Chrome/Footer.vue` (which holds the lazily hydrated form).
+- One rule in `app/assets/css/main.css` joins them:
+  `:root:has([data-newsletter-section]) [data-footer-newsletter] { display: none; }`.
+
+Why not component state. On the server the footer's async setup runs alongside
+the page body's, so the footer cannot know which sections the page draws before it
+renders; a state shared between them would be set too late for the footer's own
+server render. With the rule, the first paint has one form, nothing moves after
+hydration, and the server and client markup are the same, so there is no
+hydration mismatch. A browser without `:has()` shows both forms, as before.
+`test/unit/source-rules/one-newsletter-form.spec.ts` keeps the marker, the three
+footer attributes and the rule together.
+
 ## Phone-target source rules
 
 happy-dom lays nothing out, so the classes that size a control are the contract,
@@ -161,4 +185,5 @@ that no `overflow-hidden` ancestor clips.
 | `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/session-after-hydration.spec.ts` | Source rule: a `Lazy*` element names the session only in its own `v-if` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/queryCacheKey.ts` | `queryCacheKey` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useProductFavouriteToggle.ts`, `app/stores/user.ts`, `app/plugins/auth.ts`, `shared/constants/index.ts` | The favourites hearts |
+| `grooveshop-storefront-ui-node-nuxt/app/components/PageSection/NewsletterSignup.vue`, `app/components/Chrome/FooterNewsletter.vue`, `app/components/variants/webside/Footer/Newsletter.vue`, `app/components/variants/webside/Chrome/Footer.vue`, `app/assets/css/main.css`, `test/unit/source-rules/one-newsletter-form.spec.ts` | The one-newsletter-form rule |
 | `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/product-page-targets.spec.ts`, `test/unit/source-rules/default-design-phone-targets.spec.ts` | Source rules for 44px targets |

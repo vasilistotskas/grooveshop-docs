@@ -62,7 +62,7 @@ The list has no add button: only the subscriber creates a subscription.
 Every new store already has a **Newsletter** topic that is active, the default and requires confirmation. You can rename it.
 
 1. Keep the `NEWSLETTER_ENABLED` setting on, under <span class="sidebar-path">Settings → Store Settings</span>. It is on from the start.
-2. The store footer and the sign-up form already show it, in every design, as long as the setting is on and the store has a default newsletter topic. The sign-up form offers it as an optional box, unticked, below the terms. To add the form to another page as well, add a newsletter sign-up section to a page in the [page builder](/admin/content/page-builder).
+2. The store footer and the sign-up form already show it, in every design, as long as the setting is on and the store has a default newsletter topic. The sign-up form offers it as an optional box, unticked, below the terms. To add the form to another page as well, add a newsletter sign-up section to a page in the [page builder](/admin/content/page-builder#show-a-newsletter-sign-up). A page with that section does not show the footer's form as well: the visitor sees one form, and every other page keeps the footer's.
 
 The visitor enters their email and ticks the consent box. They get an email with a link to a page on your store, where they click **Confirm subscription**. Only then does the subscription become **Active**. The link is valid for 7 days. A customer who ticks the box when they open an account gets the same email, and shows in the list with the source **Newsletter form** until they confirm.
 
