@@ -308,21 +308,26 @@ sells out or comes back, because the product list puts products in stock first
 can leave sold-out ones out (`stock: inStockOnly`). That is the one exception, and it
 has one definition.
 
-State on the branch `fix/availability-flip-purges-product-surfaces` (Django pull
-request 678, not merged when this was written; before it, `data_purge.py` held its
-own copy of the test):
+As released:
 
 - `src/product/availability.py: availability_flipped(instance)` is true when the
-  stored stock and the new stock are on different sides of zero. A `pre_save`
-  (`_remember_stored`, connected in `ProductConfig.ready`, skipped when caching is
-  disabled) keeps the stored category and stock on the instance in ONE query, so a
-  sale costs no query for either consumer.
+  stored stock and the new stock are on different sides of zero. A stock that is
+  not a plain number (a caller saved `F("stock") - n`) counts as a flip, because
+  over-purging once is harmless and a predicate must never break the save. A
+  `pre_save` (`_remember_stored`, connected in `ProductConfig.ready`, skipped when
+  caching is disabled) keeps the stored category and stock on the instance in ONE
+  query, so a sale costs no query for either consumer.
 - `core.cache.invalidation.register_significant_save(label, predicate)` lets a
   model's app name saves that touch only ignored fields but still invalidate. The
   receiver of every surface that lists `product.Product` calls `_is_significant`
   before it skips an ignored-fields save, so a flip marks the `products` and
-  `sitemap_seo` surfaces stale. `availability` registers
-  `availability_flipped` for `product.Product`.
+  `sitemap_seo` surfaces stale. `availability` registers `availability_flipped` for
+  `product.Product`.
+- The `recommendations` surface lists `product.Product` too and ignores the sale
+  fields (`SALE_UPDATE_FIELDS`, `src/core/cache/registry.py`): the engine reads
+  stock live and drops sold-out products, so a sale does not purge its strips (a
+  hydrated strip can show an old "only 2 left" until its TTL), while a product that
+  sells out or comes back does, through the same predicate.
 - `builder.data_purge`'s `saved_product` imports the same function and
   `stored_category_id`, so a flip queues the same documents a product edit does.
   The index records a list's facets, not its `stock` rule, so every list that may
@@ -341,8 +346,17 @@ the next (`server/api/admin/cache/purge.post.ts`). Before, only the page went an
 read the old list from its 60 second data cache and stored it again for the page's
 cache time. `builderDataMedia` and `builderDataTargets` are left out (images change
 through the media library, published pages through a release), and a purge of a
-section group or the theme alone drops no record data. A render already in flight
-when the purge lands may still store what it read; the 60 second data TTL bounds that.
+section group or the theme alone drops no record data.
+
+What this cannot close: a page render already in flight when the purge lands read
+the old records, and the page it stores after the purge is an ordinary entry of the
+route cache. It is served as fresh for its route's `swr` lifetime (300 to 3600
+seconds by route: `SWR_ROUTE_RULES`, `SWR_ROUTE_PATTERN_RULES`,
+`CUSTOM_PAGE_SWR_TTL`, the brand pages' 3600), then once more while Nitro
+re-renders it (no `staleMaxAge`), until the next record change purges it or that
+re-render replaces it. The 60 second data TTL bounds only the record-data
+entries, never that page (storefront issue 454; see
+`.claude/rules/server-routes.md` in the storefront repository).
 
 ### The tenant-config epoch
 
@@ -719,7 +733,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |
 | `grooveshop-django-api/src/core/models.py` (`PublishableModel`, `PublishedQuerySet`) | What counts as published: `is_published` and a past `published_at` |
-| `grooveshop-django-api/src/product/availability.py`, `src/builder/data_purge.py`, `src/core/cache/invalidation.py` (`register_significant_save`), `src/core/cache/service.py` (`_documents_last`) | The stock-flip rule shared by the surfaces and the builder purge (branch of pull request 678) |
+| `grooveshop-django-api/src/product/availability.py`, `src/builder/data_purge.py`, `src/core/cache/invalidation.py` (`register_significant_save`), `src/core/cache/service.py` (`_documents_last`) | The stock-flip rule shared by the surfaces and the builder purge |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderDocumentPurge.ts`, `server/api/admin/cache/purge.post.ts` | `builderRecordDataMatchers` and `builderDocumentMatchers`, run in order |
 | `grooveshop-django-api/src/core/publication.py`, `src/core/sweeps.py`, `src/core/tasks.py` (`release_due_publications_task`), `src/blog/signals.py`, `src/indexnow/signals.py`, `src/builder/data_purge.py` | The go-live sweep and what `went_live` triggers |
 | `grooveshop-django-api/src/tenant/media_flush.py`, `src/tenant/tasks.py` | Media flush |

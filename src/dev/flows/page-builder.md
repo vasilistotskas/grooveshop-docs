@@ -181,13 +181,16 @@ Section components never read blocks. `shared/builder/props.ts:
 sectionProps(node)` turns a parsed node into the component's props: its
 settings, plus each list of child blocks (a disabled one left out) under the
 prop `childList` names. The same function feeds the page-heading rules
-(`HEADING_SECTION_TYPES`, `heroCarouselHeading`).
+(`HEADING_SECTION_TYPES`, `HEADING_FROM_PROPS`, `heroCarouselHeading`).
 
 Two sections read the store's own data instead of settings. `hero_showcase`
 (`app/blocks/hero_showcase.block.ts`, `app/components/PageSection/HeroShowcase.vue`)
 is a heading in two lines (`heading`, `headingAccent`, both in the page's one h1:
 `hero_showcase` is in `HEADING_SECTION_TYPES` and `sectionsHeadingText` joins the
-two), a sub-line, a `media` picture with a `mobileImage`, an explicit
+two; it is also in `HEADING_FROM_PROPS`, like `hero_banner`, so it owns the page's
+h1 only when its props give a heading: `ownsHeading` in `shared/pageSections.ts`
+asks `propsHeading`, and a hero with neither line leaves the page its own h1, as
+`contact_panel`, which always draws one, does not), a sub-line, a `media` picture with a `mobileImage`, an explicit
 `imageDecorative`, an `imageLink`, the store search (`showSearch`), two buttons
 and one `product` ref drawn by `Product/Spotlight.vue` (`showAddToCart`). The
 component lays one list of parts out in the order a phone reads them and places
@@ -197,7 +200,21 @@ have: no search or product with the `catalogue` feature off, no buy button with
 that did not resolve to a record (a sold-out product stays and offers the
 restock alert in place of the buy button), and a button needs both its text and
 its link (a link `resolveLinks` removed leaves no button). The picture is a link
-only when something names it (its description, else the heading).
+only when something names it (its description, else the heading). Every link
+it draws goes through `useLinkTo()` (`app/composables/useLinkTo.ts`), the one
+rule for a section's, band's or banner's link: an absolute URL (`hasProtocol`)
+as it is, which `NuxtLink` draws as an external link with
+`rel="noopener noreferrer"`; a store path through `localePath(pathLocation(..))`,
+query and hash kept. `localePath` given an external URL as a location made a
+partner's offer a route of the store. On a phone the layout is one
+`grid-cols-[minmax(0,1fr)]` track (the implicit `auto` track grew to the
+widest part's min-content and pushed the page sideways); the two buttons are
+equal columns at Nuxt UI's `md` text size with `xs` padding, so a label of about
+16 Greek letters keeps one line, and a longer one wraps inside its button (the
+label is our own span, since Nuxt UI's truncates). `Product/Spotlight.vue`
+becomes a grid below `sm` (`max-sm:contents` on its text column and price
+row) so the way to buy takes a row of its own across the card: beside the
+price a design's button (138 to 166px) was cut off at 320px.
 `store_assurances` (`app/blocks/store_assurances.block.ts`,
 `app/components/PageSection/StoreAssurances.vue`, `useStoreAssurances`) states
 four rows (delivery with the dispatch cutoff under it, free shipping with each
@@ -246,9 +263,12 @@ follows the rename.
   `/prompt/ctaText`) and not the object that also holds its link.
 - **Resolving a link.** See the rendering section: `resolveLinks` turns each link
   into the path it has now, and section components still receive a string.
-- **A link to a switched-off feature is taken out too.** `resolveLinks` asks
+- **A link to a switched-off feature is taken out too.** `resolveLinks`
+  computes the store path a link stands for (`storePath`: a `route`, or the
+  address of a page, content page or record) and asks
   `isFeaturePathBlocked(path, targets.blocked)` (`shared/utils/gatedRoutes.ts`)
-  of every `route` link and of the address of every record link. `targets.blocked`
+  of every one, a published page too (it can be `/blog` itself). An `href` is
+  someone else's page and no feature of the store gates it. `targets.blocked`
   is `blockedFeaturePaths(tenant)` (`readLinkTargets`), the paths
   `FEATURE_GATED_ROUTES` says the store does not serve. A blocked `/blog`
   also blocks `/blog/<anything>`, matched on a segment boundary and with the
@@ -287,15 +307,67 @@ for the listing keeps its panel under the operator's label. The panels read
 `transform` to what the menus draw (`categoryMenu`, `blogCategoryMenu`: at most
 eight roots, and for the shop at most eight children each; at most eight blog
 topics), and each gated on its store feature, so a store without the feature
-asks for nothing. An entry that opens a panel is drawn as two entries by
-`withDropdownToggles`: the link, and an adjacent button that carries the panel
-(WAI-ARIA's disclosure navigation). `useMenuHover` (`app/composables/useMenuHover.ts`)
-is the mouse half: hovering a name or its button opens the panel through the
-menu's one `v-model`, because Reka's own hover (switched off on these menus) only
-knows the button. The phone tab bar's entries are `useBottomNavItems`, each tab
-shown while the page it opens is serving (`useGatedRoute`); a design picks its
-tabs (`tabs` option) and the bar is switched by the `mobileBottomNav` store
-preference (`MOBILE_BOTTOM_NAV_ENABLED`).
+asks for nothing.
+
+- **Two entries per section.** `withDropdownToggles` draws a section with
+  `children` as two entries: the link (`data-menu-section`) and an adjacent
+  button that carries the panel (`data-menu-section`, `data-menu-toggle`;
+  WAI-ARIA's disclosure navigation). One entry could not be both: Nuxt UI draws
+  an entry with a panel and a `to` as Reka's trigger on an `<a>`, which Enter
+  followed instead of opening. A section with no `children` (none, the feature
+  off, the read failed) is one plain link with its `slot` dropped, so no arrow
+  opens an empty panel. A closed section's button states no `aria-controls`
+  (Reka assigns the id in `onMounted`, so the server HTML carried an empty
+  IDREF); an open one keeps Reka's.
+- **Who opens and closes a panel.** `useMenuPanels` (`app/composables/useMenuPanels.ts`)
+  keeps the menu's one `v-model` and is driven by pointer and click handlers on
+  an element AROUND the lazily hydrated menu (`onPointermove`, `onPointerleave`,
+  `onPointerdown`, `onPointerup`, `onClickCapture`; `onEscapeKeyDown` is the
+  menu's `content` handler). The wrapper hydrates with the page and the menu
+  does not (`hydrate-on-interaction` with `pointermove`, `pointerdown` and
+  `focusin`, held by `test/unit/source-rules/navigation-menu-hydration.spec.ts`:
+  Reka opens on `pointermove`, never `pointerenter`), so with Reka owning the click
+  the first tap after a load only hydrated the menu and opened nothing. The
+  wrapper therefore owns hover, tap and click: a touch toggles on its `pointerup`
+  and its own click is swallowed; a click is stopped before Reka's trigger toggles
+  it back; the mouse opens on the name or the button and closes 150 ms after it left
+  both and the panel. Reka's hover is switched off (`disable-hover-trigger`,
+  `disable-pointer-leave-close`) because two hover machines fought. Reka's
+  trigger guards are ported with the section standing for the trigger: a click
+  within 300 ms of the mouse opening the panel leaves it open
+  (`hasPointerMoveOpenedRef`; only the movement that opens starts the window),
+  and a panel a click or Escape closed is not reopened by the mouse until it
+  left the section and came back (`wasClickCloseRef`, `wasEscapeCloseRef`). A
+  key's click (`detail` 0) always acts. Escape on a panel the mouse opened closes
+  it where the focus is.
+- **The current section.** `currentMark(active, to, currentPath)` is the one rule
+  for `aria-current` in the headers, the tab bars and the account sidebar:
+  `page` when the entry leads to the page on screen (query aside), `location`
+  when the page is inside its section (a product under Shop), nothing otherwise.
+  `withCurrentPage(items, currentPath)` applies it to a menu.
+- **Sign-in links.** `useAuthLinks().authLink(name, { hash })` returns a location
+  object for an auth page carrying `next`: on an auth page the `next` it came
+  with (`returnPath`: a path of this site that is not itself an auth page,
+  `isAuthPagePath`), elsewhere the page (`returnTarget(route)`). The destination
+  is the PATH only unless the page opts in with `definePageMeta({ signInReturn })`
+  (`app/types/global.d.ts`): `'path-and-query'` for view state worth keeping
+  (the listings, the blog's pages, search), `'nowhere'` for a one-time token
+  (unsubscribe, confirmation, a share preview). A query can hold a payment
+  session or a token and `next` lands in an address, a history and a `Referer`,
+  so the default is deny. Every writer and reader of `next` goes through these
+  (the auth middleware, `app/plugins/auth.ts`, the flow forms);
+  `test/unit/source-rules/auth-links-keep-next.spec.ts` holds every link to an
+  auth page to the accessor.
+- **The tab bar.** `useBottomNavItems({ tabs, icons, accountAvatar, includeCart,
+  onAccount })` gives both designs' entries: the default's Home, Search, Saved,
+  Cart and Account, or the tabs a design asks for (webside: Home, Shop, Blog,
+  Cart, Account). Each tab shows while its page serves (`useGatedRoute`: Search
+  and Shop `catalogue`, Saved `favourites`, Blog `blog`, Cart `cart`), the bar by
+  the `mobileBottomNav` store preference. The Cart tab carries the count; the
+  Account tab shows the shopper's picture when the design asks. `active` is
+  decided from the route name and `currentMark` marks one tab. The default
+  bar's active pill shrinks to what is left of the dock and shows its icon alone
+  below a 21rem dock (`@container/dock`).
 
 ### 7. Rendering pages and menus from the builder
 
@@ -469,6 +541,21 @@ inset inside itself, and the sticky bar stands on the tab bar (`--dock-floor`,
 `--dock-floor-pad`). The default layout's footer clears the dock with
 `--dock-inset + --dock-tabbar + --dock-bar` (`app/layouts/default.vue`).
 
+**Phone product cards and targets.** Webside's product card is a named container
+below `sm` (`max-sm:@container/card`) and answers to ITS width, not the screen's,
+because the listing and the bands put it in two columns on a phone
+(`grid-cols-2`): below `3xs` the price and the buy button stack and the button
+becomes a 44px icon (its label `sr-only`), and below 8.625rem the price takes a
+row and the button the full width. The listing's page numbers are links
+(`pageLink`). A product that cannot be bought gets a neutral, subtle, disabled
+button with the label "Unavailable" in both designs' buy buttons, and the product
+page draws no quantity control for it. Every control of the product page is a
+44px target on a phone: a control in the flow carries `max-sm:min-h-11` (an icon
+alone also `max-sm:min-w-11`), one floating over a picture keeps its size and
+takes a 44px hit area from an `::after`;
+`test/unit/source-rules/product-page-targets.spec.ts` checks both designs' pages
+and galleries.
+
 ## Invariants
 
 - A definition holds data, never a component; the server bundle carries no
@@ -540,7 +627,10 @@ inset inside itself, and the sticky bar stands on the tab bar (`--dock-floor`,
 | `grooveshop-storefront-ui-node-nuxt/app/utils/variantRegistry.ts` | `resolvePart`, `DesignPartKey`, the design parts |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/announcementBar.ts`, `app/composables/useAnnouncementBar.ts` | The announcement bar's tokens |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useSearchShortcut.ts` | One owner for the search shortcuts |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/menuDropdown.ts`, `app/composables/useMenuHover.ts`, `app/composables/useCategoryMenu.ts`, `app/composables/useBlogCategoryMenu.ts`, `app/composables/useBottomNavItems.ts`, `app/assets/css/main.css` | The header's dropdown panels, the menus' category reads, the tab bar's entries, the dock's custom properties |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useLinkTo.ts`, `shared/pageSections.ts` | `useLinkTo`; `HEADING_SECTION_TYPES`, `HEADING_FROM_PROPS`, `ownsHeading` |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useAuthLinks.ts`, `app/utils/auth.ts`, `app/types/global.d.ts`, `app/utils/route.ts` | `authLink`, `returnPath`, `returnTarget`, `signInReturn`, `isAuthPagePath` |
+| `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/navigation-menu-hydration.spec.ts`, `auth-links-keep-next.spec.ts`, `product-page-targets.spec.ts` | Source rules for the menus' hydration events, the auth links and the 44px targets |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/menuDropdown.ts`, `app/composables/useMenuPanels.ts`, `app/composables/useCategoryMenu.ts`, `app/composables/useBlogCategoryMenu.ts`, `app/composables/useBottomNavItems.ts`, `app/assets/css/main.css` | The header's dropdown panels, the menus' category reads, the tab bar's entries, the dock's custom properties |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderLinks.ts` | `collectLinkRefs`, `resolveLinks`, `readLinkTargets` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderTargets.ts` | The published pages and content pages a link or a menu may name |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/pages/[pageKey].get.ts` | `GET /api/builder/pages/<pageKey>`: a published page, links resolved |

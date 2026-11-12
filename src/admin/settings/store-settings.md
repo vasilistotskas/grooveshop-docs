@@ -71,6 +71,7 @@ The announcement bar is a line above the store's header. Open the setting `ANNOU
 - `text`: the message, up to 200 characters, in the store's main language. `shortText` (up to 80) shows on phones.
 - `code`: an optional coupon code, one word of up to 40 characters, the same in every language.
 - `link`: optional, a store page (starts with `/`) or an address starting with `https://`.
+- `icon`: optional, an icon name starting with `i-`, for example `i-lucide-truck`.
 - `color`: one of `primary`, `secondary`, `neutral`, `info`, `success`, `warning`, `error`.
 - `dismissible`: whether the visitor can close it. Change the `id` to show the bar again to those who closed it.
 - `i18n`: the text in another language.
@@ -84,7 +85,17 @@ Write `{freeShippingThreshold}` or `{dispatchCutoff}` in `text`, `shortText` or 
 - `{freeShippingThreshold}`: the lowest **Free Shipping Threshold** of your [shipping providers](/admin/settings/shipping-providers), written as an amount in euros. It is the amount the product page quotes in its "free shipping over…" line.
 - `{dispatchCutoff}`: the `DISPATCH_CUTOFF` time, for example `15:00`.
 
-For example: `"text": "Order by {dispatchCutoff} and it ships today. Free shipping over {freeShippingThreshold}."` The amount follows your shipping rates, so the bar never goes out of date.
+The setting takes these keys: `enabled`, `text`, `shortText`, `code`, `link`, `icon`, `color`, `dismissible`, `id` and `i18n`. An example with live amounts:
+
+```json
+{
+  "enabled": true,
+  "text": "Δωρεάν μεταφορικά από {freeShippingThreshold} · Παραγγελίες έως {dispatchCutoff} φεύγουν την ίδια εργάσιμη",
+  "shortText": "Δωρεάν μεταφορικά από {freeShippingThreshold}"
+}
+```
+
+The amount follows your shipping rates, so the bar never goes out of date.
 
 When the wording a visitor would see names a value the store does not have (no free-shipping threshold on any rate, or `DISPATCH_CUTOFF` empty), the bar is not shown to that visitor at all, rather than shown with a gap. Any other word in braces is shown as you typed it.
 
