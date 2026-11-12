@@ -95,9 +95,9 @@ The setting takes these keys: `enabled`, `text`, `shortText`, `code`, `link`, `i
 }
 ```
 
-The amount follows your shipping rates, so the bar never goes out of date.
+The amount follows your shipping rates, so the bar never goes out of date. It is the lowest threshold among them: when your rates differ by country or by weight, some carts need a higher amount, so word the sentence as "from", as the example does.
 
-When the wording a visitor would see names a value the store does not have (no free-shipping threshold on any rate, or `DISPATCH_CUTOFF` empty), the bar is not shown to that visitor at all, rather than shown with a gap. Any other word in braces is shown as you typed it.
+When `text` or `shortText` in the visitor's language names a value the store does not have (no free-shipping threshold on any rate, or `DISPATCH_CUTOFF` empty), the bar is not shown in that language at all, on any screen, rather than shown with a gap. Any other word in braces is shown as you typed it.
 
 ### Tell search engines about new and changed pages
 
@@ -130,7 +130,7 @@ Defaults are the values a new store starts with. Amounts are in euros.
 
 | Setting | What it does | Default |
 |---|---|---|
-| `MOBILE_BOTTOM_NAV_ENABLED` | The navigation bar at the bottom of the screen on phones and tablets. The default design shows Home, Search, Saved, Cart and Account; a store with its own design may show others, for example Home, Shop, Blog, Cart and Account. A tab is shown only while its feature is on. See [Page builder](/admin/content/page-builder#the-header-and-phone-menus). | on |
+| `MOBILE_BOTTOM_NAV_ENABLED` | The navigation bar at the bottom of the screen on phones and tablets. The default design shows Home, Search, Saved, Cart and Account; a store with its own design may show others, for example Home, Shop, Blog, Cart and Account. A tab is shown only while its feature is on. See [Page builder](/admin/content/page-builder#the-header-the-phone-menu-and-the-tab-bar). | on |
 | `STICKY_ADD_TO_CART_ENABLED` | The "add to cart" bar that stays on screen as you scroll a product page. | on |
 | `RECENTLY_VIEWED_ENABLED` | The "Recently viewed" strip on the home page. A visitor sees it only if they accepted **Personalisation** in the cookie choices, so a store with no cookie banner does not show it. The recent searches follow the same rule. | on |
 | `PRODUCT_ASSURANCES_ENABLED` | The box under the buy button on a product page with the delivery time, the free-shipping amount, the payment methods and the return period. Each line shows only when the store has that information (for example delivery days on the shipping rates). | on |

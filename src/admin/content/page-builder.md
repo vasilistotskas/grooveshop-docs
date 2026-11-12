@@ -110,7 +110,7 @@ A **Blog post list** can go on past the posts it first shows. Turn on **Load mor
 | **Heading** and **Heading, second line** | The two lines of one heading. The second line is drawn in the accent colour. Together they are the page's main heading (see **Main heading (h1)** above). |
 | **Subheading** | The line under the heading. |
 | **Image** and **Image on phones** | The picture. Phones and tablets show **Image on phones** when you set one, and **Image** otherwise. |
-| **Decorative image** | Turn it on when the picture adds nothing a screen reader user needs. A picture with no description is not treated as decorative unless you turn this on; it is then described by the heading. |
+| **Decorative image** | Turn it on when the picture adds nothing a screen reader user needs. While it is off, a picture with no description of its own is described by the hero's heading. |
 | **Picture link** | Makes the picture a link, to a page of your store or to another site. It becomes a link only when the picture has a description or the hero has a heading to name it. |
 | **Search field** | Shows the store search. Only when the store has a product catalogue. |
 | **Button text** and **Button link** | The first button. The link may lead to a page of your store or to another site; a link to another site opens that address. |
