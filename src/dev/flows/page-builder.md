@@ -351,8 +351,10 @@ asks for nothing.
   `isAuthPagePath`), elsewhere the page (`returnTarget(route)`). The destination
   is the PATH only unless the page opts in with `definePageMeta({ signInReturn })`
   (`app/types/global.d.ts`): `'path-and-query'` for view state worth keeping
-  (the listings, the blog's pages, search), `'nowhere'` for a one-time token
-  (unsubscribe, confirmation, a share preview). A query can hold a payment
+  (the product and blog listings, search and six account lists: addresses,
+  favourite products and posts, notifications, orders, reviews), `'nowhere'` for
+  the four one-time-token pages (unsubscribe, the alert and newsletter
+  confirmations, a share preview). A query can hold a payment
   session or a token and `next` lands in an address, a history and a `Referer`,
   so the default is deny. Every writer and reader of `next` goes through these
   (the auth middleware, `app/plugins/auth.ts`, the flow forms);
