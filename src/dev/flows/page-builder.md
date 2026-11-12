@@ -183,6 +183,36 @@ settings, plus each list of child blocks (a disabled one left out) under the
 prop `childList` names. The same function feeds the page-heading rules
 (`HEADING_SECTION_TYPES`, `heroCarouselHeading`).
 
+Two sections read the store's own data instead of settings. `hero_showcase`
+(`app/blocks/hero_showcase.block.ts`, `app/components/PageSection/HeroShowcase.vue`)
+is a heading in two lines (`heading`, `headingAccent`, both in the page's one h1:
+`hero_showcase` is in `HEADING_SECTION_TYPES` and `sectionsHeadingText` joins the
+two), a sub-line, a `media` picture with a `mobileImage`, an explicit
+`imageDecorative`, an `imageLink`, the store search (`showSearch`), two buttons
+and one `product` ref drawn by `Product/Spotlight.vue` (`showAddToCart`). The
+component lays one list of parts out in the order a phone reads them and places
+them in two columns by CSS grid on a desk. It draws nothing for a part it cannot
+have: no search or product with the `catalogue` feature off, no buy button with
+`cart` off, no picture for a missing media ref, no product for a `product` ref
+that did not resolve to a record (a sold-out product stays and offers the
+restock alert in place of the buy button), and a button needs both its text and
+its link (a link `resolveLinks` removed leaves no button). The picture is a link
+only when something names it (its description, else the heading).
+`store_assurances` (`app/blocks/store_assurances.block.ts`,
+`app/components/PageSection/StoreAssurances.vue`, `useStoreAssurances`) states
+four rows (delivery with the dispatch cutoff under it, free shipping with each
+carrier's price below the threshold, returns, ways to pay) from
+`useStoreAssuranceFacts`, the one reader of those facts, which the product page's
+assurances (`useProductAssurances`) read too. Every fact is `null` when the store
+has not said it (no rate with delivery days, no threshold, `returnWindowDays` of
+0, no active pay way), its row is left out, and the section draws nothing when
+no row is left. The block declares `feature: 'cart'`, so a store without the
+cart does not get it, and the facts make no request for such a store.
+`blog_categories` is at version 2: a `layout` (`slider` or `tiles`),
+`subheading`, `ctaText` and `ctaLink` beside its `title`; `upgradeBlogCategories`
+carries a version 1 node over. The `tiles` layout is the platform's
+`PageSection/BlogCategoryTiles.vue` in every design.
+
 `test/unit/server/utils/builderRealBlocks.spec.ts` holds every real block to
 the rules that do not depend on the block: a consistent catalogue, no link that
 is translatable, rich text marked, every schema closed.
@@ -216,6 +246,15 @@ follows the rename.
   `/prompt/ctaText`) and not the object that also holds its link.
 - **Resolving a link.** See the rendering section: `resolveLinks` turns each link
   into the path it has now, and section components still receive a string.
+- **A link to a switched-off feature is taken out too.** `resolveLinks` asks
+  `isFeaturePathBlocked(path, targets.blocked)` (`shared/utils/gatedRoutes.ts`)
+  of every `route` link and of the address of every record link. `targets.blocked`
+  is `blockedFeaturePaths(tenant)` (`readLinkTargets`), the paths
+  `FEATURE_GATED_ROUTES` says the store does not serve. A blocked `/blog`
+  also blocks `/blog/<anything>`, matched on a segment boundary and with the
+  locale prefix removed. The link is removed like a link to a record that is gone, so
+  the component draws no call to action. `FEATURE_GATED_ROUTES` is the same
+  table the menus and the sitemap read.
 
 ### 6. Navigation menus
 
@@ -238,6 +277,25 @@ resolves through the legal routes (`LEGAL_ROUTE_BY_SLUG`) rather than to
 `/info/<slug>`, which would redirect; a page type a static route renders links to
 that route (`home` to `/`). The caller supplies the sets of published page types
 and content page slugs from the release.
+
+The header menu's links to `/products` and `/blog` open dropdown panels of live
+categories, in both designs, and the phone menu has sections for them. That is not
+part of the document: `app/utils/menuDropdown.ts` maps a link's path to its
+dropdown (`menuDropdownFor`, locale prefix removed), so an operator's own row
+for the listing keeps its panel under the operator's label. The panels read
+`useCategoryMenu` and `useBlogCategoryMenu`, each its own request cut down by
+`transform` to what the menus draw (`categoryMenu`, `blogCategoryMenu`: at most
+eight roots, and for the shop at most eight children each; at most eight blog
+topics), and each gated on its store feature, so a store without the feature
+asks for nothing. An entry that opens a panel is drawn as two entries by
+`withDropdownToggles`: the link, and an adjacent button that carries the panel
+(WAI-ARIA's disclosure navigation). `useMenuHover` (`app/composables/useMenuHover.ts`)
+is the mouse half: hovering a name or its button opens the panel through the
+menu's one `v-model`, because Reka's own hover (switched off on these menus) only
+knows the button. The phone tab bar's entries are `useBottomNavItems`, each tab
+shown while the page it opens is serving (`useGatedRoute`); a design picks its
+tabs (`tabs` option) and the bar is switched by the `mobileBottomNav` store
+preference (`MOBILE_BOTTOM_NAV_ENABLED`).
 
 ### 7. Rendering pages and menus from the builder
 
@@ -273,6 +331,23 @@ Pages and menus come from the store's published release.
   not published, is left out of the props, so a component draws no call to action
   rather than one that leads nowhere. A read that fails fails the page. Section
   components still receive a plain string.
+- **Records.** A block's `builderField.query` and `builderField.ref` settings are
+  read by `resolveBuilderData` (`server/utils/builderData/resolve.ts: readData`)
+  between the parse and `resolveLinks`. A kind or list whose store feature is off
+  is not asked for: `DATA_FEATURES` (`shared/constants/builder.ts`) maps each
+  record kind and list source to the feature without which Django serves none of
+  it (`catalogue` for products and categories, `blog` for posts and blog
+  categories, `promotions` for the offers, none for media), `readData` takes the
+  store's `featureOn` (`storeFeatureOf(event)`), and a record of such a kind
+  resolves as gone and a list as empty. This is for the settings of a block
+  that is not itself the feature (a hero's product); a block that is the feature
+  is left out of the document earlier by its own `feature`. A refused read is
+  never cached, so without this every render of such a page would ask again.
+  The reads are `cachedRead` functions (`builderDataProduct`, `builderDataCategory`,
+  `builderDataBlogPost`, `builderDataBlogCategory`, `builderDataPromotion`,
+  `builderDataMedia`, `server/utils/builderData/loaders.ts`), cached
+  `DATA_CACHE_SECONDS` (60) without `swr`; the links add `builderDataSlug` and
+  `builderDataTargets`.
 - **Cache.** Both handlers are cached 5 minutes with a stale hour, keyed on the
   store, the language and the epoch; Django's purge after a release names them
   (`src/core/cache/surfaces.py`, the `builder` surface), so renaming a handler stops a
@@ -313,6 +388,87 @@ it from Django's admin, which mints a **single-use ticket**.
 The shell page is a placeholder (a Nuxt UI dashboard frame, the staff name and
 a sign-out button); the editor replaces it.
 
+### 9. Product stock, colour schemes and design parts
+
+**The `stock` key.** A product rule (`DATA_DESCRIPTORS.product`,
+`shared/builder/dataSources.ts`) takes an optional `stock` from
+`PRODUCT_STOCK_MODES` (`shared/constants/builder.ts`): `any`, `inStockFirst`,
+`inStockOnly`. A descriptor without the key is `any`, so an untouched list and a
+reset one are the same document: `Builder/QueryField.vue` takes the key
+out for `any`. A hand-picked list has no `stock`. The key then runs
+end to end:
+
+1. The editor writes it (`QueryField.vue`, the **Stock** select, product source,
+   `filter` mode only).
+2. Django validates it on save (`src/builder/data_sources.py`: `PRODUCT_STOCK`,
+   `_stock`; any other value is `invalid_data_value`, and a `picked` list with a
+   `stock` key is refused as an unknown key). It adds no facet to the list's
+   `BuilderReference` row, which is why a stock flip purges by any list (see
+   [Caches and purging](/dev/operations/caches#stock-flips-and-the-page-builder)).
+3. The storefront turns it into Django's query
+   (`server/utils/builderData/queries.ts: productQuery`): `inStockFirst` orders by
+   `-availabilityPriority,<ordering>` (the product list's `availability_priority`
+   first, then the merchant's order), `inStockOnly` adds `inStock=true`.
+4. A band's automatic "see all" keeps the rule when the listing has a twin of it:
+   `productRailStockQuery` (`app/utils/productRail.ts`) adds `?inStock=true` for
+   `inStockOnly`, and `inStockFirst` has none. `ProductsGrid.vue` and
+   `ProductsSlider.vue` use it, and a link the operator set wins. A post list's
+   automatic "see all" leads to the category its rule names (`useBlogCategoryNames`
+   gives each category's name and path, `BlogPosts.vue: allPostsLink`) and to the
+   blog otherwise; the post carousel still goes to the blog.
+
+**A forced light or dark band.** `colorScheme` (`SECTION_COLOR_SCHEMES`: `light`,
+`dark`; empty means the page's) is a setting of the product and post bands
+(`builderField.productRail` and `blogRail`) and of `hero_showcase`
+(`builderField.colorScheme`). `colorSchemeClass` (`app/utils/colorScheme.ts`)
+puts Nuxt UI's `light` or `dark` class and `text-default` on the band: the class
+switches every token inside, and the text colour is on the band because `body`
+paints in the page's scheme. For the band to get the STORE's colours and not the
+stylesheet's, `themeCss` (`shared/theme/compile.ts`) writes each scheme for the
+forced subtree as well: `html:root, html .light { ... } html.dark, html .dark { ... }`.
+The innermost class wins because each declares the scheme on its own element.
+`test/helpers/themeCascade.ts` computes what an element inside a forced band
+gets from the real stylesheets, and `schemes.spec.ts` pins it.
+
+**Design parts.** A shared component can draw one piece of itself in the store's
+own design. `resolvePart(key, tenantSchema)` (`app/utils/variantRegistry.ts`)
+returns a `DesignPart` (`component` and a `props` function from `DesignPartInput`
+to the props that component takes) for a `DesignPartKey`
+(`product_add_to_cart`, `product_restock_alert`): `part:<key>@<schema>` in
+`partVariants`, else `partDefaults`. `Product/Spotlight.vue` is the same in every
+design and draws the buy button or the restock alert through it, because the
+two designs' controls take different props and an attribute one does not declare
+would fall through onto its root.
+
+**Announcement tokens.** The bar's text may name `{freeShippingThreshold}` and
+`{dispatchCutoff}` (`ANNOUNCEMENT_TOKENS`, `shared/utils/announcementBar.ts`).
+`useAnnouncementBar` fills them in the render, so the server and the browser print
+the same sentence: the threshold from `useFreeShippingInfo` (read only when some
+wording of the bar names it) and the cutoff from the typed settings
+(`parseDispatchCutoff`). `fillAnnouncementTokens` replaces a token that has a value
+and leaves any other `{word}` as typed. A bar whose wording for this visitor (the
+locale's text and short text) names a token with no value is `null`, so the chrome
+draws nothing: neither a hole nor a raw token reaches a visitor.
+
+**The search shortcut.** Ctrl+K / Cmd+K and "/" belong to ONE search field of a
+page. `useSearchShortcut(header, open)` (`app/composables/useSearchShortcut.ts`)
+registers each field in `useState`; the owner is the header's field when there
+is one, else the first other, and only the owner answers the keys. A section's
+field (the hero's, the search band's) therefore never opens a second palette, and
+a design whose header has no search field still has the shortcut.
+
+**The dock.** The phone's fixed bars (the tab bar, the sticky add-to-cart bar,
+the cookie notice, the assistant button) stack by custom properties in
+`app/assets/css/main.css`: `--dock-inset` (the safe-area inset, or the funding
+strip's `--dock-edge` when larger), `--dock-base`, `--dock-tabbar`, `--dock-bar`,
+`--dock-fab`, `--dock-stack` and `--dock-top`. A bar marks itself
+`data-dock="tabbar" | "bar" | "fab"` and `:root:has([data-dock=...])` turns its
+height on. A design that draws its bars edge to edge adds `data-dock-flush`: they
+have no gap, the bottom-most stands on the screen's edge and pads the rest of the
+inset inside itself, and the sticky bar stands on the tab bar (`--dock-floor`,
+`--dock-floor-pad`). The default layout's footer clears the dock with
+`--dock-inset + --dock-tabbar + --dock-bar` (`app/layouts/default.vue`).
+
 ## Invariants
 
 - A definition holds data, never a component; the server bundle carries no
@@ -323,6 +479,12 @@ a sign-out button); the editor replaces it.
 - A section renders from `sectionProps(node)`: components never read blocks.
 - A document stores where a link goes, never a typed internal path, and no link
   is ever translatable. What a page links to is always the current address.
+- A store feature that is off takes away what depends on it: a block with that
+  `feature` is left out, a record of a kind in `DATA_FEATURES` is read as gone and
+  its list as empty, and a link to a path `FEATURE_GATED_ROUTES` blocks is removed.
+  None of them asks Django for what it would refuse.
+- A forced colour scheme is a class on the band and the theme writes both schemes
+  for its subtree; a band never sets a colour of its own.
 - `parseDocument` rebuilds nodes from the parse; unknown keys never reach a
   component, and one bad node never takes a page down.
 - **Only `server/api/builder/**` and `builderSession.ts` may read the staff
@@ -345,6 +507,9 @@ a sign-out button); the editor replaces it.
 | The server fails to load with "is defined twice" or "allows … inside it" | Two blocks of one type, or an allowed child that is missing or not a `block` |
 | A page renders without a section and logs `node skipped` | An unknown or newer type, settings that fail the schema, a misplaced block or an upgrade that cannot run |
 | A call to action is missing from a page | Its link names a record that is gone, or a page or content page that is not published: left out at render, kept in the document |
+| A hero has no search, product or buy button | The `catalogue` feature (search, product) or `cart` (buy button) is off, or the `product` ref is gone: left out at render |
+| The shopping promises band is missing | The store has no cart, or none of its four facts is known (no delivery days, no free-shipping threshold, no return window, no active pay way) |
+| The announcement bar is missing | Its wording for this locale names `{freeShippingThreshold}` or `{dispatchCutoff}` and the store has no value for it |
 | A menu link or footer column is missing from the chrome | Its page or content page is not published in the current release: hidden at render, kept in the document |
 | `/_builder` shows "You are not signed in" | No staff cookie: the editor was opened without a ticket, the session ended, or the cookie expired |
 | `/_builder` shows the link is no longer valid | Django answered `invalid_ticket`: the ticket expired, was already used, or was minted for another store |
@@ -364,6 +529,18 @@ a sign-out button); the editor replaces it.
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/linkPointers.ts` | `linkPointers`: the link settings of a schema, as `linkRefs` |
 | `grooveshop-storefront-ui-node-nuxt/shared/builder/linkSettings.ts` | `mapLinkSettings`: rewrite the link settings of a node |
 | `grooveshop-storefront-ui-node-nuxt/shared/utils/entityPaths.ts` | The routes of the records a link names |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/gatedRoutes.ts` | `FEATURE_GATED_ROUTES`, `blockedFeaturePaths`, `isFeaturePathBlocked`: the one table of routes a switched-off feature takes away |
+| `grooveshop-storefront-ui-node-nuxt/app/blocks/hero_showcase.block.ts`, `app/components/PageSection/HeroShowcase.vue`, `app/components/Product/Spotlight.vue` | The hero with a picture, search and one product |
+| `grooveshop-storefront-ui-node-nuxt/app/blocks/store_assurances.block.ts`, `app/components/PageSection/StoreAssurances.vue`, `app/composables/useStoreAssurances.ts`, `app/composables/useStoreAssuranceFacts.ts` | The shopping promises band and the facts it shares with the product page |
+| `grooveshop-storefront-ui-node-nuxt/app/blocks/blog_categories.block.ts`, `app/components/PageSection/BlogCategories.vue`, `app/components/PageSection/BlogCategoryTiles.vue` | Blog categories as a slider or tiles |
+| `grooveshop-storefront-ui-node-nuxt/shared/constants/builder.ts` | `PRODUCT_STOCK_MODES`, `SECTION_COLOR_SCHEMES`, `DATA_FEATURES`, `DATA_CACHE_SECONDS` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderData/queries.ts`, `server/utils/builderData/resolve.ts`, `server/utils/builderData/loaders.ts` | A product rule as Django's query; reading records, skipped for a feature that is off; the cached reads |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/productRail.ts` | `productRailStockQuery`: where an in-stock band's "see all" opens |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/colorScheme.ts`, `shared/theme/compile.ts`, `test/helpers/themeCascade.ts` | `colorSchemeClass`; the theme written for a forced subtree; the cascade the tests compute |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/variantRegistry.ts` | `resolvePart`, `DesignPartKey`, the design parts |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/announcementBar.ts`, `app/composables/useAnnouncementBar.ts` | The announcement bar's tokens |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useSearchShortcut.ts` | One owner for the search shortcuts |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/menuDropdown.ts`, `app/composables/useMenuHover.ts`, `app/composables/useCategoryMenu.ts`, `app/composables/useBlogCategoryMenu.ts`, `app/composables/useBottomNavItems.ts`, `app/assets/css/main.css` | The header's dropdown panels, the menus' category reads, the tab bar's entries, the dock's custom properties |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderLinks.ts` | `collectLinkRefs`, `resolveLinks`, `readLinkTargets` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderTargets.ts` | The published pages and content pages a link or a menu may name |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/pages/[pageKey].get.ts` | `GET /api/builder/pages/<pageKey>`: a published page, links resolved |

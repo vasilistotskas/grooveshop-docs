@@ -561,6 +561,13 @@ capped by the field. It writes the whole descriptor, which is closed, so a key
 left out is a key the list does not have. A hand-picked list and a single record
 use `BuilderRecordList` and `BuilderRecordPicker`.
 
+A product rule also carries the **Stock** select (`QueryField.vue`, product source,
+`filter` mode only): `any`, `inStockFirst` or `inStockOnly` from
+`PRODUCT_STOCK_MODES`. `any` is the absence of the `stock` key, so the select takes
+the key out of the descriptor (`builderQueryPatch` drops a key set to `undefined`)
+and an untouched list equals a reset one. A hand-picked list has no select. What
+the key does downstream is in [Page builder foundation](/dev/flows/page-builder#9-product-stock-colour-schemes-and-design-parts).
+
 The editor stores only the descriptor or the id. The page route reads the data
 (`resolveBuilderData`), and the canvas keeps a node the published page would hide
 so it can still be selected.
