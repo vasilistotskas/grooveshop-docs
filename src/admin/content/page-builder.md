@@ -22,6 +22,17 @@ In the editor you can:
 - save your work as you go, and publish a page and its menus together when it is ready, or schedule the publish for a later time;
 - go back to an earlier version of a page. The theme has no version history yet: a change to it cannot be undone by going back, only by changing the colours again.
 
+## When a colleague edits at the same time
+
+Your changes save by themselves as you work. When someone else on your team has the same content open in the editor, a notice appears: **Others are editing the same content**. It names who, and what: the page, the parts shown on every page (**Header, on every page**, **Mobile menu, on every page**, **Footer, on every page**) and the theme (**Theme: colours, corners, fonts**), each by its name. The notice is only a hint. It does not stop either of you from editing.
+
+If a colleague saves one of those at the same moment, the editor cannot save yours over it without asking. A dialog opens, titled with their name and what they saved ("Anna saved Home page in the meantime"), saying your latest changes were not saved. It lists when they saved and which sections differ between the two versions, and offers two choices:
+
+- **Keep mine** saves your version over theirs. Their changes to that page, part or theme are replaced by yours.
+- **Load the saved one** replaces your version with the one your colleague saved. Your unsaved changes to it are lost, and so is the undo history you had for it.
+
+Choose one to carry on. If the saved version cannot be read, the dialog says so and **Load the saved one** is not available; you can still **Keep mine**.
+
 ## Change the colours, corners and fonts
 
 Your store's look is its theme, and you change it in the editor.
