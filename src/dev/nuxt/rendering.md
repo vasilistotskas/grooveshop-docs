@@ -54,6 +54,33 @@ user of the accessor, directly or through a composable that calls it: the sessio
 names (`loggedIn`, `user`, under whatever alias) may appear on a `Lazy*` element
 only in its own `v-if` / `v-else-if`.
 
+## Text typed before a lazy form hydrates
+
+A lazily hydrated component (a builder section under `hydrateOnVisible`, a `Lazy*`
+element with `hydrate-on-visible`) is live server HTML for a while before Vue takes
+it over, and a visitor can type into its fields. Vue's hydration force-patches an
+`<input>`'s `value` from the vnode, so a field bound with `:value`, as Nuxt UI's
+`UInput` binds it, was emptied when the component hydrated (the newsletter band:
+filled, then empty 1.5 seconds later). Vue's `v-model` keeps typed text only on a
+plain `text` input or a textarea.
+
+`useKeepTypedBeforeHydration(state)` (`app/composables/useKeepTypedBeforeHydration.ts`)
+keeps it: in `onBeforeMount`, when the component's root is still the server's
+element, it reads every text-type input inside it whose `name` is a key of `state`
+and whose value differs from the one the server rendered; in `onMounted` it writes
+those values into `state`, which draws them back. Writing after hydration, as
+`v-model` does, keeps the hydration free of a mismatch (an input is checked against
+its `value` attribute, which typing does not change). A component mounted in the
+browser has no server element and keeps nothing. Call it in setup before any
+`await`. `useNewsletterSignup` calls it for every newsletter form (the band, and
+both designs' footer forms).
+
+`test/unit/source-rules/typed-text-survives-hydration.spec.ts` holds it: every
+lazily hydrated component that draws a text field on the server (the builder's
+sections registered with `lazySection` or `idleSection`, and every `Lazy*` element
+with a `hydrate-on-*` strategy, followed into the components they draw, outside an
+overlay) calls the mechanism, itself or through `useNewsletterSignup`.
+
 ## Cache keys of list routes
 
 A cached list route's key is built from every parameter the handler forwards to
@@ -183,6 +210,7 @@ that no `overflow-hidden` ancestor clips.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useSessionAfterHydration.ts` | The session as the first render may draw it |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Blog/Post/Comments/index.vue`, `app/composables/useBlogPostComments.ts`, `app/composables/useBlogCommentList.ts` | The comments block |
 | `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/session-after-hydration.spec.ts` | Source rule: a `Lazy*` element names the session only in its own `v-if` |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useKeepTypedBeforeHydration.ts`, `app/composables/useNewsletterSignup.ts`, `test/unit/source-rules/typed-text-survives-hydration.spec.ts` | Text typed before a lazy form hydrates is kept |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/queryCacheKey.ts` | `queryCacheKey` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useProductFavouriteToggle.ts`, `app/stores/user.ts`, `app/plugins/auth.ts`, `shared/constants/index.ts` | The favourites hearts |
 | `grooveshop-storefront-ui-node-nuxt/app/components/PageSection/NewsletterSignup.vue`, `app/components/Chrome/FooterNewsletter.vue`, `app/components/variants/webside/Footer/Newsletter.vue`, `app/components/variants/webside/Chrome/Footer.vue`, `app/assets/css/main.css`, `test/unit/source-rules/one-newsletter-form.spec.ts` | The one-newsletter-form rule |

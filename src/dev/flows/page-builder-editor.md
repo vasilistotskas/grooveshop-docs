@@ -552,6 +552,18 @@ design must keep (`themeContrastRulesFor`), with a Fix on every rule that fails
 (`fixContrast`). On Groove Volt the neutral colour paints borders and badges, not
 text, so only the action and accent colours have rules.
 
+Two rules are **warnings** about the accent on the muted ground, `accent-muted-light`
+and `accent-muted-dark` (3:1, large text, WCAG SC 1.4.3), labelled "Accent on the
+muted ground, light / dark" in the panel (`Builder/ThemePanel.vue`). A band draws the
+accent as large text there: the newsletter band's accent heading and the showcase
+hero's accent line. They hold in both groups of designs; the muted ground is a
+design token on Groove Volt (`VOLT_MUTED_BACKGROUND`) and, for a store with its own
+templates, white in the light scheme and the store's neutral 900 in the dark
+(`MUTED_BACKGROUND`), both in `shared/builder/documentRoots.ts`. The text paints
+`--ui-secondary-text`, never closer to the ground than the accent, so a rule
+checks the accent itself. The panel lists a warning and offers its Fix; nothing
+checks a warning when a document is published.
+
 ### 17. Data settings
 
 A block's lists and records are data settings (`builderField.query` and
