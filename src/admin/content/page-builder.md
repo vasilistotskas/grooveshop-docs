@@ -39,6 +39,17 @@ Some sections have more than one place for a picture:
 
 **Decorative image** is for a picture that adds nothing a screen reader user needs. Set it to **On**, and the picture is left out for them. Leaving the alt text empty does not do this: a hero, a slide or a picture beside text with no alt text is described by its heading instead.
 
+## When a colleague edits at the same time
+
+Your changes save by themselves as you work. When someone else on your team has the same content open in the editor, a notice appears: **Others are editing the same content**. It names who, and what: the page, the parts shown on every page (**Header, on every page**, **Mobile menu, on every page**, **Footer, on every page**) and the theme (**Theme: colours, corners, fonts**), each by its name. The notice is only a hint. It does not stop either of you from editing.
+
+If a colleague saves one of those at the same moment, the editor cannot save yours over it without asking. A dialog opens, titled with their name and what they saved ("Anna saved Home page in the meantime"), saying your latest changes were not saved. It lists when they saved and which sections differ between the two versions, and offers two choices:
+
+- **Keep mine** saves your version over theirs. Their changes to that page, part or theme are replaced by yours.
+- **Load the saved one** replaces your version with the one your colleague saved. Your unsaved changes to it are lost, and so is the undo history you had for it.
+
+Choose one to carry on. If the saved version cannot be read, the dialog says so and **Load the saved one** is not available; you can still **Keep mine**.
+
 ## Change the colours, corners and fonts
 
 Your store's look is its theme, and you change it in the editor.
