@@ -261,8 +261,11 @@ against keys copied from the production keyspace.
 The purge endpoint is `POST /api/admin/cache/purge`
 (`server/api/admin/cache/purge.post.ts`), authenticated by the
 `X-Cache-Purge-Token` header compared in constant time against
-`NUXT_CACHE_PURGE_TOKEN`. Body: `{ patterns: string[], dryRun?: boolean,
-host?: string, tenantConfig?: boolean }`. A `host` scopes the purge to one
+`NUXT_CACHE_PURGE_TOKEN`. Body: `{ patterns: string[], builderDocuments?: string[], dryRun?: boolean,
+host?: string, tenantConfig?: boolean }`; `builderDocuments` names page-builder
+documents (`template:home`, `page:<slug>`, `group:header`, `theme`) whose pages
+the storefront maps to its own keys, and sends from `builder_documents` at most
+64 per call. A `host` scopes the purge to one
 tenant's keys; omit it for a platform-wide purge. `tenantConfig` (default
 `false`) says the purge follows a change to the store's tenant config:
 only then, and not on a dry run, does the endpoint call
@@ -293,6 +296,75 @@ Flip `dryRun` to `false` once the counts look right. `*` reports the
 total; `nitro:routes:*` and `nitro:handlers:*` match nothing because the
 stored keys carry the `cache:` mount and escaping. Entries refill on the
 next request.
+
+### Keys of cached list routes
+
+A cached list route keys its entry by every parameter it forwards to Django, read
+off the route's validated query schema (`server/utils/queryCacheKey.ts:
+queryCacheKey`), so a read at `page=2` is never answered from the entry for page 1.
+Nine routes use it; the list and the reasoning are in
+[Storefront rendering contracts](/dev/nuxt/rendering#cache-keys-of-list-routes).
+
+### Stock flips and the page builder
+
+A sale saves `stock` and `updated_at` alone (`src/order/stock.py`), and a surface's
+`ignored_update_fields` and the page builder's `_IGNORED_UPDATE_FIELDS`
+(`src/builder/data_purge.py`) skip such a save, or every sale would empty the
+store's product cache. One such save changes what pages show: a product that
+sells out or comes back, because the product list puts products in stock first
+(`availability_priority`, `src/product/views/product.py`) and a page-builder list
+can leave sold-out ones out (`stock: inStockOnly`). That is the one exception, and it
+has one definition.
+
+As released:
+
+- `src/product/availability.py: availability_flipped(instance)` is true when the
+  stored stock and the new stock are on different sides of zero. A stock that is
+  not a plain number (a caller saved `F("stock") - n`) counts as a flip, because
+  over-purging once is harmless and a predicate must never break the save. A
+  `pre_save` (`_remember_stored`, connected in `ProductConfig.ready`, skipped when
+  caching is disabled) keeps the stored category and stock on the instance in ONE
+  query, so a sale costs no query for either consumer.
+- `core.cache.invalidation.register_significant_save(label, predicate)` lets a
+  model's app name saves that touch only ignored fields but still invalidate. The
+  receiver of every surface that lists `product.Product` calls `_is_significant`
+  before it skips an ignored-fields save, so a flip marks the `products` and
+  `sitemap_seo` surfaces stale. `availability` registers `availability_flipped` for
+  `product.Product`.
+- The `recommendations` surface lists `product.Product` too and ignores the sale
+  fields (`SALE_UPDATE_FIELDS`, `src/core/cache/registry.py`): the engine reads
+  stock live and drops sold-out products, so a sale does not purge its strips (a
+  hydrated strip can show an old "only 2 left" until its TTL), while a product that
+  sells out or comes back does, through the same predicate.
+- `builder.data_purge`'s `saved_product` imports the same function and
+  `stored_category_id`, so a flip queues the same documents a product edit does.
+  The index records a list's facets, not its `stock` rule, so every list that may
+  hold the product is reached; over-purging is the safe direction.
+- In a purge of several surfaces, `CacheService.purge` runs the ones with
+  `purges_builder_documents` last (`_documents_last`), so the data caches go before
+  the pages that read them.
+
+On the storefront, a `builderDocuments` purge for a page or template document
+first drops the cached record data of the store (`builderRecordDataMatchers`,
+`server/utils/builderDocumentPurge.ts`: the `nitro:functions:` entries of
+`builderDataProduct`, `builderDataCategory`, `builderDataBlogPost`,
+`builderDataBlogCategory`, `builderDataPromotion` and `builderDataSlug`), then the
+rendered pages (`builderDocumentMatchers`), in that order and each finished before
+the next (`server/api/admin/cache/purge.post.ts`). Before, only the page went and the next render
+read the old list from its 60 second data cache and stored it again for the page's
+cache time. `builderDataMedia` and `builderDataTargets` are left out (images change
+through the media library, published pages through a release), and a purge of a
+section group or the theme alone drops no record data.
+
+What this cannot close: a page render already in flight when the purge lands read
+the old records, and the page it stores after the purge is an ordinary entry of the
+route cache. It is served as fresh for its route's `swr` lifetime (300 to 3600
+seconds by route: `SWR_ROUTE_RULES`, `SWR_ROUTE_PATTERN_RULES`,
+`CUSTOM_PAGE_SWR_TTL`, the brand pages' 3600), then once more while Nitro
+re-renders it (no `staleMaxAge`), until the next record change purges it or that
+re-render replaces it. The 60 second data TTL bounds only the record-data
+entries, never that page (storefront issue 454; see
+`.claude/rules/server-routes.md` in the storefront repository).
 
 ### The tenant-config epoch
 
@@ -669,6 +741,9 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |
 | `grooveshop-django-api/src/core/models.py` (`PublishableModel`, `PublishedQuerySet`) | What counts as published: `is_published` and a past `published_at` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/queryCacheKey.ts` | `queryCacheKey`: a cached list's key from every parameter it forwards |
+| `grooveshop-django-api/src/product/availability.py`, `src/builder/data_purge.py`, `src/core/cache/invalidation.py` (`register_significant_save`), `src/core/cache/service.py` (`_documents_last`) | The stock-flip rule shared by the surfaces and the builder purge |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderDocumentPurge.ts`, `server/api/admin/cache/purge.post.ts` | `builderRecordDataMatchers` and `builderDocumentMatchers`, run in order |
 | `grooveshop-django-api/src/core/publication.py`, `src/core/sweeps.py`, `src/core/tasks.py` (`release_due_publications_task`), `src/blog/signals.py`, `src/indexnow/signals.py`, `src/builder/data_purge.py` | The go-live sweep and what `went_live` triggers |
 | `grooveshop-django-api/src/tenant/media_flush.py`, `src/tenant/tasks.py` | Media flush |
 | `grooveshop-django-api/src/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/src/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |

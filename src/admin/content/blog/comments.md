@@ -20,6 +20,8 @@ Search looks in the comment text, the commenter's name and email, and the post t
 | ticked | The comment shows under the post and counts in its comments. |
 | not ticked | The comment and its replies do not show. |
 
+Comments are part of the article page itself, so every visitor, signed in or not, sees them (and their count) as soon as the page opens. **Load more** brings the next, older comments.
+
 ## Tasks
 
 ### Hide a comment

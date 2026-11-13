@@ -20,7 +20,18 @@ In the editor you can:
 - change the text, pictures and links of a section, in every language your store serves;
 - add, move, hide and remove sections, and build new pages;
 - save your work as you go, and publish a page and its menus together when it is ready, or schedule the publish for a later time;
-- go back to any earlier version.
+- go back to an earlier version of a page. The theme has no version history yet: a change to it cannot be undone by going back, only by changing the colours again.
+
+## When a colleague edits at the same time
+
+Your changes save by themselves as you work. When someone else on your team has the same content open in the editor, a notice appears: **Others are editing the same content**. It names who, and what: the page, the parts shown on every page (**Header, on every page**, **Mobile menu, on every page**, **Footer, on every page**) and the theme (**Theme: colours, corners, fonts**), each by its name. The notice is only a hint. It does not stop either of you from editing.
+
+If a colleague saves one of those at the same moment, the editor cannot save yours over it without asking. A dialog opens, titled with their name and what they saved ("Anna saved Home page in the meantime"), saying your latest changes were not saved. It lists when they saved and which sections differ between the two versions, and offers two choices:
+
+- **Keep mine** saves your version over theirs. Their changes to that page, part or theme are replaced by yours.
+- **Load the saved one** replaces your version with the one your colleague saved. Your unsaved changes to it are lost, and so is the undo history you had for it.
+
+Choose one to carry on. If the saved version cannot be read, the dialog says so and **Load the saved one** is not available; you can still **Keep mine**.
 
 ## Change the colours, corners and fonts
 
@@ -30,8 +41,12 @@ Your store's look is its theme, and you change it in the editor.
 2. In the outline, click **Theme: colours, corners, fonts**.
 3. Change the **Colours**, for the light and the dark scheme. **Same colours as light** copies the light colours to the dark scheme.
 4. Under **Shape and fonts**, set the **Corners**, the **Page width** and the fonts.
-5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before you can publish.
-6. Publish. The new look shows on every page, and your emails use the new primary colour.
+5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before the theme can be published.
+6. Click **Publish** in the top bar. The dialog **Publish to the store** lists **What to publish**: the page, its section groups and, last, **Theme: colours, corners, fonts**. The theme is ticked when it has changes that are not published yet, and cannot be ticked when it has none (**No changes**). Click **Publish now**, or choose **At a set time** under **When** and click **Schedule**. The new look shows on every page, and your emails use the new primary colour.
+
+If a pair that **Blocks publishing** still fails, the dialog lists it as a problem ("One problem must be fixed first") with a message about the contrast of those colours and a **Show** button, which opens the theme panel on that pair. **Publish now** stays unavailable until it is fixed. A failing warning does not block: while the theme is ticked, the dialog shows a notice, "One colour pair of the theme has less contrast than recommended" (with the number of pairs when there are several), "It does not stop the publish; some shoppers may find them hard to read", and under it each failing pair by name (for example **Accent on the muted ground, light**), each with its own **Show** button, which opens the theme panel on that pair. The list of scheduled publishes names the theme as **Theme: colours, corners, fonts** too.
+
+**Contrast** also lists two warnings about the accent colour: **Accent on the muted ground, light** and **Accent on the muted ground, dark**. They tell you when the accent is too faint (below 3 to 1) to read as a large heading on the muted background of a section, such as the accent line of a **Hero with picture and search** or an accent **Newsletter sign-up** heading. They are warnings only: the panel lists them, **Fix** corrects the colour, and they never stop a publish. While the theme is ticked in the publish dialog they show there too, as the notice described above.
 
 **Button colour** can keep its own colour or, with **Follows the primary colour** on, change along with the primary colour.
 
@@ -48,7 +63,7 @@ Every page has its own **Page settings**: how it appears in search results and, 
 | **Search engine title** | The title on the browser tab and in search results. Empty: the title the page sets itself. | 70 characters |
 | **Search engine description** | The text under the title in search results, and when the page is shared. Empty: the description the page sets itself. | 300 characters |
 | **Keywords** | Kept with the page but not put on it, because search engines ignore keywords. | 255 characters |
-| **Main heading (h1)** | Home page only. The page's main heading, used unless a section on the page supplies it: a **Hero banner**, a **Hero carousel** whose first slide has a heading, or a **Contact** section. A heading in any other section does not count. Empty: the store's name. | 120 characters |
+| **Main heading (h1)** | Home page only. The page's main heading, used unless a section on the page supplies it: a **Hero banner** or a **Hero with picture and search** that has a heading (the two heading lines together), a **Hero carousel** whose first slide has a heading, or a **Contact** section. A hero with no heading leaves the page its own title, and a heading in any other section does not count. Empty: the store's name. | 120 characters |
 
 4. Publish. Like any other change, the settings reach visitors only when the page is published.
 
@@ -68,18 +83,177 @@ Some sections show things from your store rather than words you type: **Product 
 
 | Section | What you can set |
 |---|---|
-| **Product carousel**, **Product grid**, **Featured products** | **By a rule**: **Categories** (all of them if you choose none; subcategories are included), **Order** and **How many**. **Hand-picked**: the **Items**, shown in the order you put them. |
+| **Product carousel**, **Product grid**, **Featured products** | **By a rule**: **Categories** (all of them if you choose none; subcategories are included), **Order**, **Stock** and **How many**. **Hand-picked**: the **Items**, shown in the order you put them. |
 | **Blog post grid**, **Blog post list**, **Blog post carousel** | **By a rule**: **Category**, **Featured** (**All**, **Featured only** or **Not featured**), **Order** and **How many**. **Hand-picked**: the **Items**, shown in the order you put them. |
 | **Product categories** | **Main categories**, or the **Subcategories** of a **Parent category**, and **How many**. |
-| **Blog categories**, **Offers** | **How many**. |
+| **Blog categories**, **Offers** | **How many**. **Blog categories** also takes a **Layout**: see [Show blog categories as tiles](#show-blog-categories-as-tiles). |
+
+A **Product grid** and a **Blog post grid** also have settings that [Give a section the bold look](#give-a-section-the-bold-look) describes: **Style**, **Eyebrow**, **How many on a phone**, and for the grids **Category tile** and **Layout** and **Icon**.
 
 **Order** for products can be **Newest**, **Most viewed**, **Most liked**, **Best rated**, **Biggest discount**, **Price, lowest first** or **Price, highest first**. For blog posts it can be **Newest** or **Most viewed**.
 
 **By a rule** keeps up by itself: a new product in those categories joins the list with nothing to publish. **Hand-picked** shows exactly what you chose, and an item that is deleted or hidden simply drops out.
 
+### Put products in stock first, or leave sold-out ones out
+
+A product list set **By a rule** has a **Stock** choice:
+
+| Choice | What the list does |
+|---|---|
+| **As they come** | Lists products in the chosen **Order**, sold-out ones included. This is the default. |
+| **In stock first** | Products that can be bought come first, then the sold-out ones, each group in the chosen **Order**. |
+| **In stock only** | Sold-out products are left out. |
+
+A **Hand-picked** list has no **Stock** choice: it shows exactly what you chose.
+
+- The automatic "see all" button of a **Product carousel**, **Product grid** or **Featured products** section opens the products page sorted as the section is (for example newest first). Set to **In stock only**, it opens the page already showing only what is in stock. The **Button text** you write changes only the words. Only a **Button link** you set yourself sends it somewhere else.
+- When a product sells out, or comes back in stock, the pages that list products are refreshed within moments.
+
+### Show articles as a list on a phone
+
+A **Blog post grid** section has the setting **Layout on a phone**. It takes two choices:
+
+| Choice | What a phone shows |
+|---|---|
+| **Default** | A row to swipe: the articles as cards in a row that the visitor swipes sideways. |
+| **List** | The articles one under another as compact rows: a small picture on the left, and beside it the category and the reading time ("Tips · 4 min read") with the article's title under them. The whole row is one link. |
+
+From tablet width up the section looks the same whichever you choose. It applies to the **Blog post grid** only, not to the **Blog post list** or the **Blog post carousel**.
+
 ### Let visitors load more posts
 
 A **Blog post list** can go on past the posts it first shows. Turn on **Load more button**, and publish. Visitors get a button under the posts that adds the next ones of the same list, for as long as it has more.
+
+## Add a hero with a picture and search
+
+**Hero with picture and search** is the top of a page that sells and searches at once: a heading, a short line under it, a picture, the store search, two buttons and one product the visitor can add to the cart on the spot. It is made for the top of a page.
+
+1. Open **Content → Edit storefront** and open the page.
+2. Add the section **Hero with picture and search**. A new one starts with the **Search field** on.
+3. Fill in what you need and publish. Every setting is optional:
+
+| Setting | What it does |
+|---|---|
+| **Eyebrow** | A small line above the heading. |
+| **Heading** and **Heading, second line** | The two lines of one heading. The second line is drawn in the accent colour. Together they are the page's main heading (see **Main heading (h1)** above). |
+| **Subheading** | The line under the heading. |
+| **Image** and **Image on phones** | The picture. Phones and tablets show **Image on phones** when you set one, and **Image** otherwise. |
+| **Decorative image** | Turn it on when the picture adds nothing a screen reader user needs. While it is off, a picture with no description of its own is described by the hero's heading. |
+| **Picture link** | Makes the picture a link, to a page of your store or to another site. It becomes a link only when the picture has a description or the hero has a heading to name it. |
+| **Search field** | Shows the store search. Only when the store has a product catalogue. |
+| **Search field text** | The question inside the field. Empty: “Search the shop”. In the **Bold** style the field has its own search button on a desk. |
+| **Button text** and **Button link** | The first button. The link may lead to a page of your store or to another site; a link to another site opens that address. |
+| **Second button text** and **Second button link** | The second button, drawn as an outline. |
+| **Product** | One product, shown with its picture, name, price, stock state and, with reviews on, rating. |
+| **Add to cart button** | Shows the buy button on that product. On by default. |
+| **Colour scheme** | See [Draw a band light or dark](#draw-a-band-light-or-dark). |
+| **Style** | **Bold** draws the hero heavier: see [Give a section the bold look](#give-a-section-the-bold-look). Empty: the look it always had. |
+
+On a phone the parts are stacked in the order heading, subheading, picture, search, buttons, product. The two buttons share one line when their texts are short (about 16 Greek letters each, a little more in Latin letters); a longer text wraps inside its button, so no word is cut. The featured product's buy button sits on its own row under the picture and the text. On a desk the text, the search and the buttons are on the left, and the picture over the product on the right. With neither a picture nor a product, the hero is a single column.
+
+What does not show:
+
+- **The picture** is left out when none is chosen or the chosen one was deleted.
+- **A button** needs both its text and its link. A link to a section of the store that is switched off is not shown (see Good to know), so that button disappears.
+- **The main heading** comes from this section only when it has a heading. Without one, the page keeps its own title.
+- **The search field and the product** are left out when the product catalogue is switched off. **The buy button** is left out when the cart is switched off.
+- **The product** is left out when it was deleted. A product that is sold out stays, marked **Sold out**, and offers a "notify me" alert instead of the buy button when product alerts are on.
+- **The whole section** disappears when nothing is left to show.
+
+## Show the store's shopping promises
+
+**Shopping promises** is a short row of what a shopper can count on: delivery, free shipping, returns and ways to pay. You do not type any of it. Each line is read from your store's own settings, so it changes when they do. The box under the buy button on a product page reads the same data.
+
+1. Open **Content → Edit storefront** and open the page.
+2. Add the section **Shopping promises**.
+3. Set a **Heading** if you want one, and the **Background**: **Basic** or **Muted**.
+4. Choose a **Layout** if you want the promises on one card (see below).
+5. Publish.
+
+| Line | Reads like | Comes from |
+|---|---|---|
+| Delivery | "Delivered in 2–4 business days", with "Orders placed by 15:00 leave the same business day" under it | The **Delivery Days** of your [shipping providers](/admin/settings/shipping-providers) for the first country in the list (from the lowest **Delivery Days (min)** to the highest **Delivery Days (max)**), and the `DISPATCH_CUTOFF` setting |
+| Free shipping | "Free shipping from €50", with what each courier charges below that under it | The lowest **Free Shipping Threshold** of your shipping providers for that country, and each courier's cheapest price there. A courier that already ships free is not listed. |
+| Returns | "30-day returns", linked to your return policy once that page is published | The `RETURN_WINDOW_DAYS` setting. At 0 the line is left out. |
+| Ways to pay | "Card or cash on delivery" | Your active [payment methods](/admin/settings/payment-methods) |
+
+A line the store has no data for is left out, and the section disappears when no line is left, so a store without shipping rates shows no empty strip. A store whose cart or product catalogue is switched off does not get the section at all. The section does not follow `PRODUCT_ASSURANCES_ENABLED`: that setting is only for the box on the product page.
+
+**Layout: Card.** With **Layout** set to **Card**, the promises sit on one raised card. On a desk the card rises over the bottom edge of the section right above it, when that section is drawn in the **Bold** style (for example the hero). On a phone it is four small cards, two by two. The card ignores **Background**, and its **Heading** is read out to screen readers only, so it is not drawn. A card that is the first section of a page, or that follows a section that is not bold, does not rise: it sits in its own place.
+
+## Show a newsletter sign-up
+
+**Newsletter sign-up** puts a short sign-up form in a section: a heading, a line of description, the email field and a button. Add it from **Content → Edit storefront** like any section. Its settings are **Heading**, **Description**, **Placeholder**, **Button text** and **Background** (**Basic** or **Muted**), and:
+
+| Setting | What it does |
+|---|---|
+| **Style** | **Bold** draws the sign-up heavier: see [Give a section the bold look](#give-a-section-the-bold-look). Empty: the look it always had. |
+| **Heading colour** | **Default** draws the heading in the colour your theme uses for headings. **Accent** draws it in your theme's accent colour, the same colour as the second line of the **Hero with picture and search**. The accent colour comes from the theme: the theme panel's **Contrast** list has two warnings for it, **Accent on the muted ground, light** and **Accent on the muted ground, dark**, which tell you when it is too faint to read as a large heading on a muted background. |
+
+The section draws nothing when the newsletter is switched off or the store has no default newsletter topic (see [Newsletter subscriptions](/admin/customers/subscriptions#put-a-newsletter-form-on-the-store)).
+
+**A page shows one newsletter form.** The footer of your store has a newsletter form too. On a page that has a **Newsletter sign-up** section, the footer's form is not shown, so the visitor sees one form and not two. Every other page keeps the footer's form. This holds in both designs.
+
+## Show blog categories as tiles
+
+**Blog categories** shows the blog's categories as a row you slide (**Slider**, the default) or, with **Layout** set to **Tiles**, as a grid of tiles. Each tile has the category's icon, its name and how many articles it holds ("12 articles"), and opens the category. The grid has two columns on a phone and four on a desk. In a narrow tile (on a small phone) the icon sits above the name instead of beside it, so a long name has the tile's whole width.
+
+Both layouts take an **Eyebrow**, a **Title**, a **Subheading**, a **Button text** and a **Button link**. Write `{count}` in the **Button text** and it shows how many articles the listed categories hold between them, for example “All {count} articles”. The number follows your blog, with nothing to publish. This works in every style. Under **What it lists** you set **How many** categories. The section disappears when the blog has no categories, and with the blog switched off.
+
+**Style** takes **Bold** for the **Tiles** layout: see [Give a section the bold look](#give-a-section-the-bold-look). A **Slider** of categories keeps its usual look whatever **Style** says.
+
+## Give a section the bold look
+
+Five sections can be drawn in a heavier look: **Hero with picture and search**, **Product grid**, **Blog categories**, **Blog post grid** and **Newsletter sign-up**. It is the look of the home page design board: larger, heavier headings, a small line above the heading in the accent colour, and links drawn as text with an arrow.
+
+1. Open **Content → Edit storefront** and click the section in the outline.
+2. Set **Style** to **Bold**. Empty keeps the look the section always had.
+3. Publish.
+
+A section that sets none of the settings below looks as before. They work in every design, and all are optional.
+
+| Setting | Sections | What it does |
+|---|---|---|
+| **Style** | The five above | **Bold**, or empty for the usual look. A **Slider** of blog categories, and a post band with the **Load more button**, keep their usual look whatever **Style** says. |
+| **Eyebrow** | **Product grid**, **Blog categories**, **Blog post grid** | A small line above the heading, in the accent colour in the **Bold** style. |
+| **How many on a phone** | **Product grid**, **Blog post grid** | A phone shows only the first ones. Empty: all of them. Larger screens are unchanged. |
+| **Category tile** | **Product grid** | A last tile in the grid listing the shop's categories and how many products each holds, on a computer. You choose the categories like any list under **What it lists**. Empty: no tile. |
+| **Layout** | **Blog post grid** | **Card with posts**: the heading, the icon and a few posts together on one tinted card. On a phone the posts are rows and the button comes last. Empty: the usual band. |
+| **Icon** | **Blog post grid** | The icon on the card. Only the **Card with posts** layout shows it. |
+
+**Card with posts** ignores **Background**, **Style**, **Layout on a phone** and **Load more button**. The card takes the section's **Colour scheme**, so a dark card can sit on a light page.
+
+**The button text on a phone.** In the **Bold** style a **Product grid** puts its button under the products on a phone, and a **Blog post grid** keeps it beside the heading. Without a **Button text** of your own, a **Product grid** reads “See all products” on a phone and “All products” on a desk, and a **Blog post grid** reads “All” on a phone and “All posts” on a desk. With a **Button text**, every screen shows it.
+
+## Draw a band light or dark
+
+**Colour scheme** forces a section into the **Light** or the **Dark** colours of your theme, whichever mode the visitor's page is in. The choices are **Default**, **Light** and **Dark**. **Default** leaves the setting empty, and the section then follows the page.
+
+It is a setting of **Product carousel**, **Product grid**, **Featured products**, **Blog post grid**, **Blog post list**, **Blog post carousel** and **Hero with picture and search**. The colours are the ones you set under **Theme: colours, corners, fonts**, light or dark.
+
+## The header, the phone menu and the tab bar
+
+The menus themselves are edited in the editor, under **Header, on every page** and **Mobile menu, on every page**. What fills them with categories is automatic and needs no publish. The behaviour below is the store's, and where the two designs differ it says so.
+
+- **Shop and blog sections in the header.** A header link to the **Products** page and a link to the **Blog** each get a small arrow beside them. The arrow opens a panel of live categories: your product categories, or the blog's categories with their article counts, each panel with a link to everything (all products, all articles). Your own label on the link stays. The panel opens when the mouse is over the link or the arrow, on a click or tap on the arrow, and from the keyboard (Enter or Space on the arrow; Escape closes it). A new category is in the panel with nothing to publish. A panel lists the active main categories, at most eight. A section with nothing to list (no categories, or the product catalogue or the blog switched off) is one plain link, with no arrow.
+- **Phone menu.** It opens in sections: your account, the shop (all products, then each category), the blog (all articles, then its categories), the store's own links and, in a store with its own design, the appearance (light, dark or the device's). The store's own links do not repeat the shop and blog. A section for a feature you have switched off is not drawn, and every control in it is at least 44 pixels tall.
+- **The bar at the bottom of a phone.** It has five tabs, each shown only while the page it opens is serving: in the default design **Home**, **Search**, **Saved**, **Cart** and **Account**; in a store with its own design **Home**, **Shop**, **Blog**, **Cart** and **Account**. **Search** and **Shop** need the product catalogue (`CATALOGUE_ENABLED`), **Saved** needs favourites (`FAVOURITES_ENABLED`), **Blog** needs the blog (your plan), and **Cart** needs the cart (`CART_ENABLED`) and is not shown on the account pages. **Cart** carries the number of items. The tab of the section the visitor is in is marked, including on the pages under it (a product under **Shop**). The whole bar is switched on or off with `MOBILE_BOTTOM_NAV_ENABLED` in [Store settings](/admin/settings/store-settings).
+- **Signing in from a page.** A sign-in or sign-up link in the header, the menus and the tab bar brings the shopper back to the page they were on. For a pager or filter page (the product listing, the blog, search, and lists in the account such as orders and addresses) it keeps the sort, filters and page; for a page whose address is a one-time link (an unsubscribe or confirmation page) it brings them to the account page after sign-in.
+
+### The header, footer and cart, in a store with its own design
+
+- **Header.** 56 pixels tall on a phone (menu, logo, search, favourites) and 72 on a desk (logo, menus, a wide search, icons). On a phone the choice of light, dark or the device's colours is in the menu. The cart count is drawn in the accent colour.
+- **The cart has one way in.** The tab bar carries the cart. On the account pages the tab bar leaves it out for the account's own tabs, and the header carries it there instead. With the tab bar switched off, the header carries it on every page.
+- **Footer.** The last line holds the copyright, then how the store takes payment and which carriers it ships with, for example “Card · Cash on delivery · ACS · BOX NOW”. You do not type it: it is read from your active payment methods and your shipping providers. The cookie settings link is there when the store has optional services to ask about.
+- **Announcement bar.** See [Add an announcement bar](/admin/settings/store-settings#add-an-announcement-bar).
+- **Tab bar.** 68 pixels tall, with the active tab in the accent colour.
+
+### Products on a phone, in a store with its own design
+
+- The product listing and the product bands show **two columns** of products on a phone, with a compact card in the narrowest columns: the price and the buy button stack, and the buy button becomes an icon.
+- The buy button reads **Add to cart** (**Στο καλάθι**) in the store's accent colour. A product that cannot be bought (sold out, inactive) shows **Unavailable** (**Μη διαθέσιμο**) on a neutral, faded button, and the product page shows no quantity control for it.
+- The page numbers of the product listing are real links, so a page can be opened in a new tab and search engines can follow it.
+- Every control on the product page is at least 44 pixels tall on a phone.
 
 ## What the lists show
 
@@ -104,7 +278,10 @@ To take the warning away, open **Content → Page builder → Scheduled publishe
 
 - **A deleted product or category leaves an empty section, not a broken page.** If you delete something a published page shows, that section shows nothing until you change it. A publish is refused while a page points at something that no longer exists.
 - **A section with nothing to list disappears**, heading included, and comes back by itself when it has something.
-- **Stock alone can take a little while to show.** A change to a product's name, price or category reaches your pages within moments. A change only to its stock does not refresh a page straight away, so a page can show the old stock state for a while. The checkout always checks the real stock.
+- **Stock can take a little while to show.** A change to a product's name, price or category reaches your pages within moments, and so does a product selling out or coming back in stock. A change that only lowers or raises the stock count, such as a sale that leaves the product in stock, does not refresh a page straight away, so a card can show an old "Only 3 left" for a while. The checkout always checks the real stock.
+- **A link to a section of the store that is switched off is not shown.** With the blog switched off, a button linking to the blog (or to one of its articles) disappears from your sections instead of leading to a page that does not exist. The same goes for the product catalogue, offers, gift cards, loyalty and the other features. The link comes back when the feature does. A link to another site is never removed this way.
+- **"See all" on a post list follows its category.** A **Blog post grid** or **Blog post list** set **By a rule** to one **Category** sends its automatic "see all" button to that category. Without a category it goes to the blog, as the **Blog post carousel** always does. Only a **Button link** you set yourself sends it somewhere else.
+- **Some designs draw the Blog post list as the posts alone**, without the band around them. Its **Heading** and **Colour scheme** then have no effect.
 - **Plain text pages are separate.** The terms, the privacy and cookie policies, the return policy, the FAQ and shipping information are written in [Pages](/admin/content/pages), not here.
 - **Words on buttons and labels are separate too.** They are changed in [Storefront texts](/admin/content/storefront-texts).
 - **A publish shows on the store within moments.** If it does not, purge **Page builder** on the [Cache](/admin/settings/cache) page.
