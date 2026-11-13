@@ -251,6 +251,68 @@ third state. The choices are named under `options.headingColor` and
 carries a version 1 node over. The `tiles` layout is the platform's
 `PageSection/BlogCategoryTiles.vue` in every design.
 
+**The bold look and the home board's settings.** Five blocks (`hero_showcase`,
+`products_grid`, `blog_categories`, `blog_posts_grid`, `newsletter_signup`) take
+an optional `look` (`z.enum(['bold'])`; no key is the look they always had), in
+every design. The pattern is a twin: the original component keeps its markup
+untouched and, when `look === 'bold'`, hands over to a separate component
+(`PageSection/HeroShowcaseBold.vue`, `PageSection/BandBold.vue` through
+`PageSection/Band.vue`, `PageSection/BlogCategoryTilesBold.vue`,
+`Blog/RailBold.vue`, `Product/SpotlightBold.vue`) or, for a form,
+branches inside `PageSection/NewsletterSignup.vue`. A twin has no `<i18n>` of
+its own: the original passes its `useStoreI18n` function down as a `texts` prop
+(`BlogCategoryTiles.vue`, `Blog/Rail.vue`), so a store's edited wording follows
+the look. What the original and its twin both read (`useHeroShowcase`,
+`useBlogCategoryTiles`, `useProductSpotlight`) is a composable, so the two
+cannot drift. A slider of categories and a load-more band ignore `look`. The
+help text of each setting in `app/builder/labels/{el,en}.json` names what a look
+or layout ignores; keep it true when a branch changes.
+
+New settings on those blocks, all optional and so with no version bump or
+upgrade: `hero_showcase.searchPlaceholder`; `store_assurances.layout` (`card`);
+`products_grid.eyebrow`, `phoneLimit` and `categoryTile`;
+`blog_categories.eyebrow`; `blog_posts_grid.eyebrow`, `phoneLimit`, `layout`
+(`feature`) and `icon`. `{count}` in `blog_categories.ctaText` is replaced by
+the total of the listed categories' `postCount` (`useBlogCategoryTiles`), in
+every look. `categoryTile` is `builderField.query('category', ...)`, the
+existing category data source with its `roots` mode, so **a new optional
+setting needs no Django change, while a new data filter (a query mode the
+resolver does not know) does**: the setting is checked against the catalogue
+Django serves, and the query goes to Django's API.
+
+`phoneLimit` hides items by CSS, not by a shorter list, so the cached render is
+one for every device: `phoneHidden(limit, index)` (`app/utils/phoneLimit.ts`)
+returns `''` past the limit, a section sets it as `data-phone-hidden`, and
+`main.css` hides `[data-phone-hidden]` below `sm`. The same idea serves the
+band's button: `PageSection/BandBold.vue` takes `phoneCta` (`inline`, `below`
+or `none`) and `phoneCtaText`, and draws both texts in `sm:hidden` and
+`max-sm:hidden` spans, so a bold product grid without `ctaText` reads
+`all_products_phone` on a phone and `all_products` on a desk.
+
+**The band flow.** A section that draws its own full-width band
+(`sectionDrawsBand` in `shared/pageSections.ts`: the bold look, `layout: 'card'`,
+`layout: 'feature'`) is laid out of a shell's frame by `sectionRuns`. In
+webside's shell (`Page/SectionsShell.vue`, `Page/BandRun.vue`) a run of such
+sections is edge to edge on the page's ground with no rule, and `BandRun`
+provides `provideBandFlow('open')` (`app/composables/useBandFlow.ts`; `ruled`
+is the default) and, per section, `provideFollowsBand`. A card of
+`store_assurances` reads `useFollowsBand()` and rises over the band above only
+when it directly follows a band of the run, never as a page's first section.
+
+**Chrome in webside.** `useTabBarCart` (`app/composables/useTabBarCart.ts`) is
+the one answer to whether the tab bar carries the cart: the store shows a tab
+bar and the page is not an account page. `layouts/default.vue` passes it to the
+tab bar and webside's header draws its own cart button only when it is false.
+`announcementLead` (`shared/utils/announcementBar.ts`) splits the sentence at
+the `shortText` when it opens with it, and webside's `Chrome/AnnouncementBar.vue`
+sets that lead in bold; the bar's `link` is also drawn as its own «Details»
+link. The footer's last row (`Footer/Legal.vue`) reads pay ways and carriers
+from `useStoreAssuranceFacts`, never typed. The theme compiler writes
+`--ui-secondary-deep` (`shared/theme/compile.ts`), the light accent mixed 80%
+with black in both schemes, a fill under white text that keeps the store's hue
+on a part forced dark; the default design reads nothing from it, and `main.css`
+holds the platform default.
+
 `test/unit/server/utils/builderRealBlocks.spec.ts` holds every real block to
 the rules that do not depend on the block: a consistent catalogue, no link that
 is translatable, rich text marked, every schema closed.
@@ -670,6 +732,10 @@ from `selectedImageId` (`selectedIndex`) and does the same.
 | `grooveshop-storefront-ui-node-nuxt/app/blocks/hero_showcase.block.ts`, `app/components/PageSection/HeroShowcase.vue`, `app/components/Product/Spotlight.vue` | The hero with a picture, search and one product |
 | `grooveshop-storefront-ui-node-nuxt/app/blocks/store_assurances.block.ts`, `app/components/PageSection/StoreAssurances.vue`, `app/composables/useStoreAssurances.ts`, `app/composables/useStoreAssuranceFacts.ts` | The shopping promises band and the facts it shares with the product page |
 | `grooveshop-storefront-ui-node-nuxt/app/blocks/blog_categories.block.ts`, `app/components/PageSection/BlogCategories.vue`, `app/components/PageSection/BlogCategoryTiles.vue` | Blog categories as a slider or tiles |
+| `grooveshop-storefront-ui-node-nuxt/app/components/PageSection/BandBold.vue`, `HeroShowcaseBold.vue`, `BlogCategoryTilesBold.vue`, `BlogPostsFeature.vue`, `ProductsCategoryTile.vue`, `app/components/Blog/RailBold.vue`, `app/components/Product/SpotlightBold.vue` | The bold look's twin components and the two layouts |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/phoneLimit.ts`, `app/composables/useBandFlow.ts`, `app/composables/useTabBarCart.ts`, `app/composables/useBlogCategoryTiles.ts` | `phoneHidden`, the band flow, the cart rule, `{count}` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Page/SectionsShell.vue`, `app/components/variants/webside/Page/BandRun.vue`, `app/components/variants/webside/Footer/Legal.vue`, `app/components/variants/webside/Chrome/AnnouncementBar.vue` | Webside's band run, footer legal row and announcement bar |
+| `grooveshop-storefront-ui-node-nuxt/app/builder/labels/en.json`, `app/builder/labels/el.json` | The editor labels and help texts the admin guide quotes |
 | `grooveshop-storefront-ui-node-nuxt/shared/constants/builder.ts` | `PRODUCT_STOCK_MODES`, `SECTION_COLOR_SCHEMES`, `DATA_FEATURES`, `DATA_CACHE_SECONDS` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderData/queries.ts`, `server/utils/builderData/resolve.ts`, `server/utils/builderData/loaders.ts` | A product rule as Django's query; reading records, skipped for a feature that is off; the cached reads |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/productRail.ts` | `productRailStockQuery`: where an in-stock band's "see all" opens |
