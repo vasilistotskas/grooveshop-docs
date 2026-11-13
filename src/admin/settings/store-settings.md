@@ -76,6 +76,8 @@ The announcement bar is a line above the store's header. Open the setting `ANNOU
 - `dismissible`: whether the visitor can close it. Change the `id` to show the bar again to those who closed it.
 - `i18n`: the text in another language.
 
+In a store with its own design the bar is a pale tint of the accent colour, with the icon first. When the full `text` starts with the `shortText`, that opening part is drawn in bold, and a phone shows the `shortText` alone as a link. The `link` also appears after the sentence as its own «Details» link. Set a `color` and the bar is filled with that colour instead of the tint.
+
 To remove it, set `enabled` to `false`.
 
 ### Put live amounts in the announcement

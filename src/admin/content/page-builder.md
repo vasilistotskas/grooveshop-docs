@@ -88,6 +88,8 @@ Some sections show things from your store rather than words you type: **Product 
 | **Product categories** | **Main categories**, or the **Subcategories** of a **Parent category**, and **How many**. |
 | **Blog categories**, **Offers** | **How many**. **Blog categories** also takes a **Layout**: see [Show blog categories as tiles](#show-blog-categories-as-tiles). |
 
+A **Product grid** and a **Blog post grid** also have settings that [Give a section the bold look](#give-a-section-the-bold-look) describes: **Style**, **Eyebrow**, **How many on a phone**, and for the grids **Category tile** and **Layout** and **Icon**.
+
 **Order** for products can be **Newest**, **Most viewed**, **Most liked**, **Best rated**, **Biggest discount**, **Price, lowest first** or **Price, highest first**. For blog posts it can be **Newest** or **Most viewed**.
 
 **By a rule** keeps up by itself: a new product in those categories joins the list with nothing to publish. **Hand-picked** shows exactly what you chose, and an item that is deleted or hidden simply drops out.
@@ -139,11 +141,13 @@ A **Blog post list** can go on past the posts it first shows. Turn on **Load mor
 | **Decorative image** | Turn it on when the picture adds nothing a screen reader user needs. While it is off, a picture with no description of its own is described by the hero's heading. |
 | **Picture link** | Makes the picture a link, to a page of your store or to another site. It becomes a link only when the picture has a description or the hero has a heading to name it. |
 | **Search field** | Shows the store search. Only when the store has a product catalogue. |
+| **Search field text** | The question inside the field. Empty: “Search the shop”. In the **Bold** style the field has its own search button on a desk. |
 | **Button text** and **Button link** | The first button. The link may lead to a page of your store or to another site; a link to another site opens that address. |
 | **Second button text** and **Second button link** | The second button, drawn as an outline. |
 | **Product** | One product, shown with its picture, name, price, stock state and, with reviews on, rating. |
 | **Add to cart button** | Shows the buy button on that product. On by default. |
 | **Colour scheme** | See [Draw a band light or dark](#draw-a-band-light-or-dark). |
+| **Style** | **Bold** draws the hero heavier: see [Give a section the bold look](#give-a-section-the-bold-look). Empty: the look it always had. |
 
 On a phone the parts are stacked in the order heading, subheading, picture, search, buttons, product. The two buttons share one line when their texts are short (about 16 Greek letters each, a little more in Latin letters); a longer text wraps inside its button, so no word is cut. The featured product's buy button sits on its own row under the picture and the text. On a desk the text, the search and the buttons are on the left, and the picture over the product on the right. With neither a picture nor a product, the hero is a single column.
 
@@ -163,7 +167,8 @@ What does not show:
 1. Open **Content → Edit storefront** and open the page.
 2. Add the section **Shopping promises**.
 3. Set a **Heading** if you want one, and the **Background**: **Basic** or **Muted**.
-4. Publish.
+4. Choose a **Layout** if you want the promises on one card (see below).
+5. Publish.
 
 | Line | Reads like | Comes from |
 |---|---|---|
@@ -174,12 +179,15 @@ What does not show:
 
 A line the store has no data for is left out, and the section disappears when no line is left, so a store without shipping rates shows no empty strip. A store whose cart or product catalogue is switched off does not get the section at all. The section does not follow `PRODUCT_ASSURANCES_ENABLED`: that setting is only for the box on the product page.
 
+**Layout: Card.** With **Layout** set to **Card**, the promises sit on one raised card. On a desk the card rises over the bottom edge of the section right above it, when that section is drawn in the **Bold** style (for example the hero). On a phone it is four small cards, two by two. The card ignores **Background**, and its **Heading** is read out to screen readers only, so it is not drawn. A card that is the first section of a page, or that follows a section that is not bold, does not rise: it sits in its own place.
+
 ## Show a newsletter sign-up
 
 **Newsletter sign-up** puts a short sign-up form in a section: a heading, a line of description, the email field and a button. Add it from **Content → Edit storefront** like any section. Its settings are **Heading**, **Description**, **Placeholder**, **Button text** and **Background** (**Basic** or **Muted**), and:
 
 | Setting | What it does |
 |---|---|
+| **Style** | **Bold** draws the sign-up heavier: see [Give a section the bold look](#give-a-section-the-bold-look). Empty: the look it always had. |
 | **Heading colour** | **Default** draws the heading in the colour your theme uses for headings. **Accent** draws it in your theme's accent colour, the same colour as the second line of the **Hero with picture and search**. The accent colour comes from the theme: the theme panel's **Contrast** list has two warnings for it, **Accent on the muted ground, light** and **Accent on the muted ground, dark**, which tell you when it is too faint to read as a large heading on a muted background. |
 
 The section draws nothing when the newsletter is switched off or the store has no default newsletter topic (see [Newsletter subscriptions](/admin/customers/subscriptions#put-a-newsletter-form-on-the-store)).
@@ -190,7 +198,32 @@ The section draws nothing when the newsletter is switched off or the store has n
 
 **Blog categories** shows the blog's categories as a row you slide (**Slider**, the default) or, with **Layout** set to **Tiles**, as a grid of tiles. Each tile has the category's icon, its name and how many articles it holds ("12 articles"), and opens the category. The grid has two columns on a phone and four on a desk. In a narrow tile (on a small phone) the icon sits above the name instead of beside it, so a long name has the tile's whole width.
 
-Both layouts take a **Title**, a **Subheading**, a **Button text** and a **Button link**. Under **What it lists** you set **How many** categories. The section disappears when the blog has no categories, and with the blog switched off.
+Both layouts take an **Eyebrow**, a **Title**, a **Subheading**, a **Button text** and a **Button link**. Write `{count}` in the **Button text** and it shows how many articles the listed categories hold between them, for example “All {count} articles”. The number follows your blog, with nothing to publish. This works in every style. Under **What it lists** you set **How many** categories. The section disappears when the blog has no categories, and with the blog switched off.
+
+**Style** takes **Bold** for the **Tiles** layout: see [Give a section the bold look](#give-a-section-the-bold-look). A **Slider** of categories keeps its usual look whatever **Style** says.
+
+## Give a section the bold look
+
+Five sections can be drawn in a heavier look: **Hero with picture and search**, **Product grid**, **Blog categories**, **Blog post grid** and **Newsletter sign-up**. It is the look of the home page design board: larger, heavier headings, a small line above the heading in the accent colour, and links drawn as text with an arrow.
+
+1. Open **Content → Edit storefront** and click the section in the outline.
+2. Set **Style** to **Bold**. Empty keeps the look the section always had.
+3. Publish.
+
+A section that sets none of the settings below looks as before. They work in every design, and all are optional.
+
+| Setting | Sections | What it does |
+|---|---|---|
+| **Style** | The five above | **Bold**, or empty for the usual look. A **Slider** of blog categories, and a post band with the **Load more button**, keep their usual look whatever **Style** says. |
+| **Eyebrow** | **Product grid**, **Blog categories**, **Blog post grid** | A small line above the heading, in the accent colour in the **Bold** style. |
+| **How many on a phone** | **Product grid**, **Blog post grid** | A phone shows only the first ones. Empty: all of them. Larger screens are unchanged. |
+| **Category tile** | **Product grid** | A last tile in the grid listing the shop's categories and how many products each holds, on a computer. You choose the categories like any list under **What it lists**. Empty: no tile. |
+| **Layout** | **Blog post grid** | **Card with posts**: the heading, the icon and a few posts together on one tinted card. On a phone the posts are rows and the button comes last. Empty: the usual band. |
+| **Icon** | **Blog post grid** | The icon on the card. Only the **Card with posts** layout shows it. |
+
+**Card with posts** ignores **Background**, **Style**, **Layout on a phone** and **Load more button**. The card takes the section's **Colour scheme**, so a dark card can sit on a light page.
+
+**The button text on a phone.** In the **Bold** style a **Product grid** puts its button under the products on a phone, and a **Blog post grid** keeps it beside the heading. Without a **Button text** of your own, a **Product grid** reads “See all products” on a phone and “All products” on a desk, and a **Blog post grid** reads “All” on a phone and “All posts” on a desk. With a **Button text**, every screen shows it.
 
 ## Draw a band light or dark
 
@@ -206,6 +239,14 @@ The menus themselves are edited in the editor, under **Header, on every page** a
 - **Phone menu.** It opens in sections: your account, the shop (all products, then each category), the blog (all articles, then its categories), the store's own links and, in a store with its own design, the appearance (light, dark or the device's). The store's own links do not repeat the shop and blog. A section for a feature you have switched off is not drawn, and every control in it is at least 44 pixels tall.
 - **The bar at the bottom of a phone.** It has five tabs, each shown only while the page it opens is serving: in the default design **Home**, **Search**, **Saved**, **Cart** and **Account**; in a store with its own design **Home**, **Shop**, **Blog**, **Cart** and **Account**. **Search** and **Shop** need the product catalogue (`CATALOGUE_ENABLED`), **Saved** needs favourites (`FAVOURITES_ENABLED`), **Blog** needs the blog (your plan), and **Cart** needs the cart (`CART_ENABLED`) and is not shown on the account pages. **Cart** carries the number of items. The tab of the section the visitor is in is marked, including on the pages under it (a product under **Shop**). The whole bar is switched on or off with `MOBILE_BOTTOM_NAV_ENABLED` in [Store settings](/admin/settings/store-settings).
 - **Signing in from a page.** A sign-in or sign-up link in the header, the menus and the tab bar brings the shopper back to the page they were on. For a pager or filter page (the product listing, the blog, search, and lists in the account such as orders and addresses) it keeps the sort, filters and page; for a page whose address is a one-time link (an unsubscribe or confirmation page) it brings them to the account page after sign-in.
+
+### The header, footer and cart, in a store with its own design
+
+- **Header.** 56 pixels tall on a phone (menu, logo, search, favourites) and 72 on a desk (logo, menus, a wide search, icons). On a phone the choice of light, dark or the device's colours is in the menu. The cart count is drawn in the accent colour.
+- **The cart has one way in.** The tab bar carries the cart. On the account pages the tab bar leaves it out for the account's own tabs, and the header carries it there instead. With the tab bar switched off, the header carries it on every page.
+- **Footer.** The last line holds the copyright, then how the store takes payment and which carriers it ships with, for example “Card · Cash on delivery · ACS · BOX NOW”. You do not type it: it is read from your active payment methods and your shipping providers. The cookie settings link is there when the store has optional services to ask about.
+- **Announcement bar.** See [Add an announcement bar](/admin/settings/store-settings#add-an-announcement-bar).
+- **Tab bar.** 68 pixels tall, with the active tab in the accent colour.
 
 ### Products on a phone, in a store with its own design
 
