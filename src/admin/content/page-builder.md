@@ -20,7 +20,7 @@ In the editor you can:
 - change the text, pictures and links of a section, in every language your store serves;
 - add, move, hide and remove sections, and build new pages;
 - save your work as you go, and publish a page and its menus together when it is ready, or schedule the publish for a later time;
-- go back to any earlier version.
+- go back to an earlier version of a page. The theme has no version history yet: a change to it cannot be undone by going back, only by changing the colours again.
 
 ## Change the colours, corners and fonts
 
@@ -33,7 +33,7 @@ Your store's look is its theme, and you change it in the editor.
 5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before the theme can be published.
 6. Click **Publish** in the top bar. The dialog **Publish to the store** lists **What to publish**: the page, its section groups and, last, **Theme: colours, corners, fonts**. The theme is ticked when it has changes that are not published yet, and cannot be ticked when it has none (**No changes**). Click **Publish now**, or choose **At a set time** under **When** and click **Schedule**. The new look shows on every page, and your emails use the new primary colour.
 
-If a pair that **Blocks publishing** still fails, the dialog lists it as a problem ("One problem must be fixed first") with a message about the contrast of those colours and a **Show** button, which opens the theme panel on that pair. **Publish now** stays unavailable until it is fixed. A failing warning does not block: while the theme is ticked, the dialog shows a notice, "One colour pair of the theme has less contrast than recommended" (with the number of pairs when there are several), "It does not stop the publish; some shoppers may find them hard to read", and a **Show** button for the first such pair. The list of scheduled publishes names the theme as **Theme: colours, corners, fonts** too.
+If a pair that **Blocks publishing** still fails, the dialog lists it as a problem ("One problem must be fixed first") with a message about the contrast of those colours and a **Show** button, which opens the theme panel on that pair. **Publish now** stays unavailable until it is fixed. A failing warning does not block: while the theme is ticked, the dialog shows a notice, "One colour pair of the theme has less contrast than recommended" (with the number of pairs when there are several), "It does not stop the publish; some shoppers may find them hard to read", and under it each failing pair by name (for example **Accent on the muted ground, light**), each with its own **Show** button, which opens the theme panel on that pair. The list of scheduled publishes names the theme as **Theme: colours, corners, fonts** too.
 
 **Contrast** also lists two warnings about the accent colour: **Accent on the muted ground, light** and **Accent on the muted ground, dark**. They tell you when the accent is too faint (below 3 to 1) to read as a large heading on the muted background of a section, such as the accent line of a **Hero with picture and search** or an accent **Newsletter sign-up** heading. They are warnings only: the panel lists them, **Fix** corrects the colour, and they never stop a publish. While the theme is ticked in the publish dialog they show there too, as the notice described above.
 
