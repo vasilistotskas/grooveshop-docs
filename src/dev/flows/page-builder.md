@@ -227,11 +227,12 @@ no row is left. The block declares `feature: 'cart'`, so a store without the
 cart does not get it, and the facts make no request for such a store.
 `newsletter_signup` (`app/blocks/newsletter_signup.block.ts`,
 `app/components/PageSection/NewsletterSignup.vue`) takes an optional
-`headingColor` (`default` | `accent`): `accent` paints the h2 with `text-accent`,
-the token the hero's accent line uses, and empty keeps `text-highlighted`. It is
+`headingColor` (`z.enum(['accent'])`): `accent` paints the h2 with `text-accent`,
+the token the hero's accent line uses, and no key keeps `text-highlighted`. It is
 one component in every design, so both draw it. `blog_posts_grid`
 (`app/blocks/blog_posts_grid.block.ts`) takes an optional `phoneLayout`
-(`row` | `list`), passed by `PageSection/BlogPosts.vue` to `Blog/Rail.vue`: below
+(`z.enum(['list'])`: no key is the row to swipe), passed by `PageSection/BlogPosts.vue`
+to `Blog/Rail.vue`: below
 `sm`, `list` draws the posts as compact rows (a grid per row: the thumbnail spans
 two rows beside "category · reading time" and the title, each row one link at
 least 92px tall) and from `sm` up the band is the swipe row or the grid as ever.
@@ -239,11 +240,12 @@ The list sets `data-phone-layout="list"` on the `<ul>`, and it is off for a
 `stacked` rail (the load-more band), so only the grid block offers it; the
 `ekfyseosfyteias` variant of the grid ignores it. Both settings are optional,
 so no block version bump and no upgrade: a stored node without the key is the
-old look. In the editor an optional enum with up to
-`BUILDER_SEGMENTED_CHOICE_MAX` choices draws as segmented buttons with
-**Default** first, which stores no key (`Builder/SettingField.vue`), and the
-choices are named under `options.headingColor` and `options.phoneLayout` in
-`app/builder/labels/{el,en}.json`.
+old look. Each enum has ONE value because the other state is the absence of the key: an
+optional enum is offered in the editor with **Default** first, which stores no
+key (`Builder/SettingField.vue`, segmented buttons up to
+`BUILDER_SEGMENTED_CHOICE_MAX`), so a second value saying the same would be a
+third state. The choices are named under `options.headingColor` and
+`options.phoneLayout` in `app/builder/labels/{el,en}.json`.
 `blog_categories` is at version 2: a `layout` (`slider` or `tiles`),
 `subheading`, `ctaText` and `ctaLink` beside its `title`; `upgradeBlogCategories`
 carries a version 1 node over. The `tiles` layout is the platform's
@@ -577,6 +579,16 @@ takes a 44px hit area from an `::after`;
 `test/unit/source-rules/product-page-targets.spec.ts` checks both designs' pages
 and galleries.
 
+**Card titles.** A card heading that prints a name someone wrote (a post's title,
+a product's name, an offer's, a saved address's) breaks a word too long for its
+line, in both designs: `wrap-anywhere` on the heading, inherited by the text in it
+(25 Greek letters are 380px at the phone article card's size, so without a break
+the word overflowed, or a clamp cut it mid-word, or the whole page scrolled
+sideways). Unlike `wrap-break-word` it lets a box sized by its content shrink
+below the word. A heading that `truncate`s ends with an ellipsis instead.
+`test/unit/source-rules/card-titles-break-long-words.spec.ts` holds every
+`*Card*.vue` (and `Card/` folders, and `Blog/Rail.vue`) of both designs.
+
 **The default gallery's position.** `Product/Images.vue` no longer sets `dots` on
 its carousel: Nuxt UI's dots are buttons 6px wide and 6px apart, no target a
 finger can hit. Below `lg` it draws plain marks (`data-slot="position"`, a `<div>`
@@ -586,7 +598,13 @@ is read as words instead: each slide holds an `sr-only` "Image N of M"
 (`position` in the component's `<i18n>`), as the hero carousel does. Swiping, the
 zoom viewer and the thumbnails move between photographs as before. Webside's
 gallery draws no dots (thumbnails and arrows) and is unchanged. The rule above
-fails a gallery carousel that sets `dots`.
+fails a gallery carousel that sets `dots`. The viewer and the gallery share one
+index: `Product/ImageModal.vue` takes `v-model:index` (the carousel opens at the
+value it had, read once as `startIndex`, since Embla reads it once, and follows
+it by `scrollTo` afterwards), so the viewer opens on the photograph the gallery
+shows and the gallery is on whichever one the viewer closes on, jumping rather
+than sliding since it is under the viewer. Webside's gallery derives the index
+from `selectedImageId` (`selectedIndex`) and does the same.
 
 ## Invariants
 

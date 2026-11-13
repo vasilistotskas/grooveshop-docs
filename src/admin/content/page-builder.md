@@ -33,6 +33,8 @@ Your store's look is its theme, and you change it in the editor.
 5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before you can publish.
 6. Publish. The new look shows on every page, and your emails use the new primary colour.
 
+**Contrast** also lists two warnings about the accent colour: **Accent on the muted ground, light** and **Accent on the muted ground, dark**. They tell you when the accent is too faint (below 3 to 1) to read as a large heading on the muted background of a section, such as the accent line of a **Hero with picture and search** or an accent **Newsletter sign-up** heading. They are warnings only: the panel lists them, **Fix** corrects the colour, and nothing checks them when you publish.
+
 **Button colour** can keep its own colour or, with **Follows the primary colour** on, change along with the primary colour.
 
 ## Set a page's title and description for search engines
@@ -94,12 +96,11 @@ A **Hand-picked** list has no **Stock** choice: it shows exactly what you chose.
 
 ### Show articles as a list on a phone
 
-A **Blog post grid** section has the setting **Layout on a phone**. It takes three choices:
+A **Blog post grid** section has the setting **Layout on a phone**. It takes two choices:
 
 | Choice | What a phone shows |
 |---|---|
-| **Default** | The same as **Row to swipe**. |
-| **Row to swipe** | The articles as cards in a row that the visitor swipes sideways. |
+| **Default** | A row to swipe: the articles as cards in a row that the visitor swipes sideways. |
 | **List** | The articles one under another as compact rows: a small picture on the left, and beside it the category and the reading time ("Tips · 4 min read") with the article's title under them. The whole row is one link. |
 
 From tablet width up the section looks the same whichever you choose. It applies to the **Blog post grid** only, not to the **Blog post list** or the **Blog post carousel**.
@@ -166,7 +167,7 @@ A line the store has no data for is left out, and the section disappears when no
 
 | Setting | What it does |
 |---|---|
-| **Heading colour** | **Default** and **Heading** draw the heading in the colour your theme uses for headings. **Accent** draws it in your theme's accent colour, the same colour as the second line of the **Hero with picture and search**. The accent colour comes from the theme, so check it reads well on the section's background under **Theme: colours, corners, fonts**. |
+| **Heading colour** | **Default** draws the heading in the colour your theme uses for headings. **Accent** draws it in your theme's accent colour, the same colour as the second line of the **Hero with picture and search**. The accent colour comes from the theme: the theme panel's **Contrast** list has two warnings for it, **Accent on the muted ground, light** and **Accent on the muted ground, dark**, which tell you when it is too faint to read as a large heading on a muted background. |
 
 The section draws nothing when the newsletter is switched off or the store has no default newsletter topic (see [Newsletter subscriptions](/admin/customers/subscriptions#put-a-newsletter-form-on-the-store)).
 
