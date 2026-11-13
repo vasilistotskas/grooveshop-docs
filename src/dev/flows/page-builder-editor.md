@@ -313,11 +313,25 @@ warning when the document has been saved since. The editor warns
 
 ADMIN and OWNER publish from the top bar (`Builder/Publish`; STAFF see no
 button, and a dot on it says something has changes). The dialog lists the
-page and the section groups drawn around it, each with whether it has changes
+page, the section groups drawn around it and, last, the store's theme
+(`BUILDER_THEME_DOCUMENT`, which every page draws with; `keys` in
+`Builder/Publish.vue`), each with whether it has changes
 to publish: a draft Django holds as unpublished (`hasUnpublishedChanges`) or a
 change not saved yet. Those with changes are picked to begin with; one without
 cannot be picked. An optional note goes with the release (as long as the
-generated `zPublishWriteRequest` allows).
+generated `zPublishWriteRequest` allows). The theme goes out with the rest, now
+or at a time, and the list of publishes to come names it:
+`documentLabel` (`app/composables/useBuilderLabels.ts`, `documents.theme` in
+`app/builder/labels/{el,en}.json`) calls it "Theme: colours, corners, fonts"
+wherever a document is named (the presence notice, the history, the schedules),
+where it was "/theme".
+
+After a release that holds the theme Django purges the `builder` surface
+(`invalidated_by=("builder.BuilderRelease",)`, `src/core/cache/surfaces.py`), which
+is registered with `invalidates_tenant_config`, and moves the store's cache
+generation (`tenant.signals`), so every cached page of the store is re-keyed and
+shows the new look, and the store's emails read the new primary colour. Nothing
+else is needed from the storefront.
 
 Publishing first saves the picked documents and waits for those saves
 (`useBuilderAutosaveStore().settle`): Django releases the drafts it holds, so a
@@ -330,7 +344,7 @@ none of them:
 | Answer | What the editor does |
 |---|---|
 | 201 | Reads the list and each published document's envelope again (`useBuilderEditorStore().refresh`), closes the dialog and says which release went live. |
-| 400 `invalid_document` | Lists every problem by document (the generated `zBuilderDocumentInvalidError`, the one schema the autosave reads too: Django's OpenAPI types this body only as an error), each with "Show", which opens its document and selects the node its pointer names. |
+| 400 `invalid_document` | Lists every problem by document (the generated `zBuilderDocumentInvalidError`, the one schema the autosave reads too: Django's OpenAPI types this body only as an error), each with "Show", which opens its document and selects the node its pointer names. A theme problem (`insufficient_contrast`, from a failing rule of severity `error`: Django refuses those alone) has no node: its Show opens the theme panel on the rule, see below. |
 | any other | Says the publish did not happen, with Django's reason (`useApiError`). |
 
 Before that, as the dialog opens and whenever the picks change, the editor
@@ -340,6 +354,25 @@ nothing): `{ ok, changed, problems }`. Its problems are listed like a refusal,
 and Publish stays disabled while there are any; a check overtaken by a newer
 one is dropped. Django answers `nothing_to_publish` (with no `document`) when
 the picks equal the live release.
+
+**The theme's contrast at publish.** A problem of the theme document is showable
+(`showable`): `show` calls `showThemeRule(problem.params.rule)`, which opens the
+panel (`openPanel('theme')`), closes the dialog and gives the focus to the rule's
+row, `theme-rule-<id>` (`Builder/ThemePanel.vue`, each row `tabindex="-1"`). The dialog
+gives the focus back to the Publish button as it closes, so
+`onCloseAutoFocus` (the dialog's `content`) prevents that and focuses the rule
+instead. While the theme is picked, `themeWarnings` evaluates the working copy
+against the design's rules (`evaluateContrastRules`, `themeContrastRulesFor`,
+the panel's own function) and shows a `UAlert` with a count and a Show for the
+first failing rule of severity `warning`. It never disables Publish: Django
+refuses only error rules (`check_before_release`, `src/builder/validation.py`);
+a warning is the editor's.
+
+*Known gap.* Django's refusal message names the rule by its id ("The colours of
+body-text-light have a contrast of 1.57, below the required minimum"), not by the name
+the theme panel gives it, because the panel's names are the storefront's and the
+dialog shows Django's message as it does for every other problem (django-api
+issue 686).
 
 **At a set time.** "When" offers now or a time (`UInputDate`, to the minute,
 none in the past). The time is the staff member's wall clock in their own
@@ -550,7 +583,9 @@ Every change goes through the editor store, so it is undone, saved and drawn in
 the preview like any other. The panel lists the contrast each pair of the store's
 design must keep (`themeContrastRulesFor`), with a Fix on every rule that fails
 (`fixContrast`). On Groove Volt the neutral colour paints borders and badges, not
-text, so only the action and accent colours have rules.
+text, so only the action and accent colours have rules. The theme is published
+from the Publish dialog like any other document (see Publishing): it is listed last
+and picked when it has unpublished or unsaved changes.
 
 Two rules are **warnings** about the accent on the muted ground, `accent-muted-light`
 and `accent-muted-dark` (3:1, large text, WCAG SC 1.4.3), labelled "Accent on the
@@ -561,8 +596,9 @@ design token on Groove Volt (`VOLT_MUTED_BACKGROUND`) and, for a store with its 
 templates, white in the light scheme and the store's neutral 900 in the dark
 (`MUTED_BACKGROUND`), both in `shared/builder/documentRoots.ts`. The text paints
 `--ui-secondary-text`, never closer to the ground than the accent, so a rule
-checks the accent itself. The panel lists a warning and offers its Fix; nothing
-checks a warning when a document is published.
+checks the accent itself. The panel lists a warning and offers its Fix; the Publish dialog shows the
+failing ones with a count while the theme is picked, and they never block
+(see Publishing).
 
 ### 17. Data settings
 
