@@ -138,7 +138,7 @@ started at the workspace root; subproject sessions do not see the root
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/settings.py` | `SPECTACULAR_SETTINGS` (camelize hook, enum overrides) |
+| `grooveshop-django-api/src/settings/api.py` | `SPECTACULAR_SETTINGS` (camelize hook, enum overrides) |
 | `grooveshop-django-api/schema.yml` | Committed Django schema |
 | `grooveshop-django-api/src/core/utils/serializers.py` | `create_schema_view_config` |
 | `grooveshop-django-api/src/core/json_schema.py` | `wire_schema` (camelizing published JSON Schemas) |

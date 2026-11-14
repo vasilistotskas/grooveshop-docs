@@ -530,7 +530,7 @@ browser that strips `Referer` still names itself there. The agent
 gateway sends only `attribution.agentProtocol`; see
 [Agentic commerce](/dev/flows/agentic-commerce).
 
-**Classification, in Django.** `src/order/attribution.py: classify` is pure
+**Classification, in Django.** `src/order/checkout/attribution.py: classify` is pure
 and first-match-wins: agent protocol, then `utm_source` (`paid` when the
 medium matches GA4's paid rule or a paid click id is present, else
 `campaign`), then click id, known referrer host, in-app browser
@@ -688,7 +688,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
 | `grooveshop-django-api/src/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/src/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
-| `grooveshop-django-api/src/order/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |
+| `grooveshop-django-api/src/order/checkout/attribution.py` | `classify`, the `KNOWN_SOURCES` / `CLICK_ID_PARAMS` registries, `source_label` |
 | `grooveshop-django-api/src/order/models/attribution.py` | `OrderAttribution` |
 | `grooveshop-django-api/src/order/enum/attribution.py` | `OrderSourceType` |
 | `grooveshop-django-api/src/order/serializers/order.py` | `OrderAttributionInputSerializer` (write), `OrderAttributionSerializer` (read) |

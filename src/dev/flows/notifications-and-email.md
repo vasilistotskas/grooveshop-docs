@@ -459,7 +459,7 @@ together.
   dispatch, so the two channels stay in lockstep.
 - **PENDING and PROCESSING never reach the customer.**
   `handle_order_status_changed` skips them for email;
-  `src/order/notifications.py: _ORDER_STATUS_COPY` has no entry for them, so
+  `src/order/communications/notifications.py: _ORDER_STATUS_COPY` has no entry for them, so
   `notify_order_status_changed_live` returns a skip. They are internal
   milestones already covered by the order-received or payment-confirmed
   message.
@@ -526,7 +526,7 @@ the merchant and dispute emails and the two sweep tasks use
 reservation flag at all, `send_invoice_to_mydata` uses
 `max_retries=5, default_retry_delay=120`, and the two B2B profile emails
 use `max_retries=5` with backoff and jitter. Live-notification tasks
-(`src/order/notifications.py: TASK_DEFAULTS`) retry **only** on
+(`src/order/communications/notifications.py: TASK_DEFAULTS`) retry **only** on
 `OperationalError` with backoff and jitter: `IntegrityError` will not
 resolve on retry, and re-running a partially completed task would create
 a second `Notification` row because the helper is not idempotent.
@@ -547,7 +547,7 @@ by a key that drifts back into `backend-secrets`. Since Django 6.1 those
 `EMAIL_*` variables fill `settings.MAILERS` rather than Django's `EMAIL_*`
 settings: the `default` mailer, `core.mail.DemoRecipientSuppressingBackend`,
 hands every send to the `relay` mailer, whose options they set
-(`src/settings.py`). The variable names did not change.
+(`src/settings/email.py`). The variable names did not change.
 
 Three details are counter-intuitive enough to be worth stating, each of
 which cost a production incident:
@@ -559,18 +559,18 @@ which cost a production incident:
   byte, with none of the plaintext-EHLO or STARTTLS-stripping surface that
   moving to 587 would have introduced. `EMAIL_USE_SSL=True` and
   `EMAIL_USE_TLS=False` are both set explicitly, because Django treats
-  them as mutually exclusive and `src/settings.py` refuses to boot if both are
+  them as mutually exclusive and `src/settings/email.py` refuses to boot if both are
   on.
 - **`EMAIL_TIMEOUT` must be set.** Django's default is `None`, meaning no
   socket timeout at all: a relay that accepts the connection and then goes
   quiet blocks the Celery worker that ran the send, forever, with nothing
-  in the logs and no failed task result. `src/settings.py` defaults it to 20s
+  in the logs and no failed task result. `src/settings/email.py` defaults it to 20s
   so no deployment can inherit the `None`. The Resend request uses the same
   value (`EMAIL_SEND_TIMEOUT`) as its connect and read timeout. Both bound
   each wait, not the whole message: a relay that keeps sending bytes slowly
   can run past it.
 - **The relay credential is a boot dependency of every management
-  command.** `src/settings.py` raises `ImproperlyConfigured` when
+  command.** `src/settings/email.py` raises `ImproperlyConfigured` when
   `EMAIL_HOST_PASSWORD` is still `changeme` under
   `SYSTEM_ENV=production`, so the Argo PreSync hook — which sends no mail —
   names the `resend-smtp` Secret explicitly. It used to receive the
@@ -695,7 +695,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/src/emails/types.py`, `src/emails/registry.py` | `EmailType` and the catalogue of every email |
 | `grooveshop-django-api/src/emails/send.py`, `src/emails/render.py`, `src/emails/transport.py` | `send_email`, `render`, the one sender |
 | `grooveshop-django-api/src/emails/resend.py` | The Resend HTTP client: which team's key, the request, the error text |
-| `grooveshop-django-api/src/settings.py` (`MAILERS`), `src/core/mail.py` | The `default` and `relay` mailers built from the `EMAIL_*` environment variables, and the demo-recipient filter every send passes |
+| `grooveshop-django-api/src/settings/email.py` (`MAILERS`), `src/core/mail.py` | The `default` and `relay` mailers built from the `EMAIL_*` environment variables, and the demo-recipient filter every send passes |
 | `grooveshop-django-api/src/emails/log.py`, `src/emails/status.py`, `src/emails/tasks.py` | The `EmailLog` writes, the status enum, the retention sweep and the event task |
 | `grooveshop-django-api/src/emails/webhooks.py`, `src/emails/events.py`, `src/emails/suppression.py` | The webhook receiver, the signature check, the event's effect, the suppression list |
 | `grooveshop-django-api/src/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
@@ -723,7 +723,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-storefront-ui-node-nuxt/server/api/user/email-preferences.get.ts` | Proxy for `GET /api/v1/user/email-preferences` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/user/email-preferences.patch.ts` | Proxy for `PATCH /api/v1/user/email-preferences` |
 | `grooveshop-django-api/src/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
-| `grooveshop-django-api/src/order/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
+| `grooveshop-django-api/src/order/communications/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
 | `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask` |
 | `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `dispatch_on_commit` |
 | `grooveshop-django-api/src/core/templates/emails/` | Every template pair and `base/email_base.html` |

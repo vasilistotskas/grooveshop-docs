@@ -67,7 +67,7 @@ reports and what canonical URLs, RSS and OAuth metadata are built from.
 
 `django_tenants.middleware.main.TenantMainMiddleware` looks the request
 host up in `TenantDomain` and switches the connection's search path. It is
-third in `MIDDLEWARE` (`src/settings.py`), after two middlewares that must
+third in `MIDDLEWARE` (`src/settings/application.py`), after two middlewares that must
 answer before any tenant exists: `src/core/middleware/health_probe.py` (kubelet
 probes carry a pod IP as `Host`, which no row can match) and
 `src/tenant/internal.py: InternalDomainsMiddleware` (the cluster-internal
@@ -446,7 +446,7 @@ brand domain, or the white-label asset hosts):
 | `grooveshop-django-api/src/tenant/signals.py` | `invalidate_domain_caches` and the sibling purge |
 | `grooveshop-django-api/src/tenant/internal.py` | The internal domains feed |
 | `grooveshop-django-api/src/core/utils/tenant_urls.py` | `_resolve_prefixed_service_domain`, `_has_prefix_boundary`, the three resolvers |
-| `grooveshop-django-api/src/settings.py` | `MIDDLEWARE` order, `PUBLIC_SCHEMA_URLCONF` |
+| `grooveshop-django-api/src/settings/application.py`, `grooveshop-django-api/src/settings/database.py` | `MIDDLEWARE` order (application), `PUBLIC_SCHEMA_URLCONF` (database) |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts`, `server/utils/tenant.ts` | Host resolution and the five-minute cache |
 | `grooveshop-agent-gateway/internal/tenant/middleware.go` | Host-only resolution in the gateway |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/` | The tenant overlay: `ingress.yaml`, `kustomization.yaml`, `README.md` |

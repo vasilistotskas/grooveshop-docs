@@ -71,7 +71,7 @@ gateway's tenant cache.
 The ViewSet response cache (`cache_methods` in `src/core/utils/views.py`,
 Django's `cache_page`) is scoped to the running release.
 `response_cache_key_prefix()` leads every key prefix with
-`settings.RELEASE_VERSION`, which `src/settings.py` reads from the
+`settings.RELEASE_VERSION`, which `src/settings/cache.py` reads from the
 `pyproject.toml` the image ships (semantic-release bumps it in the release
 commit). A deploy therefore never serves a body an earlier release cached;
 the old entries are never read again and expire on the timeout each
@@ -386,7 +386,7 @@ content pages, reviews) saved with `is_published=True` and a future
 (`PublishedQuerySet.published` needs both; `is_published` defaults to
 false, so a draft stays hidden whatever its date), so no `post_save` purges anything.
 `src/core/publication.py: release_due_publications` notices: the beat entry
-`release-due-publications` (`src/settings.py`, `SCHEDULE_PRESETS["every_minute"]`)
+`release-due-publications` (`src/settings/schedule.py`, `SCHEDULE_PRESETS["every_minute"]`)
 fans out per store (`tenant.tasks.fanout_release_due_publications`, then
 `src/core/tasks.py: release_due_publications_task`), and each run finds the
 published rows whose date fell in `(cursor, now]` and were not saved on or
@@ -674,7 +674,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/src/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/src/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml` | Originals served only to media-stream; public requests redirected to it |
 | `grooveshop-django-api/src/core/urls.py` | Dev/CI media route, which refuses dot-segment paths like the static nginx |
-| `grooveshop-django-api/src/settings.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
+| `grooveshop-django-api/src/settings/cache.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
 | `grooveshop-django-api/src/tenant/switches.py`, `src/tenant/features.py`, `src/core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The storefront's in-memory copy of the resolve payload; `invalidateTenantConfigs`, `tenantConfigEpoch`, `EPOCH_CHECK_MS` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/cacheKey.ts` | `tenantCacheKey` (ends with the epoch), `cacheKeyBelongsToHost` |

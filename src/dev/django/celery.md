@@ -14,7 +14,7 @@ data is dispatched into each tenant schema by a fan-out wrapper.
 ## The app (`src/core/celery.py`)
 
 `create_celery_app()` builds `Celery("core")` and loads the `CELERY_*`
-namespace from `src/settings.py`, where every Celery option lives. Add options
+namespace from `src/settings/celery.py`, where every Celery option lives. Add options
 there, because a `conf.update()` here would not win: `config_from_object` with
 `namespace="CELERY"` resolves the prefixed key from every configuration source
 before a bare lowercase one, whatever the call order. The task time limits are
@@ -74,7 +74,7 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   the operator-generated `backend-message-broker-default-user` secret
   (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`).
   Workers consume the `celery` and `meilisearch` queues.
-- Results: `CELERY_RESULT_BACKEND` is fixed in `src/settings.py` to
+- Results: `CELERY_RESULT_BACKEND` is fixed in `src/settings/celery.py` to
   `core.result_backend.TenantDatabaseBackend`, the database backend plus the
   store a failure belongs to. `django_celery_results` is in `SHARED_APPS` **only**, and `TENANT_APPS`
   carries a comment saying it is deliberately absent: task results are
@@ -86,7 +86,7 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   **No Deployment overrides the backend** — `base/backend.yaml` carries an
   explicit comment saying so on all four backend containers, because the
   results used to go to Redis DB 1 and shared one `allkeys-lru` budget
-  with the Django cache. `src/settings.py` then narrows what gets
+  with the Django cache. `src/settings/celery.py` then narrows what gets
   written: `CELERY_TASK_IGNORE_RESULT` with
   `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` keeps failures and drops
   successes.
@@ -124,7 +124,7 @@ the empty public schema and report success.
 
 ## Scheduled jobs
 
-From `src/settings.py: get_celery_beat_schedule()`, one row per entry in the
+From `src/settings/schedule.py: get_celery_beat_schedule()`, one row per entry in the
 order the settings declare them. Times are Athens local. A cadence marked
 † falls back to hourly when `DEBUG` is on; the others run on the same
 schedule everywhere. **Runs in** says where the work happens: `public` (beat
@@ -213,7 +213,7 @@ The retention periods behind the `purge-*` entries are listed in
 | `src/core/tasks.py` | health monitor, backups, cache clear, session and history cleanup, abandoned carts, Meilisearch sync, inactive-user mail |
 | `src/tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
 | `src/order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment, `push_order_event_to_gateway` |
-| `src/order/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
+| `src/order/communications/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
 | `src/shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list (and the order notes for a refused one), COD reconciliation and alerts, arrival notification |
 | `src/shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, arrival notification |
 | `src/product/tasks.py` | back-in-stock, price-drop and low-stock alerts |
@@ -299,7 +299,7 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 | `grooveshop-django-api/src/core/celery.py` | App factory, signal handlers |
 | `grooveshop-django-api/src/scheduler/beat.py` | The beat scheduler |
 | `grooveshop-django-api/src/core/retry.py` | The transient error sets `autoretry_for` names |
-| `grooveshop-django-api/src/settings.py` | `CELERY_*`, `SCHEDULE_PRESETS`, `get_celery_beat_schedule()` |
+| `grooveshop-django-api/src/settings/celery.py`, `grooveshop-django-api/src/settings/schedule.py` | `CELERY_*` (celery); `SCHEDULE_PRESETS`, `get_celery_beat_schedule()` (schedule) |
 | `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `run_for_all_tenants`, `dispatch_on_commit` |
 | `grooveshop-django-api/src/tenant/tasks.py` | Fan-out wrappers |
 | `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask`, system tasks |

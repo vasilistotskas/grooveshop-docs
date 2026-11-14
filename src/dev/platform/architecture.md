@@ -70,8 +70,8 @@ as if the browser had called it directly:
 
 | Header | Why |
 |---|---|
-| `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `src/settings.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
-| `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`src/settings.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
+| `X-Forwarded-Proto: https` | `SECURE_PROXY_SSL_HEADER` in `src/settings/security.py`; without it `SECURE_SSL_REDIRECT` answers 301 to the public host and the fetch leaves the cluster |
+| `X-Forwarded-Host: <request host>` | `USE_X_FORWARDED_HOST` is mandatory in production (`src/settings/env.py` raises otherwise); django-tenants resolves the schema from it and DRF builds pagination links from it |
 | `X-Real-IP` | The visitor's IP, from Cloudflare's `CF-Connecting-IP`. Django believes it only together with a correct `X-Origin-Verify`, which is relayed alongside (`src/core/client_ip.py`: `trusted_client_ip`); without it, limits key on the peer Traefik saw (`client_ip_or_peer`) |
 | `X-Language` | The page's locale (`event.context.locale`); Django answers in it on `/api/` and `/_allauth/` (`src/core/middleware/locale.py`) — see Multi-tenancy → Request language |
 | `Authorization: Bearer <knox token>` | The customer's API token from the Nuxt session |
@@ -106,7 +106,7 @@ never the platform host.
 ### Background work
 
 Celery workers consume the `celery` and `meilisearch` queues from RabbitMQ;
-beat schedules the periodic tasks defined in `src/settings.py:
+beat schedules the periodic tasks defined in `src/settings/schedule.py:
 get_celery_beat_schedule`. Tasks are tenant-aware through `TenantTask`
 (`grooveshop-django-api/src/tenant/celery.py`), which binds the schema the task
 was dispatched from. Django pushes order events and feed invalidations to
@@ -126,7 +126,7 @@ flowchart LR
 
 - drf-spectacular generates the schema with the camel-case post-processing
   hook, so the contract is camelCase like the wire format
-  (`src/settings.py: SPECTACULAR_SETTINGS`).
+  (`src/settings/api.py: SPECTACULAR_SETTINGS`).
 - `openapi-ts.config.ts` in the Nuxt repo emits TypeScript types and Zod
   schemas (requests, responses, definitions) into `shared/openapi/`. Nothing
   in that directory is hand-edited.
@@ -224,7 +224,7 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/1.tenant-epoch.ts` | The `x-tenant-epoch` request header the page cache varies on |
 | `grooveshop-storefront-ui-node-nuxt/app/providers/media-stream.ts` | Image URL builder |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | Type and Zod generation |
-| `grooveshop-django-api/src/settings.py` | `USE_X_FORWARDED_HOST`, `SECURE_PROXY_SSL_HEADER`, `SPECTACULAR_SETTINGS`, `CACHES` |
+| `grooveshop-django-api/src/settings/env.py`, `grooveshop-django-api/src/settings/security.py`, `grooveshop-django-api/src/settings/api.py`, `grooveshop-django-api/src/settings/cache.py` | `USE_X_FORWARDED_HOST` (env), `SECURE_PROXY_SSL_HEADER` (security), `SPECTACULAR_SETTINGS` (api), `CACHES` (cache) |
 | `grooveshop-django-api/src/tenant/cache.py` | `make_tenant_key`, `tenant_resolve_key` |
 | `grooveshop-django-api/src/core/caches.py` | `CustomCache` |
 | `grooveshop-django-api/src/core/cache/nuxt.py` | SSR cache purge client |
