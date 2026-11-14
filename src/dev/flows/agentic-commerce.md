@@ -537,10 +537,10 @@ capabilitiesOf`); with promotions off every submitted code comes back in
 
 ### Catalog feeds
 
-`internal/feeds/` serves four URLs per tenant from two documents: the RSS
-dialect (`google.xml`, `meta.xml`, `tiktok.xml` are one document, rendered,
-compressed and cached once) and the ACP JSON feed (`acp.json`). One sweep of the
-catalog renders both.
+`internal/feeds/` serves four URLs per tenant from three documents: two in the
+RSS dialect, Google's (`google.xml`) and one `meta.xml` and `tiktok.xml` share,
+and the ACP JSON feed (`acp.json`). The two RSS documents differ only in
+`g:brand` (below). One sweep of the catalog renders all three.
 
 **The documents are built whole in memory.** Only the fetch is bounded: the
 sweep reads the catalog in pages of 100 with four fetches in flight and a window
@@ -550,7 +550,8 @@ entire, then compressed (`internal/feeds/pipeline.go`,
 `internal/feeds/acp.go`). Two sweeps run
 per pod at most, whichever tenants they belong to.
 
-**What is cached, and where.** Per format (`rss`, `acp`) Redis holds the gzipped
+**What is cached, and where.** Per format (`google`, `rss` for Meta and TikTok,
+`acp`) Redis holds the gzipped
 document at `ag:{schema}:feed:{format}` and its metadata (ETag, the time the sweep
 started, the size, and the gateway build that rendered it) at
 `ag:{schema}:feed:{format}:meta`, both expiring after `FEED_STALE_TTL`. Beside
@@ -621,8 +622,14 @@ matter are listed at the top of `internal/feeds/rss.go`:
   tokenizer's text, so markup and the content of script or style elements do
   not leak), else the name.
 - Availability is the enum `in stock` / `out of stock`; condition is `new`;
-  `g:item_group_id` carries the variant group; `g:brand` falls back to the
-  store name.
+  `g:item_group_id` carries the variant group.
+- **`g:brand` is the product's brand.** For a product without one, the Meta and
+  TikTok document sends the store name and Google's sends no `g:brand`: Google
+  asks for the manufacturer's brand and says to leave it empty for a product
+  that has none. `g:identifier_exists` is never written: Google defaults it to
+  `yes` and allows `no` only when the product certainly has no identifiers,
+  which a product with none entered does not prove (`newGoogleWriter` and
+  `newMetaTikTokWriter` in `internal/feeds/rss.go`).
 - Every attribute that is not a variant option goes out as a
   `g:product_detail`, so a specification is entered once.
 - The store's highlights go out as `g:product_highlight`, from `/product/feed`'s
@@ -632,8 +639,8 @@ matter are listed at the top of `internal/feeds/rss.go`:
   anyway, and the third has no price checkout would honour yet. An inactive
   product is skipped too. A malformed money field is an error, because it would
   corrupt every consumer's feed.
-- **Fields stay within the strictest of the three targets' limits**, so one
-  document serves Google, Meta and TikTok (the constants at the top of
+- **Fields stay within the strictest of the three targets' limits**, so either
+  RSS document is valid for any of them (the constants at the top of
   `internal/feeds/rss.go`, cut by rune, never by byte):
 
   | Field | Limit |
