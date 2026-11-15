@@ -138,7 +138,7 @@ Store features follow the same rule one level down. `features` on
 `tenant/resolve` (`TenantConfig.Features`) is each optional store feature's
 effective state, which Django folds in `src/tenant/features.py:
 effective_features` from the same permission classes that answer 404 for it.
-The gateway decodes the four that something of it serves, and reads nothing
+The gateway decodes the ones that something of it serves, and reads nothing
 else for them:
 
 | Feature | Off means |
@@ -146,6 +146,7 @@ else for them:
 | `productReviews` | `get_product_reviews` is not served; `search_products` and `get_product` carry no rating or review count; the chatbot's prompt does not offer reviews |
 | `loyalty` | `my_loyalty_points` is not served |
 | `favourites` | `my_favourites` is not served |
+| `customerAccounts` | No account tool is served (`my_orders` included), no call is challenged with a 401, and a bearer the client still sends is ignored: the call is a guest's. Django folds it into `productReviews`, `favourites` and `loyalty` too. An order that cannot be opened is not answered "sign in" |
 | `promotions` | `checkout.ApplyDiscountCodes` refuses every code as `discount_code_invalid` without applying it (Django's coupon routes answer 404 with the plan flag off and would fail the request) and clears the cart's old coupon best effort; ACP sessions do not declare the discount extension |
 
 A switch reaches the gateway within twice `TENANT_CACHE_TTL` (five minutes by
@@ -205,7 +206,8 @@ through `linksFor` (`internal/mcpsrv/helpers.go`) in the turn's language;
 webhooks, the Server Card and the feeds link the store's default.
 
 Account tools, which need a linked credential: `my_orders`,
-`my_loyalty_points`, `my_favourites`.
+`my_loyalty_points`, `my_favourites`. A store with customer accounts off
+serves none of them (`account` in `internal/mcpsrv/server.go`).
 
 A rating is the average of the product's review rates, on Django's 1–10
 scale (`src/product/enum/review.py: RateEnum`).
@@ -273,11 +275,12 @@ write is the line sync and the discount codes. Then nothing is saved: a failed
 create saves no session and says "No checkout was created", though the cart it
 made holds the lines; a failed update says the buyer, fulfillment and payment
 were not stored, though line items it sent may already be in the cart. ACP
-(`internal/acp/handler.go`) differs on a create: it fills the cart first, so a
-failed region or pay-way lookup there leaves the lines in the cart and saves no
-session, and releases the idempotency key. An ACP update resolves the region
-and the buyer before any cart write, but its pay-way lookup comes after the
-line sync and the codes.
+(`internal/acp/handler.go`) does the same: a create or an update settles every
+lookup and refusal it can make without the cart (item ids, the region, the pay
+way) before its first cart write, creating the cart included, so a create
+refused there leaves no cart in Django and an update leaves the cart as the
+stored session knows it. A line sync that fails partway still leaves what it
+wrote.
 
 UCP takes the region as `fulfillment.regionId` and ACP as the address's `state`.
 Until one is chosen a checkout stays `incomplete` on UCP and
@@ -431,22 +434,24 @@ items. Completing a session that still misses data answers 400 `missing`.
 Every error the ACP handler writes is the spec's `Error` object (`type`,
 `code`, `message`, and `param` where one field is to blame), with the statuses
 and codes of the 2026-04-17 spec. Answers written before the handler is reached
-are not: the rate limit, recover, the mux's own 404 and 405, and the tenant
-middleware's 404 `unknown store` and 503 `store temporarily unavailable`, which
-are `{"error": ...}` (`internal/tenant/middleware.go`; gateway issue #129). The table is derived
+are the spec's too, with their status and message unchanged: the rate limit's
+429, recover's 500, the mux's own 404 and 405, the checkout gate's 404 and the
+tenant middleware's 404 and 503, each mapped by status to the spec's `type` and
+a code (`internal/acp/handler.go: WriteRouteError`, which the server mounts on
+every path under `/acp/` in `internal/server/routes.go`). The table is derived
 from `internal/acp/handler.go`; the code wins.
 
 | Status | Code | When |
 |---|---|---|
 | 400 | `missing_api_version`, `unsupported_api_version` | The `API-Version` header (above) |
-| 400 | `idempotency_key_required` | A POST that changes a session, with no `Idempotency-Key`; `invalid` with `param: Idempotency-Key` when it is over 255 characters |
+| 400 | `idempotency_key_required` | Any POST, a create included, with no `Idempotency-Key`; `invalid` with `param: Idempotency-Key` when it is over 255 characters |
 | 400 | `invalid` | A body that is not JSON (or is over 256 KiB), `$.currency` other than the store's, or a refusal the store explained (its `detail` is the message) |
 | 400 | `missing` | `$.line_items` empty on a create, `$.payment_data` absent on a complete, or a complete of a session still missing buyer or fulfillment data |
 | 400 | `not_found` | A referenced product or cart the store does not have (an unknown item id, or a cart it no longer serves) |
 | 400 | `out_of_stock` | A complete refused for stock; the message names each product with what was requested and what is available |
 | 400 | `unsupported` | Delegated card payment (any `handler_id` or instrument), a pay way the store has no agent-completable method for, or no pay way at all |
 | 401 | `unauthorized` | No bearer, a wrong one, or a tenant with no `acpBearerToken` |
-| 404 | `not_found` | `No such checkout session` |
+| 404 | `not_found` | No session is stored for the id, or the id cannot be one. The message says an order may exist and to check for it before creating another session (`msgSessionGone`) |
 | 405 | `conflict` | An update or a cancel of a completed or canceled session, or a complete of a canceled one. It carries `Allow`: `GET, HEAD` for an update; empty for a complete or a cancel, which have no other method |
 | 409 | `idempotency_in_flight` | A key still in flight, another request holding the session's lock, or an order still being placed. Always with `Retry-After`, in whole seconds |
 | 422 | `idempotency_conflict` | A key reused with a different body |
@@ -457,9 +462,8 @@ from `internal/acp/handler.go`; the code wins.
 | 503 | `unavailable`, `upstream_unavailable`, `order_placed` | Redis or the render failed; the store's backend is down; or the order is placed but its session cannot be rendered right now, in which case read the session again |
 
 A complete of a session that is already completed is not an error: it answers
-200 with the session, as long as the body is valid JSON within the 256 KiB
-limit: the body is read first, so an empty, non-JSON or oversized one is a 400
-before that.
+200 with the session. The body and the key are read first, so an empty,
+non-JSON or oversized body, or a missing key, is a 400 before that.
 
 An order being placed has a deadline: `checkout.Flow.CompletionDeadline` is the
 session's in-progress save plus three upstream timeouts. Until then a call on
@@ -472,48 +476,61 @@ it does.
 
 #### Idempotency
 
-Every POST that changes a session needs an `Idempotency-Key` of at most 255
-characters. A complete reads it only after judging the session's status, so a
-complete of a session already completed (200), in progress (409, then 502) or
-canceled (405) is answered before the key is read. The key is
-claimed with `SET NX` under `ag:{schema}:acp:idem:{scope}:{key}`, where the
-scope is the endpoint: `create.v2` for a create, `update:{id}`, `complete:{id}`
-and `cancel:{id}` for a session's operations. A claim that its request never
-settled lapses after a minute; a settled key is kept for 24 hours, the spec's
-minimum. The scope of a create carries the version of the record it stores, so
-a record an older pod wrote is a miss, never misread.
+Every POST needs an `Idempotency-Key` of at most 255 characters. Once the id
+has the form of a session id (404 otherwise) and the body is read, the key is
+the first thing the request settles (`claimKey`), before it reads a session or
+takes its lock: a complete without a key is 400 `idempotency_key_required`
+whatever the session is, and a replay is answered without the lock. The key is
+claimed under `ag:{schema}:acp:idem:{scope}:{key}`, where the scope is the
+endpoint: `create.v3` for a create, `update.v3:{id}`, `complete.v3:{id}` and
+`cancel.v3:{id}` for a session's operations. The version is of how every
+operation's key is recorded, so a record an older pod wrote is a miss, never
+misread. A claim its request never settled lapses with the claim; a settled key
+is kept for 24 hours, the spec's minimum, unless Redis evicts it.
 
-- A **create** stores the response it sent (status and body) beside the key. A
-  replay with the same body gets those bytes back with `Idempotent-Replayed:
-  true` for the record's 24 hours, whether or not the session still lives:
-  nothing is executed again. One exception: the record is written after the
-  session is saved, and if that write fails the handler logs it and still
-  answers 201. The in-flight claim then lapses after a minute, and a retry with
-  the same key creates another session instead of replaying.
-- An **update** or **cancel** replay renders the session as it is now, with the
-  same header.
-- A **complete** is judged by the session first: a session already completed
-  answers 200 with the session on every call, with no `Idempotent-Replayed`
-  header and whatever the body or key (gateway issue #128); in progress is 409
-  then 502, and canceled is 405. Only a complete of another status reads the
-  key, and a repeat of it renders the session with the header.
-- What a key is compared with is the decoded request, re-encoded, so a member
-  the gateway does not read does not count. A different one is 422
-  `idempotency_conflict` on create, update and complete (a complete of a
-  completed session excepted, above). A cancel has no body: its key is compared
-  with the session id, which its scope already names, so a repeat of a cancel
-  never conflicts. A key still in flight is 409.
-- A create is rendered before it is saved, and every refusal or failure
-  releases its key, so a create that failed leaves no session and no record.
-- A complete that placed nothing releases its key; one that placed an order,
-  or may have, spends it, so a retry reads the session and never places a
-  second order.
+- **Every POST stores the response it sent**, status and body, and `Allow` for
+  a 405 (`idemRecord`). A replay with an equivalent body answers those bytes
+  with `Idempotent-Replayed: true` for the record's 24 hours, whatever the
+  session became since and whether or not it still lives: nothing is executed
+  again. The answer is held back from the wire until its key is settled by it,
+  so what a key stores is what was sent.
+- **Equivalence is the body's JSON** (`fingerprint`): the raw body decoded
+  into plain values and encoded again, so member order and `1.0` against `1`
+  do not count, while `null` against an absent member, array order and a
+  member the gateway does not read all do. A different body under the same key
+  is 422 `idempotency_conflict`, on every operation. Cancel's body is
+  optional; an absent one has a fingerprint of its own.
+- **What a key keeps** (`keptAgainstKey`): every answer that is final for its
+  request, refusals included (400, 404, 405), however the condition behind the
+  refusal changes afterwards. A kept refusal's message ends "This
+  Idempotency-Key keeps this answer for 24 hours: send a new attempt with a new
+  key." (`noteKept`). The key is freed, and the same key runs again as a new
+  request, for an answer that asks for the same request again: a 5xx, a 409
+  `idempotency_in_flight` and a 429.
+- **Two 5xx answers of a complete are kept all the same**: 502
+  `order_outcome_unknown` and 500 `order_placed` for an order whose session
+  could not be saved. An order may exist behind each while the stored session
+  may not say so, so a retry run afresh could be answered by that session. The
+  key stays spent and every retry is told what the first attempt was.
+- **An update or a cancel marks the session it changes** (`Session.AppliedBy`:
+  the endpoint, the key and the body, hashed), in the save that applies it. A
+  request whose save was stored and which then could not answer (its render
+  failed and the 5xx freed the key, Redis lost the save's reply, or the pod
+  died) finds its mark and is answered with the session, changing nothing. A
+  cancel is therefore never refused 405 for its own cancel. One slot: after
+  another key's update, an earlier update's retry applies again.
+- **A create** is rendered before it is saved: one that failed (a 5xx) leaves
+  no session and frees its key, and one refused (a 4xx) leaves no session and
+  its refusal as the key's answer, like any other. A create whose record could not
+  be written does not know whether the key holds its response: it answers 503
+  and hands out no session; a retry of the key replays the session if it was
+  recorded and creates anew if not.
 
-**The stored create response holds the buyer's data.** It is the rendered
-session: name, email, phone and delivery address, kept in Redis for 24 hours
-while the session itself lives 30 minutes when open, renewed by each call, and
-24 hours once completed or canceled (`internal/checkout/store.go`,
-`internal/checkout/session.go`). Nothing else reads it. Count it when
+**The stored responses hold the buyer's data.** Each is a rendered session:
+name, email, phone and delivery address, kept in Redis for 24 hours for every
+operation, while the session itself lives 30 minutes when open, renewed by each
+call, and 24 hours once completed or canceled (`internal/checkout/store.go`,
+`internal/checkout/session.go`). Nothing else reads them. Count them when
 answering a data-retention question.
 
 #### Completing without the caller
@@ -522,7 +539,7 @@ answering a data-retention question.
 context only until the order is about to be created. From the in-progress save
 on, it runs detached, bounded by three upstream timeouts, because Django has the
 order whether or not the platform is still connected. A call whose context ended
-before that point places no order and releases its key. After a placed order
+before that point places no order, and its key is free for a retry. After a placed order
 whose caller left, the answer is "order placed, read it again" (503
 `order_placed` on ACP) without the upstream read, and an info line is logged.
 Only the process exiting cuts a completion: the shutdown drain is shorter than
@@ -858,6 +875,14 @@ account tool the store serves. Tokens are opaque to the gateway, so it could not
 step a narrower grant up later, and the shopper can still narrow it on the
 consent screen. The rest of `/mcp` stays open.
 
+A store with customer accounts off (`features.customerAccounts`) links none.
+Its bearer is not verified and no challenge is sent: Django answers 404 on
+`/agent/*` there, so the gateway treats the call as a guest's
+(`internal/identity/identity.go: Middleware`). For up to twice
+`TENANT_CACHE_TTL` after the switch, a pod whose copy still says on verifies a
+bearer, gets Django's 404, and answers 404 for that request; calls without a
+bearer are not affected.
+
 The sign-in (`/accounts/login/`) and the consent (`/identity/o/authorize`)
 are allauth pages Django serves on the store's API host. Every allauth page
 there renders in `src/core/templates/allauth/layouts/base.html`, which wears the
@@ -954,7 +979,9 @@ headers follow Standard Webhooks (`Webhook-Id`, `Webhook-Timestamp`) with
 `UCP-Agent` naming the tenant's profile, and the request is signed per RFC
 9421 (`Content-Digest`, `Signature-Input`, `Signature`) with the tenant's
 ES256 key — the one algorithm every UCP verifier must support
-(`internal/httpsig`). The client dials only public addresses and never
+(`internal/httpsig`). The signature covers `webhook-id` and
+`webhook-timestamp` beside UCP's REST components (`signedComponents` in
+`internal/ucp/webhook.go`), so neither can be changed on a replayed delivery. The client dials only public addresses and never
 follows a redirect, so a registered URL cannot be turned toward the cluster.
 
 The webhook queue is deliberately **not** per schema: one Redis stream
