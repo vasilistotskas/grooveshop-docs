@@ -444,14 +444,14 @@ from `internal/acp/handler.go`; the code wins.
 | Status | Code | When |
 |---|---|---|
 | 400 | `missing_api_version`, `unsupported_api_version` | The `API-Version` header (above) |
-| 400 | `idempotency_key_required` | A POST that changes a session, with no `Idempotency-Key`; `invalid` with `param: Idempotency-Key` when it is over 255 characters |
+| 400 | `idempotency_key_required` | Any POST, a create included, with no `Idempotency-Key`; `invalid` with `param: Idempotency-Key` when it is over 255 characters |
 | 400 | `invalid` | A body that is not JSON (or is over 256 KiB), `$.currency` other than the store's, or a refusal the store explained (its `detail` is the message) |
 | 400 | `missing` | `$.line_items` empty on a create, `$.payment_data` absent on a complete, or a complete of a session still missing buyer or fulfillment data |
 | 400 | `not_found` | A referenced product or cart the store does not have (an unknown item id, or a cart it no longer serves) |
 | 400 | `out_of_stock` | A complete refused for stock; the message names each product with what was requested and what is available |
 | 400 | `unsupported` | Delegated card payment (any `handler_id` or instrument), a pay way the store has no agent-completable method for, or no pay way at all |
 | 401 | `unauthorized` | No bearer, a wrong one, or a tenant with no `acpBearerToken` |
-| 404 | `not_found` | `No such checkout session` |
+| 404 | `not_found` | No session is stored for the id, or the id cannot be one. The message says an order may exist and to check for it before creating another session (`msgSessionGone`) |
 | 405 | `conflict` | An update or a cancel of a completed or canceled session, or a complete of a canceled one. It carries `Allow`: `GET, HEAD` for an update; empty for a complete or a cancel, which have no other method |
 | 409 | `idempotency_in_flight` | A key still in flight, another request holding the session's lock, or an order still being placed. Always with `Retry-After`, in whole seconds |
 | 422 | `idempotency_conflict` | A key reused with a different body |
@@ -476,9 +476,10 @@ it does.
 
 #### Idempotency
 
-Every POST needs an `Idempotency-Key` of at most 255 characters, and the key
-is the first thing the request settles (`claimKey`), before it reads a session
-or takes its lock: a complete without a key is 400 `idempotency_key_required`
+Every POST needs an `Idempotency-Key` of at most 255 characters. Once the id
+has the form of a session id (404 otherwise) and the body is read, the key is
+the first thing the request settles (`claimKey`), before it reads a session or
+takes its lock: a complete without a key is 400 `idempotency_key_required`
 whatever the session is, and a replay is answered without the lock. The key is
 claimed under `ag:{schema}:acp:idem:{scope}:{key}`, where the scope is the
 endpoint: `create.v3` for a create, `update.v3:{id}`, `complete.v3:{id}` and
@@ -518,8 +519,9 @@ is kept for 24 hours, the spec's minimum, unless Redis evicts it.
   died) finds its mark and is answered with the session, changing nothing. A
   cancel is therefore never refused 405 for its own cancel. One slot: after
   another key's update, an earlier update's retry applies again.
-- **A create** is rendered before it is saved, and a failure releases its key,
-  so a create that failed leaves no session. A create whose record could not
+- **A create** is rendered before it is saved: one that failed (a 5xx) leaves
+  no session and frees its key, and one refused (a 4xx) leaves no session and
+  its refusal as the key's answer, like any other. A create whose record could not
   be written does not know whether the key holds its response: it answers 503
   and hands out no session; a retry of the key replays the session if it was
   recorded and creates anew if not.
