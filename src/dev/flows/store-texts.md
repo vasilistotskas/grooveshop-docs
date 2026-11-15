@@ -364,4 +364,4 @@ ships to browsers.
 | `grooveshop-django-api/src/tenant/signals.py` | `bump_generation_on_text_override_change` |
 | `grooveshop-django-api/src/core/cache/surfaces.py` | `store_texts` surface |
 | `grooveshop-django-api/src/core/cache/invalidation.py` | Batched purge after commit |
-| `grooveshop-django-api/src/settings.py` | `TEXTS_*` settings |
+| `grooveshop-django-api/src/settings/domain.py` | `TEXTS_*` settings |

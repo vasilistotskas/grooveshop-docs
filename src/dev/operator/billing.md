@@ -147,7 +147,7 @@ a translated subject (`[{site}] Tenant billing stage {stage}: {schema}`) in
 the platform's language (`LANGUAGE_CODE`). A failure of the copy is logged and
 never fails the owner's notice it follows, and with `ADMINS` empty there is
 nobody to write to and it is skipped (`ADMINS` is built from the `ADMIN_EMAIL`
-environment variable in `src/settings.py`).
+environment variable in `src/settings/email.py`).
 
 ### How a run advances
 
@@ -190,7 +190,7 @@ TENANT_BILLING = {
 }
 ```
 
-`src/settings.py`. Verified across the cluster manifests: **no Deployment,
+`src/settings/domain.py`. Verified across the cluster manifests: **no Deployment,
 ConfigMap or Secret in `grooveshop-infrastructure` sets any of these three
 variables**, so every environment runs on the defaults above. The only
 place they appear at all is `grooveshop-django-api/.env.example`, where
@@ -278,7 +278,7 @@ Nothing is deleted.
 
 | | |
 |---|---|
-| Beat entry | `process-tenant-billing` in `src/settings.py: get_celery_beat_schedule()` |
+| Beat entry | `process-tenant-billing` in `src/settings/schedule.py: get_celery_beat_schedule()` |
 | Task | `tenant.tasks.process_tenant_billing` → `tenant.billing.run_billing_cycle` |
 | Cadence | daily 06:00 Athens; hourly when `DEBUG` |
 | Schema | `public` — **not** a fan-out |
@@ -345,6 +345,6 @@ it are in [Scheduled work & platform data](/dev/operator/background-jobs).
 | `grooveshop-django-api/src/admin/platform_billing.py` | The **Plan & Billing** control-plane page |
 | `grooveshop-django-api/src/tenant/role_scopes.py` | `TENANT_SELF_EDITABLE_FIELDS` — why a merchant cannot edit plan or term |
 | `grooveshop-django-api/src/tenant/middleware.py` | `SuspendedTenantMiddleware` (503 for a suspended host) |
-| `grooveshop-django-api/src/settings.py` | `TENANT_BILLING`, `ADMINS`, `process-tenant-billing` beat entry |
+| `grooveshop-django-api/src/settings/domain.py`, `grooveshop-django-api/src/settings/email.py`, `grooveshop-django-api/src/settings/schedule.py` | `TENANT_BILLING` (domain), `ADMINS` (email), `process-tenant-billing` beat entry (schedule) |
 | `grooveshop-django-api/src/core/templates/emails/billing/` | `expiring`, `expired`, `suspended` (html + txt) |
 | `grooveshop-django-api/.env.example` | The only declaration of the three `TENANT_BILLING_*` variables anywhere |

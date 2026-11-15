@@ -36,7 +36,7 @@ server: the project has no WSGI module, so it falls back to Django's
 default WSGI handler and serves no WebSocket. The worker must consume the
 `meilisearch` queue as well as `celery`, or search-index tasks never run.
 
-Configuration is a single `.env` read by `src/settings.py`; `SYSTEM_ENV` is
+Configuration is a single `.env` read by `src/settings/env.py`; `SYSTEM_ENV` is
 `dev`, `staging`, `production` or `ci`. Every request needs a tenant: `localhost`
 must exist as a `TenantDomain` row (`server/utils/tenant.ts` strips the
 port before resolving), so create the platform row and a store, then
@@ -192,7 +192,7 @@ the sealed `frontend-secrets`
 | File | Role |
 |---|---|
 | `grooveshop-django-api/docker-compose.yml`, `infra.compose.yml`, `app.compose.yml` | Local stack |
-| `grooveshop-django-api/.env.example`, `src/settings.py` | Django configuration keys, `SYSTEM_ENV` |
+| `grooveshop-django-api/.env.example`, `src/settings/env.py` | Django configuration keys, `SYSTEM_ENV` |
 | `grooveshop-django-api/src/asgi/__init__.py` | The ASGI application uvicorn serves |
 | `grooveshop-django-api/src/tenant/management/commands/bootstrap_platform.py`, `tenant_create.py` | Local and production provisioning |
 | `grooveshop-django-api/src/devtools/management/commands/seed_all.py` | Local sample data |

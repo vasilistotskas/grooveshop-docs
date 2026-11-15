@@ -436,7 +436,7 @@ of anything.
 | `grooveshop-django-api/src/tenant/tasks.py` | `flush_tenant_media_task`, `purge_expired_tenant_archives` |
 | `grooveshop-django-api/src/tenant/media_flush.py` | The media-stream flush call and its fail-open behaviour |
 | `grooveshop-django-api/src/tenant/storage.py` | `private_media_root`, why private files have no URL |
-| `grooveshop-django-api/src/settings.py` | `TENANT_INVOICE_RETENTION_YEARS`, middleware order |
+| `grooveshop-django-api/src/settings/domain.py`, `grooveshop-django-api/src/settings/application.py` | `TENANT_INVOICE_RETENTION_YEARS` (domain), middleware order (application) |
 | `grooveshop-media-stream/src/MediaStream/Cache/controllers/admin-cache.controller.ts` | `flush-tenant`: namespace invalidation plus the disk sweep |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | The 404 a shopper sees on a suspended store |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` | `grooveshop-backend-media-private-pvc`, mounted on backend and worker |

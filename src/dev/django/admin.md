@@ -20,7 +20,7 @@ URLs, dashboards, sidebars or settings blocks.
 | Class | `src/admin/admin.py: MyAdminSite` | `src/admin/platform_site.py: PlatformAdminSite` |
 | Instance name | `admin` | `platform_admin` |
 | Mounted by | `src/core/urls.py` (`ROOT_URLCONF`, locale-prefixed `admin/`) | `src/tenant/urls_public.py` (`PUBLIC_SCHEMA_URLCONF`, locale-prefixed `admin/`) |
-| Unfold settings | `UNFOLD` in `src/settings.py` | `UNFOLD_PLATFORM` (`settings_name = "UNFOLD_PLATFORM"`) |
+| Unfold settings | `UNFOLD` in `src/settings/admin.py` | `UNFOLD_PLATFORM` (`settings_name = "UNFOLD_PLATFORM"`) |
 | Dashboard | `admin/index.html`, widgets in `src/admin/dashboard/store/` | `admin/platform_index.html`, widgets in `src/admin/dashboard/platform.py` |
 | Who passes `has_permission` | a platform-staff session with an active staff-capable `UserTenantMembership` in the current tenant, or a superuser | a platform-staff session that is a superuser |
 
@@ -485,7 +485,7 @@ holds lazy strings evaluated after the request has reset the language.
 | `grooveshop-django-api/src/core/json_schema.py` | `JSONSchemaValidator`, `wire_schema` |
 | `grooveshop-django-api/src/tenant/role_scopes.py`, `src/tenant/auth_backends.py` | Role grants, reference data, `core.purge_cache` |
 | `grooveshop-django-api/src/admin/navigation.py` | `store_sidebar`, `platform_sidebar` |
-| `grooveshop-django-api/src/settings.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `ADMIN_DOCS_URL`, `ADMIN_OPS_LINKS` |
+| `grooveshop-django-api/src/settings/admin.py` | `UNFOLD`, `UNFOLD_PLATFORM`, `ADMIN_DOCS_URL`, `ADMIN_OPS_LINKS` |
 | `grooveshop-django-api/tests/integration/admin/test_store_navigation.py` | The store sidebar's states, roles, badges and reachability |
 | `grooveshop-django-api/src/core/management/commands/makemessages_unfold.py` | Extracts Unfold's strings into `src/locale_vendor/unfold` |
 | `grooveshop-django-api/tests/unit/admin/` | The guarantees above |

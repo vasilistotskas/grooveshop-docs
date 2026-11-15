@@ -36,7 +36,7 @@ flowchart TD
 
 ### Schemas: public versus tenant
 
-`src/settings.py` splits apps into `SHARED_APPS` (the public schema) and
+`src/settings/application.py` splits apps into `SHARED_APPS` (the public schema) and
 `TENANT_APPS` (one copy per store). Apps that appear in both lists exist in
 both places, and that duplication is deliberate:
 
@@ -381,7 +381,7 @@ are the bugs it exists to catch.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/settings.py` | `SHARED_APPS`, `TENANT_APPS`, `MIDDLEWARE`, `DATABASE_ROUTERS`, `PUBLIC_SCHEMA_URLCONF` |
+| `grooveshop-django-api/src/settings/application.py`, `grooveshop-django-api/src/settings/database.py` | `SHARED_APPS`, `TENANT_APPS`, `MIDDLEWARE` (application); `DATABASE_ROUTERS`, `PUBLIC_SCHEMA_URLCONF` (database) |
 | `grooveshop-django-api/src/tenant/middleware.py` | Suspension, cookie domain, CSRF origin rule |
 | `grooveshop-django-api/src/tenant/middleware_ws.py` | WebSocket tenant resolution |
 | `grooveshop-django-api/src/tenant/internal.py` | Internal domains feed and token check |

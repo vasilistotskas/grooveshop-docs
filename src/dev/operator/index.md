@@ -39,7 +39,7 @@ flowchart TD
 
 ### Two sites, selected by the host
 
-`src/settings.py` sets `PUBLIC_SCHEMA_URLCONF = "tenant.urls_public"`, and
+`src/settings/database.py` sets `PUBLIC_SCHEMA_URLCONF = "tenant.urls_public"`, and
 that module (`src/tenant/urls_public.py`) mounts `platform_admin_site.urls`
 at `admin/` **before** `public_shared_urlpatterns`, so on the public schema
 the platform site shadows the store admin that `ROOT_URLCONF = "core.urls"`
@@ -56,7 +56,7 @@ A tenant host never loads `tenant.urls_public` at all.
 | `login_form` | `PlatformAdminAuthenticationForm` | Credentials are always checked against the public schema's user table |
 | `get_urls()` | prepends `plan-billing/` | `AdminSite.get_urls` ends in an `<app_label>/` catch-all that would 404 the custom page first |
 
-`UNFOLD_PLATFORM` (`src/settings.py`) declares only the differences from a
+`UNFOLD_PLATFORM` (`src/settings/admin.py`) declares only the differences from a
 stock install: the `Control plane` subheader, the `hub` symbol,
 `ENVIRONMENT` pointing at `src/admin/permissions.py: platform_environment`
 (which renders a permanent amber **Control plane** badge, because the two
@@ -345,7 +345,7 @@ through `src/tenant/provisioning.py` — see
 | `grooveshop-django-api/src/tenant/auth_backends.py` | `PlatformStaffBackend`, `is_platform_staff_session` |
 | `grooveshop-django-api/src/tenant/management/commands/bootstrap_platform.py` | The public tenant row and its host |
 | `grooveshop-django-api/src/admin/navigation.py` | `platform_sidebar` |
-| `grooveshop-django-api/src/settings.py` | `UNFOLD_PLATFORM`, `PUBLIC_SCHEMA_URLCONF`, Celery result settings |
+| `grooveshop-django-api/src/settings/admin.py`, `grooveshop-django-api/src/settings/database.py`, `grooveshop-django-api/src/settings/celery.py` | `UNFOLD_PLATFORM` (admin), `PUBLIC_SCHEMA_URLCONF` (database), Celery result settings (celery) |
 | `grooveshop-django-api/src/core/cache/models.py` | `CachePurgeLog` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-platform.yaml` | The platform host, its certificate and basic auth |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` | Celery result backend, left at the `django-db` default |
