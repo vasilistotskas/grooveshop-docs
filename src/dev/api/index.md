@@ -21,7 +21,7 @@ Served by the API itself on every tenant's API host:
 | ReDoc | `https://<api-host>/api/v1/schema/redoc` |
 
 Outside `DEBUG` the schema endpoints require an authenticated session or
-token (`src/settings.py: SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"]`). The
+token (`src/settings/api.py: SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"]`). The
 committed copy is `grooveshop-django-api/schema.yml`, regenerated with:
 
 ```bash
@@ -51,7 +51,7 @@ inside the cluster). There is no tenant parameter.
 
 - **camelCase bodies and query parameters.** Django works in snake_case;
   `djangorestframework-camel-case` renders, parses and converts filter
-  names on the way in and out (`src/settings.py: REST_FRAMEWORK`
+  names on the way in and out (`src/settings/api.py: REST_FRAMEWORK`
   renderer and parser classes; `src/core/filters/` camel-case mixins).
 - **Pagination.** `?paginationType=` selects `pageNumber` (default),
   `cursor` or `limitOffset` (`src/core/pagination/`). Every strategy returns
@@ -122,7 +122,7 @@ a Django change followed by a regeneration; see
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/core/urls.py` | Schema, Swagger UI, ReDoc, health, every `/api/v1/` mount |
-| `grooveshop-django-api/src/settings.py` | `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK`, `REST_KNOX` |
+| `grooveshop-django-api/src/settings/api.py`, `grooveshop-django-api/src/settings/auth.py` | `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK` (api); `REST_KNOX` (auth) |
 | `grooveshop-django-api/src/core/pagination/` | The three paginators and the envelope |
 | `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet`, `paginate_and_serialize` and `unpaginated_actions`, settings endpoints |
 | `grooveshop-django-api/src/core/utils/serializers.py` | `create_schema_view_config`, `PAGINATION_PARAMETER` |

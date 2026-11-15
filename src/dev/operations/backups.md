@@ -25,7 +25,7 @@ flowchart LR
 
 ## The nightly database dump
 
-`src/settings.py` schedules `scheduled-database-backup` at 03:00 Athens
+`src/settings/schedule.py` schedules `scheduled-database-backup` at 03:00 Athens
 (`SCHEDULE_PRESETS["daily_3am"]`). The task (`src/core/tasks.py:
 scheduled_database_backup`) dispatches a Celery chain:
 
@@ -172,7 +172,7 @@ What does not exist, and is the open item alongside the off-cluster copy:
 ## Invariants
 
 - The scheduled dump is a Celery task, not a Kubernetes resource
-  (`src/settings.py`, `src/core/tasks.py`, `base/backend-database.yaml` comment).
+  (`src/settings/schedule.py`, `src/core/tasks.py`, `base/backend-database.yaml` comment).
 - A failed `pg_dump` fails the task (`backup_database.py` raises
   `CommandError`; `backup_database_task` propagates it).
 - Backups share the cluster, the storage class and the replica count with
@@ -191,7 +191,7 @@ What does not exist, and is the open item alongside the off-cluster copy:
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/settings.py` | `scheduled-database-backup`, `cleanup-old-backups`, `monitor-system-health` beat entries |
+| `grooveshop-django-api/src/settings/schedule.py` | `scheduled-database-backup`, `cleanup-old-backups`, `monitor-system-health` beat entries |
 | `grooveshop-django-api/src/core/tasks.py` | `scheduled_database_backup`, `backup_database_task`, `cleanup_old_backups`, `monitor_system_health` |
 | `grooveshop-django-api/src/core/management/commands/backup_database.py` | `pg_dump` invocation |
 | `grooveshop-django-api/src/core/caches.py` | `failing_persistence_statuses()` |

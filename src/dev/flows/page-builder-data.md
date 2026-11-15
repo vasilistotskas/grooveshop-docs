@@ -299,4 +299,4 @@ anonymiser deletes the table: a link is a credential.
 | `grooveshop-django-api/src/core/cache/surfaces.py` | The `builder` surface |
 | `grooveshop-django-api/src/tenant/signals.py` | `bump_generation_on_builder_release` |
 | `grooveshop-django-api/src/tenant/role_scopes.py` | Roles |
-| `grooveshop-django-api/src/settings.py` | `BUILDER_*` settings |
+| `grooveshop-django-api/src/settings/domain.py` | `BUILDER_*` settings |

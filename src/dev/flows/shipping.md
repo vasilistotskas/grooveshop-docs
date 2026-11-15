@@ -861,7 +861,7 @@ canceled on purpose (a wrong locker, a re-issue). `OrderService.cancel_for_dead_
 has ACS as its only caller. The open order keeps its status, stock and
 payment and is flagged for follow-up at once: `canceled_shipment_q` on the
 carrier adapter (`src/shipping_boxnow/carrier.py`, aggregated by
-`ShippingService.canceled_shipment_q`) feeds `src/order/follow_up.py`, which
+`ShippingService.canceled_shipment_q`) feeds `src/order/lifecycle/follow_up.py`, which
 flags an order that is PENDING or PROCESSING, not awaiting its online
 payment (`awaiting_online_payment_q`), whatever its age. That rule is
 independent of the age rule (`ORDER_FOLLOW_UP_DAYS`), so an order that
@@ -1190,7 +1190,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/admin/dashboard/store/queries.py` | The ACS counters of the dashboard, including `acs_voucher_holds` and `acs_voucher_hold_since` |
 | `grooveshop-django-api/src/admin/navigation.py` | `store_sidebar`: the ACS voucher holds menu entry under Shipping |
 | `grooveshop-django-api/src/shipping_acs/tasks.py` | Every ACS beat task and its alerts, including `issue_held_acs_vouchers` |
-| `grooveshop-django-api/src/settings.py` | The `issue-held-acs-vouchers` beat entry, `ACS_VOUCHER_HOLD_RETRY_SECONDS`, `ACS_VOUCHER_HOLD_RETRY_MAX_SECONDS` |
+| `grooveshop-django-api/src/settings/schedule.py`, `grooveshop-django-api/src/settings/integrations.py` | The `issue-held-acs-vouchers` beat entry (schedule), `ACS_VOUCHER_HOLD_RETRY_SECONDS`, `ACS_VOUCHER_HOLD_RETRY_MAX_SECONDS` (integrations) |
 | `grooveshop-django-api/src/shipping_acs/config.py` | `print_type` and other clamped provider-metadata reads |
 | `grooveshop-django-api/src/shipping_acs/views/station.py` | The station routes the picker and the gateway read; 404 for a store without ACS credentials |
 | `grooveshop-django-api/src/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
@@ -1200,7 +1200,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping_boxnow/carrier.py` | BoxNow adapter, `supported_settlements`, the locker-country check in `validate_order_payload` |
 | `grooveshop-django-api/src/shipping_boxnow/models/locker.py` | `BoxNowLocker.country_code`, no default |
 | `grooveshop-django-api/src/pay_way/services.py` | `filter_by_carrier`, `filter_by_shipping_kind` |
-| `grooveshop-django-api/src/settings.py` | Beat cadences for every carrier task |
+| `grooveshop-django-api/src/settings/schedule.py` | Beat cadences for every carrier task |
 | `grooveshop-storefront-ui-node-nuxt/shared/shipping/index.ts` | Checkout method to carrier mapping |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step, over-cap and error states, locker pickers |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/GenericLockerPicker.vue`, `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Checkout/GenericLockerPicker.vue` | The picker modal, default and webside designs: search, location button, map and list |

@@ -57,7 +57,7 @@ mechanism is described in [Multi-tenancy](/dev/platform/multi-tenancy).
 ## The platform control plane
 
 The control plane is the Django public schema, served only on the platform
-host. `src/settings.py` sets `PUBLIC_SCHEMA_URLCONF = "tenant.urls_public"`,
+host. `src/settings/database.py` sets `PUBLIC_SCHEMA_URLCONF = "tenant.urls_public"`,
 which mounts `src/admin/platform_site.py: platform_admin_site` at `/admin/`,
 the platform staff login (`src/tenant/staff_api.py`), and the
 `TenantAdminViewSet` under `/api/v1/tenant/admin/`. It deliberately omits
@@ -119,7 +119,7 @@ The stages are numbered 1 (expiry warning), 2 (expired notice) and 3
 (suspension). Only the highest newly reached stage is mailed per run, and
 the pair `billing_notice_stage` + `billing_notice_term` makes the pipeline
 idempotent and self-resetting: moving `paid_until` forward makes the
-recorded stage stale. The knobs are `TENANT_BILLING` in `src/settings.py`
+recorded stage stale. The knobs are `TENANT_BILLING` in `src/settings/domain.py`
 (`WARN_DAYS`, `GRACE_DAYS`, `AUTO_SUSPEND`); `AUTO_SUSPEND` ships **off**,
 so stage 3 is capped away and nothing is suspended automatically until an
 operator turns it on. The cycle runs on the public schema only.
@@ -196,5 +196,5 @@ Details, domain families and configuration conventions are in
 | `grooveshop-django-api/src/tenant/middleware.py` | `SuspendedTenantMiddleware`, `TenantCsrfMiddleware`, cookie-domain middleware |
 | `grooveshop-django-api/src/tenant/membership.py` | `get_current_tenant`, `tenant_plan_allows`, `is_store_staff` |
 | `grooveshop-django-api/src/admin/platform_site.py` | `PlatformAdminSite` |
-| `grooveshop-django-api/src/settings.py` | `TENANT_BILLING`, `PUBLIC_SCHEMA_URLCONF`, `SHARED_APPS` / `TENANT_APPS` |
+| `grooveshop-django-api/src/settings/domain.py`, `grooveshop-django-api/src/settings/database.py`, `grooveshop-django-api/src/settings/application.py` | `TENANT_BILLING` (domain), `PUBLIC_SCHEMA_URLCONF` (database), `SHARED_APPS` / `TENANT_APPS` (application) |
 | `grooveshop-infrastructure/docs/tenant-onboarding.md` | Operator playbook for a new store |

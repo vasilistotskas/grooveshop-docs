@@ -159,7 +159,7 @@ post-save chain runs. Only the customer-visible dispatches are skipped.
 
 PENDING and PROCESSING are categorically silent for customers anyway
 (`handle_order_status_changed` skips them, and `_ORDER_STATUS_COPY` in
-`src/order/notifications.py` has no entry for either), so the load-bearing
+`src/order/communications/notifications.py` has no entry for either), so the load-bearing
 case is the COMPLETED suppression on the DELIVERED auto-advance.
 
 ### Timestamps
@@ -210,7 +210,7 @@ Entry points:
 | Customer or guest | `POST /api/v1/order/{id}/cancel` (`OrderViewSet.cancel`; guests authorise with `?uuid=`, for `GUEST_ORDER_ACCESS_DAYS` after the order) | `True` |
 | Store staff | The same action (the view passes `not is_store_staff(user)`), or the `mark_as_canceled` bulk action in `src/order/admin.py` | `False` |
 | Automatic | `auto_cancel_stuck_pending_orders`, always with `refund_payment=False` | `False` |
-| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called only by the ACS status sync for a retired voucher. BoxNow never calls it: a `canceled` parcel event leaves the order as it is, and `src/order/follow_up.py` flags it only while it is PENDING or PROCESSING and not awaiting its online payment (see [Shipping](/dev/flows/shipping)). Always `refund_payment=False` | `False` |
+| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called only by the ACS status sync for a retired voucher. BoxNow never calls it: a `canceled` parcel event leaves the order as it is, and `src/order/lifecycle/follow_up.py` flags it only while it is PENDING or PROCESSING and not awaiting its online payment (see [Shipping](/dev/flows/shipping)). Always `refund_payment=False` | `False` |
 
 #### A customer cancel asks the courier first
 
@@ -545,7 +545,7 @@ flowchart TD
 
 1. **Pieces** (`src/order/refund_lines.py: plan_pieces`). A goods line is worth
    `price` x `quantity` less its `discount_allocation`
-   (`src/order/discounts.py: discounted_line_gross`) at its own `vat_rate`.
+   (`src/order/checkout/discounts.py: discounted_line_gross`) at its own `vat_rate`.
    Units are priced cumulatively (`_units_value`: the first *k* units are
    worth `gross * k / n`, half-up to the cent, the last taking the
    remainder), so a line refunded in steps adds up to exactly its value.
@@ -625,7 +625,7 @@ only.
 #### Unknown outcomes
 
 A provider attempt still `PENDING` after `REFUND_RECONCILE_AFTER_MINUTES`
-(`src/settings.py`, an env setting, default 60; it must stay under the 24 hours
+(`src/settings/domain.py`, an env setting, default 60; it must stay under the 24 hours
 Stripe remembers an idempotency key) is **overdue**
 (`src/order/models/refund_attempt.py: reconcile_after`,
 `RefundAttempt.objects.overdue()`, `RefundAttempt.is_overdue`). The window
@@ -791,8 +791,8 @@ promotion over the cart lines in its scope
 `CartDiscountResult.line_discounts`), both checkout paths freeze that on the
 order lines (`src/order/services.py: OrderService._snapshot_line_discounts`), and
 the loyalty redemption, being order-wide, is spread over the value left on
-every line (`src/order/discounts.py: spread_by_remaining_value`). One rule
-(`src/order/discounts.py: allocate_capped`, largest remainder to the cent)
+every line (`src/order/checkout/discounts.py: spread_by_remaining_value`). One rule
+(`src/order/checkout/discounts.py: allocate_capped`, largest remainder to the cent)
 serves the cart preview, the payment intent and order creation. Orders that
 predate the column, or were created by the previous release during its
 rollout, get the proportional allocation from `heal_discount_allocation`
@@ -802,7 +802,7 @@ refuse the order instead of billing a total the customer never owed.
 
 `src/order/taxation.py: order_vat_lines` is the one rule. It yields the goods
 lines at their snapshotted rates (less the line's discount allocation, read
-by `src/order/discounts.py: discounted_line_gross`), then shipping, then the
+by `src/order/checkout/discounts.py: discounted_line_gross`), then shipping, then the
 payment-method fee. Shipping and the fee take the goods' rate; a basket that
 mixes rates splits each charge over the rates in proportion to the value of
 the goods charged at each, after their discounts (`_rate_weights`, largest
@@ -916,7 +916,7 @@ of [the payment ledger page](/dev/django/reference/order/payment-ledger).
 ### Auto-cancel of stuck pending orders
 
 `src/order/tasks.py: auto_cancel_stuck_pending_orders` runs every 15 minutes
-through the tenant fanout (`src/settings.py`, beat entry
+through the tenant fanout (`src/settings/schedule.py`, beat entry
 `auto-cancel-stuck-pending-orders`). Two buckets, and only the second is
 restricted to online settlement:
 
@@ -941,7 +941,7 @@ open for its webhook. After each sweep, `ORDER_UNPAID_ONLINE_ALERT_THRESHOLD`
 (default 25, `0` off) or more still-unpaid online orders log
 `orders:unpaid_online_spike` at WARNING.
 
-Both windows are `EXTRA_SETTINGS_DEFAULTS` rows (`src/settings.py`), read
+Both windows are `EXTRA_SETTINGS_DEFAULTS` rows (`src/settings/store_settings.py`), read
 through `Setting.get`, so a merchant can change them without a deploy.
 
 Collect-on-delivery orders are excluded from the **never-completed**
@@ -1216,7 +1216,7 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/src/order/admin.py` | `refund_payment`, `ReturnOrderForm`, `_restock`, `restock_returned`, `RestockReturnedForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK; `OverchargedFilter`; `BooksFilter`, `ChargebackDecisionFilter`; `record_refund_outcome`, `RecordRefundOutcomeForm`, `acknowledge_uncovered`, `decide_chargeback`, `issue_receipt_now` and its deferral message; no add on `OrderAdmin`, read-only `OrderItemInline` and `OrderItemAdmin` |
 | `grooveshop-django-api/src/order/models/item.py` | `OrderItem.vat_rate`, `product_name`, `sku` and their snapshot in `save()`; `product_name_for`; `OrderItem.refund`, the one restock path |
 | `grooveshop-django-api/src/order/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
-| `grooveshop-django-api/src/order/discounts.py` | `allocate_capped`, `discounted_line_gross`, `spread_by_remaining_value` |
+| `grooveshop-django-api/src/order/checkout/discounts.py` | `allocate_capped`, `discounted_line_gross`, `spread_by_remaining_value` |
 | `grooveshop-django-api/src/order/discount_snapshot.py` | `heal_discount_allocation` |
 | `grooveshop-django-api/src/order/invoicing.py` | Receipt totals from the VAT lines net of `refunded_before_receipt` at each source's allocation (`_net_of`), `ReceiptDeferred`, `_persist_invoice_row` keeping an existing row's figures, `_refuse_if_fully_refunded`, `receipt_issuable`, `render_credit_pdf` |
 | `grooveshop-django-api/src/order/credit_documents.py` | `create_pending_credits` (REFUND rows and settled `STORED_VALUE` attempts after the receipt row, each from its allocation and net of reversals; goods-returned chargebacks), `credit_breakdown` (exactly the allocation's rates, cumulative net, never past the receipt), settlement credit |
@@ -1228,10 +1228,11 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/src/giftcard/services.py` | `GiftCardService.credit_refund`, in parts, capped per card under its row lock |
 | `grooveshop-django-api/src/loyalty/services.py` | `restore_spent_points`, `reverse_order_points` and `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` |
 | `grooveshop-django-api/src/order/models/history.py` | `OrderHistory.log_status_change`, `log_payment_update`, `log_refund`, `log_note` |
-| `grooveshop-django-api/src/order/notifications.py` | `_ORDER_STATUS_COPY` and the live-notification tasks |
+| `grooveshop-django-api/src/order/communications/notifications.py` | `_ORDER_STATUS_COPY` and the live-notification tasks |
 | `grooveshop-django-api/src/order/payment_events.py` | Redis pub/sub payment-status publish |
 | `grooveshop-django-api/src/loyalty/signals.py` | Earn on COMPLETED; reverse on CANCELED, on REFUNDED reached through `order_refunded` or `order_stored_value_returned`, on the REFUNDED status, and on `order_charged_back` once everything received is returned |
-| `grooveshop-django-api/src/settings.py` | `CELERY_BEAT_SCHEDULE` entries and their cadences, `REFUND_RECONCILE_AFTER_MINUTES` |
+| `grooveshop-django-api/src/settings/store_settings.py` | `EXTRA_SETTINGS_DEFAULTS`: the merchant-editable order windows and thresholds |
+| `grooveshop-django-api/src/settings/schedule.py`, `grooveshop-django-api/src/settings/domain.py` | `CELERY_BEAT_SCHEDULE` entries and their cadences (schedule), `REFUND_RECONCILE_AFTER_MINUTES` (domain) |
 | `grooveshop-agent-gateway/internal/server/internalapi.go` | `POST /internal/events/order-status` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/[id]/cancel.post.ts` | Cancel proxy that returns the typed refusal body |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/error.ts` | `forwardUpstreamClientError`, `forwardUpstreamDocumentedError` |

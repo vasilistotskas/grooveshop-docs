@@ -55,19 +55,24 @@ function allowedUppercaseTokens() {
     console.warn(`check-admin-prose: ${django} not found, skipping the uppercase-token check`)
     return null
   }
-  // The Django repository keeps its apps and settings under src/. With the
-  // repository present a missing file is not a partial checkout: the source
-  // moved and this reader did not follow. Skipping would let every uppercase
-  // token through unchecked, so it fails.
+  // The Django repository keeps its apps under src/ and its settings in the
+  // package src/settings/, one module per concern. With the repository present
+  // a missing package is not a partial checkout: the source moved and this
+  // reader did not follow. Skipping would let every uppercase token through
+  // unchecked, so it fails.
   const djangoRoot = join(django, 'src')
-  const settings = join(djangoRoot, 'settings.py')
-  if (!existsSync(settings)) {
+  const settings = join(djangoRoot, 'settings')
+  if (!existsSync(settings) || !statSync(settings).isDirectory()) {
     console.error(`check-admin-prose: ${settings} not found: the Django sources moved, so update allowedUppercaseTokens() in scripts/check-admin-prose.mjs`)
     process.exit(1)
   }
   const allowed = new Set()
 
-  const text = readFileSync(settings, 'utf8')
+  const text = readdirSync(settings)
+    .filter(name => name.endsWith('.py'))
+    .sort()
+    .map(name => readFileSync(join(settings, name), 'utf8'))
+    .join('\n')
   const start = text.indexOf('EXTRA_SETTINGS_DEFAULTS')
   if (start !== -1) {
     for (const m of text.slice(start, start + 120_000).matchAll(/"name":\s*"([A-Z][A-Z0-9_]+)"/g)) {

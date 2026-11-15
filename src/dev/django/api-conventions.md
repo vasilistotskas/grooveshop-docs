@@ -14,10 +14,10 @@ routes proxy and validate against the generated contract
 ## camelCase everywhere
 
 Request and response bodies are camelCase on the wire and snake_case in
-Python. `src/settings.py` wires `djangorestframework-camel-case` at every
+Python. `src/settings/api.py` wires `djangorestframework-camel-case` at every
 layer: `CamelCaseJSONRenderer` and `CamelCaseBrowsableAPIRenderer` in
 `DEFAULT_RENDERER_CLASSES`, the three `CamelCase*Parser` classes in
-`DEFAULT_PARSER_CLASSES`, `CamelCaseMiddleWare` in `MIDDLEWARE`, and the
+`DEFAULT_PARSER_CLASSES`, `CamelCaseMiddleWare` in `MIDDLEWARE` (`src/settings/application.py`), and the
 `camelize_serializer_fields` post-processing hook in
 `SPECTACULAR_SETTINGS`, so the schema is camelCase too. Query parameters
 follow through `CamelCaseFilterMixin` and `CamelCaseOrderingFilter`
@@ -205,8 +205,8 @@ not a second prefix.
 ## Invariants
 
 - Two `Bearer` authenticators cannot coexist; platform staff use
-  `StaffBearer` (`src/settings.py`, `src/tenant/api_tokens.py`).
-- Anonymous writes are opt-in per ViewSet with `AllowAny` (`src/settings.py`,
+  `StaffBearer` (`src/settings/api.py`, `src/tenant/api_tokens.py`).
+- Anonymous writes are opt-in per ViewSet with `AllowAny` (`src/settings/api.py`,
   comment on `DEFAULT_PERMISSION_CLASSES`).
 - The paginated envelope has the same seven keys for all three paginators
   (`src/core/pagination/`).
@@ -218,7 +218,7 @@ not a second prefix.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/settings.py` | `REST_FRAMEWORK`, `REST_KNOX`, `HEADLESS_*`, `SPECTACULAR_SETTINGS`, `MIDDLEWARE` |
+| `grooveshop-django-api/src/settings/api.py`, `grooveshop-django-api/src/settings/auth.py`, `grooveshop-django-api/src/settings/application.py` | `REST_FRAMEWORK`, `SPECTACULAR_SETTINGS` (api); `REST_KNOX`, `HEADLESS_*` (auth); `MIDDLEWARE` (application) |
 | `grooveshop-django-api/src/core/urls.py` | `api/v1/` mounts, schema and health routes, `_allauth/` |
 | `grooveshop-django-api/src/core/api/tokens.py` | `BoundedTokenAuthentication`, `SessionTokenStrategy` |
 | `grooveshop-django-api/src/tenant/api_tokens.py` | `PlatformStaffTokenAuthentication` |

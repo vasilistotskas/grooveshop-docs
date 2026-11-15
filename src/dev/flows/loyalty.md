@@ -152,7 +152,7 @@ was received **and** the gift cards and points are back.
    blocking the earn reversal. This does not touch XP.
 5. Reverses each `EARN`, then the order's new-customer `BONUS`, as
    negative `ADJUST` rows. With `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE`
-   on (the default, `src/settings.py`), the whole earning comes off even when
+   on (the default, `src/settings/store_settings.py`), the whole earning comes off even when
    the customer has spent it, and the balance goes negative: later
    earnings pay it off, and a negative balance fails the redemption check
    (`points_amount > balance`), so earning, spending and then refunding
@@ -227,7 +227,7 @@ passed, so an `EARN` older than it has been live for longer than the window.
 ### Scheduling
 
 The expiry sweep is a per-tenant fanout, because beat runs in the public
-schema. `src/settings.py` registers one beat entry,
+schema. `src/settings/schedule.py` registers one beat entry,
 `process-loyalty-points-expiration`, pointing at
 `tenant.tasks.fanout_process_points_expiration` and scheduled daily at 03:00.
 
@@ -408,7 +408,7 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/src/b2b/services.py` | `loyalty_allowed`, `suppresses_loyalty` |
 | `grooveshop-django-api/src/order/services.py` | Redemption at order create, wholesale suppression |
 | `grooveshop-django-api/src/cart/views/cart.py` | Preview redemption at payment-intent creation |
-| `grooveshop-django-api/src/settings.py` | `LOYALTY_*` defaults (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` included), beat schedule |
+| `grooveshop-django-api/src/settings/store_settings.py`, `grooveshop-django-api/src/settings/schedule.py` | `LOYALTY_*` defaults (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` included), beat schedule |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/loyalty-enabled.ts` | Fail-open two-tier gate |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useLoyalty.ts` | Summary, transactions, tiers, settings |
 | `grooveshop-storefront-ui-node-nuxt/server/api/loyalty/` | Storefront proxies |
