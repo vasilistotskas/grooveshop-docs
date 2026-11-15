@@ -1231,6 +1231,7 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/src/order/communications/notifications.py` | `_ORDER_STATUS_COPY` and the live-notification tasks |
 | `grooveshop-django-api/src/order/payment_events.py` | Redis pub/sub payment-status publish |
 | `grooveshop-django-api/src/loyalty/signals.py` | Earn on COMPLETED; reverse on CANCELED, on REFUNDED reached through `order_refunded` or `order_stored_value_returned`, on the REFUNDED status, and on `order_charged_back` once everything received is returned |
+| `grooveshop-django-api/src/settings/store_settings.py` | `EXTRA_SETTINGS_DEFAULTS`: the merchant-editable order windows and thresholds |
 | `grooveshop-django-api/src/settings/schedule.py`, `grooveshop-django-api/src/settings/domain.py` | `CELERY_BEAT_SCHEDULE` entries and their cadences (schedule), `REFUND_RECONCILE_AFTER_MINUTES` (domain) |
 | `grooveshop-agent-gateway/internal/server/internalapi.go` | `POST /internal/events/order-status` |
 | `grooveshop-storefront-ui-node-nuxt/server/api/orders/[id]/cancel.post.ts` | Cancel proxy that returns the typed refusal body |

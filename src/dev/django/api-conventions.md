@@ -17,7 +17,7 @@ Request and response bodies are camelCase on the wire and snake_case in
 Python. `src/settings/api.py` wires `djangorestframework-camel-case` at every
 layer: `CamelCaseJSONRenderer` and `CamelCaseBrowsableAPIRenderer` in
 `DEFAULT_RENDERER_CLASSES`, the three `CamelCase*Parser` classes in
-`DEFAULT_PARSER_CLASSES`, `CamelCaseMiddleWare` in `MIDDLEWARE`, and the
+`DEFAULT_PARSER_CLASSES`, `CamelCaseMiddleWare` in `MIDDLEWARE` (`src/settings/application.py`), and the
 `camelize_serializer_fields` post-processing hook in
 `SPECTACULAR_SETTINGS`, so the schema is camelCase too. Query parameters
 follow through `CamelCaseFilterMixin` and `CamelCaseOrderingFilter`

@@ -674,6 +674,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/src/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/src/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml` | Originals served only to media-stream; public requests redirected to it |
 | `grooveshop-django-api/src/core/urls.py` | Dev/CI media route, which refuses dot-segment paths like the static nginx |
+| `grooveshop-django-api/src/settings/schedule.py` | `CELERY_BEAT_SCHEDULE`, `SCHEDULE_PRESETS["every_minute"]` for `release-due-publications` |
 | `grooveshop-django-api/src/settings/cache.py` | `CACHES`, `NUXT_INTERNAL_BASE_URL`, `NUXT_CACHE_PURGE_TOKEN`, `STOREFRONT_TENANT_CACHE_SECONDS`, `CLOUDFLARE_PLATFORM_*` |
 | `grooveshop-django-api/src/tenant/switches.py`, `src/tenant/features.py`, `src/core/tasks.py` (`purge_store_pages_task`) | The purge a feature switch triggers |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/tenant.ts` | The storefront's in-memory copy of the resolve payload; `invalidateTenantConfigs`, `tenantConfigEpoch`, `EPOCH_CHECK_MS` |

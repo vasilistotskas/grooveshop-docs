@@ -67,9 +67,12 @@ reports and what canonical URLs, RSS and OAuth metadata are built from.
 
 `django_tenants.middleware.main.TenantMainMiddleware` looks the request
 host up in `TenantDomain` and switches the connection's search path. It is
-third in `MIDDLEWARE` (`src/settings/application.py`), after two middlewares that must
-answer before any tenant exists: `src/core/middleware/health_probe.py` (kubelet
-probes carry a pod IP as `Host`, which no row can match) and
+fifth in `MIDDLEWARE` (`src/settings/application.py`), after four middlewares that
+sit outside tenant resolution: `src/core/middleware/health_probe.py` (kubelet
+probes carry a pod IP as `Host`, which no row can match),
+`src/core/middleware/correlation_id.py: CorrelationIdMiddleware` and
+`src/core/middleware/access_log.py: AccessLogMiddleware` (so a request that
+fails tenant resolution still gets an id and a log line), and
 `src/tenant/internal.py: InternalDomainsMiddleware` (the cluster-internal
 domains feed). Matching is **exact** — a host that looks derivable but has
 no row is a host Django refuses to serve.

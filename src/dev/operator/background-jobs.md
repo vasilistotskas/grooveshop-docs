@@ -311,7 +311,9 @@ half.
 | `grooveshop-django-api/src/scheduler/beat.py` | The scheduler: deletes undeclared rows, saves runs, follows the switches |
 | `grooveshop-django-api/src/scheduler/models.py` | `PeriodicTask`, `switch_on`, `switch_off` |
 | `grooveshop-django-api/src/scheduler/admin.py` | `PeriodicTaskAdmin` and its actions |
-| `grooveshop-django-api/src/settings/celery.py`, `grooveshop-django-api/src/settings/schedule.py` | `get_celery_beat_schedule()`, `SCHEDULE_PRESETS`, `CELERY_BEAT_SCHEDULER`, `CELERY_TASK_IGNORE_RESULT`, `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED`, `CELERY_RESULT_EXPIRES`, `CELERY_RESULT_EXTENDED`, `SHARED_APPS`/`TENANT_APPS`, `SITE_ID` |
+| `grooveshop-django-api/src/settings/celery.py`, `grooveshop-django-api/src/settings/schedule.py` | `get_celery_beat_schedule()`, `SCHEDULE_PRESETS`, `CELERY_BEAT_SCHEDULER`, `CELERY_TASK_IGNORE_RESULT`, `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED`, `CELERY_RESULT_EXPIRES`, `CELERY_RESULT_EXTENDED` |
+| `grooveshop-django-api/src/settings/application.py` | `SHARED_APPS`, `TENANT_APPS`, `SITE_ID` |
+| `grooveshop-django-api/src/settings/auth.py` | The platform-wide OAuth credentials |
 | `grooveshop-django-api/src/core/admin.py` | `CachePurgeLogAdmin`, `override_third_party_admins()` |
 | `grooveshop-django-api/src/core/celery.py` | App factory |
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | `GrooveShopBeatSilent` |
