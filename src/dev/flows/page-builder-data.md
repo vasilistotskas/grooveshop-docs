@@ -15,7 +15,7 @@ and Django validates every write against it and adds the checks only it can
 make.
 
 The Django side is described in depth in the synced
-[Storefront page builder reference](/dev/django/reference/builder); this page
+[Storefront page builder reference](/dev/django/reference/builder/); this page
 is the end-to-end flow of the data side. The storefront's own part, the block
 catalogue and the editor's staff session, is [Page builder foundation](/dev/flows/page-builder). The editor and the storefront's catalogue endpoint
 are the storefront's part of the same epic (storefront #289), and are marked
@@ -98,7 +98,7 @@ language of `settings.LANGUAGES`, like any malformed rule, is refused when the
 catalogue is read. A rule side can be a pointer into the theme, a literal
 colour, or a mix (`{mix, toward, percent}`, CSS `color-mix(in oklab, ...)`,
 computed by `contrast.mix_oklab` as the storefront does). The full rules are
-in the [builder reference](/dev/django/reference/builder).
+in the [builder reference](/dev/django/reference/builder/documents#a-theme-keeps-its-contrast-src-builder-contrast-py).
 
 ### 4. A publish
 

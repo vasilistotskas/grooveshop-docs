@@ -98,7 +98,7 @@ only by the lifecycle actions and the billing task. `is_active`, `plan` and
 | `logo_light_url`, `logo_dark_url`, `favicon_url` | `URLField`, blank |
 | `socials_*` | Nine `URLField`s (discord, facebook, instagram, pinterest, reddit, tiktok, linkedin, twitter, youtube). `Tenant._validate_social_urls` requires `https://` on every non-empty one; empty hides the footer link |
 
-A store's colours, corners and fonts are not on this row: they are its theme document in the page builder ([`builder`](/dev/django/reference/builder)).
+A store's colours, corners and fonts are not on this row: they are its theme document in the page builder ([`builder`](/dev/django/reference/builder/documents#where-a-store-s-theme-document-comes-from)).
 
 ### Locales and currency
 
