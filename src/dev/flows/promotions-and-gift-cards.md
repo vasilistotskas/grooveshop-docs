@@ -446,7 +446,7 @@ badge a card shows cannot disagree:
 - **Search index.** `ProductTranslation` indexes a filterable `on_offer`
   (`src/product/models/product.py`). The bulk queryset annotates it once per sync
   (`get_meilisearch_queryset`, `indexed_offer_kind`), and
-  `src/search/views.py` filters on it when the request carries `onOffer=true`.
+  `src/search/views/product.py` filters on it when the request carries `onOffer=true`.
 - **Search result cards.** `src/search/serializers.py` resolves `offer_kind` from
   the product.
 
@@ -840,7 +840,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/product/tasks.py` | `reevaluate_price_episodes`, `sync_price_records` |
 | `grooveshop-django-api/src/product/managers/product.py` | `ProductQuerySet.with_offer_kind()` |
 | `grooveshop-django-api/src/product/models/product.py` | `Product.offer_kind`, the indexed `on_offer` field, `get_meilisearch_queryset` |
-| `grooveshop-django-api/src/search/views.py` | The `onOffer` search filter |
+| `grooveshop-django-api/src/search/views/product.py` | The `onOffer` search filter |
 | `grooveshop-django-api/src/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
 | `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
 | `grooveshop-django-api/src/order/services.py` | Locked evaluation, `record`, `clear_after_order`, `free_shipping_progress`, `FreeShippingProgress` |

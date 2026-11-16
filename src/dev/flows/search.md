@@ -338,7 +338,7 @@ what the task's own exclusion clause keys on, so do not relax either
 column back to null.
 
 `SearchQuery.processing_time_ms` is Meilisearch's own processing time,
-which `src/search/views.py: _record_engine_time` adds up on the request over
+which `src/search/analytics.py: record_engine_time` adds up on the request over
 every engine call (a relaxed retry included). It travels on the request,
 never in the response body, so that it stays out of the public OpenAPI
 contract.
@@ -494,7 +494,9 @@ every failure — tracking must never affect the shopper. It no-ops without a
 | `grooveshop-django-api/src/meili/tasks.py` | `index_document_task`, `delete_document_task`, `reindex_model_task` |
 | `grooveshop-django-api/src/meili/management/commands/` | Sync, settings, drop, inspect |
 | `grooveshop-django-api/src/search/transliteration.py` | The three Greeklish layers |
-| `grooveshop-django-api/src/search/views.py` | Product, blog, click, analytics, trending |
+| `grooveshop-django-api/src/search/views/` | One module per endpoint: `product.py`, `blog.py`, `click.py`, `report.py` (analytics), `trending.py` |
+| `grooveshop-django-api/src/search/params.py` | Query-parameter parsing shared by the views |
+| `grooveshop-django-api/src/search/analytics.py` | `record_engine_time`: the engine time carried on the request |
 | `grooveshop-django-api/src/search/middleware.py` | `SearchAnalyticsMiddleware` |
 | `grooveshop-django-api/src/search/tasks.py` | Query and click persistence, `update_click_scores`, anonymisation |
 | `grooveshop-django-api/src/core/sessions.py` | `persisted_session_key`, the session key of a stored session only |

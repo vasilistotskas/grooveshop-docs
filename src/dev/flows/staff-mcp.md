@@ -93,6 +93,7 @@ The scope table is `STAFF_SCOPE_PERMISSIONS` (`src/agent/staff.py`). The role co
 | Scope not granted at consent | Tool error `not_granted`: disconnect and connect again, approving it |
 | Role does not open the area | Tool error `not_allowed` (Django: 403) |
 | An authorize request naming no store, or an unknown one | 400 page on the connect host, before sign-in |
+| A token request with no `resource`, or one naming no store | 400 `invalid_target` (RFC 8707; `src/core/middleware/idp_oauth_errors.py`): the staff issuer requires the `resource` on the token request too |
 | Signed in, but not on that store's team | 403 page, no consent form |
 | A superuser with no authenticator yet | Asked to set one up in the admin first |
 | Django down | Gateway 503 on verification; `unavailable` on a tool |

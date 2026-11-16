@@ -934,6 +934,13 @@ token bound to anything else gets 401, so the client links again.
 `src/agent/oidc.py: AgentOIDCAdapter` applies the same comparison when a token is
 requested, so such a token is normally never issued.
 
+A `resource` the issuer refuses is an OAuth error, not a server fault: the token
+and device-code endpoints answer `400 invalid_target` (RFC 8707) for a `resource`
+that is missing where one is required, unknown or malformed
+(`src/core/middleware/idp_oauth_errors.py: IdpResourceErrorMiddleware`, which maps
+the `ValidationError` allauth raises there; before it, such a request was an
+uncoded 500). The authorize view shows its own error page for the same refusal.
+
 `openid` needs `IDP_OIDC_PRIVATE_KEY` to sign the ID token, and clients request
 it because the protected-resource metadata lists it.
 
@@ -1165,6 +1172,9 @@ yourself, then bumping the pin in the infrastructure repo.
 - **The token endpoint answers 500 after consent.** The client asked for
   `openid` and the environment has no `IDP_OIDC_PRIVATE_KEY`: Django logs
   `No active private key`, and `/.well-known/jwks.json` serves no keys.
+- **The token or device-code endpoint answers `400 invalid_target`.** The client
+  sent a `resource` that is malformed, or not a store's MCP server on its primary
+  domain. Fix the `resource` the client sends; it is not a server fault.
 - **A client is sent to link again right after linking.** Its token is bound to
   a resource other than the store's MCP server on the primary domain, so
   `/api/v1/agent/*` answers 401. A token issued before the store's primary
@@ -1271,6 +1281,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/.github/workflows/release.yml` | Tag-triggered release |
 | `grooveshop-django-api/src/tenant/views.py`, `src/tenant/serializers.py` | `tenant_resolve` and the folded gates |
 | `grooveshop-django-api/src/agent/views.py`, `src/agent/oidc.py` | Agent resources and scopes |
+| `grooveshop-django-api/src/core/middleware/idp_oauth_errors.py` | `invalid_target` for a refused `resource` at the token and device-code endpoints |
 | `grooveshop-django-api/src/core/templates/allauth/layouts/base.html`, `src/core/templates/allauth/elements/` | The store's frame for every allauth page: sign-in, consent, device flow |
 | `grooveshop-django-api/src/core/templates/idp/oidc/authorization_form.html`, `src/core/templates/socialaccount/signup.html` | Consent and social sign-up naming the store |
 | `grooveshop-django-api/src/core/templatetags/store_brand.py` | The store's name, logo, favicon and colour for those pages |
