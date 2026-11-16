@@ -68,6 +68,8 @@ The buttons:
 
 The shipment stays **Pending creation**, you receive an email with the cause, and the same note is written in the order's history.
 
+If BoxNow created the parcel but its answer never reached your shop (for example, BoxNow was slow to reply), the next try finds the parcel at BoxNow by the order number and, while it is still new there and matches the order's locker and payment, keeps it: the parcel becomes **New** and no email is sent. Otherwise you get the usual email. If BoxNow still lists no parcel for the order later on, you get the usual email. When BoxNow answers that the order number was already used, the email says which parcels BoxNow holds for the order.
+
 - **Unknown locker:** click **Sync lockers from BoxNow API** on the locker list and check that the locker is active.
 - **BoxNow login details missing:** an Owner or Admin fills them in on the [Store profile](/admin/settings/store-profile). Nothing is retried until then.
 - Once the details are fixed, open the shipment and click **Create BoxNow parcel now**. For a card order that is not paid yet, the button does nothing: the shipment is sent by itself when the payment arrives.
@@ -76,7 +78,7 @@ The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the
 
 ### Cancel a parcel
 
-1. A parcel in state **New** can be cancelled. So can a shipment that is still **Pending creation**: your shop holds no parcel number for it, so it is cancelled in your shop only and nothing is sent to BoxNow. If the shop sent you an alert that the parcel could not be created, ask BoxNow whether a parcel exists for the order before you cancel, because a cancel from here would not reach it. For anything later, contact BoxNow.
+1. A parcel in state **New** can be cancelled. So can a shipment that is still **Pending creation**. If your shop never sent it to BoxNow (for example, a card order that is not paid yet), it is cancelled in your shop only. If it did send it, the shop first asks BoxNow whether a parcel exists for the order: it cancels a **New** parcel it finds there, and cancels in your shop only when BoxNow holds none. The cancel is refused with a message, and the shipment stays as it is, when BoxNow does not answer, when the parcel is still being created or its creation has not settled yet (cancel again in a few minutes), or when BoxNow holds a parcel that can no longer be cancelled. For anything later, contact BoxNow.
 2. Open the shipment and click **Cancel parcel via BoxNow API**, or select rows and run **Cancel parcels via BoxNow API**.
 
 Cancelling a parcel does not cancel the order. The order keeps its status, its stock and its payment, and, if it is **Pending** or **Processing** and not a card order still waiting for its payment, it is flagged **Needs follow-up** at once, with the line "Needs follow-up: the parcel was canceled while the order is still open. Create a new parcel or cancel the order." The same happens when BoxNow reports the parcel as **Canceled**. To go on, click **Create BoxNow parcel now** on the shipment, or cancel the order. The flag for the canceled parcel goes at the click, before BoxNow has accepted the new parcel, so open the shipment afterwards and check that it has a new parcel. If BoxNow refuses it (for example because the order number was already used), you get an alert and no parcel is created: contact BoxNow or the [platform team](/admin/help/contact-support). Cancelling a parcel that is already **Canceled** changes nothing.

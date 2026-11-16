@@ -105,7 +105,7 @@ Check the payment in your Viva Wallet or Stripe account. If it shows as paid the
 
 ### A customer cannot place a new order because others are "waiting for their payment"
 
-They already have as many unpaid online-payment orders as `ORDER_MAX_UNPAID_ONLINE_ORDERS` allows (5 by default). They must pay for or cancel one. See [Store settings](/admin/settings/store-settings).
+They already have as many unpaid online-payment orders as `ORDER_MAX_UNPAID_ONLINE_ORDERS` allows (5 by default). An order whose card payment failed counts until it is paid or cancelled automatically. They must pay for or cancel one, or choose an offline method such as cash on delivery. See [Store settings](/admin/settings/store-settings).
 
 ### Stock looks wrong after a failed payment
 

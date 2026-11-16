@@ -121,12 +121,12 @@ unwound.
 | Payment succeeded | A CHARGE row on the payment ledger (written before any guard, so a stale or repeated event and a charge on a CANCELED order still leave theirs), `mark_as_paid`, PROCESSING advance with the customer notification suppressed, carrier dispatch on commit, confirmation email, `notify_payment_confirmed_live`, Redis payment-status publish |
 | Payment failed | `payment_status=FAILED`, failure email, `notify_payment_failed_live`. No stock movement |
 | → PROCESSING | `order_paid` when already paid → cart clear, Meta CAPI Purchase. No customer email, no toast |
-| → SHIPPED | `order_shipped`, history row, `send_shipping_notification_email` (self-gates), SHIPPED toast, and the retail receipt: `generate_order_invoice` once for a RECEIPT order while `MYDATA_ENABLED` and `MYDATA_AUTO_SUBMIT` are on (`src/order/invoicing.py: receipt_issuable`; ΕΛΠ art. 13(a): issued at the start of the shipment), registered with myDATA (11.1) and only then emailed |
+| → SHIPPED | `order_shipped`, history row, `send_shipping_notification_email` (self-gates), SHIPPED toast, and the retail receipt: `generate_order_invoice` once for a RECEIPT order while `MYDATA_ENABLED` and `MYDATA_AUTO_SUBMIT` are on (`src/order/accounting/invoicing.py: receipt_issuable`; ΕΛΠ art. 13(a): issued at the start of the shipment), registered with myDATA (11.1) and only then emailed |
 | Tracking first set | `order_shipment_dispatched` → the same shipping email, which sends whichever condition completes second |
 | → DELIVERED | `order_delivered`, status email, DELIVERED toast, then the COMPLETED auto-advance for paid orders |
 | → COMPLETED | `order_completed` → loyalty points earned, status email, COMPLETED toast. Nothing is issued for an `INVOICE` order: invoices are issued by hand in timologio |
 | → CANCELED | Written by `cancel_order`, which also runs the carrier voucher cascade itself (skipped when the cancel already asked the courier). `order_canceled` → credit of whatever gift-card value has not come back yet, loyalty reversal, status email, CANCELED toast |
-| Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row, and the loyalty reversal once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund recorded after the receipt row was created, once the receipt has a MARK, for the goods part of the refund at the VAT split stored when its money was claimed (`src/order/credit_documents.py: create_pending_credits`, task `issue_pending_credits`; see [Credit allocation](#credit-allocation)); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
+| Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row, and the loyalty reversal once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund recorded after the receipt row was created, once the receipt has a MARK, for the goods part of the refund at the VAT split stored when its money was claimed (`src/order/accounting/credit_documents.py: create_pending_credits`, task `issue_pending_credits`; see [Credit allocation](#credit-allocation)); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
 | Stored value returned | `order_stored_value_returned`, once per settled `STORED_VALUE` refund attempt → a staff history NOTE, the credit reconciliation (the same `create_pending_credits`), and the loyalty reversal once `payment_status` is REFUNDED. No email, no toast |
 | Status, payment status or tracking changed | `push_order_event_to_gateway` when `AGENT_GATEWAY_INTERNAL_URL` is set |
 
@@ -543,13 +543,13 @@ flowchart TD
   K -->|complete and restock ticked| X[restock the same units]
 ```
 
-1. **Pieces** (`src/order/refund_lines.py: plan_pieces`). A goods line is worth
+1. **Pieces** (`src/order/refunds/refund_lines.py: plan_pieces`). A goods line is worth
    `price` x `quantity` less its `discount_allocation`
    (`src/order/checkout/discounts.py: discounted_line_gross`) at its own `vat_rate`.
    Units are priced cumulatively (`_units_value`: the first *k* units are
    worth `gross * k / n`, half-up to the cent, the last taking the
    remainder), so a line refunded in steps adds up to exactly its value.
-   Shipping is split per rate the way `src/order/taxation.py: order_vat_lines`
+   Shipping is split per rate the way `src/order/accounting/taxation.py: order_vat_lines`
    splits it, one piece per rate, and is refundable once. The payment fee is
    not a line option. Each piece is a `credit_allocation.Piece` (kind, rate,
    gross, line, units).
@@ -640,7 +640,7 @@ the allocation):
 2. **The hourly lookup**: beat entry `reconcile-pending-refunds` →
    `tenant.tasks.fanout_reconcile_pending_refunds` (suspended stores
    included) → `order.tasks.reconcile_pending_refunds` →
-   `src/order/refund_reconciliation.py: reconcile_overdue`, which asks
+   `src/order/refunds/refund_reconciliation.py: reconcile_overdue`, which asks
    `PaymentProvider.find_refunds` for each overdue attempt (`src/order/payment.py`).
    **Stripe** lists the PaymentIntent's refunds (the list call filters by
    `payment_intent`, not by metadata) and keeps the one whose
@@ -688,7 +688,7 @@ A retail credit (myDATA 11.4) must credit exactly the VAT rates its refund
 belongs to, and AADE cannot check it against the receipt, so the split is
 **stored when the money is claimed, booked or decided**, under the order
 lock, and the credit is issued from it alone
-(`src/order/credit_documents.py: credit_breakdown(..., allocation)`). The order
+(`src/order/accounting/credit_documents.py: credit_breakdown(..., allocation)`). The order
 in which credits are issued can no longer change one. The full rule set, with
 every edge case, is the "VAT split" part of the credit documents section in
 [the VAT split page](/dev/django/reference/order/fiscal-credit-vat-split); the invariants are
@@ -728,7 +728,7 @@ replayed by `tests/integration/order/test_credit_invariants.py`.
   a source more room or more excess than it gets now, the source stays
   undecided (`allocate_source` returns `False`). `credit_allocation.allocate_order`
   decides oldest first and stops at the first undecided source. While one
-  remains, the receipt is deferred (`src/order/invoicing.py: ReceiptDeferred`,
+  remains, the receipt is deferred (`src/order/accounting/invoicing.py: ReceiptDeferred`,
   `metadata["receipt_deferred"]`, the dashboard's "Receipts waiting for a
   refund"), the settlement credit of a closed order waits, and a new claim
   is refused naming the claims that block (`blocking_claims`,
@@ -763,7 +763,7 @@ replayed by `tests/integration/order/test_credit_invariants.py`.
 - **The backfill.** Beat entry `allocate-credit-sources`, every five minutes
   → `tenant.tasks.fanout_allocate_credit_sources` (suspended stores included)
   → `order.tasks.allocate_credit_sources` →
-  `src/order/credit_allocation_backfill.py: backfill_credit_allocations`, which
+  `src/order/accounting/credit_allocation_backfill.py: backfill_credit_allocations`, which
   runs `allocate_order` for every order with a source that owes a credit and
   has no allocation, requests the credit documents of orders with a receipt,
   and issues the receipt of a deferred order once nothing is undecided. So a
@@ -800,7 +800,7 @@ rollout, get the proportional allocation from `heal_discount_allocation`
 and the `heal_discount_allocation` command); until then the tax documents
 refuse the order instead of billing a total the customer never owed.
 
-`src/order/taxation.py: order_vat_lines` is the one rule. It yields the goods
+`src/order/accounting/taxation.py: order_vat_lines` is the one rule. It yields the goods
 lines at their snapshotted rates (less the line's discount allocation, read
 by `src/order/checkout/discounts.py: discounted_line_gross`), then shipping, then the
 payment-method fee. Shipping and the fee take the goods' rate; a basket that
@@ -808,8 +808,8 @@ mixes rates splits each charge over the rates in proportion to the value of
 the goods charged at each, after their discounts (`_rate_weights`, largest
 remainder to the cent; AADE circular Εγκ. 10/1987). Each line is split
 into a net rounded half-up and the VAT left of its gross
-(`split_gross`), then summed. The invoice (`src/order/invoicing.py`), its
-persisted totals and the myDATA payload (`src/order/mydata/builder.py`) all
+(`split_gross`), then summed. The invoice (`src/order/accounting/invoicing.py`), its
+persisted totals and the myDATA payload (`src/order/accounting/mydata/builder.py`) all
 consume those lines, so they agree to the cent, and the cart's VAT figure
 rounds the same way. A charge on an order with no goods raises
 `ValueError`, which the invoice task, the admin actions and the myDATA
@@ -817,7 +817,7 @@ submit each report.
 
 A receipt row, once created, keeps the breakdown and totals it was issued
 with, MARK or not: a retry after a failed render and a forced regeneration
-reuse them (`src/order/invoicing.py: _persist_invoice_row`), because a new
+reuse them (`src/order/accounting/invoicing.py: _persist_invoice_row`), because a new
 receipt is computed net of everything returned before it, at each source's
 stored allocation (`refunded_before_receipt`, `_net_of`: provider and cash
 refunds net of reversals, value returned onto gift cards, and chargebacks
@@ -966,11 +966,17 @@ window, how many one customer can have waiting is bounded per store:
 `create_order_from_cart_offline`, refuses a new order with an online
 settlement when the account (or, for a guest, the email, compared
 case-insensitively among guest orders) already has
-`ORDER_MAX_UNPAID_ONLINE_ORDERS` orders at `status=PENDING`,
-`payment_status=PENDING` with `pay_way__settlement=online` (default 5, `0`
-turns it off). It is counted under the cart row lock, so two carts of one
-customer racing can overshoot by the number in flight. See
-[Checkout & payment](/dev/flows/checkout-and-payment).
+`ORDER_MAX_UNPAID_ONLINE_ORDERS` orders holding stock for an online
+payment (default 5, `0` turns it off). That set is
+`Order.objects.holding_stock_for_online_payment()`
+(`src/order/managers/order.py`): `status=PENDING`, an online settlement,
+and a payment that is not financially final, so a PENDING order whose
+payment is pending, processing or failed counts. The pile-up alert at the
+end of `auto_cancel_stuck_pending_orders` counts the same set. The
+refusal is `UnpaidOrderLimitError`, a 400 with the code
+`unpaid_order_limit` on `pay_way_id`. It is counted under the cart row
+lock, so two carts of one customer racing can overshoot by the number in
+flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 
 ## Invariants
 
@@ -1006,7 +1012,7 @@ customer racing can overshoot by the number in flight. See
 - **A credit's VAT split is fixed when its money is claimed, booked or
   decided**, and the credit is issued from that allocation only; the
   duplicate-payment excess owes no credit, a lost dispute never moves it,
-  and credits are net of provider reversals (`src/order/credit_allocation.py`).
+  and credits are net of provider reversals (`src/order/accounting/credit_allocation.py`).
 - **A refund is in the value of what came back, the provider first.**
   Gift cards and points get only the excess, in proportion to what each
   has not got back, read from their own ledgers under their row locks.
@@ -1023,7 +1029,7 @@ customer racing can overshoot by the number in flight. See
   stored as its allocation when it is claimed, each rate must fit its own
   headroom, it never takes the duplicate-payment excess, and no line is held
   past its value: what a line has had back is value (points included),
-  never a unit count (`src/order/refund_lines.py`, `_allocate_lines_claim`).
+  never a unit count (`src/order/refunds/refund_lines.py`, `_allocate_lines_claim`).
 - **A refund by lines is resumed only by name.** Only `retry_request_id`
   calls its shares again, under their own keys, and only where
   `unresumable_reason` allows it.
@@ -1037,7 +1043,7 @@ customer racing can overshoot by the number in flight. See
   the ledger in both directions.
 - **An order's tax documents never re-read the catalogue's VAT.** The
   invoice and myDATA split each line at `OrderItem.vat_rate` and tax
-  shipping and the fee at the goods' rates (`src/order/taxation.py`).
+  shipping and the fee at the goods' rates (`src/order/accounting/taxation.py`).
 - **Read status with `values()`, not `refresh_from_db(fields=...)`.**
   The latter leaves other columns deferred and `Order.__init__` lazy-loads
   them while snapshotting `_original_tracking_number`, which recurses
@@ -1185,22 +1191,22 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/src/order/enum/status.py` | `OrderStatus`, `PaymentStatus`, `SETTLED_PAYMENT_STATUSES`, `RETURN_HANDLING_STATUSES` |
 | `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `stored_value`, `stored_value_refundable`, `split_stored_value`, `refundable_value`, `refund_open`, `refund_status`, `held`, `excess_held`, `refundable_excess`, `overcharge_held`, `sync_overcharge`, `plan_refund`, `record_charge`, `record_cod_collection`, `record_refund`, `record_cod_refund`, `record_refund_reversal`, `settle_attempt`, `ensure_charge` |
 | `grooveshop-django-api/src/order/models/refund_attempt.py` | `RefundAttempt` (kinds `PROVIDER`, `STORED_VALUE`; `PENDING`, `SETTLED`, `DECLINED`; `reason_code`, `request_id`), `RefundReason`, `reconcile_after`, `live`, `overdue`, `stalled`, `with_provider_key`, `provider_key` |
-| `grooveshop-django-api/src/order/refund_lines.py` | `plan_pieces`, `held_values`, `covered_units`, `request_of`, `pending_request`: a refund by lines |
+| `grooveshop-django-api/src/order/refunds/refund_lines.py` | `plan_pieces`, `held_values`, `covered_units`, `request_of`, `pending_request`: a refund by lines |
 | `grooveshop-django-api/src/order/migrations/0105_refund_reason_request_and_points.py` | `RefundAttempt.reason_code`, `request_id`, `CreditAllocation.points` |
-| `grooveshop-django-api/src/order/refund_reconciliation.py` | `reconcile`, `reconcile_overdue`, `record_outcome`: resolving an attempt whose outcome is unknown |
+| `grooveshop-django-api/src/order/refunds/refund_reconciliation.py` | `reconcile`, `reconcile_overdue`, `record_outcome`: resolving an attempt whose outcome is unknown |
 | `grooveshop-django-api/src/order/models/credit_allocation.py` | `CreditAllocation`: per-rate allocation of a credit source, `item`, `kind`, `quantity` and `points` of a refund by lines, `goods_claimed`, `uncovered`, `understated` and their acknowledgements; `counting()`, `holding()` |
 | `grooveshop-django-api/src/order/migrations/0102_credit_allocation.py` | The `CreditAllocation` table, created empty |
-| `grooveshop-django-api/src/order/credit_allocation.py` | `Piece`, `split_over_shares`, `scale_pieces`, `scale_points`, `by_rate`, `first_short_rate`, `room_blockers`, `headroom`, `allocate_source`, `allocate_order`, `undecided`, `owing_sources`, `goods_returned`, `blocking_claims`, `excess_holders`, `describe_blockers`, `free_reversed`, `reversed_credits`, `uncovered_orders`, `beyond_receipt_orders`, `understated_orders`, `acknowledge_uncovered`, `link_attempt` |
-| `grooveshop-django-api/src/order/credit_allocation_backfill.py` | `backfill_credit_allocations`, behind the five-minute `allocate_credit_sources` task |
+| `grooveshop-django-api/src/order/accounting/credit_allocation.py` | `Piece`, `split_over_shares`, `scale_pieces`, `scale_points`, `by_rate`, `first_short_rate`, `room_blockers`, `headroom`, `allocate_source`, `allocate_order`, `undecided`, `owing_sources`, `goods_returned`, `blocking_claims`, `excess_holders`, `describe_blockers`, `free_reversed`, `reversed_credits`, `uncovered_orders`, `beyond_receipt_orders`, `understated_orders`, `acknowledge_uncovered`, `link_attempt` |
+| `grooveshop-django-api/src/order/accounting/credit_allocation_backfill.py` | `backfill_credit_allocations`, behind the five-minute `allocate_credit_sources` task |
 | `grooveshop-django-api/src/tenant/tasks.py` | `fanout_reconcile_pending_refunds`, `fanout_allocate_credit_sources` (both `include_suspended=True`) |
 | `grooveshop-django-api/src/order/models/payment_transaction.py` | `PaymentTransaction`, its unique and check constraints |
 | `grooveshop-django-api/src/order/enum/payment_transaction.py` | `PaymentTransactionKind` |
 | `grooveshop-django-api/src/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
 | `grooveshop-django-api/src/order/migrations/0067_backfill_payment_transactions.py` | Ledger backfill for orders paid before it existed |
 | `grooveshop-django-api/src/order/enum/cancel_error.py` | `OrderCancelErrorType`: `parcel_with_courier`, `courier_unreachable` |
-| `grooveshop-django-api/src/order/exceptions.py` | `OrderCancellationError`, `ParcelWithCourierError`, `CourierUnreachableError`, `DisputeOpenError`, `RefundOutstandingError` |
+| `grooveshop-django-api/src/order/exceptions.py` | `OrderCancellationError`, `ParcelWithCourierError`, `CourierUnreachableError`, `DisputeOpenError`, `RefundOutstandingError`, `UnpaidOrderLimitError` |
 | `grooveshop-django-api/src/order/models/order.py` | `Order.save()` timestamp rules, `mark_as_paid`, `can_be_canceled`, `can_be_canceled_by_customer`, `awaits_online_payment`, `calculate_order_total_amount`, `AMOUNT_MISMATCH_FLAG` |
-| `grooveshop-django-api/src/order/managers/order.py` | `with_shipments`, `for_list`, `refund_owed` |
+| `grooveshop-django-api/src/order/managers/order.py` | `with_shipments`, `for_list`, `refund_owed`, `holding_stock_for_online_payment` |
 | `grooveshop-django-api/src/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `refund_order`, `_claim_refund`, `_allocate_claim`, `_allocate_lines_claim`, `_waiting_error`, `_reason_text`, `_attempts_to_resume`, `_pending_request_shares`, `unresumable_reason`, `_require_resumable`, `resumes_a_refund`, `_make_refund`, `book_share`, `_return_stored_value`, `RefundResult`, `_note_refund_declined`, `confirm_offline_payment`, `add_tracking_info` |
 | `grooveshop-django-api/src/order/payment.py` | `refund_payment` per provider (Stripe writes `metadata.refund_attempt`), `find_refunds` and `confirm_refund` per provider, `StripePaymentProvider.retrieve_refund`, `refund_attempt_key`, `_ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
@@ -1215,13 +1221,13 @@ customer racing can overshoot by the number in flight. See
 | `grooveshop-django-api/src/admin/dashboard/store/widgets.py` | The "Orders paid twice" row; `StoreAlerts`: `_unknown_refunds`, `_unfinished_returns`, `_deferred_receipts`, `_reversed_credits`, `_uncovered_refunds`, `_understated_receipts` |
 | `grooveshop-django-api/src/order/admin.py` | `refund_payment`, `ReturnOrderForm`, `_restock`, `restock_returned`, `RestockReturnedForm`, `has_refund_permission`, `RefundOwedFilter`, `PaymentTransactionInline`; `mark_as_canceled` and its courier and refund error messages; `OrderItemAdmin` freezing `vat_rate` once the invoice has a MARK; `OverchargedFilter`; `BooksFilter`, `ChargebackDecisionFilter`; `record_refund_outcome`, `RecordRefundOutcomeForm`, `acknowledge_uncovered`, `decide_chargeback`, `issue_receipt_now` and its deferral message; no add on `OrderAdmin`, read-only `OrderItemInline` and `OrderItemAdmin` |
 | `grooveshop-django-api/src/order/models/item.py` | `OrderItem.vat_rate`, `product_name`, `sku` and their snapshot in `save()`; `product_name_for`; `OrderItem.refund`, the one restock path |
-| `grooveshop-django-api/src/order/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
+| `grooveshop-django-api/src/order/accounting/taxation.py` | `order_vat_lines`, `split_gross`, `_rate_weights` |
 | `grooveshop-django-api/src/order/checkout/discounts.py` | `allocate_capped`, `discounted_line_gross`, `spread_by_remaining_value` |
 | `grooveshop-django-api/src/order/discount_snapshot.py` | `heal_discount_allocation` |
-| `grooveshop-django-api/src/order/invoicing.py` | Receipt totals from the VAT lines net of `refunded_before_receipt` at each source's allocation (`_net_of`), `ReceiptDeferred`, `_persist_invoice_row` keeping an existing row's figures, `_refuse_if_fully_refunded`, `receipt_issuable`, `render_credit_pdf` |
-| `grooveshop-django-api/src/order/credit_documents.py` | `create_pending_credits` (REFUND rows and settled `STORED_VALUE` attempts after the receipt row, each from its allocation and net of reversals; goods-returned chargebacks), `credit_breakdown` (exactly the allocation's rates, cumulative net, never past the receipt), settlement credit |
+| `grooveshop-django-api/src/order/accounting/invoicing.py` | Receipt totals from the VAT lines net of `refunded_before_receipt` at each source's allocation (`_net_of`), `ReceiptDeferred`, `_persist_invoice_row` keeping an existing row's figures, `_refuse_if_fully_refunded`, `receipt_issuable`, `render_credit_pdf` |
+| `grooveshop-django-api/src/order/accounting/credit_documents.py` | `create_pending_credits` (REFUND rows and settled `STORED_VALUE` attempts after the receipt row, each from its allocation and net of reversals; goods-returned chargebacks), `credit_breakdown` (exactly the allocation's rates, cumulative net, never past the receipt), settlement credit |
 | `grooveshop-django-api/src/order/models/retail_credit.py` | `RetailCredit`, `CreditCounter` |
-| `grooveshop-django-api/src/order/mydata/builder.py` | myDATA lines and summary from the same VAT lines |
+| `grooveshop-django-api/src/order/accounting/mydata/builder.py` | myDATA lines and summary from the same VAT lines |
 | `grooveshop-django-api/src/shipping/services.py` | `ShippingService.cancel_shipment`, `can_cancel_shipment` |
 | `grooveshop-django-api/src/shipping/exceptions.py` | `CarrierError`, `CarrierUnavailableError` |
 | `grooveshop-django-api/src/giftcard/signals.py` | Gift-card credit on cancel |

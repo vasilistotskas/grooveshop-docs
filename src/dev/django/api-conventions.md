@@ -65,7 +65,11 @@ Throttling is global (`AnonRateThrottle`, `UserRateThrottle`, disabled when
 `DEBUG`) plus named scopes for contact, feedback, attachments, payment,
 cart mutation and order creation (`DEFAULT_THROTTLE_RATES`, applied by the
 classes in `src/core/api/throttling.py`). `NUM_PROXIES` is 1 because Traefik
-is the single trusted hop.
+is the single trusted hop. A guest's cart, order and payment calls made
+through the agent gateway are budgeted per cart or order rather than per
+address, when they carry the gateway's secret and name a cart or an order;
+otherwise they fall back to the client address
+([Agentic commerce](/dev/flows/agentic-commerce#django-s-rate-limits-on-gateway-calls)).
 
 ## Pagination
 

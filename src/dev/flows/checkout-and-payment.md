@@ -306,12 +306,16 @@ Before it creates anything, the order-first path refuses an online-settled
 order from a customer who already has `ORDER_MAX_UNPAID_ONLINE_ORDERS`
 unpaid online orders waiting (`OrderService._enforce_unpaid_order_limit`,
 per-store setting, default 5, `0` off; the customer is the account, or the
-guest email). The service raises `InvalidOrderDataError` with a sentence
-naming the limit, but `OrderViewSet.create` answers every
-`InvalidOrderDataError` with the generic 400 `invalid_order_data` and the
-detail "Invalid order data", so the shopper does not see that sentence
-(`src/order/views/order.py`). The payment-first path (`create_order_from_cart`)
-does not call it, though its own unpaid orders are counted.
+guest email). The orders counted are
+`src/order/managers/order.py: holding_stock_for_online_payment`: PENDING,
+online-settled, payment not financially final, so an order whose payment
+is pending, processing or failed counts, because each still holds its
+stock. The service raises `UnpaidOrderLimitError`, and
+`OrderViewSet.create` answers it as a 400 validation error on `pay_way_id`
+with the code `unpaid_order_limit` and a sentence naming the limit
+(`src/order/views/order.py`), before its generic `invalid_order_data`
+branch. The payment-first path (`create_order_from_cart`) does not call
+it, though its own unpaid orders are counted.
 
 The order-first path creates `status=PENDING, payment_status=PENDING`,
 stamps `payment_id = "offline_<uuid>"` for non-online settlements, and
@@ -672,6 +676,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 |---|---|
 | `grooveshop-django-api/src/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
 | `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `threshold_value`, `calculate_payment_method_fee`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/src/order/managers/order.py` | `holding_stock_for_online_payment`, the set the unpaid-order limit counts |
+| `grooveshop-django-api/src/order/exceptions.py` | `UnpaidOrderLimitError` |
 | `grooveshop-django-api/src/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
 | `grooveshop-django-api/src/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
 | `grooveshop-django-api/src/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |

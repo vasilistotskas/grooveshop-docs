@@ -114,9 +114,11 @@ def fanout_cleanup_abandoned_carts():
 
 `run_for_all_tenants()` (`src/tenant/celery.py`) iterates active,
 non-suspended tenants (suspended ones are skipped except for the wrappers
-passed `include_suspended=True`: the retention sweeps, and the money jobs
+passed `include_suspended=True`: the retention sweeps, the money jobs
 `reconcile-pending-refunds` and `allocate-credit-sources`, because a
-suspended store's open refunds still hold its customers' money) and calls `send_task` with a
+suspended store's open refunds still hold its customers' money, and
+`settle-uncertain-boxnow-creations`, because a canceled order's parcel may
+be live at BoxNow whatever the store's status) and calls `send_task` with a
 `_schema_name` header per tenant. It returns plain dicts, not
 `AsyncResult` objects, because the JSON result serializer cannot encode
 those. Calling the underlying task directly from beat would run it against
@@ -185,8 +187,8 @@ non-suspended store), or every store including suspended ones
 | `send-gift-card-expiry-reminders` | `tenant.tasks.fanout_send_gift_card_expiry_reminders` | every store | daily 06:00 † | `giftcard.tasks.send_gift_card_expiry_reminders` |
 | `auto-cancel-stuck-pending-orders` | `tenant.tasks.fanout_auto_cancel_stuck_pending_orders` | every store | every 15 min | `order.tasks.auto_cancel_stuck_pending_orders`: the only place failed-payment stock is released |
 | `complete-paid-delivered-orders` | `tenant.tasks.fanout_complete_paid_delivered_orders` | every store | hourly | `order.tasks.complete_paid_delivered_orders`: DELIVERED and paid → COMPLETED for what the carrier poll and the COD reconcile did not advance inline |
-| `reconcile-pending-refunds` | `tenant.tasks.fanout_reconcile_pending_refunds` | every store, suspended too | hourly | `order.tasks.reconcile_pending_refunds`: asks the provider about every refund attempt `PENDING` past `REFUND_RECONCILE_AFTER_MINUTES` and settles or declines only on an unambiguous answer (`src/order/refund_reconciliation.py`; see [Order lifecycle](/dev/flows/order-lifecycle#unknown-outcomes)) |
-| `allocate-credit-sources` | `tenant.tasks.fanout_allocate_credit_sources` | every store, suspended too | every 5 min | `order.tasks.allocate_credit_sources`: decides every credit source with no allocation and issues receipts deferred on them (`src/order/credit_allocation_backfill.py`; see [Order lifecycle](/dev/flows/order-lifecycle#credit-allocation)) |
+| `reconcile-pending-refunds` | `tenant.tasks.fanout_reconcile_pending_refunds` | every store, suspended too | hourly | `order.tasks.reconcile_pending_refunds`: asks the provider about every refund attempt `PENDING` past `REFUND_RECONCILE_AFTER_MINUTES` and settles or declines only on an unambiguous answer (`src/order/refunds/refund_reconciliation.py`; see [Order lifecycle](/dev/flows/order-lifecycle#unknown-outcomes)) |
+| `allocate-credit-sources` | `tenant.tasks.fanout_allocate_credit_sources` | every store, suspended too | every 5 min | `order.tasks.allocate_credit_sources`: decides every credit source with no allocation and issues receipts deferred on them (`src/order/accounting/credit_allocation_backfill.py`; see [Order lifecycle](/dev/flows/order-lifecycle#credit-allocation)) |
 | `check-low-stock-products` | `tenant.tasks.fanout_check_low_stock_products` | every store | hourly | `product.tasks.check_low_stock_products` |
 | `refresh-tenant-stats` | `tenant.tasks.fanout_refresh_stats_snapshots` | every store | every 30 min | `tenant.tasks.refresh_stats_snapshot`: the control plane's per-store figures (`TenantStatsSnapshot`); a suspended store keeps its last snapshot |
 | `send-review-request-emails` | `tenant.tasks.fanout_send_review_request_emails` | every store | daily 12:00 † | `order.tasks.send_review_request_emails`: one reminder per order `REVIEW_REQUEST_DELAY_DAYS` days after delivery (`src/order/review_request.py`) |
@@ -194,6 +196,7 @@ non-suspended store), or every store including suspended ones
 | `send-checkout-abandonment-emails` | `tenant.tasks.fanout_send_checkout_abandonment_emails` | every store | daily 06:00 † | `order.tasks.send_checkout_abandonment_emails` |
 | `sync-boxnow-lockers` | `tenant.tasks.fanout_sync_boxnow_lockers` | every store | daily 02:00 † | `shipping_boxnow.tasks.sync_boxnow_lockers` |
 | `poll-boxnow-tracking` | `tenant.tasks.fanout_poll_boxnow_tracking_batch` | every store | every 15 min | `shipping_boxnow.tasks.poll_boxnow_tracking_batch`: defence against a missed webhook; `expires: 300` |
+| `settle-uncertain-boxnow-creations` | `tenant.tasks.fanout_settle_uncertain_boxnow_creations` | every store, suspended too | every 15 min | `shipping_boxnow.tasks.settle_uncertain_boxnow_creations`: settles BoxNow creations whose outcome stayed uncertain past `BOXNOW_CREATION_SETTLE_SECONDS`; `expires: 300`; see [Shipping](/dev/flows/shipping#creations-whose-answer-was-lost) |
 | `sync-acs-stations` | `tenant.tasks.fanout_sync_acs_stations` | every store | daily 03:00 † | `shipping_acs.tasks.sync_acs_stations` |
 | `issue-acs-pickup-list` | `tenant.tasks.fanout_issue_daily_acs_pickup_list` | every store | Mon-Fri 16:30 | `shipping_acs.tasks.issue_daily_acs_pickup_list`: an unprinted-voucher refusal returns `blocked_unprinted` and notes each held-back order, no email; only other refusals fail |
 | `poll-acs-tracking` | `tenant.tasks.fanout_poll_acs_tracking_batch` | every store | every 15 min | `shipping_acs.tasks.poll_acs_tracking_batch`: staggered under the ACS rate cap; `expires: 300` |
@@ -215,12 +218,12 @@ The retention periods behind the `purge-*` entries are listed in
 | `src/order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment, `push_order_event_to_gateway` |
 | `src/order/communications/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
 | `src/shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list (and the order notes for a refused one), COD reconciliation and alerts, arrival notification |
-| `src/shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, arrival notification |
+| `src/shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, the uncertain-creation sweep, arrival notification |
 | `src/product/tasks.py` | back-in-stock, price-drop and low-stock alerts |
 | `src/giftcard/tasks.py` | delivery, receipts, expiry, reminders, refund-to-card |
 | `src/loyalty/tasks.py` | award, reverse, expire points; tier-up notification |
-| `src/notification/tasks.py` | `send_notification_task` (WebSocket push) |
-| `src/user/tasks.py` | avatar download, subscription confirmation, data export, account deletion |
+| `src/notification/tasks.py` | `send_notification_task` (WebSocket push, bounded by `NOTIFICATION_PUSH_TIMEOUT_SECONDS`; its soft and hard time limits are two and three times that deadline) |
+| `src/user/tasks.py` | avatar download, subscription confirmation, data export, account deletion, `push_force_logout` (the WebSocket force-logout after tokens are revoked, with the notification push's deadline and limits) |
 | `src/contact/tasks.py` | contact and feedback mail, attachment scanning and retention |
 | `src/b2b/tasks.py` | business-profile status and admin notification mail |
 | `src/meta_capi/tasks.py` | purchase, initiate-checkout, refund and registration events |

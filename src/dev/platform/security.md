@@ -37,8 +37,10 @@ flowchart LR
 | Internal services | A shared secret compared in constant time. `X-Internal-Token` on tenant resolve (unlocks the ACP token and chat key) and on the domains feed; the gateway's `/internal/*` routes for order events and feed invalidation; `x-internal-secret` on the media stream's admin endpoints, and a separate read-only bearer token (`METRICS_BEARER_TOKEN`) on its `/metrics`; `NUXT_CACHE_PURGE_TOKEN` on the Nuxt purge route | `src/tenant/views.py: _is_gateway`, `src/tenant/internal.py`, `internal/server/internalapi.go`, media `InternalSecretGuard` and `MetricsTokenGuard` |
 
 Rate limiting on the auth endpoints is Django-side as well:
-`src/core/middleware/allauth_ratelimit.py` keys on `X-Real-IP`, and allauth's
-own limits apply to dynamic client registration.
+`src/core/middleware/allauth_ratelimit.py` keys on
+`src/core/client_ip.py: client_ip_or_peer` (the edge-proven visitor, else the
+peer Traefik saw), never on a bare `X-Real-IP`, and allauth's own limits apply
+to dynamic client registration.
 
 ### Staff sign-in attempts
 
@@ -58,7 +60,7 @@ over a `WINDOW_SECONDS` window (default 900 s) in `settings.STAFF_LOGIN_LIMITS`:
 | Account-wide ceiling (`MAX_FAILURES_PER_ACCOUNT`) | 50 | The account, for everyone: bounds a run spread over many addresses |
 | Proven address (`MAX_FAILURES_PER_IP`) | 20 | That address, across accounts; a success does not clear it |
 
-A proven address is `trusted_client_ip`: the request carried the edge's
+A proven address is `edge_client_ip`: the request carried the edge's
 `X-Origin-Verify`. IPv6 counts on its /64, IPv4 on the full address. Without
 that proof the only address known is a shared Cloudflare edge node or SNAT
 gateway, so no address counter applies and the account ceiling alone bounds

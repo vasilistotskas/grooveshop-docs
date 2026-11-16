@@ -269,14 +269,14 @@ survive later profile edits, and the tax register attaches to the order row.
 **The platform issues no invoice.** AADE decision Α.1128/2025 art. 1(2)
 requires 1.1 and 5.1 documents, from 2.11.2026, to come from a licensed
 provider or the free timologio app, and an invoice sent over the ERP channel
-counts as not issued. `src/order/mydata/builder.py` therefore builds 11.1 and 11.4
+counts as not issued. `src/order/accounting/mydata/builder.py` therefore builds 11.1 and 11.4
 only, and a `document_type = INVOICE` order never gets an `Invoice` row, a
-PDF, an email or a myDATA submission (`src/order/invoicing.py: receipt_issuable`
+PDF, an email or a myDATA submission (`src/order/accounting/invoicing.py: receipt_issuable`
 refuses it). The order confirmation says an invoice was *requested*.
 
 Staff issue the invoice by hand in timologio. The order admin's
 `OrderAdmin.timologio_summary` (`src/order/admin.py`) lists the buyer identity and
-the VAT rows of the order, taken from `src/order/taxation.py`, and four fields on
+the VAT rows of the order, taken from `src/order/accounting/taxation.py`, and four fields on
 `Order` record what was issued: `timologio_invoice_number`,
 `timologio_invoice_mark`, `timologio_credit_number`, `timologio_credit_mark`.
 The storefront's checkout fields and the buyer's `billing_*` snapshot are

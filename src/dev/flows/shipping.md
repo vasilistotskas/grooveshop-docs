@@ -174,6 +174,21 @@ and 503 `courier_unreachable` for a `CarrierUnavailableError`
 ([Order lifecycle](/dev/flows/order-lifecycle)). A new carrier gets the
 same behaviour by deriving its errors the same way.
 
+The other endpoints that call a carrier tell the two apart the same way,
+through `src/shipping/api_errors.py: unanswered`: the BoxNow nearest-locker
+lookup, ACS address validation and every staff cancel endpoint (the
+carriers' own `cancelBoxNowShipment` and `cancelAcsShipment`, and the
+order's `shipment_cancel`). A carrier that gives no answer is a 503
+`carrier_unavailable` whose `detail` is written for a client; the carrier's
+own text goes to the log, never into the body. A refusal raised with no
+carrier call because the same work is already running
+(`CarrierBusyError`, raised as `BoxNowBusyError` or `AcsBusyError`: a mint
+or cancel in flight, a BoxNow creation still settling) is a 409
+`carrier_request_in_progress` whose `detail` says what to wait for.
+`CarrierBusyError` is a `CarrierUnavailableError`, so Celery retries it and
+a customer cancel still answers `courier_unreachable`. A carrier's real
+refusal keeps its 400.
+
 ### Method offering at checkout
 
 `ShippingService.available_options` iterates the active rates for the
@@ -222,8 +237,14 @@ carrier API call never happens with a Postgres row lock held:
    `metadata["mint_started_at"]`.
 2. **API call** — no lock, no open transaction.
 3. **Persist** — fresh atomic block with `select_for_update` and a race
-   re-check; a voucher that lost the race is deleted at ACS and the
-   winner's row returned.
+   re-check. A voucher no shipment uses (it lost the race, or its answer
+   is stale) is recorded in `metadata["orphan_vouchers"]` under the lock,
+   and the block commits.
+4. **Delete the unused voucher** (`_delete_unused_voucher`) — no lock, no
+   open transaction. Deleted at ACS, the number comes off the list; any
+   failure keeps it there and, best effort, records it at once as a voucher
+   matching no order (`source=refused_delete`). If that record fails too,
+   an ERROR log and `orphan_vouchers` still hold the number (see below).
 
 The claim TTL is 300 seconds (`_MINT_CLAIM_TTL_SECONDS`). It was 90 until
 a slow ACS round trip let a second worker re-mint and leak an orphan
@@ -343,9 +364,10 @@ stateDiagram-v2
   (`unknown_request` equals its claim). Otherwise it is stale: staff
   resolved the check (request again, close, adopt another voucher), or a
   **later** request took the check (it was lost too), or no identity was
-  recorded. A stale answer is not saved, and not offered for adoption: it is
-  deleted at ACS and its unrecognised row settled as `deleted`. If ACS
-  refuses, the number goes to `metadata["orphan_vouchers"]` and
+  recorded. A stale answer is not saved, and not offered for adoption: Phase
+  3 records it in `metadata["orphan_vouchers"]`, and Phase 4 deletes it at
+  ACS and settles its unrecognised row as `deleted`. If the delete fails,
+  for any reason, the number stays in `orphan_vouchers` and
   `_keep_unrecognised_vouchers` records it at once as an
   `AcsUnrecognisedVoucher` with `source=refused_delete` and `duplicate_of` the
   shipment. It reopens a row staff had marked `checked` (a `deleted` or
@@ -871,8 +893,11 @@ the admin's "Create BoxNow parcel now" calls
 `BoxNowService.reset_shipment_for_reissue`, which sets the shipment to
 `PENDING_CREATION` before `create_boxnow_shipment_for_order` is dispatched:
 the flag can therefore clear while no new parcel exists yet, and a P-coded
-BoxNow refusal (for example P410, a duplicate order number) raises the
-usual shipment-creation alert instead. ACS has no such rule.
+BoxNow refusal raises the usual shipment-creation alert instead. A P410 (a
+duplicate order number) on a re-issue still does: the lookup that follows
+it finds only the canceled parcel, which is never taken over (see
+[Creations whose answer was lost](#creations-whose-answer-was-lost)). ACS
+has no such rule.
 
 The summary alone is not enough to know the parcel has left. ACS reports
 `shipment_status=5`, `delivery_flag=0` and no non-delivery reason for a
@@ -945,6 +970,63 @@ design. Lockers are synced nightly into `BoxNowLocker` by
 `sync_boxnow_lockers` (per-tenant fanout — the table is tenant-scoped)
 and served to the picker through `GET /api/v1/shipping/boxnow/lockers`
 and `.../nearest`.
+
+### Creations whose answer was lost
+
+BoxNow refuses a second creation for one `orderNumber` (the order id) with
+P410, so a P410 means BoxNow already holds a request under that number:
+either an earlier attempt reached it and its answer was lost (the HTTP
+layer never re-sends a POST, so this is a task retry or a worker that died
+before saving), or a parcel canceled before a re-issue. Only a live `new`
+parcel is ever taken over, so the re-issue case still alerts. Every decision
+below looks the order up with `GET /api/v1/parcels?orderNumber=`, once per
+payment mode and over every page, and makes no BoxNow call inside a
+transaction. The full rules are in the
+[BoxNow reference](/dev/django/reference/order/shipping-boxnow).
+
+- **A P410 takes the parcel over.** Exactly one live `new` parcel with no
+  cancel requested, for the same locker, `paymentMode` and COD amount, is
+  saved as the shipment's parcel (`_take_over_existing_parcel`, then the
+  usual persist). Anything else (nothing listed, only canceled parcels,
+  one past `new`, several) is the P410 refusal and the creation alert,
+  whose message says what BoxNow lists.
+- **A cancel with no parcel number asks BoxNow first**
+  (`_cancel_unrecorded_parcel`). A creation never sent (an unpaid order)
+  cancels locally with no call. One that was sent looks the order up:
+  nothing live cancels locally, one live `new` parcel is cancelled at
+  BoxNow by id, anything else is refused. A creation in flight, or a
+  lookup that fails, refuses the cancel; it never reads as "nothing
+  there".
+- **An uncertain creation settles before an empty lookup is trusted.** A
+  creation that failed after its request may have left (no answer, an
+  unclassified error, a P410 whose take-over saved nothing) stamps
+  `metadata["creation_uncertain_at"]`. For `BOXNOW_CREATION_SETTLE_SECONDS`
+  (env, default 600) after it, a cancel that finds nothing refuses with a
+  `BoxNowBusyError` instead of cancelling locally. Only a saved or found
+  parcel ends the stamp early.
+- **The sweep settles what stays uncertain.**
+  `settle_uncertain_boxnow_creations` (every 15 minutes, per store,
+  suspended stores too) runs `BoxNowService.settle_uncertain_creation` for
+  each shipment with no parcel whose stamp is older than the settle time.
+  A canceled order's cancel is finished. For a live order, one parcel
+  BoxNow lists for its terms is saved; nothing listed sends the creation
+  alert, unless the creation task already alerted staff; anything else
+  goes to staff with what BoxNow lists. A refused lookup or refused
+  credentials go to staff (the credentials alert at most once per
+  `BOXNOW_CREDENTIALS_ALERT_INTERVAL_SECONDS`, default a day); no answer
+  waits for the next run.
+- **A canceled order never gets a live parcel.** A creation reads the
+  order's status before it starts and again when it saves: a parcel
+  created for an order canceled meanwhile is recorded under
+  `metadata["minted_after_cancel"]` and cancelled at BoxNow by id.
+- **The tracking poll names the payment mode.** BoxNow's `paymentMode`
+  defaults to `prepaid`, so `sync_shipment_state` passes the shipment's
+  own mode; without it a COD parcel's states never reached the shop.
+- **A 429 is waited out.** BoxNow's `Retry-After` (else
+  `BOXNOW_RATE_LIMIT_DEFAULT_SECONDS`, capped at
+  `BOXNOW_RETRY_AFTER_MAX_SECONDS`) is recorded per store; every BoxNow
+  task retries no sooner, and the poll and the sweep skip their runs until
+  it is over.
 
 ### Countries: Greece and Cyprus
 
@@ -1158,6 +1240,11 @@ move `Order.status`, which the carrier events drive separately.
 - **Courier unreachable during a customer cancel.** Any
   `CarrierUnavailableError` (the transient ACS 406 included) answers 503
   `courier_unreachable` and changes nothing; the customer tries again.
+- **Courier unreachable on a staff endpoint.** A staff cancel, the BoxNow
+  nearest-locker lookup or ACS address validation answers 503
+  `carrier_unavailable`, or 409 `carrier_request_in_progress` while the
+  same work is already running; the carrier's error text is logged, not
+  returned.
 
 ## Source
 
@@ -1165,7 +1252,8 @@ move `Order.status`, which the carrier events drive separately.
 |---|---|
 | `grooveshop-django-api/src/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment`), `_REGISTRY`, `register_provider`, `all_payload_keys` |
 | `grooveshop-django-api/src/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
-| `grooveshop-django-api/src/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError` |
+| `grooveshop-django-api/src/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError`, `CarrierBusyError` |
+| `grooveshop-django-api/src/shipping/api_errors.py` | `CarrierUnavailable` (503 `carrier_unavailable`), `CarrierBusy` (409 `carrier_request_in_progress`), `unanswered` |
 | `grooveshop-django-api/src/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy, including `AcsOutcomeUnknownError`, `AcsVoucherRequestUnknownError`, `AcsVoucherResolutionError`, `AcsUndocumentedHttpError`, `AcsVoucherRequestNotSentError` and `AcsVoucherRequestHeldError` |
 | `grooveshop-django-api/src/shipping_acs/voucher_hold.py` | The voucher hold's state machine and the rule table: `admit`, `allow_trial`, `record_voucher`, `record_refusal`, `record_no_answer`, `record_not_sent`, `record_unknown_outcome` |
 | `grooveshop-django-api/src/shipping_acs/models/voucher_hold.py` | `AcsVoucherHold`: the one-in-force constraint, `trial_request`, `retry_after`, `holds` |
@@ -1196,7 +1284,9 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping_acs/carrier.py` | ACS adapter, `live_quote`, `supported_settlements`, `is_kind_enabled` |
 | `grooveshop-django-api/src/shipping_boxnow/webhook.py` | Raw-bytes `data` extraction and HMAC verification |
 | `grooveshop-django-api/src/shipping_boxnow/views/webhook.py` | Tenant resolution and the response contract |
-| `grooveshop-django-api/src/shipping_boxnow/services.py` | Shipment creation, `apply_webhook_event`, locker sync (`skipped_no_country`), COD on delivery, `cancel_shipment` and `can_cancel_shipment` |
+| `grooveshop-django-api/src/shipping_boxnow/services.py` | Shipment creation, the P410 take-over (`_take_over_existing_parcel`), `settle_uncertain_creation`, `apply_webhook_event`, locker sync (`skipped_no_country`), COD on delivery, `cancel_shipment` (`_cancel_unrecorded_parcel`) and `can_cancel_shipment` |
+| `grooveshop-django-api/src/shipping_boxnow/tasks.py` | Creation task, `settle_uncertain_boxnow_creations`, the tracking poll, the 429 wait (`BoxNowTask`) |
+| `grooveshop-django-api/src/settings/integrations.py` | `BOXNOW_CREATION_SETTLE_SECONDS`, `BOXNOW_CREDENTIALS_ALERT_INTERVAL_SECONDS`, `BOXNOW_RATE_LIMIT_DEFAULT_SECONDS`, `BOXNOW_RETRY_AFTER_MAX_SECONDS` |
 | `grooveshop-django-api/src/shipping_boxnow/carrier.py` | BoxNow adapter, `supported_settlements`, the locker-country check in `validate_order_payload` |
 | `grooveshop-django-api/src/shipping_boxnow/models/locker.py` | `BoxNowLocker.country_code`, no default |
 | `grooveshop-django-api/src/pay_way/services.py` | `filter_by_carrier`, `filter_by_shipping_kind` |
