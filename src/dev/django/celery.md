@@ -114,9 +114,11 @@ def fanout_cleanup_abandoned_carts():
 
 `run_for_all_tenants()` (`src/tenant/celery.py`) iterates active,
 non-suspended tenants (suspended ones are skipped except for the wrappers
-passed `include_suspended=True`: the retention sweeps, and the money jobs
+passed `include_suspended=True`: the retention sweeps, the money jobs
 `reconcile-pending-refunds` and `allocate-credit-sources`, because a
-suspended store's open refunds still hold its customers' money) and calls `send_task` with a
+suspended store's open refunds still hold its customers' money, and
+`settle-uncertain-boxnow-creations`, because a canceled order's parcel may
+be live at BoxNow whatever the store's status) and calls `send_task` with a
 `_schema_name` header per tenant. It returns plain dicts, not
 `AsyncResult` objects, because the JSON result serializer cannot encode
 those. Calling the underlying task directly from beat would run it against

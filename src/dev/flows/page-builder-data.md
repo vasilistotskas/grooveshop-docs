@@ -291,8 +291,9 @@ anonymiser deletes the table: a link is a credential.
   shape this Django release requires): `fetch_catalogue` logs it at ERROR with
   the storefront host, the schema and the cause, and every caller refuses as it
   does with no catalogue. A new store's provisioning then fails its `theme`
-  step at ERROR and names it in `seeding_failures`; re-running provisioning
-  installs the theme.
+  step at ERROR and names it in `seeding_failures`. Deploy a storefront whose
+  catalogue Django can read first; then re-running provisioning installs the
+  theme.
 
 ## Source
 

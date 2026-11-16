@@ -68,7 +68,7 @@ The buttons:
 
 The shipment stays **Pending creation**, you receive an email with the cause, and the same note is written in the order's history.
 
-If BoxNow created the parcel but its answer never reached your shop (for example, BoxNow was slow to reply), the next try finds the parcel at BoxNow by the order number and keeps it: the parcel becomes **New** and no email is sent. If BoxNow still lists no parcel for the order later on, you get the usual email. When BoxNow answers that the order number was already used, the email says which parcels BoxNow holds for the order.
+If BoxNow created the parcel but its answer never reached your shop (for example, BoxNow was slow to reply), the next try finds the parcel at BoxNow by the order number and, while it is still new there and matches the order's locker and payment, keeps it: the parcel becomes **New** and no email is sent. Otherwise you get the usual email. If BoxNow still lists no parcel for the order later on, you get the usual email. When BoxNow answers that the order number was already used, the email says which parcels BoxNow holds for the order.
 
 - **Unknown locker:** click **Sync lockers from BoxNow API** on the locker list and check that the locker is active.
 - **BoxNow login details missing:** an Owner or Admin fills them in on the [Store profile](/admin/settings/store-profile). Nothing is retried until then.

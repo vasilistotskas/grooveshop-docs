@@ -242,8 +242,9 @@ carrier API call never happens with a Postgres row lock held:
    and the block commits.
 4. **Delete the unused voucher** (`_delete_unused_voucher`) — no lock, no
    open transaction. Deleted at ACS, the number comes off the list; any
-   failure keeps it there and records it at once as a voucher matching no
-   order (`source=refused_delete`), so a live voucher is never forgotten.
+   failure keeps it there and, best effort, records it at once as a voucher
+   matching no order (`source=refused_delete`). If that record fails too,
+   an ERROR log and `orphan_vouchers` still hold the number (see below).
 
 The claim TTL is 300 seconds (`_MINT_CLAIM_TTL_SECONDS`). It was 90 until
 a slow ACS round trip let a second worker re-mint and leak an orphan
@@ -973,8 +974,11 @@ and `.../nearest`.
 ### Creations whose answer was lost
 
 BoxNow refuses a second creation for one `orderNumber` (the order id) with
-P410, and the HTTP layer never re-sends a POST, so a P410 on a retry means
-an earlier attempt reached BoxNow and its answer was lost. Every decision
+P410, so a P410 means BoxNow already holds a request under that number:
+either an earlier attempt reached it and its answer was lost (the HTTP
+layer never re-sends a POST, so this is a task retry or a worker that died
+before saving), or a parcel canceled before a re-issue. Only a live `new`
+parcel is ever taken over, so the re-issue case still alerts. Every decision
 below looks the order up with `GET /api/v1/parcels?orderNumber=`, once per
 payment mode and over every page, and makes no BoxNow call inside a
 transaction. The full rules are in the

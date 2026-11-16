@@ -36,7 +36,7 @@ sequenceDiagram
   D->>Q: dispatch_on_commit send_*_email
   Q->>DB: create Notification + NotificationUser
   DB->>Q: post_save signal
-  Q->>CL: send_to_user_group tenant_schema_user_id
+  Q->>CL: send_to_user_group(user_id), group tenant_schema_user_id
   CL->>B: send_notification frame
   Q->>M: send_email via emails.transport
   B->>D: GET websocket ticket
@@ -96,15 +96,22 @@ connect and is server-push only — client frames are read and discarded.
 An anonymous scope is accepted and then closed with code 4003, because
 Channels requires the handshake to complete before an application close
 code can be delivered. `force_logout` is a second handler on the same
-consumer. After a password change, a password reset, an email change or
-an account deletion, `src/user/signals.py` revokes the Knox tokens in the
-request and queues `src/user/tasks.py: push_force_logout` with
-`dispatch_on_commit`; the task pushes `force.logout` through the same
-`send_to_user_group`, with the same retry policy and time limits. A push
-that fails never turns the saved change into an error. The consumer closes
-with 4003 so every open tab re-authenticates, except a socket
-authenticated after the tokens were revoked (`revoked_at`), which belongs
-to a later sign-in and stays open.
+consumer. The Knox tokens are revoked in the request, and the push is
+queued after the commit as `src/user/tasks.py: push_force_logout`
+(`dispatch_on_commit`): by the receivers in `src/user/signals.py` for a
+password change, a password reset or an email change, and by
+`src/user/views/account.py: delete_account` itself, which calls the same
+helpers before it queues the deletion. The task pushes `force.logout`
+through the same `send_to_user_group`, with the same retry policy and time
+limits, and a push that fails never turns the saved change into an error.
+The push is best effort: the tokens are already dead, and the consumer
+closes with 4003 so an open tab re-authenticates sooner, but a push still
+undelivered after its retries leaves those sockets open. The consumer
+keeps a socket whose `authenticated_at` (stamped in `connect`, after the
+ticket was checked) is later than the push's `revoked_at`, so that a
+socket of a later sign-in is not closed; a socket whose ticket was checked
+just before the revocation and whose `connect` finished just after it is
+kept too.
 
 The route is `ws/notifications/` (`src/asgi/__init__.py`), wrapped in
 `AllowedHostsOriginValidator` → `TenantWebsocketMiddleware` →

@@ -307,8 +307,10 @@ the key of a session that is actually stored, else `""`. Until a session
 loads, Django's `session_key` is the raw `sessionid` cookie: a
 227-character one failed the insert on the column's 40 characters. The
 recommendation events use the same helper. Client IP is
-`src/core/client_ip.py: client_ip_or_peer`, the one rule the throttles use
-too: the visitor Cloudflare vouched for (`edge_client_ip`), else the
+`src/core/client_ip.py: client_ip_or_peer`, the rule the scoped throttles
+in `src/core/api/throttling.py` use too (DRF's global `AnonRateThrottle`,
+set in `src/settings/api.py`, keys on its own `get_ident` instead): the
+visitor Cloudflare vouched for (`edge_client_ip`), else the
 **rightmost** `X-Forwarded-For` hop when it is an address (the one Traefik
 appended), else `REMOTE_ADDR`. A hop that is not an address is never
 stored, so it cannot fail the `GenericIPAddressField` insert and lose the

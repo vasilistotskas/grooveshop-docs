@@ -166,9 +166,12 @@ throttles built on it are `CartMutationAnonThrottle`,
 `OrderCreateAnonThrottle` and `PaymentAttemptAnonThrottle`, with their own
 scopes and rates (`DEFAULT_THROTTLE_RATES`). A wrong or missing secret, or
 a call that names neither, falls back to the client address. One cart or
-order still cannot exceed the rate, and a call signed in as an account is
-held by the user budget alone. Django's 429 reaches the agent as
-`throttled`.
+order still cannot exceed the rate while the cache answers; in a Redis
+outage the order and payment throttles refuse (fail closed) and the cart
+throttle lets writes through (fail open, `ResilientThrottleMixin`). A call
+signed in as an account is held by the user budget alone. Django's 429
+reaches an MCP agent as the `throttled` tool error and an ACP agent as
+`rate_limited`.
 
 ### MCP
 
