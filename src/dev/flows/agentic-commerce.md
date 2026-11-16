@@ -153,6 +153,23 @@ A switch reaches the gateway within twice `TENANT_CACHE_TTL` (five minutes by
 default). Django drops its own resolve cache at once, but the Redis tier and
 then each pod's memory can each hold the previous config for one TTL.
 
+### Django's rate limits on gateway calls
+
+Every buyer an AI platform serves reaches Django from that platform's
+address, so a per-address budget would put them all in one bucket. A guest
+call that carries the gateway's `X-Internal-Gateway` secret is therefore
+budgeted on what it names instead (`src/core/api/throttling.py:
+GatewayAnonThrottle`, `_gateway_ident`): the cart (the hash of its
+`X-Cart-Token`, else `X-Cart-Id`) for cart writes and order creation, and
+the order (the hash of its `?uuid=`) for the payment-link calls. The
+throttles built on it are `CartMutationAnonThrottle`,
+`OrderCreateAnonThrottle` and `PaymentAttemptAnonThrottle`, with their own
+scopes and rates (`DEFAULT_THROTTLE_RATES`). A wrong or missing secret, or
+a call that names neither, falls back to the client address. One cart or
+order still cannot exceed the rate, and a call signed in as an account is
+held by the user budget alone. Django's 429 reaches the agent as
+`throttled`.
+
 ### MCP
 
 `internal/mcpsrv/server.go` registers the tool surface. One server is built
@@ -1208,6 +1225,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/mcpsrv/catalog.go` | Catalog tools, `ratingOf` |
 | `grooveshop-agent-gateway/internal/checkout/discounts.go` | `ApplyDiscountCodes`, shared by UCP and ACP |
 | `grooveshop-django-api/src/tenant/features.py` | `STORE_FEATURES`, `effective_features` |
+| `grooveshop-django-api/src/core/api/throttling.py` | `GatewayAnonThrottle`, `_gateway_ident`: gateway calls budgeted per cart or order |
 | `grooveshop-agent-gateway/internal/mcpsrv/discovery.go` | `storeEntry`, `ARDHandler`, `AICatalogHandler` |
 | `grooveshop-agent-gateway/internal/mcpsrv/servercard.go` | `ServerCardHandler`, `IdentityFor`, `publisher`, `publicDocument` |
 | `grooveshop-agent-gateway/internal/storefront/urls.go` | `Site.Links` (page links in a language), `MCPServerCard` and the gateway's own endpoints |

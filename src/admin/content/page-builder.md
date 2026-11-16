@@ -30,7 +30,7 @@ Your store's look is its theme, and you change it in the editor.
 2. In the outline, click **Theme: colours, corners, fonts**.
 3. Change the **Colours**, for the light and the dark scheme. **Same colours as light** copies the light colours to the dark scheme.
 4. Under **Shape and fonts**, set the **Corners**, the **Page width** and the fonts.
-5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before you can publish.
+5. Check **Contrast**: it shows how far each colour stands out from its background. **Fix** corrects a colour for you. A pair marked **Blocks publishing** has to be fixed before you can publish. If a publish is refused for contrast, the message names the colour pair, its contrast and the contrast it needs: find that pair under **Contrast** and fix it.
 6. Publish. The new look shows on every page, and your emails use the new primary colour.
 
 **Button colour** can keep its own colour or, with **Follows the primary colour** on, change along with the primary colour.

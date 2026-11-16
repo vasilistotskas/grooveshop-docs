@@ -306,12 +306,16 @@ Before it creates anything, the order-first path refuses an online-settled
 order from a customer who already has `ORDER_MAX_UNPAID_ONLINE_ORDERS`
 unpaid online orders waiting (`OrderService._enforce_unpaid_order_limit`,
 per-store setting, default 5, `0` off; the customer is the account, or the
-guest email). The service raises `InvalidOrderDataError` with a sentence
-naming the limit, but `OrderViewSet.create` answers every
-`InvalidOrderDataError` with the generic 400 `invalid_order_data` and the
-detail "Invalid order data", so the shopper does not see that sentence
-(`src/order/views/order.py`). The payment-first path (`create_order_from_cart`)
-does not call it, though its own unpaid orders are counted.
+guest email). The orders counted are
+`src/order/managers/order.py: holding_stock_for_online_payment`: PENDING,
+online-settled, payment not financially final, so an order whose payment
+is pending, processing or failed counts, because each still holds its
+stock. The service raises `UnpaidOrderLimitError`, and
+`OrderViewSet.create` answers it as a 400 validation error on `pay_way_id`
+with the code `unpaid_order_limit` and a sentence naming the limit
+(`src/order/views/order.py`), before its generic `invalid_order_data`
+branch. The payment-first path (`create_order_from_cart`) does not call
+it, though its own unpaid orders are counted.
 
 The order-first path creates `status=PENDING, payment_status=PENDING`,
 stamps `payment_id = "offline_<uuid>"` for non-online settlements, and

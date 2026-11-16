@@ -36,7 +36,7 @@ sequenceDiagram
   D->>Q: dispatch_on_commit send_*_email
   Q->>DB: create Notification + NotificationUser
   DB->>Q: post_save signal
-  Q->>CL: group_send tenant_schema_user_id
+  Q->>CL: send_to_user_group tenant_schema_user_id
   CL->>B: send_notification frame
   Q->>M: send_email via emails.transport
   B->>D: GET websocket ticket
@@ -74,8 +74,17 @@ inside one atomic block.
 handle_notification_created`, which serialises the row plus its
 translations (cached 60 seconds, so a broadcast to N users does not issue
 N translation queries) and enqueues `send_notification_task`. That task
-reads the worker connection's schema, builds the group name through
-`src/notification/groups.py: user_group` and calls `group_send`.
+sends through `src/notification/groups.py: send_to_user_group`, which
+names the group from the worker connection's schema (`user_group`) and
+gives the push a deadline of its own: `NOTIFICATION_PUSH_TIMEOUT_SECONDS`
+(env, default 5). At the deadline it raises `TimeoutError`, which the task
+retries like any transient error. The Redis socket timeout cannot serve as
+that deadline: it is sized for the consumer's blocking receive and bounds
+each Redis command, and one `group_send` sends several. The task's own
+`soft_time_limit` and `time_limit` are two and three times the deadline
+(`NOTIFICATION_TASK_SOFT_TIME_LIMIT`, `NOTIFICATION_TASK_TIME_LIMIT` in
+`src/settings/websocket.py`), backstops for a send the deadline cannot
+interrupt.
 
 **The group name is `tenant_{schema_name}_user_{user_id}`.** The schema
 segment is what stops tenant A's user 42 receiving tenant B's user 42's
@@ -87,8 +96,15 @@ connect and is server-push only — client frames are read and discarded.
 An anonymous scope is accepted and then closed with code 4003, because
 Channels requires the handshake to complete before an application close
 code can be delivered. `force_logout` is a second handler on the same
-consumer: `src/user/signals.py` broadcasts it after Knox tokens are revoked,
-and it closes with 4003 so every open tab re-authenticates.
+consumer. After a password change, a password reset, an email change or
+an account deletion, `src/user/signals.py` revokes the Knox tokens in the
+request and queues `src/user/tasks.py: push_force_logout` with
+`dispatch_on_commit`; the task pushes `force.logout` through the same
+`send_to_user_group`, with the same retry policy and time limits. A push
+that fails never turns the saved change into an error. The consumer closes
+with 4003 so every open tab re-authenticates, except a socket
+authenticated after the tokens were revoked (`revoked_at`), which belongs
+to a later sign-in and stays open.
 
 The route is `ws/notifications/` (`src/asgi/__init__.py`), wrapped in
 `AllowedHostsOriginValidator` → `TenantWebsocketMiddleware` →
@@ -686,8 +702,10 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/src/notification/enum.py` | Kind, category, priority, `NotificationTypeEnum` |
 | `grooveshop-django-api/src/notification/services.py` | `create_user_notification` and locale fallback |
 | `grooveshop-django-api/src/notification/signals.py` | Post-save fan-out and the translation cache |
-| `grooveshop-django-api/src/notification/tasks.py` | `send_notification_task`, `group_send` |
-| `grooveshop-django-api/src/notification/groups.py` | `user_group` name format |
+| `grooveshop-django-api/src/notification/tasks.py` | `send_notification_task`, its retry policy and time limits |
+| `grooveshop-django-api/src/notification/groups.py` | `user_group` name format, `send_to_user_group` and its deadline |
+| `grooveshop-django-api/src/settings/websocket.py` | `NOTIFICATION_PUSH_TIMEOUT_SECONDS` and the task time limits derived from it |
+| `grooveshop-django-api/src/user/signals.py`, `src/user/tasks.py` | Token revocation and the queued `push_force_logout` |
 | `grooveshop-django-api/src/notification/consumers.py` | `NotificationConsumer`, `force_logout`, close codes |
 | `grooveshop-django-api/src/notification/views/websocket.py` | Ticket minting, TTL, Knox liveness check |
 | `grooveshop-django-api/src/core/middleware/channels.py` | `GETDEL` ticket consumption, tenant binding |

@@ -307,10 +307,12 @@ the key of a session that is actually stored, else `""`. Until a session
 loads, Django's `session_key` is the raw `sessionid` cookie: a
 227-character one failed the insert on the column's 40 characters. The
 recommendation events use the same helper. Client IP is
-`trusted_client_ip` (the visitor Cloudflare vouched for) when present.
-Otherwise it is the **rightmost** `X-Forwarded-For` entry when
-`REMOTE_ADDR` is a private address, because that is the one the trusted
-proxy appended.
+`src/core/client_ip.py: client_ip_or_peer`, the one rule the throttles use
+too: the visitor Cloudflare vouched for (`edge_client_ip`), else the
+**rightmost** `X-Forwarded-For` hop when it is an address (the one Traefik
+appended), else `REMOTE_ADDR`. A hop that is not an address is never
+stored, so it cannot fail the `GenericIPAddressField` insert and lose the
+row.
 
 Clicks are attributed by the `query_id` the search response carried.
 `search_click` validates and dispatches `save_search_click`, which retries

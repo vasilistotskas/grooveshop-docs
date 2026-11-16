@@ -385,7 +385,10 @@ order-based one. `src/meta_capi/signals.py: _on_user_signed_up` reads the
 `ad_storage` cookie off the signup request and sends only on an explicit
 `granted`; a signup with no request at all, such as a programmatic one,
 returns early. It fails closed because there is no order to carry a consent
-snapshot.
+snapshot. Its `client_ip_address` is `src/core/client_ip.py: edge_client_ip`,
+the visitor the edge vouched for with `X-Origin-Verify`. Without that proof
+no IP is sent at all (the SDK drops a `None`), because the only other
+address is a proxy's, and Meta asks for the browser's real one.
 
 The offline-pay-way branch exists because for cash on delivery the
 confirmation page **is** the conversion: no webhook ever fires at purchase

@@ -83,6 +83,23 @@ feature-gated block's feature is on, and that rich text survives the sanitiser
 policy. Every problem is `{path, code, message}`, the path a JSON pointer into
 what was sent.
 
+The theme also keeps the contrast its catalogue declares
+(`documentKinds.theme.contrast`, checked by `src/builder/contrast.py`). Saving
+never refuses for contrast; a publish, a publish check and a scheduled publish
+are refused for every failing `error` rule with an `insufficient_contrast`
+problem. Each rule carries its name in every language (`label`), and the
+message names the colour pair by that name in the request's language, with
+the measured and the required ratio, so the API and the editor's Publish
+dialog show the same sentence. `params` keeps the rule id the editor leads to
+(`rule`) and the name in every language (`label-el`, `label-en`), from which
+`src/builder/errors.py: message_for` words a kept failure again for whoever
+reads it (the scheduled-publish failure email). A rule with no name in a
+language of `settings.LANGUAGES`, like any malformed rule, is refused when the
+catalogue is read. A rule side can be a pointer into the theme, a literal
+colour, or a mix (`{mix, toward, percent}`, CSS `color-mix(in oklab, ...)`,
+computed by `contrast.mix_oklab` as the storefront does). The full rules are
+in the [builder reference](/dev/django/reference/builder).
+
 ### 4. A publish
 
 `services.publish` validates every named draft (references included) and
@@ -270,6 +287,12 @@ anonymiser deletes the table: a link is a credential.
   upgrades them; published versions keep rendering, because the storefront
   upgrades them when it renders.
 - **Two editors**: the second save is refused with the first editor's name.
+- **A catalogue Django cannot read** (a storefront older than the catalogue
+  shape this Django release requires): `fetch_catalogue` logs it at ERROR with
+  the storefront host, the schema and the cause, and every caller refuses as it
+  does with no catalogue. A new store's provisioning then fails its `theme`
+  step at ERROR and names it in `seeding_failures`; re-running provisioning
+  installs the theme.
 
 ## Source
 
@@ -278,6 +301,7 @@ anonymiser deletes the table: a link is a credential.
 | `grooveshop-django-api/src/builder/models.py` | Documents, versions, releases, reference index |
 | `grooveshop-django-api/src/builder/services.py` | The only writer: save, checkpoint, restore, discard, publish, rollback, delete page |
 | `grooveshop-django-api/src/builder/validation.py` | Every rule, as pointer and code |
+| `grooveshop-django-api/src/builder/contrast.py`, `src/builder/errors.py` | Theme contrast rules, their names and the `insufficient_contrast` message |
 | `grooveshop-django-api/src/builder/storefront.py` | The catalogue client |
 | `grooveshop-django-api/src/builder/references.py` | Reference existence and the index |
 | `grooveshop-django-api/src/builder/published.py` | The public read, cached per release; `assemble` and `preview` shared with the editor preview |
