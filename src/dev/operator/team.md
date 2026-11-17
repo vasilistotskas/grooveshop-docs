@@ -112,13 +112,15 @@ The app sets come from `src/tenant/role_scopes.py` and are **derived, not
 enumerated**:
 
 - `store_app_labels()` = the `TENANT_APPS`-only labels, plus
-  `STORE_SHARED_APP_LABELS` (`user`, `usersessions`, `extra_settings` —
+  `STORE_SHARED_APP_LABELS` (`user`, `extra_settings`, `emails` —
   dual-listed apps whose tenant copy wins on the search path, so on a
   store host those pages show that store's own rows), minus anything in
   `PLATFORM_ONLY_APP_LABELS`.
 - `operational_app_labels()` = the above minus `STORE_SETTINGS_APP_LABELS`
-  (`extra_settings`). That subtraction is the whole of the
-  staff-versus-admin split.
+  (`extra_settings`, `texts`, `emails`, `builder`). That subtraction is the
+  staff-versus-admin split; `STAFF_READ_ONLY_APP_LABELS` (`texts`,
+  `builder`, `emails`) then lets Staff open three of those apps' pages
+  read-only, never change them.
 
 An app added to `TENANT_APPS` later is covered automatically. Only the
 platform set is written out by hand, because there "forgetting an entry is
