@@ -114,6 +114,7 @@ Refunds, payment capture or cancellation, order cancellation, deletions, custome
 | Concern | Files |
 |---|---|
 | Policy: scopes, resource, role check | `grooveshop-django-api/src/agent/staff.py` |
+| A refused `resource` at the token endpoints (400 `invalid_target`) | `grooveshop-django-api/src/core/middleware/idp_oauth_errors.py` |
 | The two issuers | `grooveshop-django-api/src/agent/oidc.py`, `src/settings/application.py` (`SHARED_APPS`), `src/settings/domain.py` (`STAFF_CONNECT_HOST`) |
 | Connect host routing and pages | `grooveshop-django-api/src/tenant/middleware.py`, `src/agent/urls_connect.py`, `src/agent/staff_connect.py`, `src/core/templates/agent/staff_connect/` |
 | Staff API | `grooveshop-django-api/src/agent/staff_auth.py`, `src/agent/staff_views.py`, `src/agent/staff_serializers.py`, `src/agent/urls.py` |
