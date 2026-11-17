@@ -189,6 +189,19 @@ or cancel in flight, a BoxNow creation still settling) is a 409
 a customer cancel still answers `courier_unreachable`. A carrier's real
 refusal keeps its 400.
 
+#### Lock order: the order, then the shipment
+
+A carrier path that needs both rows locks them through
+`src/shipping/locks.py: lock_with_order`: the order first, then the shipment,
+never one joined `select_for_update().select_related("order")` (one statement
+that locks the shipment's row before its order's, which deadlocks against a
+staff cancel that locks the order first). A path that only touches the shipment
+locks the shipment alone and does not write the order in that transaction. An
+order cancel holds no shipment lock at all: it commits, then asks the courier
+([Order lifecycle](/dev/flows/order-lifecycle#staff-and-system-cancels-are-best-effort-at-the-courier)).
+ACS's `cancel_voucher` never reads or writes the order, so it locks the
+shipment alone. BoxNow and ACS use the same function.
+
 ### Method offering at checkout
 
 `ShippingService.available_options` iterates the active rates for the
@@ -1268,6 +1281,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
 | `grooveshop-django-api/src/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
 | `grooveshop-django-api/src/shipping/alerts.py`, `src/shipping/emails.py`, `src/shipping_acs/emails.py` | The two carrier alerts (`alert_admins_*`) and the ops email types they and the ACS tasks send |
+| `grooveshop-django-api/src/shipping/locks.py` | `lock_with_order`: the one lock order for an order and its shipment |
 | `grooveshop-django-api/src/shipping/utils.py` | `compute_total_weight_grams` |
 | `grooveshop-django-api/src/shipping/urls.py` | Options, free-shipping-info, providers |
 | `grooveshop-django-api/src/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |

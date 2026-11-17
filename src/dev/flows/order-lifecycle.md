@@ -258,9 +258,30 @@ courier could not be reached, so try again in a few minutes.
 #### Staff and system cancels are best-effort at the courier
 
 These cancel first and ask the courier afterwards, through
-`OrderService.cancel_attached_shipment`, called by `cancel_order` itself:
-`cancel_order` is the only path that produces CANCELED, so every cancel
-of an order whose shipment is still alive reaches the courier. A
+`OrderService.cancel_attached_shipment`, which `cancel_order` registers with
+`transaction.on_commit`: `cancel_order` is the only path that produces CANCELED,
+so every cancel of an order whose shipment is still alive reaches the courier.
+The ask follows the commit, so no order, product or shipment row is locked
+while the courier answers (the carrier's HTTP calls used to run inside the
+cancel's transaction). A caller with no transaction open (the cancel endpoint,
+the admin action) has the ask run before `cancel_order` returns and reads the
+answer on the order it gets back; `auto_cancel_stuck_pending_orders`, which
+cancels inside its own transaction and row lock, gets it when that transaction
+commits.
+
+The cancel writes `metadata["shipment_cancel_pending"]`
+(`SHIPMENT_CANCEL_PENDING_FLAG`, `src/order/services.py`) in the same save, and
+the courier's answer is merged into the order's metadata under its row lock,
+with the flag removed in the same write. A worker that stops between the commit
+and the courier leaves the flag, and the beat task
+`order.tasks.finish_pending_shipment_cancels` (every
+`ORDER_SHIPMENT_CANCEL_SWEEP_EVERY_MINUTES`, suspended stores included) asks the
+courier for every canceled order whose flag is older than
+`ORDER_SHIPMENT_CANCEL_SWEEP_AFTER_SECONDS`. A carrier already working on the
+shipment (`CarrierBusyError`: a cancel in flight, a creation still settling) has
+given no answer, so nothing is recorded and the flag stays for a later run. The
+admin cancel action says how long that can take (`shipment_cancel_wait_minutes`).
+The customer cancel is unchanged: it asks first, as above. A
 dead-shipment cancel does not ask: the shipment is already canceled
 ([Shipping](/dev/flows/shipping)). A customer cancel, which already asked, writes the
 `shipment_cancel` breadcrumb on the metadata before the save so the
@@ -1212,7 +1233,7 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
 | `grooveshop-django-api/src/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_refund_made`, `handle_stripe_charge_refunded` (gift card purchases only), `handle_stripe_refund_failed` and every other domain receiver |
 | `grooveshop-django-api/src/order/signals/__init__.py` | The twelve order signals and the `order_refunded` contract |
-| `grooveshop-django-api/src/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email`, `generate_order_invoice` and `_set_receipt_deferred`, `reconcile_pending_refunds`, `allocate_credit_sources` |
+| `grooveshop-django-api/src/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email`, `generate_order_invoice` and `_set_receipt_deferred`, `reconcile_pending_refunds`, `allocate_credit_sources`, `finish_pending_shipment_cancels` |
 | `grooveshop-django-api/src/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/src/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
 | `grooveshop-django-api/src/order/views/item.py`, `src/order/urls.py` | `OrderItemViewSet`: read-only list and detail, and `restock` |
