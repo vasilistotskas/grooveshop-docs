@@ -70,8 +70,9 @@ gateway's address). Django's `.env.example` leaves the secret empty, and Django
 then does not recognise the gateway on `tenant/resolve`
 (`src/tenant/views.py: _is_gateway`): it leaves the store's chat key and ACP bearer
 out of the answer, so `/chat` and `/acp` answer 503 for every store, and the
-gateway logs an error line each time (`Django did not recognise the gateway's
-internal token`, then `tenant credentials unavailable`). The same secret
+gateway logs an error line (`Django did not recognise the gateway's
+internal token` once per cached answer, then `tenant credentials unavailable`
+once per decision). The same secret
 authenticates the order-event push the other way.
 
 ## Staging

@@ -34,7 +34,7 @@ Open the brand, change the **Name** and save. The change shows on all its produc
 - **Each name exists once.** You cannot create a second brand with the same name.
 - **In the store**: the brand shows on the product card and page, and the product list has a brand filter. The store's search also finds products by their brand name, and renaming a brand updates the search shortly after.
 - **In the feeds**: a product with a brand is sent to Meta, TikTok and Google with it. A product without one is sent to Meta and TikTok with your store's name as the brand, and to Google with no brand: Google asks for the brand of whoever made the product, and a store's name in its place would state a brand the product does not have.
-- **Products you make yourself** (handmade, or sold under your own label): add a brand with your store's name and give it to those products. Google then gets your store's name as their brand too.
+- **Products you make yourself** (handmade, or sold under your own label): add a brand named as you sell them (your own label's name, which is your store's name when you sell under it) and give it to those products. Google then gets that brand too, instead of none.
 - **Deleting a brand does not delete products.** Its products are simply left without a brand.
 
 ## Related

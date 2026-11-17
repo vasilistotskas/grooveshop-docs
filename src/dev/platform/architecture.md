@@ -48,7 +48,8 @@ flowchart LR
   every storefront map reads ([Maps](/dev/operations/maps)).
 - Redis is one instance with separate logical databases: Django cache,
   the Nuxt Nitro cache (`NUXT_REDIS_DB` in `frontend-config.yaml`), the
-  gateway (`agent-gateway.yaml`), the media stream.
+  media stream. The agent gateway is not one of them: it has its own Redis
+  (`redis-gateway.yaml`).
 
 ## Request paths
 

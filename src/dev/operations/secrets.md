@@ -157,6 +157,7 @@ placeholders may be present at build time. The same applies to any
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/sealed-*.yaml`, `overlays/staging/sealed-*.yaml` | Committed SealedSecrets |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`, `frontend.yaml`, `media-stream.yaml`, `agent-gateway.yaml` | `envFrom` / `secretKeyRef` wiring, Reloader annotations |
 | `grooveshop-agent-gateway/internal/config/config.go` | `checkInternalSecret` and `minInternalSecretLen`: what the gateway accepts as `INTERNAL_EVENTS_SECRET` |
+| `grooveshop-agent-gateway/internal/ucp/keys.go` | How `SIGNING_KEY_ENCRYPTION_KEY` seals each store's UCP signing key |
 | `grooveshop-infrastructure/docs/missing-secrets-runbook.md` | Add or rotate a key |
 | `grooveshop-infrastructure/docs/sealed-secrets-key-management.md` | Controller key export, rotation, restore |
 | `grooveshop-infrastructure/docs/tenant-onboarding.md` | Tenant-row credential reference |

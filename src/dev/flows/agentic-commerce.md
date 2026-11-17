@@ -824,7 +824,7 @@ matter are listed at the top of `internal/feeds/rss.go`:
   product is skipped too. A malformed money field is an error, because it would
   corrupt every consumer's feed.
 - **Fields stay within the strictest of the three targets' limits**, so either
-  RSS document is valid for any of them (the constants at the top of
+  RSS document fits any of them on length (brand presence differs, above; the constants at the top of
   `internal/feeds/rss.go`, cut by rune, never by byte):
 
   | Field | Limit |
@@ -1489,7 +1489,8 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/checkout/session.go`, `grooveshop-agent-gateway/internal/checkout/store.go` | The session, its revision and `Serves`, the Redis keys, locks and claims |
 | `grooveshop-agent-gateway/internal/mcptool/mcptool.go` | The `tool call` log line and `gateway_tool_calls_total` |
 | `grooveshop-agent-gateway/docs/agent-protocols-runbook.md` | The hands-on checks, including U5 (a signed request through the edge) |
-| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis-gateway.yaml` | The gateway's own Redis |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis-gateway.yaml`, `redis-gateway-config.yaml` | The gateway's own Redis and its `noeviction` config |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/patches/pvc-offsite-backup-patch.yaml` | The backup labels on the gateway's Redis volume |
 | `grooveshop-agent-gateway/internal/ucp/profiles.go` | Platform profile fetch, validation and cache |
 | `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
 | `grooveshop-agent-gateway/internal/acp/handler.go`, `grooveshop-agent-gateway/internal/acp/types.go` | ACP routes, bearer auth, `API-Version`, errors, idempotency, `acp.Version` |

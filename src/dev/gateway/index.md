@@ -24,7 +24,7 @@ secrets.
 | `/feeds/*` | Product feeds: `google.xml`, `meta.xml`, `tiktok.xml`, `acp.json` |
 | `POST /chat` | First-party shopping chatbot (SSE) over an OpenAI-compatible provider; the model key is per tenant |
 | `/internal/*` | Cluster-only: Django's order-event push and feed invalidation, shared-secret header |
-| `/healthz`, `/readyz`, `/metrics` | Process-only liveness, readiness gated on Redis only (Django health is reported in the body but never flips it), Prometheus |
+| `/healthz`, `/readyz`, `/metrics` | Process-only liveness, readiness gated on Redis and the startup check of the signing keys (Django health is reported in the body but never flips it), Prometheus |
 
 Every tenant gate (`agentCommerceEnabled`, `productFeedsEnabled`,
 `agentHostedPaymentEnabled`) is a boolean Django folds and emits on the
@@ -99,6 +99,8 @@ production and staging accept, so it boots only under `ENV=development` or
 |---|---|
 | `grooveshop-agent-gateway/CLAUDE.md`, `grooveshop-agent-gateway/.claude/rules/ucp.md` | The surface map and the conventions the code keeps |
 | `grooveshop-agent-gateway/cmd/gateway/serve.go` | The shutdown windows and the timeouts |
+| `grooveshop-agent-gateway/internal/mcpsrv/signature.go` | Platform signature verification on `/mcp` |
+| `grooveshop-agent-gateway/internal/mcptool/mcptool.go` | The `tool call` log line and `gateway_tool_calls_total` |
 | `grooveshop-agent-gateway/internal/config/config.go`, `grooveshop-agent-gateway/.env.example` | Every setting and what `Load` refuses |
 
 ## Status of this section
