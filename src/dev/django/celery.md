@@ -82,7 +82,15 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   `DeferredDispatch` row that `redispatch_deferred_tasks` publishes once the
   alarm clears. A task published by a task a worker is running is not refused
   (a refusal would lose it): it waits for the broker, bounded by the task's time
-  limit. The `GrooveShopBrokerAlarm` alert pages for the alarm
+  limit. A worker rides out the alarm without a restart. Its publishing
+  connection (`core.broker.PublishingConnection`) never fails for a heartbeat
+  it missed: nothing reads it between publishes. Its control queries
+  (`core.celery.GrooveShopControl`: `hello`, `ping`, `stats`, ...) answer
+  empty during the hold, so a worker started during an alarm goes on "all
+  alone" instead of exiting in `Mingle`. Control commands (`revoke`,
+  `shutdown`, ...) still raise. Measurements and the full reasoning:
+  `grooveshop-django-api/docs/deferred-dispatch.md`. The
+  `GrooveShopBrokerAlarm` alert pages for the alarm
   ([Monitoring](/dev/operations/monitoring#alerts)).
 - Results: `CELERY_RESULT_BACKEND` is fixed in `src/settings/celery.py` to
   `core.result_backend.TenantDatabaseBackend`, the database backend plus the
@@ -196,7 +204,7 @@ non-suspended store), or every store including suspended ones
 | `expire-gift-cards` | `tenant.tasks.fanout_expire_gift_cards` | every store | daily 03:00 † | `giftcard.tasks.expire_gift_cards` |
 | `deliver-scheduled-gift-cards` | `tenant.tasks.fanout_deliver_scheduled_gift_cards` | every store | daily 06:00 † | `giftcard.tasks.deliver_scheduled_gift_cards`: cards bought with a future `deliver_at` |
 | `send-gift-card-expiry-reminders` | `tenant.tasks.fanout_send_gift_card_expiry_reminders` | every store | daily 06:00 † | `giftcard.tasks.send_gift_card_expiry_reminders` |
-| `finish-pending-shipment-cancels` | `tenant.tasks.fanout_finish_pending_shipment_cancels` | every store, suspended too | every `ORDER_SHIPMENT_CANCEL_SWEEP_EVERY_MINUTES` (15) min | `order.tasks.finish_pending_shipment_cancels`: asks the courier for every CANCELED order still carrying `metadata.shipment_cancel_pending` older than `ORDER_SHIPMENT_CANCEL_SWEEP_AFTER_SECONDS` (see [Order lifecycle](/dev/flows/order-lifecycle#staff-and-system-cancels-are-best-effort-at-the-courier)) |
+| `finish-pending-shipment-cancels` | `tenant.tasks.fanout_finish_pending_shipment_cancels` | every store, suspended too | every `ORDER_SHIPMENT_CANCEL_SWEEP_EVERY_MINUTES` (15) min | `order.tasks.finish_pending_shipment_cancels`: asks the courier for every CANCELED order still carrying `metadata.shipment_cancel_pending` older than `ORDER_SHIPMENT_CANCEL_SWEEP_AFTER_SECONDS`, and asks again for a courier that gave no answer until `ORDER_SHIPMENT_CANCEL_RETRY_HOURS` (24) after the cancel (see [Order lifecycle](/dev/flows/order-lifecycle#staff-and-system-cancels-are-best-effort-at-the-courier)) |
 | `auto-cancel-stuck-pending-orders` | `tenant.tasks.fanout_auto_cancel_stuck_pending_orders` | every store | every 15 min | `order.tasks.auto_cancel_stuck_pending_orders`: the only place failed-payment stock is released |
 | `complete-paid-delivered-orders` | `tenant.tasks.fanout_complete_paid_delivered_orders` | every store | hourly | `order.tasks.complete_paid_delivered_orders`: DELIVERED and paid → COMPLETED for what the carrier poll and the COD reconcile did not advance inline |
 | `reconcile-pending-refunds` | `tenant.tasks.fanout_reconcile_pending_refunds` | every store, suspended too | hourly | `order.tasks.reconcile_pending_refunds`: asks the provider about every refund attempt `PENDING` past `REFUND_RECONCILE_AFTER_MINUTES` and settles or declines only on an unambiguous answer (`src/order/refunds/refund_reconciliation.py`; see [Order lifecycle](/dev/flows/order-lifecycle#unknown-outcomes)) |
