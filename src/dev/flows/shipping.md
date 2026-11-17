@@ -998,9 +998,11 @@ and `.../nearest`.
 BoxNow refuses a second creation for one `orderNumber` (the order id) with
 P410, so a P410 means BoxNow already holds a request under that number:
 either an earlier attempt reached it and its answer was lost (the HTTP
-layer never re-sends a POST, see the one retry rule above, so this is a task
-retry or a worker that died before saving), or a parcel canceled before a re-issue. Only a live `new`
-parcel is ever taken over, so the re-issue case still alerts. Every decision
+layer re-sends a POST only when it never connected, never once it may have
+reached BoxNow, see the one retry rule above, so this is a task retry or a
+worker that died before saving), or a parcel canceled before a re-issue.
+Only a live `new` parcel is ever taken over, so the re-issue case still
+alerts. Every decision
 below looks the order up with `GET /api/v1/parcels?orderNumber=`, once per
 payment mode and over every page, and makes no BoxNow call inside a
 transaction. The full rules are in the
