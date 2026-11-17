@@ -281,12 +281,24 @@ courier for every canceled order whose flag is older than
 shipment (`CarrierBusyError`: a cancel in flight, a creation still settling) has
 given no answer, so nothing is recorded and the flag stays for a later run. The
 admin cancel action says how long that can take (`shipment_cancel_wait_minutes`).
+A courier that gives no answer (`CarrierUnavailableError`: unreachable, timed
+out, HTTP 5xx, an auth-layer rejection, missing credentials) has not answered
+either. The flag stays, the attempt is counted in
+`metadata["shipment_cancel_unanswered"]` (`since`, `attempts`, `last_error`),
+and later sweep runs ask again until `ORDER_SHIPMENT_CANCEL_RETRY_HOURS`
+(env, default 24; 0 asks once) after the cancel. After that, the last failure
+is recorded like a refusal, below. Staff are told at once, in one history note
+and the admin action's warning, that the parcel is still live and can be
+collected meanwhile, so they call the courier if it must not ship. In a run, a
+courier that gave no answer is not asked about its other orders (they wait for
+a later run), so an outage costs one timeout per courier per run. The run's limit counts courier calls, not
+orders looked at, so one courier's backlog never holds up another's cancels.
 The customer cancel is unchanged: it asks first, as above. A
 dead-shipment cancel does not ask: the shipment is already canceled
 ([Shipping](/dev/flows/shipping)). A customer cancel, which already asked, writes the
 `shipment_cancel` breadcrumb on the metadata before the save so the
-cascade skips. A carrier refusal never stops the cancel: it
-is logged, kept in `metadata["cancellation"]["shipment_cancel"]["error"]`,
+cascade skips. A carrier refusal (a plain `CarrierError`) is the answer at
+once and never stops the cancel: it is logged, kept in `metadata["cancellation"]["shipment_cancel"]["error"]`,
 left as a staff-only `OrderHistory` NOTE (the order is canceled but the
 parcel may still be delivered), and the admin **Cancel selected orders and
 restore stock** action shows it as an error message.
