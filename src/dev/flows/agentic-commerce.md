@@ -485,7 +485,7 @@ severity is one the spec requires of `requires_escalation`:
 |---|---|---|
 | Being processed by the provider | the order's page | `payment_processing`, `requires_buyer_review`: never pay again |
 | A charge that did not match the total waits for the store (`paymentAwaitsReview`) | the order's page | `payment_in_review`, `requires_buyer_review`: never pay again |
-| Time to pay ran out | the order's page | `payment_link_expired`, `requires_buyer_review`: the shopper owes nothing; the store cancels it by `expires_at` when its sweep will decide it (a store whose sweep is off is promised no cancel) |
+| Time to pay ran out | the order's page | `payment_link_expired`, `requires_buyer_review`: a payment made just before then may still be confirmed; otherwise the shopper owes nothing, and the store cancels it by `expires_at` when its sweep will decide it (a store whose sweep is off is promised no cancel) |
 | First link could not be created | the order's page | `payment_link_unavailable`, `recoverable`: `complete_checkout` tries again |
 | Django holds no payment open for it (no hold) | the order's page | `payment_with_store`, `requires_buyer_review` |
 | Last attempt failed, link still payable | the PSP's page | `payment_failed`, `requires_buyer_input`: Django lets the buyer retry there |
@@ -496,10 +496,12 @@ passed or where the checkout tells the buyer not to pay
 (`checkout.Flow.ResumePayment` reads the order: `ErrPaymentAwaitsStore`).
 Django's `payment_window_expired` and `order_not_payable` are final for the
 order (`checkout.ErrPaymentWindowClosed`, UCP `checkout_closed`). A
-canceled checkout never says "nothing was charged", only that the shopper owes
-nothing: Django settles any unconfirmed payment as canceled with its order. The checkout's `expires_at` is the order's
-`paymentDecidedBy`, when Django's sweep will have decided it, or the session's
-end when nothing will.
+canceled checkout never says "nothing was charged": it says the shopper owes
+nothing, since Django settles any unconfirmed payment as canceled with its
+order, or, for a payment that landed after the cancel, that the store refunds
+it. The checkout's `expires_at` is raised to the order's `paymentDecidedBy`,
+when Django's sweep will have decided it, or to the session's end when nothing
+will, and never moves earlier than a value an earlier response published.
 
 `internal/ucp/handler.go: paymentHandlers` therefore advertises only pay-way
 codes with a **modelled instrument** — today that is
