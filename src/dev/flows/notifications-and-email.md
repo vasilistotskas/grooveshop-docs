@@ -151,16 +151,19 @@ backoff, fetching a fresh ticket each time. A `BroadcastChannel` keeps
 tabs in step.
 
 **The heartbeat.** The plugin sends `ping` every 30 seconds and closes a
-socket that does not answer within 5 seconds, which is how a connection a
-proxy dropped without a word is found; the reconnect above then opens a new
-one. The consumer's `pong` is the plugin's `responseMessage`, so VueUse's
+socket that sends nothing back within 5 seconds of a ping (any frame
+counts, a notification too), which is how a connection a proxy dropped
+without a word is found; the reconnect above then opens a new one. The
+consumer's `pong` is the plugin's `responseMessage`, so VueUse's
 `useWebSocket` takes it as the answer and never hands it to the
-notification handler, which reads JSON only. The two sides share the strings
-and the timing (`HEARTBEAT_PING` and `HEARTBEAT_PONG` in the consumer, the
-same names in the plugin), so a change to one changes both. A consumer that
-does not answer makes every signed-in tab reconnect about every 36 seconds;
-a client that does not treat `pong` as the answer parses it as a
-notification and logs `ws:parse` every 30 seconds.
+notification handler, which reads JSON only. The two sides share the
+strings (`HEARTBEAT_PING` and `HEARTBEAT_PONG` in the consumer, the same
+names in the plugin), so a change to one changes both; the interval and
+the timeout are the plugin's alone (`HEARTBEAT_INTERVAL_MS`,
+`HEARTBEAT_PONG_TIMEOUT_MS`). A consumer that does not answer makes every
+signed-in tab reconnect about every 36 seconds; a client that does not
+treat `pong` as the answer parses it as a notification and logs
+`ws:parse` every 30 seconds.
 
 ### The email system
 
