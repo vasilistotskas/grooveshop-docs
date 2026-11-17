@@ -77,7 +77,7 @@ The header holds **Return and refund** while money can still be refunded, **Rest
 
 If the courier does not cancel the parcel (for example, it is already on a pickup list), the order is cancelled anyway. A red message tells you so: arrange the parcel's return with the courier.
 
-If the courier gives no answer at all (its system is down or too slow), the order is cancelled anyway and a yellow message tells you so. The parcel is still live and the courier may still collect it, so call the courier if it must not ship. Meanwhile the cancel is sent again every 15 minutes for up to 24 hours. If the courier still never answers, a note in the order's history says so, and the parcel's return is yours to arrange.
+If the courier gives no answer at all (its system is down or too slow), the order is cancelled anyway and a yellow message tells you so. The parcel is still live and the courier may still collect it, so call the courier if it must not ship. Meanwhile a check that runs every 15 minutes sends the cancel again, for up to 24 hours after you cancelled (both are the platform's defaults). If the courier still never answers, a note in the order's history says so, and the parcel's return is yours to arrange.
 
 If the refund does not go through, the order stays cancelled and the money stays with you. See [Refunds and disputes](/admin/sales/refunds-and-disputes#an-order-was-cancelled-but-is-still-paid).
 
