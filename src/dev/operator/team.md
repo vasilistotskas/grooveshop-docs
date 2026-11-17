@@ -112,7 +112,7 @@ The app sets come from `src/tenant/role_scopes.py` and are **derived, not
 enumerated**:
 
 - `store_app_labels()` = the `TENANT_APPS`-only labels, plus
-  `STORE_SHARED_APP_LABELS` (`user`, `usersessions`, `extra_settings` —
+  `STORE_SHARED_APP_LABELS` (`user`, `extra_settings`, `emails` —
   dual-listed apps whose tenant copy wins on the search path, so on a
   store host those pages show that store's own rows), minus anything in
   `PLATFORM_ONLY_APP_LABELS`.
