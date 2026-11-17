@@ -552,7 +552,7 @@ two filters, read-only fields on the order's Additional Information tab
 and the store dashboard's "Where orders come from" card
 (`src/admin/dashboard/store/queries.py: order_sources`, the top five sources
 plus "Other" for the selected period). The per-field reference
-is section 3.4 of [Order system: what an order records when it is created](/dev/django/reference/order/creation-records#_3-4-acquisition-source-src-order-attribution-py).
+is section 3.4 of [Order system: what an order records when it is created](/dev/django/reference/order/creation-records#_3-4-acquisition-source-src-order-checkout-attribution-py).
 
 ## Invariants
 

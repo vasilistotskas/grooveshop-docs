@@ -49,10 +49,16 @@ pnpm install
 pnpm dev              # dev server on :3000
 pnpm build && pnpm start
 pnpm lint:ci          # what CI runs
-pnpm typecheck        # nuxt typecheck, the required gate
+pnpm typecheck        # nuxt typecheck, the required gate (8 GB heap, see below)
 pnpm test             # vitest, all projects
 pnpm generate:schema && pnpm openapi-ts && pnpm sync:schema   # regenerate the API contract
 ```
+
+`pnpm typecheck` needs a larger Node heap than the default (`vue-tsc` holds the
+whole app's program in one V8 heap). Every script pnpm runs gets
+`--max-old-space-size=8192` from `nodeOptions` in `pnpm-workspace.yaml`, the same
+on a developer's machine, in CI and in the image build; `${NODE_OPTIONS:- }` keeps
+what the environment already sets. It is not a CI-only variable.
 
 ## Status of this section
 

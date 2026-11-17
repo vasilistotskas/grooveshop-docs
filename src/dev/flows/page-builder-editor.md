@@ -313,11 +313,36 @@ warning when the document has been saved since. The editor warns
 
 ADMIN and OWNER publish from the top bar (`Builder/Publish`; STAFF see no
 button, and a dot on it says something has changes). The dialog lists the
-page and the section groups drawn around it, each with whether it has changes
+page, the section groups drawn around it and, last, the store's theme
+(`BUILDER_THEME_DOCUMENT`, which every page draws with; `keys` in
+`Builder/Publish.vue`), each with whether it has changes
 to publish: a draft Django holds as unpublished (`hasUnpublishedChanges`) or a
 change not saved yet. Those with changes are picked to begin with; one without
 cannot be picked. An optional note goes with the release (as long as the
-generated `zPublishWriteRequest` allows).
+generated `zPublishWriteRequest` allows). The theme goes out with the rest, now
+or at a time, and the list of publishes to come names it:
+`documentLabel` (`app/composables/useBuilderLabels.ts`, `documents.theme` in
+`app/builder/labels/{el,en}.json`) calls it "Theme: colours, corners, fonts".
+
+**One naming function.** `documentLabel(key)` is the only way a document is named: the
+theme and a section group as the outline names them (`groups.<name>`, for a key
+`isBuilderEditorGroup` accepts, never by its path), a page type by its name, a page the
+store made by its address. The Publish list, the refusals, the publishes to come
+and the failed ones, the presence notice, the share links list, the media
+picker's "used by" and the save-conflict dialog all call it (the conflict dialog's title
+names the document: "{name} saved {document} in the meantime"; the theme saves
+with `If-Match` like a page, so a second save of it gets the same dialog). The
+list of what the editor works on is one function too, `documentsWith(key)` in
+`useBuilderEditorStore`: the page, the section groups as the outline lists them,
+then the theme. `open()`, the Publish list, the presence heartbeat and the version
+history's picker read it, so they cannot disagree about what "the open documents" are.
+
+After a release that holds the theme Django purges the `builder` surface
+(`invalidated_by=("builder.BuilderRelease",)`, `src/core/cache/surfaces.py`), which
+is registered with `invalidates_tenant_config`, and moves the store's cache
+generation (`tenant.signals`), so every cached page of the store is re-keyed and
+shows the new look, and the store's emails read the new primary colour. Nothing
+else is needed from the storefront.
 
 Publishing first saves the picked documents and waits for those saves
 (`useBuilderAutosaveStore().settle`): Django releases the drafts it holds, so a
@@ -330,7 +355,7 @@ none of them:
 | Answer | What the editor does |
 |---|---|
 | 201 | Reads the list and each published document's envelope again (`useBuilderEditorStore().refresh`), closes the dialog and says which release went live. |
-| 400 `invalid_document` | Lists every problem by document (the generated `zBuilderDocumentInvalidError`, the one schema the autosave reads too: Django's OpenAPI types this body only as an error), each with "Show", which opens its document and selects the node its pointer names. |
+| 400 `invalid_document` | Lists every problem by document (the generated `zBuilderDocumentInvalidError`, the one schema the autosave reads too: Django's OpenAPI types this body only as an error), each with "Show", which opens its document and selects the node its pointer names. A theme problem (`insufficient_contrast`, from a failing rule of severity `error`: Django refuses those alone) has no node: its Show opens the theme panel on the rule, see below. |
 | any other | Says the publish did not happen, with Django's reason (`useApiError`). |
 
 Before that, as the dialog opens and whenever the picks change, the editor
@@ -340,6 +365,28 @@ nothing): `{ ok, changed, problems }`. Its problems are listed like a refusal,
 and Publish stays disabled while there are any; a check overtaken by a newer
 one is dropped. Django answers `nothing_to_publish` (with no `document`) when
 the picks equal the live release.
+
+**The theme's contrast at publish.** A problem of the theme document is showable
+(`showable`): `show` calls `showThemeRule(problem.params.rule)`, which opens the
+panel (`openPanel('theme')`), closes the dialog and gives the focus to the rule's
+row, `theme-rule-<id>` (`Builder/ThemePanel.vue`, each row `tabindex="-1"`). The dialog
+gives the focus back to the Publish button as it closes, so
+`onCloseAutoFocus` (the dialog's `content`) prevents that and focuses the rule
+instead. While the theme is picked, `themeWarnings` evaluates the working copy
+against the design's rules (`evaluateContrastRules`, `themeContrastRulesFor`,
+the panel's own function) and shows a `UAlert` with the count and, under it, one row per
+failing rule of severity `warning`: its name (`contrastRuleLabel(rule)`) and its
+own Show (`showThemeRule(rule.id)`). It never disables Publish: Django
+refuses only error rules (`check_before_release`, `src/builder/validation.py`);
+a warning is the editor's.
+
+The rule names live in the design's catalogue (`RULE_TEXTS` in
+`shared/builder/documentRoots.ts`: each rule's `label` in every language, its scheme
+added), read by the theme panel's rows and by this dialog through
+`useBuilderLabels().contrastRuleLabel(rule)`. Django's refusal names the rule by the
+same label ("The colour pair “Text, light” has a contrast of …", `insufficient_contrast`
+in `src/builder/errors.py`, its `label` params from the catalogue in
+`check_before_release`).
 
 **At a set time.** "When" offers now or a time (`UInputDate`, to the minute,
 none in the past). The time is the staff member's wall clock in their own
@@ -447,6 +494,11 @@ strings are its components' `<i18n>` blocks.
 
 ### 13. Version history
 
+The panel shows the history of one of the documents the editor works on
+(`documentsWith`): the page being edited unless a section group or the theme is
+picked; opening another page shows that page's again. A theme version whose
+settings this editor cannot read is not offered to put back (`unreadable`).
+
 The top bar's history panel (`Builder/VersionHistory.vue`, store
 `useBuilderHistoryStore`) lists what Django keeps of the open document, newest
 first, a page at a time (`BUILDER_VERSIONS_PAGE_SIZE`), grouped by calendar day
@@ -524,12 +576,14 @@ The address is `/_builder/preview/<token>?page=<slug>`
 ### 15. Who else is editing
 
 `Builder/PresenceNotice.vue` (store `useBuilderPresenceStore`) tells Django
-which documents the editor has open, the page and its section groups, at once,
+which documents the editor has open, the page, its section groups and the theme
+(`documentsWith`), at once,
 when they change, and every `BUILDER_PRESENCE_HEARTBEAT_MS` (a third of
 Django's `BUILDER_PRESENCE_TTL_SECONDS`, 45 s by default), through
 `POST /api/builder/presence`. The answer lists the other staff on each
 document; the notice (`role="status"`, so it is announced) names them per
-document. Leaving (`pagehide`, unmounting) lets go of the documents with
+document with `documentLabel`, so a group is named as the outline names it, not by
+its path. Leaving (`pagehide`, unmounting) lets go of the documents with
 `DELETE /api/builder/presence`; a person whose beats stop lapses on their own.
 Every staff role beats, because looking is a reason to be seen.
 
@@ -550,7 +604,24 @@ Every change goes through the editor store, so it is undone, saved and drawn in
 the preview like any other. The panel lists the contrast each pair of the store's
 design must keep (`themeContrastRulesFor`), with a Fix on every rule that fails
 (`fixContrast`). On Groove Volt the neutral colour paints borders and badges, not
-text, so only the action and accent colours have rules.
+text, so only the action and accent colours have rules. The theme is published
+from the Publish dialog like any other document (see Publishing): it is listed last
+and picked when it has unpublished or unsaved changes. Its versions are read and
+restored in the history panel like any other document's (section 13).
+
+Two rules are **warnings** about the accent as large text on the muted ground, `accent-muted-light`
+and `accent-muted-dark` (3:1, large text, WCAG SC 1.4.3), labelled "Accent on the
+muted ground, light / dark" in the panel and the Publish dialog (`RULE_TEXTS` in
+`shared/builder/documentRoots.ts`). A band draws the
+accent as large text there: the newsletter band's accent heading and the showcase
+hero's accent line. They hold in both groups of designs; the muted ground is a
+design token on Groove Volt (`VOLT_MUTED_BACKGROUND`) and, for a store with its own
+templates, white in the light scheme and the store's neutral 900 in the dark
+(`MUTED_BACKGROUND`), both in `shared/builder/documentRoots.ts`. The text paints
+`--ui-secondary-text`, never closer to the ground than the accent, so a rule
+checks the accent itself. The panel lists a warning and offers its Fix; the Publish dialog shows the
+failing ones with a count while the theme is picked, and they never block
+(see Publishing).
 
 ### 17. Data settings
 
@@ -560,6 +631,14 @@ A block's lists and records are data settings (`builderField.query` and
 capped by the field. It writes the whole descriptor, which is closed, so a key
 left out is a key the list does not have. A hand-picked list and a single record
 use `BuilderRecordList` and `BuilderRecordPicker`.
+
+A product rule also carries the **Stock** select (`QueryField.vue`, product source,
+`filter` mode only): "As they come" (`stock.any`, no value) or one of
+`PRODUCT_STOCK_MODES`, `inStockFirst` and `inStockOnly`. "As they come" is the
+absence of the `stock` key, so the select takes
+the key out of the descriptor (`builderQueryPatch` drops a key set to `undefined`)
+and an untouched list equals a reset one. A hand-picked list has no select. What
+the key does downstream is in [Page builder foundation](/dev/flows/page-builder#9-product-stock-colour-schemes-and-design-parts).
 
 The editor stores only the descriptor or the id. The page route reads the data
 (`resolveBuilderData`), and the canvas keeps a node the published page would hide

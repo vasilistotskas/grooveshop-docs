@@ -19,7 +19,7 @@ Your customers tap the heart on a product to keep it in their favourites. Here y
 
 Search finds by customer email, product name or SKU (product code). In the filters you can pick a customer, a product, a product category or a date range.
 
-Only customers with an account have favourites. A visitor who taps the heart is asked to sign in.
+Only customers with an account have favourites. A visitor who taps the heart is asked to sign in. A signed-in customer sees their favourites as filled hearts on every product card and product page, including the cards in the home page's sections and the suggestions on a product page.
 
 ## Tasks
 
