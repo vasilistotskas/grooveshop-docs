@@ -479,7 +479,7 @@ Pages and menus come from the store's published release.
   as `navigationItems` shapes. `useNavigation` reads them. A menu that cannot be
   read is empty, never the built-in menu; the built-in menu stays only for a slot
   the store never configured.
-- **Links.** `server/utils/builderLinks.ts: resolveLinks` turns each link setting
+- **Links.** `shared/builder/links.ts: resolveLinks` turns each link setting
   into the path (or URL) it stands for: an `href` or a `route` as it is; a record
   as its current address (`shared/utils/entityPaths.ts`, the one module that
   writes these routes, also used by `useUrls` and the menus). The slugs of the
@@ -753,7 +753,8 @@ from `selectedImageId` (`selectedIndex`) and does the same.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useAuthLinks.ts`, `app/utils/auth.ts`, `app/types/global.d.ts`, `app/utils/route.ts` | `authLink`, `returnPath`, `returnTarget`, `signInReturn`, `isAuthPagePath` |
 | `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/navigation-menu-hydration.spec.ts`, `auth-links-keep-next.spec.ts`, `product-page-targets.spec.ts` | Source rules for the menus' hydration events, the auth links and the 44px targets |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/menuDropdown.ts`, `app/composables/useMenuPanels.ts`, `app/composables/useCategoryMenu.ts`, `app/composables/useBlogCategoryMenu.ts`, `app/composables/useBottomNavItems.ts`, `app/assets/css/main.css` | The header's dropdown panels, the menus' category reads, the tab bar's entries, the dock's custom properties |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/builderLinks.ts` | `collectLinkRefs`, `resolveLinks`, `readLinkTargets` |
+| `grooveshop-storefront-ui-node-nuxt/shared/builder/links.ts` | `collectLinkRefs`, `resolveLinks` |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderLinks.ts` | `readLinkTargets` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/builderTargets.ts` | The published pages and content pages a link or a menu may name |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/pages/[pageKey].get.ts` | `GET /api/builder/pages/<pageKey>`: a published page, links resolved |
 | `grooveshop-storefront-ui-node-nuxt/server/api/builder/navigation.get.ts` | `GET /api/builder/navigation`: the menus |
