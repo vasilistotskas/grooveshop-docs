@@ -483,16 +483,21 @@ severity is one the spec requires of `requires_escalation`:
 
 | Order's payment | `continue_url` | Message |
 |---|---|---|
-| Link payable (hold ahead), payment pending | the PSP's page | `payment_required`, `requires_buyer_input`, naming when the link stops being payable |
-| Link payable, last attempt failed | the PSP's page | `payment_failed`, `requires_buyer_input`: Django lets the buyer retry there |
 | Being processed by the provider | the order's page | `payment_processing`, `requires_buyer_review`: never pay again |
-| `paymentDecidedBy` null otherwise | the order's page | `payment_in_review`, `requires_buyer_review`: a charge that did not match waits for the store, or the sweep is off; Django does not yet tell them apart (gateway #187, Django #739) |
+| A charge that did not match the total waits for the store (`paymentAwaitsReview`) | the order's page | `payment_in_review`, `requires_buyer_review`: never pay again |
 | Time to pay ran out | the order's page | `payment_link_expired`, `requires_buyer_review`: the store cancels it and the shopper owes nothing |
 | First link could not be created | the order's page | `payment_link_unavailable`, `recoverable`: `complete_checkout` tries again |
+| Django holds no payment open for it (no hold) | the order's page | `payment_with_store`, `requires_buyer_review` |
+| Last attempt failed, link still payable | the PSP's page | `payment_failed`, `requires_buyer_input`: Django lets the buyer retry there |
+| Link payable | the PSP's page | `payment_required`, `requires_buyer_input`, naming when the link stops being payable |
 
-No link is minted after the first: Django's `payment_window_expired` and
-`order_not_payable` are final for the order (`checkout.ErrPaymentWindowClosed`,
-UCP `checkout_closed`). The checkout's `expires_at` is the order's
+No link is minted after the first, nor the first once the order's hold has
+passed or where the checkout tells the buyer not to pay
+(`checkout.Flow.ResumePayment` reads the order: `ErrPaymentAwaitsStore`).
+Django's `payment_window_expired` and `order_not_payable` are final for the
+order (`checkout.ErrPaymentWindowClosed`, UCP `checkout_closed`). A
+canceled checkout never says "nothing was charged", only that the shopper owes
+nothing: Django settles any unconfirmed payment as canceled with its order. The checkout's `expires_at` is the order's
 `paymentDecidedBy`, when Django's sweep will have decided it, or the session's
 end when nothing will.
 
