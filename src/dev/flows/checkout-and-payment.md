@@ -9,7 +9,7 @@ There is exactly one order-creation endpoint and two ways through it.
 Which one runs is decided by two facts about the chosen payment method:
 what its **settlement** is (`src/pay_way/enum/settlement.py: PaySettlement`)
 and whether its **provider** can mint a client-confirmed intent
-(`src/order/payment.py: PaymentProvider.supports_payment_intent`). Never by a
+(`src/order/payments/payment.py: PaymentProvider.supports_payment_intent`). Never by a
 provider name. Intent-first means the money is verified before the order
 row exists; order-first means the order exists before any money moves.
 Everything else on this page follows from that split.
@@ -95,7 +95,7 @@ recorded on the order cannot drift; the detail lives in
 
 `POST /api/v1/cart/reserve-stock` (`src/cart/views/cart.py: reserve_stock`)
 makes the cart's holds exactly its current quantities, through
-`src/order/stock.py: StockManager.reserve_cart_stock`. One transaction locks the
+`src/order/inventory/stock.py: StockManager.reserve_cart_stock`. One transaction locks the
 `Cart` row first (`select_for_update`, the lock checkout takes first), then
 every product the old or the new set touches in pk order, releases **all**
 of the cart's unconsumed holds (expired ones included, each with its
@@ -291,15 +291,17 @@ sweep cancels.
 product the order touches (cart lines, the session's reservations,
 free-gift products) in one statement ordered by pk
 (`OrderService._lock_order_products` calling
-`src/order/stock.py: StockManager.lock_products`), before the first
+`src/order/inventory/stock.py: StockManager.lock_products`), before the first
 `OrderItem` insert; the cart-item query locks only the cart lines
 (`of=("self",)`). Two carts holding the same products in different line
 orders used to lock them in opposite orders, and PostgreSQL broke the
 cycle by aborting one checkout. The lock must precede the inserts because
 each insert takes `FOR KEY SHARE` on its product, which conflicts with
 `FOR UPDATE`. `cancel_order` and the expired-reservation sweep lock through
-the same helper, the bulk discount admin actions in `src/product/admin.py`
-lock in pk order, and the guest-to-user cart merge (`src/cart/services.py`)
+the same helper, the bulk discount lock in pk order
+(`src/product/services.py: ProductService.set_discount`, which the admin's
+discount and clear-discount actions in `src/product/admin/product.py` call;
+it saves the products one by one, never with `update()`), and the guest-to-user cart merge (`src/cart/services.py`)
 no longer locks products through its join.
 
 Before it creates anything, the order-first path refuses an online-settled
@@ -329,7 +331,7 @@ error, not a silent full charge.
 
 **Viva Wallet — primary, hosted redirect.** The order is created first,
 then `POST /api/v1/order/{id}/create_checkout_session` mints a Viva order
-code (`src/order/payment.py: VivaWalletPaymentProvider.create_checkout_session`)
+code (`src/order/payments/payment.py: VivaWalletPaymentProvider.create_checkout_session`)
 and the storefront sets `window.location.href` to the hosted page
 (`app/components/VivaWalletCheckout.vue`). Every issued code is appended
 to `metadata["viva_order_codes"]` — a shopper can pay on an older
@@ -355,7 +357,14 @@ bare `X-Forwarded-For` entry. Idempotency is a database row, not metadata:
 Event 1796 checks `StatusId == "F"`, then verifies the transaction
 belongs to this order, then currency, then amount within one cent. A
 verified charge whose amount disagrees stamps `AMOUNT_MISMATCH_FLAG` on
-the order and refuses to mark it paid. A charge that passes every check
+the order and refuses to mark it paid. From then on the order detail serves
+`paymentAwaitsReview: true` (`src/order/payments/payment_hold.py:
+awaits_payment_review`, `src/order/serializers/order.py:
+OrderDetailSerializer.payment_awaits_review`) while the order is still
+undecided, that is PENDING with a payment that is not final (COMPLETED,
+REFUNDED, PARTIALLY_REFUNDED and CANCELED are final). The flag is never
+cleared: an order the store marks paid, cancels or refunds leaves the set
+through its own state. A charge that passes every check
 is recorded on the payment ledger as a CHARGE row keyed on the
 transaction id, before the canceled-order and settled guards, so a second
 payment under another of the order's codes is a second row. On success it
@@ -368,7 +377,7 @@ Transaction (`_verify_viva_reversal`: one of the order's codes, status `F`,
 a refund or void type, a negative amount), and it is recorded as a REFUND
 row against the order's CHARGE row that its `ParentId` names. The payment
 status, PARTIALLY_REFUNDED or REFUNDED, follows from the ledger's sums
-(`src/order/payment_ledger.py: PaymentLedger.refund_status`). The handler
+(`src/order/payments/payment_ledger.py: PaymentLedger.refund_status`). The handler
 records its real outcome on `VivaWebhookEvent.outcome`, so a refused event
 reads `skipped`, not `processed`. Refunds and the ledger are covered in
 [Order lifecycle](/dev/flows/order-lifecycle).
@@ -636,8 +645,14 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 - **Shopper pays on a stale Viva tab after the total moved.** The
   webhook verifies a real charge whose amount disagrees, so it refuses
   to mark the order paid and stamps `AMOUNT_MISMATCH_FLAG`.
-  `auto_cancel_stuck_pending_orders` then skips the order permanently —
-  it needs a human.
+  `auto_cancel_stuck_pending_orders` selects through `swept_orders()`,
+  which leaves out `payment_review_orders()` (flagged and still
+  undecided), so it never cancels the order — it needs a human. The order
+  detail serves `paymentAwaitsReview: true` and a null `paymentDecidedBy`,
+  which tells it apart from an order whose sweep is switched off (null
+  `paymentDecidedBy`, `paymentAwaitsReview: false`): a client must not
+  offer a new payment link for the first. Once the store
+  settles, cancels or refunds the order, it leaves the set.
 - **Viva webhook for a suspended tenant.** The handler answers 503 so
   Viva redelivers. Acknowledging would drop a paid order permanently,
   and unlike BoxNow there is no polling job to rescue it.
@@ -681,8 +696,10 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
 | `grooveshop-django-api/src/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
 | `grooveshop-django-api/src/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
-| `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
-| `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region |
+| `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
+| `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region; `OrderDetailSerializer.payment_awaits_review` |
+| `grooveshop-django-api/src/order/payments/payment_hold.py` | `payment_review_orders`, `awaits_payment_review`, `swept_orders`, `decided_by` |
+| `grooveshop-django-api/src/product/services.py` | `ProductService.set_discount` and `clear_discount`: the bulk discount, saved in pk order under row locks |
 | `grooveshop-django-api/src/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
 | `grooveshop-django-api/src/shipping/services.py` | `quote`, `assert_available`, `available_options` |
 | `grooveshop-django-api/src/country/serializers.py` | `phone_metadata` and `has_regions` fields |
@@ -690,7 +707,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/src/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value` |
-| `grooveshop-django-api/src/order/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
+| `grooveshop-django-api/src/order/payments/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
 | `grooveshop-django-api/src/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/src/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
@@ -699,7 +716,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/order/enum/attribution.py` | `OrderSourceType` |
 | `grooveshop-django-api/src/order/serializers/order.py` | `OrderAttributionInputSerializer` (write), `OrderAttributionSerializer` (read) |
 | `grooveshop-django-api/src/order/filters.py` | `source` and `sourceType` order filters |
-| `grooveshop-django-api/src/order/stock.py` | `StockManager.reserve_cart_stock` (a cart's holds replaced under the cart lock), convert, decrement, increment, cleanup, `lock_products` |
+| `grooveshop-django-api/src/order/inventory/stock.py` | `StockManager.reserve_cart_stock` (a cart's holds replaced under the cart lock), convert, decrement, increment, cleanup, `lock_products` |
 | `grooveshop-django-api/src/pay_way/services.py` | `is_provider_configured`, `filter_by_carrier`, `filter_by_shipping_kind`, `process_payment` |
 | `grooveshop-django-api/src/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
 | `grooveshop-django-api/src/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |

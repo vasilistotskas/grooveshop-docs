@@ -309,7 +309,8 @@ anonymiser deletes the table: a link is a credential.
 | `grooveshop-django-api/src/builder/link_picker.py` | `link-search` and `link-labels` |
 | `grooveshop-django-api/src/builder/presence.py` | Who else has a document open (Redis) |
 | `grooveshop-django-api/src/builder/preview_links.py` | Share-preview links: create, revoke, open, sweep |
-| `grooveshop-django-api/src/builder/views.py` | Staff and public routes |
+| `grooveshop-django-api/src/builder/views/` | Staff and public routes, one module per resource: `documents`, `publish`, `schedules`, `links`, `previews`, `presence`, `features` and `public`, on the `StaffView` and `StaffListView` bases in `base`; `src/builder/urls.py` imports each view from its module |
+| `grooveshop-django-api/src/builder/schema.py` | The OpenAPI fragments the views share: tags, the locale and `If-Match` parameters, the error-body maps |
 | `grooveshop-django-api/src/builder/rendering.py` | Parser and renderer that leave document keys alone |
 | `grooveshop-django-api/src/builder/scheduling.py` | Schedule, move, cancel, the sweep, acknowledging a failure |
 | `grooveshop-django-api/src/builder/tasks.py` | `run_due_publishes`, the per-store sweep; `purge_expired_preview_links` |

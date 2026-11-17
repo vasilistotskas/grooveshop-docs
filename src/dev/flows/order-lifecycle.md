@@ -332,7 +332,7 @@ and §7.3 in [the payment ledger](/dev/django/reference/order/payment-ledger).
 record of money a provider or a courier moved for an order. It is
 append-only, like `GiftCardTransaction`: a row is never updated, and the
 foreign key to the order is `PROTECT`. Rows are written only through
-`src/order/payment_ledger.py: PaymentLedger`, and every writer holds the order
+`src/order/payments/payment_ledger.py: PaymentLedger`, and every writer holds the order
 row lock.
 
 | Column | Meaning |
@@ -487,7 +487,7 @@ sums do. `succeeded` and `pending` are recorded
 refusal, which records nothing and leaves Stripe's refund id and status in
 the NOTE (`Refund via <provider> was not processed: …`). Stripe amounts
 are integers in the currency's own smallest unit and go through
-`src/order/payment.py: money_from_minor_units`.
+`src/order/payments/payment.py: money_from_minor_units`.
 
 **Viva 1797.** The event's `TransactionId` is the refund, a transaction
 of its own; `ParentId` names the payment it reverses.
@@ -674,7 +674,7 @@ the allocation):
    `tenant.tasks.fanout_reconcile_pending_refunds` (suspended stores
    included) → `order.tasks.reconcile_pending_refunds` →
    `src/order/refunds/refund_reconciliation.py: reconcile_overdue`, which asks
-   `PaymentProvider.find_refunds` for each overdue attempt (`src/order/payment.py`).
+   `PaymentProvider.find_refunds` for each overdue attempt (`src/order/payments/payment.py`).
    **Stripe** lists the PaymentIntent's refunds (the list call filters by
    `payment_intent`, not by metadata) and keeps the one whose
    `metadata.refund_attempt` is the attempt's `provider_key`: `succeeded`
@@ -910,7 +910,7 @@ edited. So no surface edits one:
 
 ### An order paid twice
 
-`src/order/payment_ledger.py: PaymentLedger.sync_overcharge` runs for every new
+`src/order/payments/payment_ledger.py: PaymentLedger.sync_overcharge` runs for every new
 ledger row, under the order lock. It sets `Order.overcharged_at` while
 `PaymentLedger.overcharge_held` is positive: what the ledger holds (captured,
 less refunded, less charged back) above what the order is still for
@@ -956,7 +956,7 @@ restricted to online settlement:
 | Bucket | Selector | Window |
 |---|---|---|
 | Failed payment | `status=PENDING`, `payment_status=FAILED`, `updated_at` older than the cutoff. No settlement filter | `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`, default 30 |
-| Never completed | `status=PENDING`, `payment_status=PENDING`, `pay_way__settlement=online`, and the payment hold over (`src/order/payment_hold.py: expired_unpaid_online_orders`) | `Order.payment_hold_expires_at` (else `created_at` plus `ORDER_ONLINE_PAYMENT_HOLD_MINUTES`, default 30) plus `ORDER_ONLINE_PAYMENT_GRACE_MINUTES`, default 5 |
+| Never completed | `status=PENDING`, `payment_status=PENDING`, `pay_way__settlement=online`, and the payment hold over (`src/order/payments/payment_hold.py: expired_unpaid_online_orders`) | `Order.payment_hold_expires_at` (else `created_at` plus `ORDER_ONLINE_PAYMENT_HOLD_MINUTES`, default 30) plus `ORDER_ONLINE_PAYMENT_GRACE_MINUTES`, default 5 |
 
 Note which timestamp each bucket reads: the failed bucket measures the
 grace window from `updated_at`, so it runs from the failure, while the
@@ -982,9 +982,20 @@ bucket by its positive settlement filter, which also excludes orders
 whose `pay_way` is null; they legitimately sit PENDING until the carrier
 remits. The failed-payment bucket carries no such filter, but an offline
 order has nothing that can report a FAILED payment, so it does not select
-one in practice. Orders carrying `AMOUNT_MISMATCH_FLAG` are excluded from
-both buckets and logged — a charged customer must not be auto-cancelled
-without a refund.
+one in practice. Orders carrying `AMOUNT_MISMATCH_FLAG` that are still undecided
+(`payment_review_orders`: PENDING, payment not COMPLETED, REFUNDED,
+PARTIALLY_REFUNDED or CANCELED) are excluded from both buckets and listed
+in a warning — a charged customer must not be auto-cancelled without a
+refund. The flag is never cleared, so a flagged order the store has since
+marked paid, canceled or refunded is no longer excluded or listed. The sweep
+selects through `payment_hold.swept_orders`, the definition
+`paymentDecidedBy` on the order detail is computed from, so the two cannot
+drift. `paymentDecidedBy` is null when nothing will decide the order: it is
+not PENDING, the sweep never selects it (a flagged order, a
+collect-on-delivery order) or the sweep is switched off. The order detail
+also serves `paymentAwaitsReview` (`OrderDetailSerializer`), true exactly
+for a flagged, still undecided order, so a client tells a mismatched charge
+that waits for the store from an order whose sweep is off.
 
 Each cancel re-fetches under `select_for_update(skip_locked=True)`, so
 two beat workers cannot both close the same order, and delegates to
@@ -1222,7 +1233,7 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/order/enum/status.py` | `OrderStatus`, `PaymentStatus`, `SETTLED_PAYMENT_STATUSES`, `RETURN_HANDLING_STATUSES` |
-| `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `stored_value`, `stored_value_refundable`, `split_stored_value`, `refundable_value`, `refund_open`, `refund_status`, `held`, `excess_held`, `refundable_excess`, `overcharge_held`, `sync_overcharge`, `plan_refund`, `record_charge`, `record_cod_collection`, `record_refund`, `record_cod_refund`, `record_refund_reversal`, `settle_attempt`, `ensure_charge` |
+| `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger`: `captured`, `refunded`, `refundable`, `stored_value`, `stored_value_refundable`, `split_stored_value`, `refundable_value`, `refund_open`, `refund_status`, `held`, `excess_held`, `refundable_excess`, `overcharge_held`, `sync_overcharge`, `plan_refund`, `record_charge`, `record_cod_collection`, `record_refund`, `record_cod_refund`, `record_refund_reversal`, `settle_attempt`, `ensure_charge` |
 | `grooveshop-django-api/src/order/models/refund_attempt.py` | `RefundAttempt` (kinds `PROVIDER`, `STORED_VALUE`; `PENDING`, `SETTLED`, `DECLINED`; `reason_code`, `request_id`), `RefundReason`, `reconcile_after`, `live`, `overdue`, `stalled`, `with_provider_key`, `provider_key` |
 | `grooveshop-django-api/src/order/refunds/refund_lines.py` | `plan_pieces`, `held_values`, `covered_units`, `request_of`, `pending_request`: a refund by lines |
 | `grooveshop-django-api/src/order/migrations/0105_refund_reason_request_and_points.py` | `RefundAttempt.reason_code`, `request_id`, `CreditAllocation.points` |
@@ -1241,13 +1252,13 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/order/models/order.py` | `Order.save()` timestamp rules, `mark_as_paid`, `can_be_canceled`, `can_be_canceled_by_customer`, `awaits_online_payment`, `calculate_order_total_amount`, `AMOUNT_MISMATCH_FLAG` |
 | `grooveshop-django-api/src/order/managers/order.py` | `with_shipments`, `for_list`, `refund_owed`, `holding_stock_for_online_payment` |
 | `grooveshop-django-api/src/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `refund_order`, `_claim_refund`, `_allocate_claim`, `_allocate_lines_claim`, `_waiting_error`, `_reason_text`, `_attempts_to_resume`, `_pending_request_shares`, `unresumable_reason`, `_require_resumable`, `resumes_a_refund`, `_make_refund`, `book_share`, `_return_stored_value`, `RefundResult`, `_note_refund_declined`, `confirm_offline_payment`, `add_tracking_info` |
-| `grooveshop-django-api/src/order/payment.py` | `refund_payment` per provider (Stripe writes `metadata.refund_attempt`), `find_refunds` and `confirm_refund` per provider, `StripePaymentProvider.retrieve_refund`, `refund_attempt_key`, `_ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
+| `grooveshop-django-api/src/order/payments/payment.py` | `refund_payment` per provider (Stripe writes `metadata.refund_attempt`), `find_refunds` and `confirm_refund` per provider, `StripePaymentProvider.retrieve_refund`, `refund_attempt_key`, `_ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
 | `grooveshop-django-api/src/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_refund_made`, `handle_stripe_charge_refunded` (gift card purchases only), `handle_stripe_refund_failed` and every other domain receiver |
 | `grooveshop-django-api/src/order/signals/__init__.py` | The twelve order signals and the `order_refunded` contract |
 | `grooveshop-django-api/src/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email`, `generate_order_invoice` and `_set_receipt_deferred`, `reconcile_pending_refunds`, `allocate_credit_sources`, `finish_pending_shipment_cancels` |
 | `grooveshop-django-api/src/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
-| `grooveshop-django-api/src/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer` |
+| `grooveshop-django-api/src/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer`; `OrderDetailSerializer.payment_awaits_review` and `payment_decided_by` |
 | `grooveshop-django-api/src/order/views/item.py`, `src/order/urls.py` | `OrderItemViewSet`: read-only list and detail, and `restock` |
 | `grooveshop-django-api/src/product/models/product.py` | `Product.vat`: NOT NULL, `on_delete=PROTECT` |
 | `grooveshop-django-api/src/order/line_snapshot.py`, `src/order/management/commands/backfill_line_snapshots.py` | The line name and SKU backfill |
@@ -1268,7 +1279,8 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/loyalty/services.py` | `restore_spent_points`, `reverse_order_points` and `LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` |
 | `grooveshop-django-api/src/order/models/history.py` | `OrderHistory.log_status_change`, `log_payment_update`, `log_refund`, `log_note` |
 | `grooveshop-django-api/src/order/communications/notifications.py` | `_ORDER_STATUS_COPY` and the live-notification tasks |
-| `grooveshop-django-api/src/order/payment_events.py` | Redis pub/sub payment-status publish |
+| `grooveshop-django-api/src/order/payments/payment_events.py` | Redis pub/sub payment-status publish |
+| `grooveshop-django-api/src/order/payments/payment_hold.py` | The hold and sweep definitions: `expired_unpaid_online_orders`, `payment_review_orders`, `awaits_payment_review`, `swept_orders`, `decided_by` |
 | `grooveshop-django-api/src/loyalty/signals.py` | Earn on COMPLETED; reverse on CANCELED, on REFUNDED reached through `order_refunded` or `order_stored_value_returned`, on the REFUNDED status, and on `order_charged_back` once everything received is returned |
 | `grooveshop-django-api/src/settings/store_settings.py` | `EXTRA_SETTINGS_DEFAULTS`: the merchant-editable order windows and thresholds |
 | `grooveshop-django-api/src/settings/schedule.py`, `grooveshop-django-api/src/settings/domain.py` | `CELERY_BEAT_SCHEDULE` entries and their cadences (schedule), `REFUND_RECONCILE_AFTER_MINUTES` (domain) |

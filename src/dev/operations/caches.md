@@ -307,7 +307,7 @@ Nine routes use it; the list and the reasoning are in
 
 ### Stock flips and the page builder
 
-A sale saves `stock` and `updated_at` alone (`src/order/stock.py`), and a surface's
+A sale saves `stock` and `updated_at` alone (`src/order/inventory/stock.py`), and a surface's
 `ignored_update_fields` and the page builder's `_IGNORED_UPDATE_FIELDS`
 (`src/builder/data_purge.py`) skip such a save, or every sale would empty the
 store's product cache. One such save changes what pages show: a product that
