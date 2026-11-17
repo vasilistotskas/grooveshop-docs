@@ -862,7 +862,7 @@ admin offers `vat_rate` for correction only until the order's invoice
 carries a MARK; a correction rewrites the order's `OrderVatLine` rows
 (`src/order/vat_snapshot.py: write_vat_lines`), which the turnover report reads.
 The admin cannot add a line (see below). The full rationale, with the legal references, is in
-[section 3.5 of the order records page](/dev/django/reference/order/creation-records#_3-5-vat-on-an-order-orderitem-vat-rate-src-order-taxation-py).
+[section 3.5 of the order records page](/dev/django/reference/order/creation-records#_3-5-vat-on-an-order-orderitem-vat-rate-src-order-accounting-taxation-py).
 
 ### A placed order's lines are a record
 
