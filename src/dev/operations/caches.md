@@ -265,7 +265,7 @@ The purge endpoint is `POST /api/admin/cache/purge`
 host?: string, tenantConfig?: boolean }`; `builderDocuments` names page-builder
 documents (`template:home`, `page:<slug>`, `group:header`, `theme`) whose pages
 the storefront maps to its own keys, and sends from `builder_documents` at most
-64 per call. A `host` scopes the purge to one
+64 per call; a purge that names them must carry `host`. A `host` scopes the purge to one
 tenant's keys; omit it for a platform-wide purge. `tenantConfig` (default
 `false`) says the purge follows a change to the store's tenant config:
 only then, and not on a dry run, does the endpoint call
@@ -332,7 +332,7 @@ As released:
   `sitemap_seo` surfaces stale. `availability` registers `availability_flipped` for
   `product.Product`.
 - The `recommendations` surface lists `product.Product` too and ignores the sale
-  fields (`SALE_UPDATE_FIELDS`, `src/core/cache/registry.py`): the engine reads
+  fields (`SALE_UPDATE_FIELDS`, `src/core/cache/surfaces.py`): the engine reads
   stock live and drops sold-out products, so a sale does not purge its strips (a
   hydrated strip can show an old "only 2 left" until its TTL), while a product that
   sells out or comes back does, through the same predicate.
@@ -348,23 +348,25 @@ On the storefront, a `builderDocuments` purge for a page or template document
 first drops the cached record data of the store (`builderRecordDataMatchers`,
 `server/utils/builderDocumentPurge.ts`: the `nitro:functions:` entries of
 `builderDataProduct`, `builderDataCategory`, `builderDataBlogPost`,
-`builderDataBlogCategory`, `builderDataPromotion` and `builderDataSlug`), then the
-rendered pages (`builderDocumentMatchers`), in that order and each finished before
-the next (`server/api/admin/cache/purge.post.ts`). Before, only the page went and the next render
-read the old list from its 60 second data cache and stored it again for the page's
-cache time. `builderDataMedia` and `builderDataTargets` are left out (images change
-through the media library, published pages through a release), and a purge of a
-section group or the theme alone drops no record data.
+`builderDataBlogCategory`, `builderDataPromotion` and `builderDataSlug`), then
+moves the store's builder epoch (`moveBuilderEpoch`), then drops the rendered pages
+(`builderDocumentMatchers`), in that order and each finished before the next
+(`server/api/admin/cache/purge.post.ts`). Purging only the page would let the next
+render read the old list from its 60 second data cache (`DATA_CACHE_SECONDS`) and
+store it again for the page's cache time. `builderDataMedia` and
+`builderDataTargets` are left out (images change through the media library,
+published pages through a release), and a purge of a section group or the theme
+alone drops no record data.
 
-What this cannot close: a page render already in flight when the purge lands read
-the old records, and the page it stores after the purge is an ordinary entry of the
-route cache. It is served as fresh for its route's `swr` lifetime (300 to 3600
-seconds by route: `SWR_ROUTE_RULES`, `SWR_ROUTE_PATTERN_RULES`,
-`CUSTOM_PAGE_SWR_TTL`, the brand pages' 3600), then once more while Nitro
-re-renders it (no `staleMaxAge`), until the next record change purges it or that
-re-render replaces it. The 60 second data TTL bounds only the record-data
-entries, never that page (storefront issue 454; see
-`.claude/rules/server-routes.md` in the storefront repository).
+A page render already in flight when the purge lands read the old records. The
+page cache's renders read the store's builder epoch as they start
+(`render:before`) and as they answer (`render:response`), and one that saw it move
+answers `no-store`, which Nitro's cached handler does not store, so the purge's
+deletion stands (`server/plugins/builder-render-epoch.ts`). Still open: Nitro shares
+one in-flight call of a cached function between its callers, so a render that
+starts after the purge can join a record read that began before it and store what
+that read returns (see `.claude/rules/server-routes.md` in the storefront
+repository).
 
 ### The tenant-config epoch
 
@@ -743,7 +745,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/src/core/models.py` (`PublishableModel`, `PublishedQuerySet`) | What counts as published: `is_published` and a past `published_at` |
 | `grooveshop-storefront-ui-node-nuxt/server/utils/queryCacheKey.ts` | `queryCacheKey`: a cached list's key from every parameter it forwards |
 | `grooveshop-django-api/src/product/availability.py`, `src/builder/data_purge.py`, `src/core/cache/invalidation.py` (`register_significant_save`), `src/core/cache/service.py` (`_documents_last`) | The stock-flip rule shared by the surfaces and the builder purge |
-| `grooveshop-storefront-ui-node-nuxt/server/utils/builderDocumentPurge.ts`, `server/api/admin/cache/purge.post.ts` | `builderRecordDataMatchers` and `builderDocumentMatchers`, run in order |
+| `grooveshop-storefront-ui-node-nuxt/server/utils/builderDocumentPurge.ts`, `server/api/admin/cache/purge.post.ts`, `server/plugins/builder-render-epoch.ts` | `builderRecordDataMatchers`, `moveBuilderEpoch` and `builderDocumentMatchers`, run in order; a render the epoch overtook answers `no-store` |
 | `grooveshop-django-api/src/core/publication.py`, `src/core/sweeps.py`, `src/core/tasks.py` (`release_due_publications_task`), `src/blog/signals.py`, `src/indexnow/signals.py`, `src/builder/data_purge.py` | The go-live sweep and what `went_live` triggers |
 | `grooveshop-django-api/src/tenant/media_flush.py`, `src/tenant/tasks.py` | Media flush |
 | `grooveshop-django-api/src/tenant/lifecycle.py` (`suspend_tenant`, `activate_tenant`), `grooveshop-django-api/src/tenant/offboarding.py` (`purge_tenant_files`) | The flush and purge a suspension and a reactivation queue; erasing the uploads on destroy |

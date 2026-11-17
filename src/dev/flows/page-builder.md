@@ -189,8 +189,8 @@ is a heading in two lines (`heading`, `headingAccent`, both in the page's one h1
 `hero_showcase` is in `HEADING_SECTION_TYPES` and `sectionsHeadingText` joins the
 two; it is also in `HEADING_FROM_PROPS`, like `hero_banner`, so it owns the page's
 h1 only when its props give a heading: `ownsHeading` in `shared/pageSections.ts`
-asks `propsHeading`, and a hero with neither line leaves the page its own h1, as
-`contact_panel`, which always draws one, does not), a sub-line, a `media` picture with a `mobileImage`, an explicit
+asks `propsHeading`, and a hero with neither line leaves the page its own h1), a
+sub-line, an `image` (a `media` ref) with a `mobileImage`, an explicit
 `imageDecorative`, an `imageLink`, the store search (`showSearch`), two buttons
 and one `product` ref drawn by `Product/Spotlight.vue` (`showAddToCart`). The
 component lays one list of parts out in the order a phone reads them and places
@@ -198,7 +198,7 @@ them in two columns by CSS grid on a desk. It draws nothing for a part it cannot
 have: no search or product with the `catalogue` feature off, no buy button with
 `cart` off, no picture for a missing media ref, no product for a `product` ref
 that did not resolve to a record (a sold-out product stays and offers the
-restock alert in place of the buy button), and a button needs both its text and
+restock alert, with `productAlerts` on, in place of the buy button), and a button needs both its text and
 its link (a link `resolveLinks` removed leaves no button). The picture is a link
 only when something names it (its description, else the heading). Every link
 it draws goes through `useLinkTo()` (`app/composables/useLinkTo.ts`), the one
@@ -246,9 +246,10 @@ key (`Builder/SettingField.vue`, segmented buttons up to
 `BUILDER_SEGMENTED_CHOICE_MAX`), so a second value saying the same would be a
 third state. The choices are named under `options.headingColor` and
 `options.phoneLayout` in `app/builder/labels/{el,en}.json`.
-`blog_categories` is at version 2: a `layout` (`slider` or `tiles`),
-`subheading`, `ctaText` and `ctaLink` beside its `title`; `upgradeBlogCategories`
-carries a version 1 node over. The `tiles` layout is the platform's
+`blog_categories` is at version 3: an optional `layout` (`tiles`; no key is the
+slider), `subheading`, `ctaText` and `ctaLink` beside its `title`;
+`upgradeBlogCategories` carries a version 1 node over, and the version 2 upgrade
+takes out a stored `layout: 'slider'`. The `tiles` layout is the platform's
 `PageSection/BlogCategoryTiles.vue` in every design.
 
 **The bold look and the home board's settings.** Five blocks (`hero_showcase`,
@@ -264,7 +265,8 @@ its own: the original passes its `useStoreI18n` function down as a `texts` prop
 (`BlogCategoryTiles.vue`, `Blog/Rail.vue`), so a store's edited wording follows
 the look. What the original and its twin both read (`useHeroShowcase`,
 `useBlogCategoryTiles`, `useProductSpotlight`) is a composable, so the two
-cannot drift. A slider of categories and a load-more band ignore `look`. The
+cannot drift. A slider of categories ignores `look`, and the load-more band
+(`blog_posts_list`) has no `look` setting. The
 help text of each setting in `app/builder/labels/{el,en}.json` names what a look
 or layout ignores; keep it true when a branch changes.
 
@@ -274,7 +276,7 @@ upgrade: `hero_showcase.searchPlaceholder`; `store_assurances.layout` (`card`);
 `blog_categories.eyebrow`; `blog_posts_grid.eyebrow`, `phoneLimit`, `layout`
 (`feature`) and `icon`. `{count}` in `blog_categories.ctaText` is replaced by
 the total of the listed categories' `postCount` (`useBlogCategoryTiles`), in
-every look. `categoryTile` is `builderField.query('category', ...)`, the
+the `tiles` layout's every look; the slider shows `ctaText` as typed. `categoryTile` is `builderField.query('category', ...)`, the
 existing category data source with its `roots` mode, so **a new optional
 setting needs no Django change, while a new data filter (a query mode the
 resolver does not know) does**: the setting is checked against the catalogue
@@ -309,9 +311,10 @@ sets that lead in bold; the bar's `link` is also drawn as its own «Details»
 link. The footer's last row (`Footer/Legal.vue`) reads pay ways and carriers
 from `useStoreAssuranceFacts`, never typed. The theme compiler writes
 `--ui-secondary-deep` (`shared/theme/compile.ts`), the light accent mixed 80%
-with black in both schemes, a fill under white text that keeps the store's hue
-on a part forced dark; the default design reads nothing from it, and `main.css`
-holds the platform default.
+with black in both schemes, a fill that keeps the store's hue on a part forced
+dark, with `--ui-on-secondary-deep` (`readableTextOn`) as the text on it; the
+bold hero's solid button is drawn on it in every design, and `main.css` holds
+the platform default.
 
 `test/unit/server/utils/builderRealBlocks.spec.ts` holds every real block to
 the rules that do not depend on the block: a consistent catalogue, no link that
@@ -447,7 +450,8 @@ asks for nothing.
   onAccount })` gives both designs' entries: the default's Home, Search, Saved,
   Cart and Account, or the tabs a design asks for (webside: Home, Shop, Blog,
   Cart, Account). Each tab shows while its page serves (`useGatedRoute`: Search
-  and Shop `catalogue`, Saved `favourites`, Blog `blog`, Cart `cart`), the bar by
+  and Shop `catalogue`, Saved `favourites`, Blog `blog`, Cart `cart`, Account
+`customerAccounts`), the bar by
   the `mobileBottomNav` store preference. The Cart tab carries the count; the
   Account tab shows the shopper's picture when the design asks. `active` is
   decided from the route name and `currentMark` marks one tab. The default
@@ -549,10 +553,11 @@ a sign-out button); the editor replaces it.
 
 **The `stock` key.** A product rule (`DATA_DESCRIPTORS.product`,
 `shared/builder/dataSources.ts`) takes an optional `stock` from
-`PRODUCT_STOCK_MODES` (`shared/constants/builder.ts`): `any`, `inStockFirst`,
-`inStockOnly`. A descriptor without the key is `any`, so an untouched list and a
-reset one are the same document: `Builder/QueryField.vue` takes the key
-out for `any`. A hand-picked list has no `stock`. The key then runs
+`PRODUCT_STOCK_MODES` (`shared/constants/builder.ts`): `inStockFirst`,
+`inStockOnly`. A descriptor without the key is the list as ordered, which no
+value names, so an untouched list and a reset one are the same document:
+`Builder/QueryField.vue` offers that as its first item and takes the key out for
+it (the product bands' upgrades drop a stored `any`). A hand-picked list has no `stock`. The key then runs
 end to end:
 
 1. The editor writes it (`QueryField.vue`, the **Stock** select, product source,
@@ -589,9 +594,9 @@ gets from the real stylesheets, and `schemes.spec.ts` pins it.
 
 **Design parts.** A shared component can draw one piece of itself in the store's
 own design. `resolvePart(key, tenantSchema)` (`app/utils/variantRegistry.ts`)
-returns a `DesignPart` (`component` and a `props` function from `DesignPartInput`
-to the props that component takes) for a `DesignPartKey`
-(`product_add_to_cart`, `product_restock_alert`): `part:<key>@<schema>` in
+returns a `DesignPart` (`component` and a `props` function from the part's input,
+`DesignPartInput` for a product's part, to the props that component takes) for a
+`DesignPartKey` (`product_add_to_cart`, `product_restock_alert`, `search_field`): `part:<key>@<schema>` in
 `partVariants`, else `partDefaults`. `Product/Spotlight.vue` is the same in every
 design and draws the buy button or the restock alert through it, because the
 two designs' controls take different props and an attribute one does not declare
@@ -623,15 +628,16 @@ strip's `--dock-edge` when larger), `--dock-base`, `--dock-tabbar`, `--dock-bar`
 height on. A design that draws its bars edge to edge adds `data-dock-flush`: they
 have no gap, the bottom-most stands on the screen's edge and pads the rest of the
 inset inside itself, and the sticky bar stands on the tab bar (`--dock-floor`,
-`--dock-floor-pad`). The default layout's footer clears the dock with
-`--dock-inset + --dock-tabbar + --dock-bar` (`app/layouts/default.vue`).
+`--dock-floor-pad`). The default layout pads the footer by
+`--dock-inset + --dock-tabbar + --dock-bar` for a store without a design of its
+own; a design's footer keeps clear of the dock itself (`app/layouts/default.vue`).
 
 **Phone product cards and targets.** Webside's product card is a named container
 below `sm` (`max-sm:@container/card`) and answers to ITS width, not the screen's,
 because the listing and the bands put it in two columns on a phone
-(`grid-cols-2`): below `3xs` the price and the buy button stack and the button
-becomes a 44px icon (its label `sr-only`), and below 8.625rem the price takes a
-row and the button the full width. The listing's page numbers are links
+(`grid-cols-2`): below `3xs` the buy button becomes a 44px icon beside the price
+(its label `sr-only`; a price too long for the row sends it to a line of its
+own), and below 8.625rem the price takes a row and the button the full width. The listing's page numbers are links
 (`pageLink`). A product that cannot be bought gets a neutral, subtle, disabled
 button with the label "Unavailable" in both designs' buy buttons, and the product
 page draws no quantity control for it. Every control of the product page is a
@@ -659,8 +665,8 @@ carousel's `select` event), which are neither buttons nor focusable. The positio
 is read as words instead: each slide holds an `sr-only` "Image N of M"
 (`position` in the component's `<i18n>`), as the hero carousel does. Swiping, the
 zoom viewer and the thumbnails move between photographs as before. Webside's
-gallery draws no dots (thumbnails and arrows) and is unchanged. The rule above
-fails a gallery carousel that sets `dots`. The viewer and the gallery share one
+gallery draws no dots (thumbnails and arrows) and is unchanged.
+`product-page-targets.spec.ts` fails a gallery carousel that sets `dots`. The viewer and the gallery share one
 index: `Product/ImageModal.vue` takes `v-model:index` (the carousel opens at the
 value it had, read once as `startIndex`, since Embla reads it once, and follows
 it by `scrollTo` afterwards), so the viewer opens on the photograph the gallery

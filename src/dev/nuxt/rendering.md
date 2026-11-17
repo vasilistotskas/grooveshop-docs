@@ -10,7 +10,8 @@ visitor and replayed to everyone (see [Caches and purging](/dev/operations/cache
 layer 3). Anything that depends on who is looking therefore has to appear
 **after** the browser has mounted, as a patch over the HTML it was sent. A
 component that draws the signed-in state in its first client render hydrates over
-anonymous markup, and Vue does not repair that mismatch in production. This page
+anonymous markup, and Vue's production hydration rewrites a differing text but
+leaves a differing attribute or class as the server sent it. This page
 holds the rules that keep it so, each tied to the file that implements it and the
 source rule that checks it.
 
@@ -128,8 +129,8 @@ without its caller asking, because the pages are cached anonymously. The files:
   from the shared toggle: none until the heart has mounted, the store's after. A
   heart that hydrates after another one asked (a section hydrated on scroll) would
   otherwise draw the store's answer over the anonymous HTML. The icon, colour,
-  title and `aria-pressed` all follow it. The default design's hearts are inside
-  `<ClientOnly>` and never hydrate.
+  title and `aria-pressed` all follow it. The default design's product cards draw
+  their hearts inside `<ClientOnly>`, so those never hydrate.
 - **A click waits for the session.** On a cached page the session reaches the
   client after the page has resolved, and a heart can be clicked first. The click
   waits for it (the heart shows it is busy) and then decides, so a signed-in

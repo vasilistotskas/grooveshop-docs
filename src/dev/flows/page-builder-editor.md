@@ -322,8 +322,7 @@ cannot be picked. An optional note goes with the release (as long as the
 generated `zPublishWriteRequest` allows). The theme goes out with the rest, now
 or at a time, and the list of publishes to come names it:
 `documentLabel` (`app/composables/useBuilderLabels.ts`, `documents.theme` in
-`app/builder/labels/{el,en}.json`) calls it "Theme: colours, corners, fonts",
-where it was "/theme".
+`app/builder/labels/{el,en}.json`) calls it "Theme: colours, corners, fonts".
 
 **One naming function.** `documentLabel(key)` is the only way a document is named: the
 theme and a section group as the outline names them (`groups.<name>`, for a key
@@ -331,12 +330,12 @@ theme and a section group as the outline names them (`groups.<name>`, for a key
 store made by its address. The Publish list, the refusals, the publishes to come
 and the failed ones, the presence notice, the share links list, the media
 picker's "used by" and the save-conflict dialog all call it (the conflict dialog's title
-names the document: "{document}: saved in the meantime by {name}"; the theme saves
+names the document: "{name} saved {document} in the meantime"; the theme saves
 with `If-Match` like a page, so a second save of it gets the same dialog). The
 list of what the editor works on is one function too, `documentsWith(key)` in
 `useBuilderEditorStore`: the page, the section groups as the outline lists them,
-then the theme. `open()`, the Publish list and the presence heartbeat read it, so
-the three cannot disagree about what "the open documents" are.
+then the theme. `open()`, the Publish list, the presence heartbeat and the version
+history's picker read it, so they cannot disagree about what "the open documents" are.
 
 After a release that holds the theme Django purges the `builder` surface
 (`invalidated_by=("builder.BuilderRelease",)`, `src/core/cache/surfaces.py`), which
@@ -376,21 +375,18 @@ gives the focus back to the Publish button as it closes, so
 instead. While the theme is picked, `themeWarnings` evaluates the working copy
 against the design's rules (`evaluateContrastRules`, `themeContrastRulesFor`,
 the panel's own function) and shows a `UAlert` with the count and, under it, one row per
-failing rule of severity `warning`: its name (`contrastRuleLabel(rule.id)`) and its
+failing rule of severity `warning`: its name (`contrastRuleLabel(rule)`) and its
 own Show (`showThemeRule(rule.id)`). It never disables Publish: Django
 refuses only error rules (`check_before_release`, `src/builder/validation.py`);
 a warning is the editor's.
 
-The rule names live in `contrastRules` of `app/builder/labels/{el,en}.json`, read by
-the theme panel's rows and by this dialog through
-`useBuilderLabels().contrastRuleLabel(id)` (the panel's own `<i18n>` block no longer
-holds them).
-
-*Known gap.* Django's refusal message names the rule by its id ("The colours of
-body-text-light have a contrast of 1.57, below the required minimum"), not by the name
-the theme panel gives it, because the panel's names are the storefront's and the
-dialog shows Django's message as it does for every other problem (django-api
-issue 686).
+The rule names live in the design's catalogue (`RULE_TEXTS` in
+`shared/builder/documentRoots.ts`: each rule's `label` in every language, its scheme
+added), read by the theme panel's rows and by this dialog through
+`useBuilderLabels().contrastRuleLabel(rule)`. Django's refusal names the rule by the
+same label ("The colour pair “Text, light” has a contrast of …", `insufficient_contrast`
+in `src/builder/errors.py`, its `label` params from the catalogue in
+`check_before_release`).
 
 **At a set time.** "When" offers now or a time (`UInputDate`, to the minute,
 none in the past). The time is the staff member's wall clock in their own
@@ -498,11 +494,10 @@ strings are its components' `<i18n>` blocks.
 
 ### 13. Version history
 
-*Known gap.* The panel works on the page being edited (`documentKey`). The theme
-has no version history and no restore (storefront issue 472): a published theme
-is a release like any other, but the editor offers no way to read an earlier
-version of it or to put one back, so a change to it is undone only by changing
-the colours again.
+The panel shows the history of one of the documents the editor works on
+(`documentsWith`): the page being edited unless a section group or the theme is
+picked; opening another page shows that page's again. A theme version whose
+settings this editor cannot read is not offered to put back (`unreadable`).
 
 The top bar's history panel (`Builder/VersionHistory.vue`, store
 `useBuilderHistoryStore`) lists what Django keeps of the open document, newest
@@ -611,13 +606,13 @@ design must keep (`themeContrastRulesFor`), with a Fix on every rule that fails
 (`fixContrast`). On Groove Volt the neutral colour paints borders and badges, not
 text, so only the action and accent colours have rules. The theme is published
 from the Publish dialog like any other document (see Publishing): it is listed last
-and picked when it has unpublished or unsaved changes. It has no version history
-and no restore (section 13, storefront issue 472).
+and picked when it has unpublished or unsaved changes. Its versions are read and
+restored in the history panel like any other document's (section 13).
 
-Two rules are **warnings** about the accent on the muted ground, `accent-muted-light`
+Two rules are **warnings** about the accent as large text on the muted ground, `accent-muted-light`
 and `accent-muted-dark` (3:1, large text, WCAG SC 1.4.3), labelled "Accent on the
-muted ground, light / dark" in the panel and the Publish dialog (`contrastRules` in
-the editor labels). A band draws the
+muted ground, light / dark" in the panel and the Publish dialog (`RULE_TEXTS` in
+`shared/builder/documentRoots.ts`). A band draws the
 accent as large text there: the newsletter band's accent heading and the showcase
 hero's accent line. They hold in both groups of designs; the muted ground is a
 design token on Groove Volt (`VOLT_MUTED_BACKGROUND`) and, for a store with its own
@@ -638,8 +633,9 @@ left out is a key the list does not have. A hand-picked list and a single record
 use `BuilderRecordList` and `BuilderRecordPicker`.
 
 A product rule also carries the **Stock** select (`QueryField.vue`, product source,
-`filter` mode only): `any`, `inStockFirst` or `inStockOnly` from
-`PRODUCT_STOCK_MODES`. `any` is the absence of the `stock` key, so the select takes
+`filter` mode only): "As they come" (`stock.any`, no value) or one of
+`PRODUCT_STOCK_MODES`, `inStockFirst` and `inStockOnly`. "As they come" is the
+absence of the `stock` key, so the select takes
 the key out of the descriptor (`builderQueryPatch` drops a key set to `undefined`)
 and an untouched list equals a reset one. A hand-picked list has no select. What
 the key does downstream is in [Page builder foundation](/dev/flows/page-builder#9-product-stock-colour-schemes-and-design-parts).
