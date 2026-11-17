@@ -183,74 +183,84 @@ settings, plus each list of child blocks (a disabled one left out) under the
 prop `childList` names. The same function feeds the page-heading rules
 (`HEADING_SECTION_TYPES`, `HEADING_FROM_PROPS`, `heroCarouselHeading`).
 
-Two sections read the store's own data instead of settings. `hero_showcase`
-(`app/blocks/hero_showcase.block.ts`, `app/components/PageSection/HeroShowcase.vue`)
-is a heading in two lines (`heading`, `headingAccent`, both in the page's one h1:
-`hero_showcase` is in `HEADING_SECTION_TYPES` and `sectionsHeadingText` joins the
-two; it is also in `HEADING_FROM_PROPS`, like `hero_banner`, so it owns the page's
-h1 only when its props give a heading: `ownsHeading` in `shared/pageSections.ts`
-asks `propsHeading`, and a hero with neither line leaves the page its own h1), a
-sub-line, an `image` (a `media` ref) with a `mobileImage`, an explicit
-`imageDecorative`, an `imageLink`, the store search (`showSearch`), two buttons
-and one `product` ref drawn by `Product/Spotlight.vue` (`showAddToCart`). The
-component lays one list of parts out in the order a phone reads them and places
-them in two columns by CSS grid on a desk. It draws nothing for a part it cannot
-have: no search or product with the `catalogue` feature off, no buy button with
-`cart` off, no picture for a missing media ref, no product for a `product` ref
-that did not resolve to a record (a sold-out product stays and offers the
-restock alert, with `productAlerts` on, in place of the buy button), and a button needs both its text and
-its link (a link `resolveLinks` removed leaves no button). The picture is a link
-only when something names it (its description, else the heading). Every link
-it draws goes through `useLinkTo()` (`app/composables/useLinkTo.ts`), the one
-rule for a section's, band's or banner's link: an absolute URL (`hasProtocol`)
-as it is, which `NuxtLink` draws as an external link with
-`rel="noopener noreferrer"`; a store path through `localePath(pathLocation(..))`,
-query and hash kept. `localePath` given an external URL as a location made a
-partner's offer a route of the store. On a phone the layout is one
-`grid-cols-[minmax(0,1fr)]` track (the implicit `auto` track grew to the
-widest part's min-content and pushed the page sideways); the two buttons are
-equal columns at Nuxt UI's `md` text size with `xs` padding, so a label of about
-16 Greek letters keeps one line, and a longer one wraps inside its button (the
-label is our own span, since Nuxt UI's truncates). `Product/Spotlight.vue`
-becomes a grid below `sm` (`max-sm:contents` on its text column and price
-row) so the way to buy takes a row of its own across the card: beside the
-price a design's button (138 to 166px) was cut off at 320px.
-`store_assurances` (`app/blocks/store_assurances.block.ts`,
-`app/components/PageSection/StoreAssurances.vue`, `useStoreAssurances`) states
-four rows (delivery with the dispatch cutoff under it, free shipping with each
-carrier's price below the threshold, returns, ways to pay) from
-`useStoreAssuranceFacts`, the one reader of those facts, which the product page's
-assurances (`useProductAssurances`) read too. Every fact is `null` when the store
-has not said it (no rate with delivery days, no threshold, `returnWindowDays` of
-0, no active pay way), its row is left out, and the section draws nothing when
-no row is left. The block declares `feature: 'cart'`, so a store without the
-cart does not get it, and the facts make no request for such a store.
-`newsletter_signup` (`app/blocks/newsletter_signup.block.ts`,
-`app/components/PageSection/NewsletterSignup.vue`) takes an optional
-`headingColor` (`z.enum(['accent'])`): `accent` paints the h2 with `text-accent`,
-the token the hero's accent line uses, and no key keeps `text-highlighted`. It is
-one component in every design, so both draw it. `blog_posts_grid`
-(`app/blocks/blog_posts_grid.block.ts`) takes an optional `phoneLayout`
-(`z.enum(['list'])`: no key is the row to swipe), passed by `PageSection/BlogPosts.vue`
-to `Blog/Rail.vue`: below
-`sm`, `list` draws the posts as compact rows (a grid per row: the thumbnail spans
-two rows beside "category · reading time" and the title, each row one link at
-least 92px tall) and from `sm` up the band is the swipe row or the grid as ever.
-The list sets `data-phone-layout="list"` on the `<ul>`, and it is off for a
-`stacked` rail (the load-more band), so only the grid block offers it; the
-`ekfyseosfyteias` variant of the grid ignores it. Both settings are optional,
-so no block version bump and no upgrade: a stored node without the key is the
-old look. Each enum has ONE value because the other state is the absence of the key: an
-optional enum is offered in the editor with **Default** first, which stores no
-key (`Builder/SettingField.vue`, segmented buttons up to
+The home's sections, block by block. Two of them, `hero_showcase` and
+`store_assurances`, show the store's own data (the search, a product, the
+delivery, shipping, returns and payment facts) as well as what is typed in.
+
+- **`hero_showcase`** (`app/blocks/hero_showcase.block.ts`,
+  `app/components/PageSection/HeroShowcase.vue`) is a heading in two lines
+  (`heading`, `headingAccent`, both in the page's one h1: `hero_showcase` is in
+  `HEADING_SECTION_TYPES` and `sectionsHeadingText` joins the two; it is also in
+  `HEADING_FROM_PROPS`, like `hero_banner`, so it owns the page's h1 only when
+  its props give a heading: `ownsHeading` in `shared/pageSections.ts` asks
+  `propsHeading`, and a hero with neither line leaves the page its own h1), a
+  sub-line, an `image` (a `media` ref) with a `mobileImage`, an explicit
+  `imageDecorative`, an `imageLink`, the store search (`showSearch`), two
+  buttons and one `product` ref drawn by `Product/Spotlight.vue`
+  (`showAddToCart`). The component lays one list of parts out in the order a
+  phone reads them and places them in two columns by CSS grid on a desk.
+- The hero draws nothing for a part it cannot have: no search or product with the
+  `catalogue` feature off, no buy button with `cart` off, no picture for a
+  missing media ref, no product for a `product` ref that did not resolve to a
+  record (a sold-out product stays and offers the restock alert, with
+  `productAlerts` on, in place of the buy button), and a button needs both its
+  text and its link (a link `resolveLinks` removed leaves no button). The
+  picture is a link only when something names it (its description, else the
+  heading).
+- Every link the hero draws goes through `useLinkTo()`
+  (`app/composables/useLinkTo.ts`), the one rule for a section's, band's or
+  banner's link: an absolute URL (`hasProtocol`) as it is, which `NuxtLink`
+  draws as an external link with `rel="noopener noreferrer"`; a store path
+  through `localePath(pathLocation(..))`, query and hash kept. `localePath`
+  given an external URL as a location made a partner's offer a route of the
+  store.
+- On a phone the hero is one `grid-cols-[minmax(0,1fr)]` track (the implicit
+  `auto` track grew to the widest part's min-content and pushed the page
+  sideways); the two buttons are equal columns at Nuxt UI's `md` text size with
+  `xs` padding, and a label too long for its half wraps inside its button (the
+  label is our own span, since Nuxt UI's truncates). `Product/Spotlight.vue`
+  becomes a grid below `sm` (`max-sm:contents` on its text column and price
+  row) so the way to buy takes a row of its own across the card: beside the
+  price a design's button (138 to 166px) was cut off at 320px.
+- **`store_assurances`** (`app/blocks/store_assurances.block.ts`,
+  `app/components/PageSection/StoreAssurances.vue`, `useStoreAssurances`)
+  states four rows (delivery with the dispatch cutoff under it, free shipping
+  with each carrier's price below the threshold, returns, ways to pay) from
+  `useStoreAssuranceFacts`, the one reader of those facts, which the product
+  page's assurances (`useProductAssurances`) read too. Every fact is `null`
+  when the store has not said it (no rate with delivery days, no threshold,
+  `returnWindowDays` of 0, no active pay way), its row is left out, and the
+  section draws nothing when no row is left. The block declares
+  `feature: 'cart'`, so a store without the cart does not get it, and the facts
+  make no request for such a store.
+- **`newsletter_signup`** (`app/blocks/newsletter_signup.block.ts`,
+  `app/components/PageSection/NewsletterSignup.vue`) takes an optional
+  `headingColor` (`z.enum(['accent'])`): `accent` paints the h2 with
+  `text-accent`, the token the hero's accent line uses, and no key keeps
+  `text-highlighted`. It is one component in every design, so both draw it.
+- **`blog_posts_grid`** (`app/blocks/blog_posts_grid.block.ts`) takes an
+  optional `phoneLayout` (`z.enum(['list'])`: no key is the row to swipe),
+  passed by `PageSection/BlogPosts.vue` to `Blog/Rail.vue`: below `sm`, `list`
+  draws the posts as compact rows (a grid per row: the thumbnail spans two rows
+  beside "category · reading time" and the title, each row one link at least
+  92px tall) and from `sm` up the band is the swipe row or the grid as ever.
+  The list sets `data-phone-layout="list"` on the `<ul>`, and it is off for a
+  `stacked` rail (the load-more band), so only the grid block offers it; the
+  `ekfyseosfyteias` variant of the grid ignores it.
+- **`blog_categories`** is at version 3: an optional `layout` (`tiles`; no key
+  is the slider), `subheading`, `ctaText` and `ctaLink` beside its `title`;
+  `upgradeBlogCategories` carries a version 1 node over, and the version 2
+  upgrade takes out a stored `layout: 'slider'`. The `tiles` layout is the
+  platform's `PageSection/BlogCategoryTiles.vue` in every design.
+
+`headingColor` and `phoneLayout` are optional, so no block version bump and no
+upgrade: a stored node without the key is the old look. Each enum has ONE value
+because the other state is the absence of the key: an optional enum is offered
+in the editor with **Default** first, which stores no key
+(`Builder/SettingField.vue`, segmented buttons up to
 `BUILDER_SEGMENTED_CHOICE_MAX`), so a second value saying the same would be a
 third state. The choices are named under `options.headingColor` and
 `options.phoneLayout` in `app/builder/labels/{el,en}.json`.
-`blog_categories` is at version 3: an optional `layout` (`tiles`; no key is the
-slider), `subheading`, `ctaText` and `ctaLink` beside its `title`;
-`upgradeBlogCategories` carries a version 1 node over, and the version 2 upgrade
-takes out a stored `layout: 'slider'`. The `tiles` layout is the platform's
-`PageSection/BlogCategoryTiles.vue` in every design.
 
 **The bold look and the home board's settings.** Five blocks (`hero_showcase`,
 `products_grid`, `blog_categories`, `blog_posts_grid`, `newsletter_signup`) take
@@ -290,6 +300,8 @@ band's button: `PageSection/BandBold.vue` takes `phoneCta` (`inline`, `below`
 or `none`) and `phoneCtaText`, and draws both texts in `sm:hidden` and
 `max-sm:hidden` spans, so a bold product grid without `ctaText` reads
 `all_products_phone` on a phone and `all_products` on a desk.
+`PageSection/BlogCategoryTilesBold.vue` passes `phoneCta="none"`: bold tiles
+show no button (and no sub-line) on a phone.
 
 **The band flow.** A section that draws its own full-width band
 (`sectionDrawsBand` in `shared/pageSections.ts`: the bold look, `layout: 'card'`,
@@ -451,8 +463,7 @@ asks for nothing.
   Cart and Account, or the tabs a design asks for (webside: Home, Shop, Blog,
   Cart, Account). Each tab shows while its page serves (`useGatedRoute`: Search
   and Shop `catalogue`, Saved `favourites`, Blog `blog`, Cart `cart`, Account
-`customerAccounts`), the bar by
-  the `mobileBottomNav` store preference. The Cart tab carries the count; the
+  `customerAccounts`), the bar by the `mobileBottomNav` store preference. The Cart tab carries the count; the
   Account tab shows the shopper's picture when the design asks. `active` is
   decided from the route name and `currentMark` marks one tab. The default
   bar's active pill shrinks to what is left of the dock and shows its icon alone
