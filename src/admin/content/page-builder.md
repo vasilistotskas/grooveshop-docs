@@ -27,17 +27,17 @@ In the editor you can:
 A picture lives in your image library, so you store it once and can use it on as many pages as you like.
 
 1. Open **Content → Edit storefront** and click the section in the outline.
-2. Under **Image**, press **Choose an image**. The **Image library** opens.
+2. Under **Image**, press **Choose an image** (**Change image** when one is already there). The **Image library** opens.
 3. Pick a picture, or press **Upload an image**. If that same picture is already in the library, you get the one that is there.
-4. Under **Alt text**, describe the picture for people who cannot see it, in each language, and press **Save alt text**. The text belongs to the picture, so it applies wherever the picture is used.
-5. Press **Use this image**, and publish.
+4. Under **Alt text**, describe the picture for people who cannot see it, in each language of your store, and press **Save alt text**. The text belongs to the picture, so it applies wherever the picture is used.
+5. Press **Use this image**, which waits until the alt text is saved, and publish.
 
 Some sections have more than one place for a picture:
 
 - **Image on phones** is the crop phones and tablets see. Leave it empty and they see the same picture. Some store designs do not use it.
 - **Images**, on the **Hero carousel**, holds several pictures, added one at a time and shown in that order. **Images on phones** goes by position: its first picture stands in for the first of **Images**.
 
-**Decorative image** is for a picture that adds nothing a screen reader user needs. Set it to **On**, and the picture is left out for them. Leaving the alt text empty does not do this: with no alt text the page describes the picture with the section's heading, a badge's label or the person's name.
+**Decorative image** is for a picture that adds nothing a screen reader user needs. Set it to **On**, and the picture is left out for them. Leaving the alt text empty does not do this: a hero, a slide or a picture beside text with no alt text is described by its heading instead.
 
 ## Change the colours, corners and fonts
 
@@ -120,7 +120,7 @@ To take the warning away, open **Content → Page builder → Scheduled publishe
 ## Good to know
 
 - **A deleted product or category leaves an empty section, not a broken page.** If you delete something a published page shows, that section shows nothing until you change it. A publish is refused while a page points at something that no longer exists.
-- **A picture a published page uses cannot be deleted.** The library names the pages that use it: change those first. A picture only a draft uses can go, and a section that still holds it shows nothing until you choose another; publishing is refused until you do.
+- **A picture a published page uses cannot be deleted.** The library names the pages that use it: change those first. A picture only a draft uses can go: select it in the library and press **Delete**, then **Confirm delete**. A section that still holds it shows without a picture, and publishing is refused until you choose another.
 - **A section with nothing to list disappears**, heading included, and comes back by itself when it has something.
 - **Stock alone can take a little while to show.** A change to a product's name, price or category reaches your pages within moments. A change only to its stock does not refresh a page straight away, so a page can show the old stock state for a while. The checkout always checks the real stock.
 - **Plain text pages are separate.** The terms, the privacy and cookie policies, the return policy, the FAQ and shipping information are written in [Pages](/admin/content/pages), not here.
