@@ -487,7 +487,7 @@ severity is one the spec requires of `requires_escalation`:
 | Link payable, last attempt failed | the PSP's page | `payment_failed`, `requires_buyer_input`: Django lets the buyer retry there |
 | Being processed by the provider | the order's page | `payment_processing`, `requires_buyer_review`: never pay again |
 | `paymentDecidedBy` null otherwise | the order's page | `payment_in_review`, `requires_buyer_review`: a charge that did not match waits for the store, or the sweep is off; Django does not yet tell them apart (gateway #187, Django #739) |
-| Time to pay ran out | the order's page | `payment_link_expired`, `requires_buyer_review`: the store cancels it, nothing is charged |
+| Time to pay ran out | the order's page | `payment_link_expired`, `requires_buyer_review`: the store cancels it and the shopper owes nothing |
 | First link could not be created | the order's page | `payment_link_unavailable`, `recoverable`: `complete_checkout` tries again |
 
 No link is minted after the first: Django's `payment_window_expired` and
