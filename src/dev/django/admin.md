@@ -229,14 +229,19 @@ instance: look the row up by the id, as
 copies its object uses a method of its own, because
 `has_add_permission` takes no object:
 `PromotionAdmin.has_duplicate_permission` asks `has_add_permission`,
-and `duplicate_promotion` declares `permissions=["duplicate"]`.
+and `duplicate_promotion` declares `permissions=["duplicate"]`. Deleting
+an unrecognised ACS voucher at ACS has one too:
+`AcsUnrecognisedVoucherAdmin.has_delete_at_acs_permission` asks `change`
+and the role's `delete` on those rows, read from the user, because that
+admin's `has_delete_permission` refuses everyone (a voucher is resolved,
+never removed).
 
 **Guards.** `tests/unit/admin/test_actions_declare_permissions.py`
 walks every module in `src/` by `ast`: a function decorated as an admin
 action, or a method a class lists in an action slot (a dropdown's
-`items` too), must pass a literal, non-empty `permissions=[...]`. It also
-walks the admin registry, which sees an action a class only inherits,
-and fails on a stale `READ_ONLY` entry.
+`items` too), must pass a literal, non-empty `permissions=[...]`. It fails
+on a stale `READ_ONLY` entry, and it also walks the admin registry, which
+sees an action a class only inherits.
 `tests/integration/admin/test_action_permissions.py` requests every URL
 action, GET and POST, as an identity holding only `view` on its model
 (nothing, for an action that asks for `view`) and expects 403. It checks
@@ -566,6 +571,7 @@ holds lazy strings evaluated after the request has reset the language.
 | `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `IsSuperuserOnlyModelAdmin`, `StripeMirrorModelAdmin`, `AdminSiteLoginNextMixin`, `AdminFooterMixin` |
 | `grooveshop-django-api/src/core/admin.py` | `override_third_party_admins`: the package admins re-registered on the store site |
 | `grooveshop-django-api/src/promotion/admin.py` | `PromotionAdmin.has_duplicate_permission`, a copy's own permission method |
+| `grooveshop-django-api/src/shipping_acs/admin.py` | `AcsUnrecognisedVoucherAdmin.has_delete_at_acs_permission`, a deletion's own permission method |
 | `grooveshop-django-api/tests/unit/admin/test_actions_declare_permissions.py` | Every action declares its permission; `READ_ONLY`, `THIRD_PARTY_ADMINS`, `THIRD_PARTY_URLS` |
 | `grooveshop-django-api/tests/integration/admin/test_action_permissions.py` | Every action refused without its permission; detail-action permission methods read no object |
 | `grooveshop-django-api/src/admin/displays.py`, `src/admin/filters.py`, `src/admin/datasets.py` | Shared displays, filters, datasets |
