@@ -63,8 +63,9 @@ under `overlays/staging/` with its own values.
 | `media-stream-secrets` | `INTERNAL_DOMAINS_SECRET`, `NODE_AUTH_TOKEN` | media-stream |
 | `media-stream-internal-secret` | `secret` (the `INTERNAL_ADMIN_SECRET` that guards `flush-tenant`) | media-stream, and the backend as `MEDIA_STREAM_INTERNAL_SECRET` |
 | `media-stream-metrics-token` | `token` (read-only bearer for `/metrics`; sealed straight from a generated value, no plaintext copy — the rotation command is in the file) | media-stream as `METRICS_BEARER_TOKEN`, and the `media-stream` VMPodScrape |
-| `agent-gateway-secrets` | `INTERNAL_EVENTS_SECRET` (same value as the backend's `AGENT_GATEWAY_INTERNAL_SECRET`; the gateway refuses to boot in any `ENV` with one holding a control character or leading or trailing blanks, and in production or staging with one under 32 characters, so generate it with `openssl rand -hex 32`) | agent-gateway |
-| `redis-auth` | `password` | Redis CR, backend, workers, frontend, gateway |
+| `agent-gateway-secrets` | `INTERNAL_EVENTS_SECRET` (same value as the backend's `AGENT_GATEWAY_INTERNAL_SECRET`; the gateway refuses to boot in any `ENV` with one holding a control character or leading or trailing blanks, and in production or staging with one under 32 characters, so generate it with `openssl rand -hex 32`), `SIGNING_KEY_ENCRYPTION_KEY` (standard base64 of 32 bytes, `openssl rand -base64 32`: it seals each store's UCP signing key in the gateway's Redis, so changing it in place makes every sealed key unreadable and the gateway refuses to start; a backup of the Redis volume opens only with it) | agent-gateway |
+| `redis-auth` | `password` | Redis CR, backend, workers, frontend |
+| `redis-gateway-auth` | `password` | The gateway's own Redis CR (`redis-gateway`) and agent-gateway (`REDIS_PASSWORD`) |
 | `app-grooveshop-meilisearch-master-key` | `MEILI_MASTER_KEY` | Meilisearch chart, PreSync job |
 | `platform-admin-basic-auth` | `users` (htpasswd) | Traefik middleware on the platform host |
 | `docs-basic-auth` | `users` (htpasswd) | Traefik middleware gating `/dev` on the documentation host; until it exists Traefik cannot load the Middleware and `/dev` fails closed with no route |
@@ -156,6 +157,7 @@ placeholders may be present at build time. The same applies to any
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/sealed-*.yaml`, `overlays/staging/sealed-*.yaml` | Committed SealedSecrets |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`, `frontend.yaml`, `media-stream.yaml`, `agent-gateway.yaml` | `envFrom` / `secretKeyRef` wiring, Reloader annotations |
 | `grooveshop-agent-gateway/internal/config/config.go` | `checkInternalSecret` and `minInternalSecretLen`: what the gateway accepts as `INTERNAL_EVENTS_SECRET` |
+| `grooveshop-agent-gateway/internal/ucp/keys.go` | How `SIGNING_KEY_ENCRYPTION_KEY` seals each store's UCP signing key |
 | `grooveshop-infrastructure/docs/missing-secrets-runbook.md` | Add or rotate a key |
 | `grooveshop-infrastructure/docs/sealed-secrets-key-management.md` | Controller key export, rotation, restore |
 | `grooveshop-infrastructure/docs/tenant-onboarding.md` | Tenant-row credential reference |

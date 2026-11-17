@@ -8,8 +8,8 @@ description: "The Go agent gateway: MCP tools, UCP checkout and its payment hand
 One Go binary serves five protocol surfaces on each tenant's **own**
 storefront domain, path-routed there by Traefik. It is a **protocol adapter**
 and nothing else: all commerce state lives in Django's REST API, sessions and
-caches live in Redis, and it holds no database and no payment-provider
-secrets.
+caches live in the gateway's own Redis, and it holds no database and no
+payment-provider secrets.
 
 | Path | Surface |
 |---|---|
@@ -36,7 +36,7 @@ flowchart TD
   Gate -- "yes" --> Ident["optional bearer verify"]
   Ident --> Tools["MCP tools"]
   Tools --> API["Django REST, X-Forwarded-Host"]
-  Tools --> Sess["Redis ag:schema:cs:id"]
+  Tools --> Sess["Redis ag:schema:cs:v4:id"]
 
   Platform["UCP / ACP platform"] --> Profile["/.well-known/ucp"]
   Platform --> ACP["/acp/checkout_sessions"]
@@ -77,6 +77,27 @@ indistinguishable, to a handler, from a tenant that never configured the
 feature. Routes that need one (`/chat`, `/acp`) use
 `MiddlewareWithSecrets`, which tops them up through `EnsureSecrets` before the
 handler runs.
+
+**When Django cannot give the credentials** (it is down, or it does not
+recognise the gateway's internal token), the credential routes are decided once
+per host per negative TTL, by `internal/tenant/resolver.go`:
+
+- A memory entry keeps the credentials of the last answer this pod got from
+  Django, per store: they are kept only while the tenant known for the host has
+  the same `SchemaName`, and dropped for a gone store or a host that moved to
+  another one.
+- Until twice `TENANT_CACHE_TTL` after the pod fetched them, `/chat` and `/acp/*`
+  are served with the held credentials on the entry's current config, marked
+  `Stale`. After that they answer **503**, with the error line `tenant
+  credentials unavailable`. The other routes keep serving the config, which
+  carries no credentials, and a stale config has no age bound.
+- A resolve that Django answers without recognising the internal token (a
+  rotation that reached only one side) is logged once at error, "Django did not
+  recognise the gateway's internal token", and cached as a public config, never
+  as a store without credentials. Once Django recognises the token again,
+  credentials load within one negative TTL.
+- A rotated ACP bearer or chat key is refused by a pod within one TTL while
+  Django answers, and within two while it cannot.
 
 Every tenant-scoped Django call then sends `X-Forwarded-Host: <tenant
 domain>` and `X-Forwarded-Proto: https`, plus `X-Language` when the request
@@ -330,16 +351,74 @@ Declaring it asserts a machine-checkable contract. Its cart and catalog
 methods belong to capabilities the profile does not advertise, so a
 negotiating platform never calls them.
 
-`get_order` sources the required `checkout_id` from the gateway's own order
-link (`ag:{schema}:orderlink:{uuid}` — checkout id, storefront domain and
-webhook target — retained a year, because the link must outlive the session
-itself: `internal/checkout/store.go` holds an active session for 30 minutes
-and a terminal one for 24 hours, and `internal/checkout/session.go` ends a
-placed one 24 hours after placement however often it is saved since). An order placed on the web has no checkout to
-name and is refused with that explanation, never a fabricated id.
+`get_order` serves an order to the platform that placed it, as the order
+capability's authorization section describes. It reads the gateway's own order
+link (`ag:{schema}:orderlink:{uuid}`: checkout id, storefront domain, webhook
+target and the platform that signed the checkout's creation, retained a year,
+because the link must outlive the session itself: `internal/checkout/store.go`
+holds an active session for 30 minutes and a terminal one for 24 hours, and
+`internal/checkout/session.go` ends a placed one 24 hours after placement
+however often it is saved since) before it asks the store anything. An order
+whose link names another platform, or none, answers the spec's `not_found`
+error response (`ucp.OrderNotFound`), the same as an id that names no order. An
+order placed on the web has no checkout to name and is refused likewise, never
+with a fabricated id. The required `checkout_id` comes from the link.
 `order.fulfillment` stays `{}`: an expectation needs a destination the order
 detail deliberately does not decode, and an event needs a shipment timestamp
 upstream does not expose.
+
+#### Signed platform calls
+
+A UCP platform can prove who it is by signing its request (RFC 9421, with an RFC
+9530 `Content-Digest` of the body), as UCP's signatures page defines for MCP.
+`mcpsrv.VerifyPlatformSignature` (`internal/mcpsrv/signature.go`) runs on `/mcp`
+before the MCP handler, which never sees the request's method, path or raw body.
+
+- **What is verified.** A request is a UCP request when it names its platform in
+  a `UCP-Agent` header or calls a tool that serves only a signed platform
+  (`get_order`). One of those that carries `Signature-Input` or `Signature` is
+  verified. A signature on any other request (an agent that signs all its
+  traffic, as Web Bot Auth does) is not UCP's to judge, and the request is served
+  as an unsigned one.
+- **Against which key.** The keys are the top-level `keys[]` of the profile the
+  `UCP-Agent` header names (`ucp.ProfileResolver.VerifyRequest`,
+  `internal/ucp/profiles.go`): the profile is fetched as negotiation fetches it,
+  a key marked `use: enc` or whose `key_ops` leave out `verify` is skipped, and a
+  keyid the cached profile does not publish makes one fresh fetch, at most once
+  per cache floor per origin. The signer is that profile's URL, normalized
+  (`ucp.NormalizeProfileURL`).
+- **What a signature must cover** (`internal/httpsig`): the method, authority
+  (the request's `Host`), path and query, the body's `content-digest` and
+  `content-type`, and each of `ucp-agent` and `idempotency-key` the request
+  carries. The algorithm is the key's (ES256, ES384 or Ed25519), never a
+  parameter. Because the signature binds `Host`, path, `Content-Type` and body
+  bytes, the edge must pass them to the pod unchanged. `created` and `expires`
+  are held to `UCP_SIGNATURE_MAX_AGE` (five minutes by default) and
+  `UCP_SIGNATURE_CLOCK_SKEW` (one minute) only when the signature carries them;
+  replay protection is the idempotency key.
+- **A signature that fails** is answered before the handler with UCP's status and
+  JSON-RPC code: 401 and -32000 for `signature_invalid` and `key_not_found`, 400
+  and -32600 for `digest_mismatch` and `algorithm_unsupported`, the discovery
+  failure (-32001) when the profile cannot be had, or 503 when the discovery
+  budget is spent. A signed call whose tool names another platform in
+  `meta.ucp-agent.profile` is `signature_invalid` (identity binding).
+- **What the signer gets** (a fixed policy, no switch):
+  - `get_order` takes only a signed request: unsigned, it is 401
+    `signature_missing`, with no OAuth challenge.
+  - A checkout a signed `create_checkout` made belongs to that platform
+    (`Session.Platform`). Every later call on it must come from the same signer,
+    and any other caller gets the missing-session answer (`Session.Serves`). A
+    `create_checkout` with a `cart_id` whose open checkout another platform
+    signed does not take the cart: it is a `conflict`.
+  - An **unsigned** `create_checkout` stays open, as the spec makes signing a
+    SHOULD for checkout: its checkout belongs to no platform and any UCP caller
+    reaches it. The other five tools are not made to require a signature.
+  - The order link carries the signer, so `get_order` answers a platform only the
+    orders it placed.
+
+`go run ./cmd/ucp-sign` signs requests to a running gateway as a platform, for the
+runbook's signed checks (`docs/agent-protocols-runbook.md`, U5: a signed call
+through the edge, which fails if Cloudflare or Traefik changed what was signed).
 
 A UCP or ACP checkout books both its cart and its order as the agent's.
 `internal/checkout/session.go: agentAttribution` builds
@@ -562,8 +641,9 @@ order whether or not the platform is still connected. A call whose context ended
 before that point places no order, and its key is free for a retry. After a placed order
 whose caller left, the answer is "order placed, read it again" (503
 `order_placed` on ACP) without the upstream read, and an info line is logged.
-Only the process exiting cuts a completion: the shutdown drain is shorter than
-the budget. UCP's `complete_checkout` shares this flow, and both surfaces
+The process does not exit under one: the shutdown's final window holds the
+completion's budget and the settle steps after it
+(`checkout.CompletionTail`, see Shutdown and logs). UCP's `complete_checkout` shares this flow, and both surfaces
 store what the call itself submitted (ACP's buyer, UCP's payment) before they
 call it, so a refused call keeps the buyer's latest choice.
 
@@ -572,24 +652,79 @@ while the store has promotions on (`internal/acp/render.go:
 capabilitiesOf`); with promotions off every submitted code comes back in
 `discounts.rejected`.
 
+### Checkout sessions
+
+A UCP or ACP checkout is a session in the gateway's Redis
+(`internal/checkout/store.go`, `internal/checkout/session.go`).
+
+- **Keys.** `ag:{schema}:cs:v4:{id}` is the session, that plus `:lock` its
+  lock, that plus `:order` the order it placed. The version is of how sessions
+  are written, not only of their shape: it moves whenever an older pod writing
+  the key its own way could undo what a newer one relies on, so the two never
+  share a session and one under an older key is simply not found
+  (`TestSessionKeyIsVersioned`). The session that holds a cart is named in
+  `ag:{schema}:checkoutcart:{cartId}`, a family of its own, and the order links
+  are `ag:{schema}:orderlink:{uuid}`.
+- **Who may read one.** A session answers only on the surface that created it
+  (`Session.Protocol`), and one whose creation a platform signed only to that
+  platform (`Session.Platform`): `Session.Serves` decides, and a session the
+  caller may not reach gets that surface's missing-session answer.
+- **A missing session is not "nothing happened".** The id does not say whether
+  the checkout was never completed, placed an order and is no longer kept, or
+  never existed, so every such answer says an order may exist and to check
+  before starting another checkout (`mcpsrv.errCheckoutGone` on UCP,
+  `acp.msgSessionGone` on ACP).
+- **A session is stored by compare-and-set.** Every save gives it a new random
+  `Session.Revision` and writes only over the revision the request loaded;
+  another request's save in between is `ErrSessionChanged` and nothing is
+  written. There is no unconditional write of a session. A lost save is answered
+  like a busy one (ACP 409 `idempotency_in_flight` with `Retry-After`, UCP a
+  `conflict` tool error, the order-event push a 503 Django sends again).
+- **The in-progress save is the fence.** `Flow.Complete` sends `POST /order` only
+  after its save of `complete_in_progress` was accepted, so of all the
+  completions that loaded one ready session, under any lock or key, one reaches
+  Django. The lock only orders requests (`Store.Lock`): it can lapse while its
+  holder still works, and the fence is what stands. A lock and an idempotency key
+  are both a claim (`checkout.Claim`) holding the request's own token, so a
+  request that outlived its claim never writes or deletes the next holder's.
+- **One live checkout holds a cart.** Two sessions on one cart could each place
+  an order. `Store.Create` stores a session and takes the cart in one script,
+  and the newest UCP `create_checkout` on a cart cancels the open UCP checkout
+  that held it (under that checkout's own lock). A holder whose order is being
+  placed or awaits payment, or an open checkout of another protocol or one
+  another platform signed, keeps the cart: the create is a `conflict`. An unpaid
+  online order Django has canceled releases it. Django also refuses an agent's
+  order from a cart whose earlier order still awaits its payment, which holds
+  whatever Redis lost.
+- **A handler holds a snapshot** and answers from it only through its exit
+  (`finish`): once the session was loaded the lock can lapse, so an answer made
+  from the snapshot is given only while the stored revision is still the loaded
+  one, else the request is answered by what is stored.
+- **Order events** (`Flow.ApplyOrderEvent`) reach a session through its order
+  link, take no lock, and save by the same compare-and-set. A payment-completed
+  event sets `completed`; no other event changes a status. A session is never
+  completed without its order.
+
 ### Catalog feeds
 
-`internal/feeds/` serves four URLs per tenant from two documents: the RSS
-dialect (`google.xml`, `meta.xml`, `tiktok.xml` are one document, rendered,
-compressed and cached once) and the ACP JSON feed (`acp.json`). One sweep of the
-catalog renders both.
+`internal/feeds/` serves four URLs per tenant from three documents: two in the
+RSS dialect, Google's (`google.xml`) and one `meta.xml` and `tiktok.xml` share,
+and the ACP JSON feed (`acp.json`). The two RSS documents differ only in
+`g:brand` (below). One sweep of the catalog renders all three.
 
-**The documents are built whole in memory.** Only the fetch is bounded: the
-sweep reads the catalog in pages of 100 with four fetches in flight and a window
-of eight completed pages, up to 100 pages, so ten thousand products. A catalog
-past that is cut, logged as such. The RSS and the ACP document are each held
-entire, then compressed (`internal/feeds/pipeline.go`,
-`internal/feeds/acp.go`). Two sweeps run
-per pod at most, whichever tenants they belong to.
+**No document is ever held whole and uncompressed.** The sweep reads the catalog in pages of 100
+with four fetches in flight and a window of eight completed pages, up to 100
+pages, so ten thousand products. A catalog past that is cut, logged as such.
+Each document is written an item at a time into its own gzip stream
+(`docStream`, `internal/feeds/pipeline.go`, `internal/feeds/service.go`), which
+hashes and counts it for the ETag and the size, so a sweep costs the fetch window
+plus the gzip output, about a tenth of the documents. Two sweeps run per pod at
+most, whichever tenants they belong to.
 
-**What is cached, and where.** Per format (`rss`, `acp`) Redis holds the gzipped
+**What is cached, and where.** Per format (`google`, `rss` for Meta and TikTok,
+`acp`) Redis holds the gzipped
 document at `ag:{schema}:feed:{format}` and its metadata (ETag, the time the sweep
-started, the size, and the gateway build that rendered it) at
+started, the uncompressed size, and the gateway build that rendered it) at
 `ag:{schema}:feed:{format}:meta`, both expiring after `FEED_STALE_TTL`. Beside
 them are `ag:{schema}:feed:epoch`, a counter an invalidation bumps, and
 `ag:{schema}:feed:failed`, the failure mark below.
@@ -601,9 +736,21 @@ them are `ag:{schema}:feed:epoch`, a counter an invalidation bumps, and
   instead of after the stale window.
 - **A revalidation reads no blob.** The handler reads the metadata and
   compares the ETag; a match answers 304 without the document. It only TOUCHes
-  the blob, which keeps its LRU clock as warm as the metadata's. Redis evicts
-  keys one by one, so an entry whose blob is gone counts as a miss: the next
-  request regenerates it.
+  the blob, which marks it read with the metadata, so the two keys stay as warm
+  as each other. They can still be lost apart (a flush or a restore), so an
+  entry whose blob is gone counts as a miss and the next request regenerates it.
+  So does one whose blob is not whole: every body read checks the gzip header
+  and the trailer's stored length against the metadata's size, without decoding.
+- **One weak ETag, declared lengths, no validators on errors.** The ETag is weak
+  (`W/"..."`) and covers the gzip and the identity body alike. A 200, and a
+  HEAD, declare `Content-Length` in either coding, with `Vary: Accept-Encoding`
+  and `Cache-Control`; a 304 carries only `ETag`, `Cache-Control` and `Vary`; an
+  error answer carries none of the three. A gzip request is served the stored
+  bytes as they are. An identity request is decoded as a stream under its
+  declared length, with the last bytes held back until gzip has verified its CRC
+  and length: a blob that fails there cuts the response short of
+  `Content-Length`, so the client sees a broken body and never a complete-looking
+  200, and the blob is logged and dropped so the next request regenerates it.
 - **`If-None-Match` and `Accept-Encoding` follow RFC 9110**
   (`internal/httphdr/httphdr.go`, shared with the Server Card). The ETag is
   compared weakly (a `W/` prefix on either side is ignored), the field may be
@@ -658,8 +805,15 @@ matter are listed at the top of `internal/feeds/rss.go`:
   tokenizer's text, so markup and the content of script or style elements do
   not leak), else the name.
 - Availability is the enum `in stock` / `out of stock`; condition is `new`;
-  `g:item_group_id` carries the variant group; `g:brand` falls back to the
-  store name.
+  `g:item_group_id` carries the variant group.
+- **`g:brand` is the product's brand.** For a product without one, the Meta and
+  TikTok document sends the store name (Meta lists brand as required and TikTok
+  rejects an upload without one) and Google's sends no `g:brand`: Google asks for
+  the brand of whoever made the product and for none on a product that has none,
+  and a store's name in its place would state a brand the product does not carry.
+  A store that makes its own goods gives them a brand named after the store.
+  `g:identifier_exists` is never written (`newGoogleWriter` and
+  `newMetaTikTokWriter` in `internal/feeds/rss.go`).
 - Every attribute that is not a variant option goes out as a
   `g:product_detail`, so a specification is entered once.
 - The store's highlights go out as `g:product_highlight`, from `/product/feed`'s
@@ -669,8 +823,8 @@ matter are listed at the top of `internal/feeds/rss.go`:
   anyway, and the third has no price checkout would honour yet. An inactive
   product is skipped too. A malformed money field is an error, because it would
   corrupt every consumer's feed.
-- **Fields stay within the strictest of the three targets' limits**, so one
-  document serves Google, Meta and TikTok (the constants at the top of
+- **Fields stay within the strictest of the three targets' limits**, so either
+  RSS document fits any of them on length (brand presence differs, above; the constants at the top of
   `internal/feeds/rss.go`, cut by rune, never by byte):
 
   | Field | Limit |
@@ -691,8 +845,7 @@ matter are listed at the top of `internal/feeds/rss.go`:
 `acp.json` follows the ACP feed schema: one Product per catalog row with a
 single self-Variant, because the RSS feeds already carry `item_group_id` for
 the platforms that group variants. Its variant's `price` is the charged price,
-and `list_price` is the prior price only when a reduction is announced. The
-document is held whole in memory like the RSS one.
+and `list_price` is the prior price only when a reduction is announced.
 
 Image origins go through `internal/media/url.go: Host`, which returns the
 tenant's own assets domain **only when it opted into white-label assets** and
@@ -1015,24 +1168,70 @@ The webhook queue is deliberately **not** per schema: one Redis stream
 (`ag:webhooks:orders`) and consumer group for the whole pod pool, one consumer
 per pod name, each delivery carrying its own schema for the signing key.
 Delivery runs in a bounded worker pool because inline delivery let one
-undeliverable endpoint stall every tenant's webhooks. Semantics are
-at-least-once: an entry is acknowledged only on a terminal outcome; a
-restarted pod replays its own pending entries at once, and a vanished pod's
-are claimed by another after the visibility timeout — never while the pod
-that holds them is still delivering.
+undeliverable endpoint stall every tenant's webhooks, and no one endpoint can
+hold the pool either: a **target** holds at most its share of a pod's workers
+(`perTargetDeliveries`, two of `deliveryWorkers`, in `internal/ucp/webhook.go`).
+The target is the registrable domain of the URL's host, in ASCII (a name under
+one's own domain is free, so a cap per host would give one owner as many shares
+as names), or the address as the rate limiter counts one. A delivery read while
+its target is at the cap waits in process, first in first out, and the worker
+that frees one of the target's slots takes it next; one beyond the queues'
+bounds, or not started within `queueMaxWait` of its read, is left pending for
+reclaim. So an endpoint that does not answer delays its own deliveries, never
+another platform's. Semantics are at-least-once: an entry is acknowledged only
+on a terminal outcome (and never when the store's signing key could not be read);
+a restarted pod replays its own pending entries at once, and a vanished pod's
+are claimed by another after the visibility timeout, never while the pod that
+holds them is still delivering. Two deliveries to one target can run at once, so
+two events of one order can arrive in either order; each carries the full order
+entity.
+
+The tenant's signing key is **sealed at rest** (`internal/ucp/keys.go`).
+`ag:{schema}:ucp:signing_key:es256:aes256gcm` holds the private scalar encrypted
+with AES-256-GCM under `SIGNING_KEY_ENCRYPTION_KEY`, with the purpose and the
+schema as associated data, so a record copied to another store does not open. A
+record that does not open is an error, never a key minted over it, because a new
+key would rotate the store's published key under the platforms that verify
+against it. At boot a pod checks the key against the sealed keys Redis holds
+(`Keys.AwaitKEK`): it retries until Redis answers and exits only when Redis holds
+keys and the key opens none of them. The records carry no TTL; the gateway's
+Redis evicts nothing.
 
 Django can also drop a tenant's cached feeds through
 `POST /internal/feeds/invalidate` (`src/core/cache/gateway.py`), which requires
 the schema **explicitly** — guessing would drop another tenant's feeds.
+
+### The gateway's own Redis
+
+The gateway does not use the platform's shared Redis. `REDIS_URL` points at
+`redis-gateway`, database 0 of an instance of its own
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis-gateway.yaml`,
+`redis-gateway-config.yaml`, and `agent-gateway.yaml` for the URL and the
+`redis-gateway-auth` password). What it keeps is state, not cache: checkout
+sessions, their locks and order links (kept a year), ACP idempotency records, the
+sealed signing keys, and the order-webhook stream with its consumer group. On the
+shared instance, which evicts to make room for cached pages, any of it could be
+dropped, so this one runs `maxmemory-policy noeviction` with AOF persistence: a
+full instance refuses writes (the gateway then fails checkouts, chat turns and
+feed sweeps) instead of losing a record. A record without a TTL or with a long
+one is never evicted. The volume carries the backup labels
+(`overlays/production/patches/pvc-offsite-backup-patch.yaml`), because a store's
+signing key and the year-long order links are not rebuilt by anything; the
+infrastructure repository's `docs/backups.md` has the restore. The key that seals
+the signing keys is `SIGNING_KEY_ENCRYPTION_KEY` in `agent-gateway-secrets`: a
+restored volume's keys open only with it.
 
 ### Health
 
 `/healthz` is process-only liveness: no dependency checks, because a Django
 or Redis outage must never restart pods.
 
-`/readyz` gates on **Redis only**. `internal/obs/health.go: Readyz` pings both
-and reports both in the body, but only the Redis error sets the 503 status —
-the Django result is informational and never flips readiness. With Django
+`/readyz` gates on **Redis and the startup checks**. `internal/obs/health.go:
+Readyz` pings both Redis and Django and reports both in the body, but only the
+Redis error and an unfinished startup check (the signing keys' check above,
+`Keys.Checked`) set the 503 status — the Django result is informational and
+never flips readiness. A pod that boots during a Redis restart is therefore
+unready, not crash-looping. With Django
 down the gateway still serves actionable tool errors and stale feeds, which
 beats Traefik 502s. The Django ping is one attempt, never retried: the probe
 repeats on its own period.
@@ -1040,15 +1239,23 @@ repeats on its own period.
 ### Shutdown and logs
 
 `cmd/gateway/serve.go` ends a pod in two windows. After the Deployment's preStop
-sleep, SIGTERM starts a **10 second drain**: in-flight requests finish with
-live contexts, because a context cancelled at the signal would abort a Django
-call midway. Then every request context is cancelled with the cause
-`httpmw.ErrShuttingDown` and a stream (a chat turn, an MCP call) gets **5
-seconds** to write its last event; the chat sends its generic `error`. What is
-still open is closed, logged at warn, and the process exits 0, inside
-`terminationGracePeriodSeconds`. `ReadTimeout` (30 seconds) bounds reading a
-request and is cleared once the body is read; there is no `WriteTimeout`, which
-would cut every stream.
+sleep (10 seconds), SIGTERM starts a **10 second drain**: in-flight requests
+finish with live contexts, because a context cancelled at the signal would abort
+a Django call midway. Then every request context is cancelled with the cause
+`httpmw.ErrShuttingDown`, and so is every MCP tool call's on either MCP server
+and any protocol (`mcptool.Add` ends each handler's context on it). A final
+window follows, the longer of a stream's 5 seconds to write its last event (the
+chat sends its generic `error`) and the tail of an order completion that
+detached before the cut: its budget, then the steps that settle its key and
+release its lock (`checkout.CompletionTail`). At the default `UPSTREAM_TIMEOUT`
+that is 51 seconds. What is still open is then closed, logged at warn, and the
+process exits 0, 61 seconds after SIGTERM, so the Deployment's
+`terminationGracePeriodSeconds` covers the sleep, the 61 seconds and a margin
+(76 at the default); each second of `UPSTREAM_TIMEOUT` adds five, and the
+infrastructure repository's pre-commit check refuses a grace period that does not
+follow. `ReadTimeout` (30 seconds) bounds reading a request and is cleared once
+the body is read; `IdleTimeout` (120 seconds) sits above Traefik's 90 second
+backend idle timeout; there is no `WriteTimeout`, which would cut every stream.
 
 Every log line written with a request's context carries `request_id` and
 `tenant` (`internal/obs/log.go`), and the same id goes to Django as
@@ -1056,6 +1263,16 @@ Every log line written with a request's context carries `request_id` and
 `X-Request-Id` is kept only as visible ASCII cut to 64 bytes, else one is
 minted. A handler panic is logged and still gets its access line and metric,
 as a 500 or the status already sent.
+
+Every MCP tool call that reaches its handler, on `/mcp`, the chat and
+`/mcp/admin`, logs one info line, `tool call`, with `server` (`mcp`, `chat` or
+`mcp_admin`), `tool`, `outcome` (`ok`, the tool error's code, `error` or
+`panic`) and `duration_ms`, never the arguments or the result
+(`internal/mcptool/mcptool.go`). The same call is counted on
+`gateway_tool_calls_total{server,tool,outcome}`, where a code Django or a coupon
+refusal gave counts as `refused`. A bearer that could not be verified because
+Django failed is logged `token verification failed`, with `server` naming which
+MCP server asked.
 
 ### Routing and release
 
@@ -1100,7 +1317,8 @@ yourself, then bumping the pin in the infrastructure repo.
 - **A store feature switched off is off on every agent surface.** Read
   `TenantConfig.Features`, never a flag or setting of your own; a tool that
   serves a feature is registered with `onlyWith`.
-- **`/readyz` never fails on Django.** Only Redis flips it.
+- **`/readyz` never fails on Django.** Only Redis and the startup check of the
+  signing keys flip it.
 - **Redis keys are `ag:{schema}:…`**, except the tenant cache
   (`ag:tenant:<version>:{host}`) and the shared order-event queue.
 - **No tenant label on Prometheus metrics** — unbounded cardinality; tenant
@@ -1151,6 +1369,12 @@ yourself, then bumping the pin in the infrastructure repo.
   Remember that the key only arrives on an internally-authenticated resolve,
   so a config served from the Redis tier has it empty — `/chat` uses the
   secrets middleware for exactly that reason.
+- **`/chat` or `/acp/*` answers 503, not 404.** The gateway holds no credentials
+  for the store: Django was down or did not recognise the internal token for
+  longer than twice `TENANT_CACHE_TTL`, or the pod never had them. The log line is
+  `tenant credentials unavailable`, or, when the token was refused, "Django did
+  not recognise the gateway's internal token". Check `INTERNAL_EVENTS_SECRET`
+  against Django's `AGENT_GATEWAY_INTERNAL_SECRET`.
 - **Every ACP bearer gets 401.** The tenant has no `acpBearerToken`, which is
   how ACP is disabled. It is not a credential mismatch.
 - **Every ACP call is 400 `missing_api_version` or `unsupported_api_version`.**
@@ -1167,8 +1391,10 @@ yourself, then bumping the pin in the infrastructure repo.
   (`clear_cache products`). A stale feed is still served during the mark.
   `gateway_feed_generation_failures_total` and the `feed generation failed` log
   line say why it failed.
-- **The gateway pod crash-loops at start.** `config.Load` refused a value, and
-  the error names the variable. See [Agent gateway](/dev/gateway/#configuration).
+- **The gateway pod crash-loops at start, or never turns ready.** `config.Load`
+  refused a value and the error names the variable, or `SIGNING_KEY_ENCRYPTION_KEY`
+  opens none of the sealed signing keys Redis holds (the process ends rather than
+  mint a second key), or Redis is down (unready, not a crash). See [Agent gateway](/dev/gateway/#configuration).
 - **The token endpoint answers 500 after consent.** The client asked for
   `openid` and the environment has no `IDP_OIDC_PRIVATE_KEY`: Django logs
   `No active private key`, and `/.well-known/jwks.json` serves no keys.
@@ -1201,12 +1427,24 @@ yourself, then bumping the pin in the infrastructure repo.
   only published while every method it defines for an advertised capability
   exists. Dropping one of the five tools without removing the URL breaks the
   contract the profile asserts.
-- **`get_order` refuses with "no checkout".** The order was placed on the web
-  and has no session in the order index, or the index entry aged out past its
-  one-year retention. It is a refusal, not a bug.
-- **Order webhooks stop for one tenant.** The delivery pool bounds the damage
-  to one worker per stuck endpoint, so the symptom is usually that tenant's
-  platform endpoint blackholing. Undelivered entries stay pending in the
+- **`get_order` refuses with "no checkout" or answers `not_found`.** The order was
+  placed on the web, or by another platform (or by an unsigned one), or the
+  order link aged out past its one-year retention. It is a refusal, not a bug.
+- **`get_order` answers 401 `signature_missing`.** The call was not signed: the
+  tool serves a platform only by a signature its UCP profile's `keys[]` can
+  verify.
+- **A signed call answers `signature_invalid` or `digest_mismatch`.** Something
+  changed what was signed (`Host`, path, `Content-Type` or the body) between the
+  platform and the pod, or the platform's profile no longer publishes the key.
+  The gateway's log line does not say which; compare the request as sent with what
+  the pod received (runbook U5).
+- **A checkout answers as missing to a caller that is not its platform.** It was created by
+  a signed platform and is read by another caller, or by that platform
+  unsigned. A checkout a signed create made is served only to that signer.
+- **Order webhooks stop for one tenant.** One target (a platform's registrable
+  domain) holds at most two of a pod's workers and queues the rest, so a stuck
+  endpoint delays its own deliveries and no other platform's; the symptom is
+  usually that tenant's platform endpoint blackholing. Undelivered entries stay pending in the
   `dispatch` group (`XPENDING ag:webhooks:orders dispatch`) until a terminal
   outcome.
 - **Deploy changed nothing.** The gateway image is not released by pushing to
@@ -1246,6 +1484,13 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/ucp/handler.go` | Payment handler, instruments, hosted selection |
 | `grooveshop-agent-gateway/internal/ucp/webhook.go` | Order-event queue and signed delivery |
 | `grooveshop-agent-gateway/internal/ucp/negotiate.go` | Capability intersection and authority binding |
+| `grooveshop-agent-gateway/internal/mcpsrv/signature.go`, `grooveshop-agent-gateway/internal/mcpsrv/order.go` | Platform signature verification on `/mcp`, `get_order` and its order-link check |
+| `grooveshop-agent-gateway/internal/ucp/keys.go`, `grooveshop-agent-gateway/internal/ucp/keys_upkeep.go` | The sealed signing key and its startup check |
+| `grooveshop-agent-gateway/internal/checkout/session.go`, `grooveshop-agent-gateway/internal/checkout/store.go` | The session, its revision and `Serves`, the Redis keys, locks and claims |
+| `grooveshop-agent-gateway/internal/mcptool/mcptool.go` | The `tool call` log line and `gateway_tool_calls_total` |
+| `grooveshop-agent-gateway/docs/agent-protocols-runbook.md` | The hands-on checks, including U5 (a signed request through the edge) |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis-gateway.yaml`, `redis-gateway-config.yaml` | The gateway's own Redis and its `noeviction` config |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/patches/pvc-offsite-backup-patch.yaml` | The backup labels on the gateway's Redis volume |
 | `grooveshop-agent-gateway/internal/ucp/profiles.go` | Platform profile fetch, validation and cache |
 | `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
 | `grooveshop-agent-gateway/internal/acp/handler.go`, `grooveshop-agent-gateway/internal/acp/types.go` | ACP routes, bearer auth, `API-Version`, errors, idempotency, `acp.Version` |

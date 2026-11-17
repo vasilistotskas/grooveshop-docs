@@ -56,8 +56,10 @@ be `memory`.
 **Media stream.** `pnpm install`, `pnpm run dev`; `BACKEND_URL` points at
 the image origin and Redis must be running.
 
-**Gateway.** Export the variables from `.env.example` (the seven required ones,
-`ENV=development`) and `go run ./cmd/gateway`. `ENV=development` is what lets
+**Gateway.** Export the variables from `.env.example` (the eight required ones,
+`ENV=development`) and `go run ./cmd/gateway`. The key that seals the stores'
+signing keys is `SIGNING_KEY_ENCRYPTION_KEY`: `openssl rand -base64 32` makes one,
+and a Redis that already holds sealed keys opens only with the key that sealed them. `ENV=development` is what lets
 the example's short `INTERNAL_EVENTS_SECRET` boot: production and staging refuse
 one under 32 characters. Every other value `config.Load` refuses at start is
 listed in [Agent gateway](/dev/gateway/#configuration).
@@ -67,8 +69,11 @@ gateway's `INTERNAL_EVENTS_SECRET` (and `AGENT_GATEWAY_INTERNAL_URL` to the
 gateway's address). Django's `.env.example` leaves the secret empty, and Django
 then does not recognise the gateway on `tenant/resolve`
 (`src/tenant/views.py: _is_gateway`): it leaves the store's chat key and ACP bearer
-out of the answer, so `/chat` and `/acp` stay off for every store with no error
-anywhere. The same secret authenticates the order-event push the other way.
+out of the answer, so `/chat` and `/acp` answer 503 for every store, and the
+gateway logs an error line (`Django did not recognise the gateway's
+internal token` once per cached answer, then `tenant credentials unavailable`
+once per decision). The same secret
+authenticates the order-event push the other way.
 
 ## Staging
 

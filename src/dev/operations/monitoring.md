@@ -43,7 +43,7 @@ flowchart LR
 |---|---|---|
 | Traefik | `victoria-metrics/scrapes/vmpodscrape-traefik.yaml` | Every request by Service, by router (one per Ingress host, so one per store) and by status. Django and the storefront export no metrics of their own |
 | Flower | `grooveshop/base/metrics-scrapes.yaml` | Celery task events (`flower_events_total`, including `task-failed`), runtimes, workers online |
-| Agent gateway | same file | Routes, status codes, Django upstream latency and outcomes (a caller that hung up is counted `canceled`, not as an upstream failure), rate limiting, tenant cache, failed feed generations (`gateway_feed_generation_failures_total`, any store; the log line names the store) |
+| Agent gateway | same file | Routes, status codes, Django upstream latency and outcomes (a caller that hung up is counted `canceled`, not as an upstream failure), rate limiting, tenant cache, failed feed generations (`gateway_feed_generation_failures_total`, any store; the log line names the store), MCP tool calls that reach their handler, by server, tool and outcome (`gateway_tool_calls_total`; each such call also logs one `tool call` line) |
 | Media stream | same file | Sharp pipelines, cache layers, admission control. Requires a bearer token, see below |
 | RabbitMQ | same file | Node metrics from `/metrics`, per-queue depth and consumers from `/metrics/detailed` |
 | Patroni | same file | Primary role, PostgreSQL running, timeline, WAL position |
