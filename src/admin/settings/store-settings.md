@@ -84,10 +84,10 @@ To remove it, set `enabled` to `false`.
 
 Write `{freeShippingThreshold}` or `{dispatchCutoff}` in `text`, `shortText` or any language's text, and the store fills in the current value every time the bar is shown:
 
-- `{freeShippingThreshold}`: the lowest **Free Shipping Threshold** among the active rates of the first country in the list, on your [shipping providers](/admin/settings/shipping-providers), written as an amount in euros. It is the same amount the product page quotes for free shipping.
+- `{freeShippingThreshold}`: the lowest **Free Shipping Threshold** among the active rates of the country checkout picks first (the first, in the platform's order of countries, with an active rate), on your [shipping providers](/admin/settings/shipping-providers), written as an amount in euros. It is the same amount the product page quotes for free shipping.
 - `{dispatchCutoff}`: the `DISPATCH_CUTOFF` time, for example `15:00`.
 
-The setting takes these keys: `enabled`, `text`, `shortText`, `code`, `link`, `icon`, `color`, `dismissible`, `id` and `i18n`. An example with live amounts:
+An example with live amounts:
 
 ```json
 {

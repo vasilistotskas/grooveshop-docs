@@ -189,14 +189,14 @@ What does not show:
 
 | Line | Reads like | Comes from |
 |---|---|---|
-| Delivery | "Delivered in 2–4 business days", with "Orders placed by 15:00 leave the same business day" under it | The delivery days of your [shipping providers](/admin/settings/shipping-providers) for the first country in the list (from the lowest **Delivery Days (min)** to the highest **Delivery Days (max)**), and the `DISPATCH_CUTOFF` setting |
+| Delivery | "Delivered in 2–4 business days", with "Orders placed by 15:00 leave the same business day" under it | The delivery days of your [shipping providers](/admin/settings/shipping-providers) for the country checkout picks first, the first in the platform's order of countries with an active rate (from the lowest **Delivery Days (min)** to the highest **Delivery Days (max)**), and the `DISPATCH_CUTOFF` setting |
 | Free shipping | "Free shipping from €50.00", with what each courier charges below that under it | The lowest **Free Shipping Threshold** of your shipping providers for that country, and each courier's cheapest price there. A courier that already ships free is not listed. |
 | Returns | "30-day returns", linked to your return policy once that page is published | The `RETURN_WINDOW_DAYS` setting. At 0 the line is left out. |
 | Ways to pay | "Card or cash on delivery" | Your active [payment methods](/admin/settings/payment-methods) |
 
 A line the store has no data for is left out, and the section disappears when no line is left, so a store without shipping rates shows no empty strip. A store whose cart or product catalogue is switched off does not get the section at all. The section does not follow `PRODUCT_ASSURANCES_ENABLED`: that setting is only for the box on the product page.
 
-**Layout: Card.** With **Layout** set to **Card**, the promises sit on one raised card. In a store with its own design, on a desk the card rises over the bottom edge of the section right above it, when that section is drawn in the **Bold** style (for example the hero) or is a **Blog post grid** with **Layout** set to **Card with posts**. On a phone it is small cards, two to a row. The card ignores **Background**, and its **Heading** is read out to screen readers only, so it is not drawn. A card that is the first section of a page, or that follows a section that is not bold, does not rise: it sits in its own place.
+**Layout: Card.** With **Layout** set to **Card**, the promises sit on one raised card. In a store with its own design, on a desk the card rises over the bottom edge of the section right above it when that section draws its own full-width band: a section in the **Bold** style (for example the hero), a **Blog post grid** with **Layout** set to **Card with posts**, or another shopping promises card. On a phone it is small cards, two to a row. The card ignores **Background**, and its **Heading** is read out to screen readers only, so it is not drawn. A card that is the first section of a page, or that follows any other section, does not rise: it sits in its own place.
 
 ## Show a newsletter sign-up
 
@@ -217,11 +217,11 @@ The section draws nothing when the newsletter is switched off or the store has n
 
 Both layouts take an **Eyebrow**, a **Title**, a **Subheading**, a **Button text** and a **Button link**. With **Layout** set to **Tiles**, write `{count}` in the **Button text** and it shows how many articles the listed categories hold between them, for example “All {count} articles”. The number follows your blog, with nothing to publish. This works in every style. Under **What it lists** you set **How many** categories. The section disappears when the blog has no categories, and with the blog switched off.
 
-**Style** takes **Bold** for the **Tiles** layout: see [Give a section the bold look](#give-a-section-the-bold-look). The sliding row of categories keeps its usual look whatever **Style** says. In the **Bold** style the tiles keep the icon beside the name at every width, and a desk shows as many columns as fit.
+**Style** takes **Bold** for the **Tiles** layout: see [Give a section the bold look](#give-a-section-the-bold-look). The sliding row of categories keeps its usual look whatever **Style** says. In the **Bold** style the tiles keep the icon beside the name at every width, and a desk shows as many columns as fit. On a phone the **Bold** tiles show no button.
 
 ## Give a section the bold look
 
-Five sections can be drawn in a heavier look: **Hero with picture and search**, **Product grid**, **Blog categories**, **Blog post grid** and **Newsletter sign-up**. It draws heavier headings, a small line above the heading in the accent colour and, in the product, post and category bands, links drawn as text with an arrow.
+Five sections can be drawn in a heavier look: **Hero with picture and search**, **Product grid**, **Blog categories**, **Blog post grid** and **Newsletter sign-up**. It draws heavier headings, a small line above the heading in the accent colour where the section has an **Eyebrow** and, in the product, post and category bands, links drawn as text with an arrow.
 
 1. Open **Content → Edit storefront** and click the section in the outline.
 2. Set **Style** to **Bold**. **Default** keeps the look the section always had.
@@ -240,7 +240,7 @@ A section that sets none of the settings below looks as before. All are optional
 
 **Card with posts** ignores **Background**, **Style** and **Layout on a phone**. The card takes the section's **Colour scheme**, so a dark card can sit on a light page.
 
-**The button text on a phone.** In the **Bold** style a **Product grid** puts its button under the products on a phone, and a **Blog post grid** keeps it beside the heading. Without a **Button text** of your own, in the **Bold** style a **Product grid** reads “See all products” on a phone and “All products” on a desk, and a **Blog post grid** reads “All” on a phone and “All posts” on a desk; the usual look shows “All products” and “All posts” on every screen. With a **Button text**, every screen shows it.
+**The button text on a phone.** In the **Bold** style a **Product grid** puts its button under the products on a phone, and a **Blog post grid** keeps it beside the heading. Without a **Button text** of your own, in the **Bold** style a **Product grid** reads “See all products” on a phone and “All products” on a desk, and a **Blog post grid** reads “All” on a phone and “All posts” on a desk; the usual look shows “All products” and “All posts” on every screen. With a **Button text**, every screen shows it. In the **Bold** style the **Blog categories** tiles show no button on a phone.
 
 ## Draw a band light or dark
 
