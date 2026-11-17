@@ -31,7 +31,7 @@ flowchart LR
   Celery --> Redis
   Media -- "upstream fetch" --> Static["Static nginx / Django media"]
   Nuxt --> Redis
-  Gateway --> Redis
+  Gateway --> GatewayRedis[("Gateway Redis, own instance")]
   Media --> Redis
   Django -- "order events, feed invalidation" --> Gateway
   Django -- "cache purge" --> Nuxt
@@ -167,8 +167,8 @@ admission control and per-resource deduplication.
 | Nuxt tenant config | Process memory, 5 minutes, dropped early when the store's epoch moves | host | `server/utils/tenant.ts`; negative results are never cached. Each pod re-reads the store's tenant-config epoch from the shared cache storage at most every 5 s (`EPOCH_CHECK_MS`); a purge sent with `tenantConfig: true` moves it (`invalidateTenantConfigs`) |
 | Nuxt route cache | Nitro cache in Redis | `tenantCacheKey(event, ...)` from `server/utils/cacheKey.ts`: `host__locale__key__e<epoch>` | Every tenant-specific `defineCachedEventHandler` must use it; the locale keeps an English entry from being served to a Greek page, the epoch keeps an entry rendered from an old tenant config from being read after a purge, and the key carries a hash because Nitro strips punctuation |
 | Nuxt SWR pages | Nitro cache | `varies: ['host', 'x-device-class', 'x-tenant-epoch']` (`CACHED_PAGE_VARIES`) | Homepage, brand pages, blog and catalogue families (`nuxt.config.ts: routeRules`, `shared/constants/prerender.ts`); cached HTML is rendered anonymously by contract |
-| Gateway tenant config | Process memory 5 min, then Redis `ag:tenant:{host}`, then Django | host | Singleflight, negative cache, stale-if-error (`internal/tenant`) |
-| Gateway feeds and sessions | Redis | `ag:{schema}:...` | Feeds have fresh and stale TTLs; checkout sessions expire after a day |
+| Gateway tenant config | Process memory 5 min, then the gateway's Redis `ag:tenant:<version>:{host}`, then Django | host | Singleflight, negative cache, stale-if-error; credentials stay in memory (`internal/tenant`) |
+| Gateway feeds and sessions | The gateway's own Redis (`redis-gateway`, no eviction) | `ag:{schema}:...` | Feeds have fresh and stale TTLs; checkout sessions expire after half an hour open, a day once ended; order links a year. It is state, not cache: [The gateway's own Redis](/dev/flows/agentic-commerce#the-gateway-s-own-redis) |
 | Media stream | Memory, then Redis, then the rendition store (an R2 bucket) | `image:{schema}:…` from `Cache/utils/cache-namespace.util.ts: imageNamespace` | Per-tenant flush via `POST /admin/cache/flush-tenant` with the internal secret |
 
 Purging procedures are in [Caches & purging](/dev/operations/caches).
