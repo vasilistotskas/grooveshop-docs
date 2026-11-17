@@ -36,7 +36,7 @@ flowchart TD
   Gate -- "yes" --> Ident["optional bearer verify"]
   Ident --> Tools["MCP tools"]
   Tools --> API["Django REST, X-Forwarded-Host"]
-  Tools --> Sess["Redis ag:schema:cs:v4:id"]
+  Tools --> Sess["Redis ag:schema:cs:v5:id"]
 
   Platform["UCP / ACP platform"] --> Profile["/.well-known/ucp"]
   Platform --> ACP["/acp/checkout_sessions"]
@@ -355,10 +355,11 @@ negotiating platform never calls them.
 capability's authorization section describes. It reads the gateway's own order
 link (`ag:{schema}:orderlink:{uuid}`: checkout id, storefront domain, webhook
 target and the platform that signed the checkout's creation, retained a year,
-because the link must outlive the session itself: `internal/checkout/store.go`
-holds an active session for 30 minutes and a terminal one for 24 hours, and
-`internal/checkout/session.go` ends a placed one 24 hours after placement
-however often it is saved since) before it asks the store anything. An order
+because the link must outlive the session itself: `internal/checkout/session.go`
+(`Session.keptUntil`) holds an open session for 30 minutes and a terminal one
+for 24 hours, ends a placed one 24 hours after placement however often it is
+saved since, and keeps any session until the `expires_at` it published if
+that is later) before it asks the store anything. An order
 whose link names another platform, or none, answers the spec's `not_found`
 error response (`ucp.OrderNotFound`), the same as an id that names no order. An
 order placed on the web has no checkout to name and is refused likewise, never
@@ -475,6 +476,32 @@ platform to acquire, because the buyer authenticates on the PSP's page. It
 cannot be an Action either, since both standard payment Action types require
 a `payment_instrument_id`. UCP models that case as `requires_escalation` plus
 a `continue_url`.
+
+A checkout awaiting its payment is rendered from its order
+(`internal/ucp/payload.go: awaitingPayment`), with one `error` message whose
+severity is one the spec requires of `requires_escalation`:
+
+| Order's payment | `continue_url` | Message |
+|---|---|---|
+| Being processed by the provider | the order's page | `payment_processing`, `requires_buyer_review`: never pay again |
+| A charge that did not match the total waits for the store (`paymentAwaitsReview`) | the order's page | `payment_in_review`, `requires_buyer_review`: never pay again |
+| Time to pay ran out | the order's page | `payment_link_expired`, `requires_buyer_review`: a payment made just before then may still be confirmed; otherwise the shopper owes nothing, and the store cancels it by `expires_at` when its sweep will decide it (a store whose sweep is off is promised no cancel) |
+| First link could not be created | the order's page | `payment_link_unavailable`, `recoverable`: `complete_checkout` tries again |
+| Django holds no payment open for it (no hold) | the order's page | `payment_with_store`, `requires_buyer_review` |
+| Last attempt failed, link still payable | the PSP's page | `payment_failed`, `requires_buyer_input`: Django lets the buyer retry there |
+| Link payable | the PSP's page | `payment_required`, `requires_buyer_input`, naming when the link stops being payable |
+
+No link is minted after the first, nor the first once the order's hold has
+passed or where the checkout tells the buyer not to pay
+(`checkout.Flow.ResumePayment` reads the order: `ErrPaymentAwaitsStore`).
+Django's `payment_window_expired` and `order_not_payable` are final for the
+order (`checkout.ErrPaymentWindowClosed`, UCP `checkout_closed`). A
+canceled checkout never says "nothing was charged": it says the shopper owes
+nothing, since Django settles any unconfirmed payment as canceled with its
+order, or, for a payment that landed after the cancel, that the store refunds
+it. The checkout's `expires_at` is raised to the order's `paymentDecidedBy`,
+when Django's sweep will have decided it, or to the session's end when nothing
+will, and never moves earlier than a value an earlier response published.
 
 `internal/ucp/handler.go: paymentHandlers` therefore advertises only pay-way
 codes with a **modelled instrument** — today that is
@@ -657,7 +684,7 @@ capabilitiesOf`); with promotions off every submitted code comes back in
 A UCP or ACP checkout is a session in the gateway's Redis
 (`internal/checkout/store.go`, `internal/checkout/session.go`).
 
-- **Keys.** `ag:{schema}:cs:v4:{id}` is the session, that plus `:lock` its
+- **Keys.** `ag:{schema}:cs:v5:{id}` is the session, that plus `:lock` its
   lock, that plus `:order` the order it placed. The version is of how sessions
   are written, not only of their shape: it moves whenever an older pod writing
   the key its own way could undo what a newer one relies on, so the two never
@@ -672,8 +699,17 @@ A UCP or ACP checkout is a session in the gateway's Redis
 - **A missing session is not "nothing happened".** The id does not say whether
   the checkout was never completed, placed an order and is no longer kept, or
   never existed, so every such answer says an order may exist and to check
-  before starting another checkout (`mcpsrv.errCheckoutGone` on UCP,
-  `acp.msgSessionGone` on ACP).
+  before starting another checkout (`mcpsrv.errCheckoutGone` on UCP, answered
+  as the spec's error response `ucp.CheckoutNotFound`: `not_found`,
+  `unrecoverable`; `acp.msgSessionGone` on ACP).
+- **`expires_at`.** Every UCP and ACP response carries the session's
+  `ExpiresAt`. It never moves earlier than a value already published, and the
+  session is kept at least until it. An open or completed checkout's is its
+  session's end; one awaiting its payment takes its order's (above). A UCP read
+  of a placed checkout reads its order and stores what it says before it
+  answers (`mcpsrv.handlers.rendered`), so nothing unstored is published. ACP
+  never sends the status `expired`: a session past its `expires_at` is no
+  longer stored.
 - **A session is stored by compare-and-set.** Every save gives it a new random
   `Session.Revision` and writes only over the revision the request loaded;
   another request's save in between is `ErrSessionChanged` and nothing is
@@ -701,8 +737,11 @@ A UCP or ACP checkout is a session in the gateway's Redis
   from the snapshot is given only while the stored revision is still the loaded
   one, else the request is answered by what is stored.
 - **Order events** (`Flow.ApplyOrderEvent`) reach a session through its order
-  link, take no lock, and save by the same compare-and-set. A payment-completed
-  event sets `completed`; no other event changes a status. A session is never
+  link, take no lock, and save by the same compare-and-set. The event's order
+  status and payment status set the session's (`Session.FollowOrder`), as a
+  read does: a checkout awaiting its payment is `canceled` with its order, a
+  payment that landed after the cancel included, and `completed` once its
+  payment is charged; a completed checkout never moves. A session is never
   completed without its order.
 
 ### Catalog feeds
