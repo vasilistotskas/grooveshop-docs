@@ -22,7 +22,7 @@ merchant what to ask for is
 
 | Menu entry | Model | Written by | Store-side view |
 |---|---|---|---|
-| Stock Logs | `order.StockLog` | `src/order/stock.py: StockManager` (reserve, release, decrement, increment); `src/product/signals.py` for a manual stock edit | **Stock activity** tab on the product (`src/product/admin.py: StockLogDataset`) |
+| Stock Logs | `order.StockLog` | `src/order/inventory/stock.py: StockManager` (reserve, release, decrement, increment); `src/product/signals.py` for a manual stock edit | **Stock activity** tab on the product (`src/product/admin/stock_history.py: StockLogDataset`) |
 | Order History | `order.OrderHistory` | `OrderHistory.log_*` helpers (`src/order/models/history.py`), called from the order services, webhooks and tasks | **Order History** tab on the order (`src/order/admin.py: OrderHistoryInline`) |
 | Order Item History | `order.OrderItemHistory` | the same module, per line | none |
 | BoxNow Events | `shipping_boxnow.BoxNowParcelEvent` | the BoxNow webhook and the tracking poll (`src/shipping_boxnow/services.py`, `src/shipping_boxnow/tasks.py`) | events tab on the BoxNow shipment (`BoxNowParcelEventInline`) |
@@ -136,8 +136,8 @@ Expired.
 | `grooveshop-django-api/src/order/models/history.py` | `OrderHistory`, `OrderItemHistory`, change types |
 | `grooveshop-django-api/src/order/models/viva_webhook_event.py` | `VivaWebhookEvent`, event-type and outcome choices |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | Where outcomes are written |
-| `grooveshop-django-api/src/order/stock.py` | `StockManager` |
-| `grooveshop-django-api/src/product/admin.py` | `StockLogDataset` (store-side stock tab) |
+| `grooveshop-django-api/src/order/inventory/stock.py` | `StockManager` |
+| `grooveshop-django-api/src/product/admin/stock_history.py` | `StockLogDataset` (store-side stock tab) and the product's stock-history report page |
 | `grooveshop-django-api/src/shipping_boxnow/admin.py` | `BoxNowParcelEventAdmin`, `BoxNowParcelEventInline` |
 | `grooveshop-django-api/src/shipping_acs/admin.py` | `AcsTrackingEventAdmin`, `AcsTrackingEventInline` |
 | `grooveshop-django-api/src/meta_capi/admin.py` | `MetaCapiEventLogAdmin` |

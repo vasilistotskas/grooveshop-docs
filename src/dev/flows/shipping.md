@@ -273,15 +273,24 @@ Until one runs, the alert and the dashboard counter lag.
 
 ### A voucher request with an unknown outcome
 
-> Describes the Django change in pull request
-> `vasilistotskas/grooveshop-django-api#626` as it stood in review. Re-check
-> every name below against the merged code.
-
 `ACS_Create_Voucher` has no idempotency key, and no documented ACS call
 finds a voucher by our reference before it is on a pickup list. A request
 whose answer was lost may therefore have created a voucher, and sending it
 again may create a second one. So such a request is never sent again by
 the code: the shipment waits for staff.
+
+**One HTTP retry rule for both carriers.** Both clients send through the one
+session `src/shipping/carrier_http.py: carrier_session()`, whose adapter
+follows `CARRIER_RETRY`, and neither mounts a retry of its own. A request that
+never connected (a connect timeout, a refused connection) is sent again
+whatever its method, since nothing reached the courier. A GET is also sent
+again after a 5xx or a lost answer. A POST or PUT never is once it may have
+reached the courier, because neither courier can tell a re-sent write from a
+new one; the client raises its own error and the caller decides. ACS sends
+only POSTs, so for ACS the rule is "retry only a connect failure"
+(`AcsClient.worst_case_request_seconds` reads the connect budget from
+`CARRIER_RETRY`). A client built with an injected session keeps that session's
+own policy.
 
 **Which failure leads where.** The client classifies a failure where it is
 raised (`AcsClient._exchange`, `_never_connected` in `src/shipping_acs/client.py`):
@@ -989,9 +998,11 @@ and `.../nearest`.
 BoxNow refuses a second creation for one `orderNumber` (the order id) with
 P410, so a P410 means BoxNow already holds a request under that number:
 either an earlier attempt reached it and its answer was lost (the HTTP
-layer never re-sends a POST, so this is a task retry or a worker that died
-before saving), or a parcel canceled before a re-issue. Only a live `new`
-parcel is ever taken over, so the re-issue case still alerts. Every decision
+layer re-sends a POST only when it never connected, never once it may have
+reached BoxNow, see the one retry rule above, so this is a task retry or a
+worker that died before saving), or a parcel canceled before a re-issue.
+Only a live `new` parcel is ever taken over, so the re-issue case still
+alerts. Every decision
 below looks the order up with `GET /api/v1/parcels?orderNumber=`, once per
 payment mode and over every page, and makes no BoxNow call inside a
 transaction. The full rules are in the
@@ -1278,7 +1289,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping/carriers/flat_rate.py` | Merchant-fulfilled, lifecycle-only adapter |
 | `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/src/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider`, `settle_cod_payment` |
-| `grooveshop-django-api/src/order/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
+| `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
 | `grooveshop-django-api/src/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
 | `grooveshop-django-api/src/shipping/alerts.py`, `src/shipping/emails.py`, `src/shipping_acs/emails.py` | The two carrier alerts (`alert_admins_*`) and the ops email types they and the ACS tasks send |
 | `grooveshop-django-api/src/shipping/locks.py` | `lock_with_order`: the one lock order for an order and its shipment |
@@ -1286,6 +1297,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping/urls.py` | Options, free-shipping-info, providers |
 | `grooveshop-django-api/src/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
 | `grooveshop-django-api/src/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` and `voucher_held` filter values, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`), `AcsVoucherHoldAdmin` (`allow_one_request`) and the `label_printed_at` empty filter |
+| `grooveshop-django-api/src/shipping/carrier_http.py` | `CARRIER_RETRY` and `carrier_session`: the one HTTP retry rule of both carrier clients |
 | `grooveshop-django-api/src/shipping_acs/client.py` | `AcsClient._exchange` and `_never_connected`: which transport failures are `AcsOutcomeUnknownError` |
 | `grooveshop-django-api/src/shipping_acs/attention.py` | `voucher_request_unknown_q`, `voucher_requests_unknown`, `voucher_requests_waiting`, `needs_no_voucher`, `unrecognised_vouchers`, `voucher_request_held_q`, `voucher_requests_held`, `voucher_holds_holding_requests` |
 | `grooveshop-django-api/src/shipping_acs/models/` | `AcsShipment.voucher_request_unknown_at`, `voucher_request_held_at`, `voucher_request_retried_at`, `AcsUnrecognisedVoucher`, `AcsVoucherHold` |
