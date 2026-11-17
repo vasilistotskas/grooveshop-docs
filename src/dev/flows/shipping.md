@@ -273,10 +273,6 @@ Until one runs, the alert and the dashboard counter lag.
 
 ### A voucher request with an unknown outcome
 
-> Describes the Django change in pull request
-> `vasilistotskas/grooveshop-django-api#626` as it stood in review. Re-check
-> every name below against the merged code.
-
 `ACS_Create_Voucher` has no idempotency key, and no documented ACS call
 finds a voucher by our reference before it is on a pickup list. A request
 whose answer was lost may therefore have created a voucher, and sending it
