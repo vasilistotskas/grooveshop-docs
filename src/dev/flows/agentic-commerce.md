@@ -1178,8 +1178,8 @@ the storefront serves neither.
 
 ### Order events
 
-Django keeps every event of an order an agent placed in its outbox
-(`src/agent/outbox.py`, [Agent order events](/dev/django/reference/agent-order-events)):
+Django keeps every event of an order an agent placed in its outbox, while
+`AGENT_GATEWAY_INTERNAL_URL` is set (`src/agent/outbox.py`, [Agent order events](/dev/django/reference/agent-order-events)):
 an `AgentOrderEvent` row written in the transaction of the change, its first
 attempt queued after the commit, the rest swept every minute per store. Each
 attempt POSTs to `/internal/events/order-status` with the shared
@@ -1214,9 +1214,12 @@ warn line, since the link is lost. `gateway_order_webhooks_total{outcome}`
 counts `delivered` and the gateway's own `failed`.
 
 Deliveries follow the UCP order-event rules: the body is the order entity,
-headers follow Standard Webhooks (`Webhook-Id` is the outbox row's id and
-`Webhook-Timestamp` its `occurredAt`, both the same on every attempt, as UCP
-requires of a retry; the signature's `created` is the attempt's) with
+headers are Standard Webhooks' `Webhook-Id` and `Webhook-Timestamp` with
+UCP's meaning, not Standard Webhooks': `Webhook-Id` is the outbox row's id and
+`Webhook-Timestamp` the event's `occurredAt`, both the same on every attempt, as
+UCP requires of a retry, where Standard Webhooks sends the attempt's time. A
+receiver that judges freshness reads the signature's `created`, which is the
+attempt's. They come with
 `UCP-Agent` naming the tenant's profile, and the request is signed per RFC
 9421 (`Content-Digest`, `Signature-Input`, `Signature`) with the tenant's
 ES256 key — the one algorithm every UCP verifier must support
