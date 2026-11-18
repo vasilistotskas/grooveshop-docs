@@ -128,17 +128,18 @@ unwound.
 | → CANCELED | Written by `cancel_order`, which also runs the carrier voucher cascade itself (skipped when the cancel already asked the courier). `order_canceled` → credit of whatever gift-card value has not come back yet, loyalty reversal, status email, CANCELED toast |
 | Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row, and the loyalty reversal once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund recorded after the receipt row was created, once the receipt has a MARK, for the goods part of the refund at the VAT split stored when its money was claimed (`src/order/accounting/credit_documents.py: create_pending_credits`, task `issue_pending_credits`; see [Credit allocation](#credit-allocation)); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
 | Stored value returned | `order_stored_value_returned`, once per settled `STORED_VALUE` refund attempt → a staff history NOTE, the credit reconciliation (the same `create_pending_credits`), and the loyalty reversal once `payment_status` is REFUNDED. No email, no toast |
-| Status, payment status or tracking changed | `push_order_event_to_gateway` when `AGENT_GATEWAY_INTERNAL_URL` is set |
+| Status, payment status or tracking changed | An `AgentOrderEvent` for the agent gateway, for an order an agent placed, when `AGENT_GATEWAY_INTERNAL_URL` is set (`record_order_changed`; order creation records `created`) |
 
-The gateway push is one `POST /internal/events/order-status` carrying
-`schemaName`, `orderUuid`, `status`, `paymentStatus` and `trackingNumber`,
-authenticated with `X-Internal-Token`
-(`src/order/tasks.py: push_order_event_to_gateway`). The gateway matches the
-UUID against its agent checkout sessions; an order placed outside one is
-acknowledged with 204 and goes no further
-(`grooveshop-agent-gateway/internal/server/internalapi.go`). A 5xx makes
-Celery retry, which is how at-least-once delivery to agent platforms is
-achieved. See [Agentic commerce](/dev/flows/agentic-commerce).
+The event is a row in Django's outbox (`src/agent/outbox.py`), written in the
+transaction of the change, so it is never lost with a failed call. Each
+attempt is one `POST /internal/events/order-status` carrying `eventId`,
+`eventType`, `occurredAt`, `schemaName`, `orderUuid`, `status`,
+`paymentStatus` and `trackingNumber`, authenticated with `X-Internal-Token`.
+The gateway delivers the platform's webhook within the call and answers the
+outcome: a 2xx is delivered, a 503 is tried again later, a 422 failed for good.
+An order's events go out in the order they happened. See
+[Agent order events](/dev/django/reference/agent-order-events) and
+[Agentic commerce](/dev/flows/agentic-commerce).
 
 ### Notification suppression on chained transitions
 
@@ -1245,6 +1246,7 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/tenant/tasks.py` | `fanout_reconcile_pending_refunds`, `fanout_allocate_credit_sources` (both `include_suspended=True`) |
 | `grooveshop-django-api/src/order/models/payment_transaction.py` | `PaymentTransaction`, its unique and check constraints |
 | `grooveshop-django-api/src/order/enum/payment_transaction.py` | `PaymentTransactionKind` |
+| `grooveshop-django-api/src/agent/outbox.py` | `record_order_created`, `record_order_changed`: the agent gateway's order events |
 | `grooveshop-django-api/src/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
 | `grooveshop-django-api/src/order/migrations/0067_backfill_payment_transactions.py` | Ledger backfill for orders paid before it existed |
 | `grooveshop-django-api/src/order/enum/cancel_error.py` | `OrderCancelErrorType`: `parcel_with_courier`, `courier_unreachable` |
@@ -1256,7 +1258,7 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |
 | `grooveshop-django-api/src/order/signals/handlers.py` | `handle_order_post_save` fan-out, `handle_order_refunded`, `handle_order_stored_value_returned`, `handle_stripe_refund_made`, `handle_stripe_charge_refunded` (gift card purchases only), `handle_stripe_refund_failed` and every other domain receiver |
 | `grooveshop-django-api/src/order/signals/__init__.py` | The twelve order signals and the `order_refunded` contract |
-| `grooveshop-django-api/src/order/tasks.py` | `auto_cancel_stuck_pending_orders`, `push_order_event_to_gateway`, every email task, `send_refund_confirmation_email` and `_claim_refund_email`, `generate_order_invoice` and `_set_receipt_deferred`, `reconcile_pending_refunds`, `allocate_credit_sources`, `finish_pending_shipment_cancels` |
+| `grooveshop-django-api/src/order/tasks.py` | `auto_cancel_stuck_pending_orders`, every email task, `send_refund_confirmation_email` and `_claim_refund_email`, `generate_order_invoice` and `_set_receipt_deferred`, `reconcile_pending_refunds`, `allocate_credit_sources`, `finish_pending_shipment_cancels` |
 | `grooveshop-django-api/src/order/views/order.py` | `cancel` and its 400/503 refusals, `update_status`, `add_tracking`, permission map |
 | `grooveshop-django-api/src/order/serializers/order.py` | `can_be_canceled` sourced from `can_be_canceled_by_customer`; `OrderDetailSerializer.payment_awaits_review` and `payment_decided_by` |
 | `grooveshop-django-api/src/order/views/item.py`, `src/order/urls.py` | `OrderItemViewSet`: read-only list and detail, and `restock` |
