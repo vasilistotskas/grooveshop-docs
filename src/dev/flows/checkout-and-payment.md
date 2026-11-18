@@ -306,7 +306,8 @@ and what the order stores).
   (the cart changed in between, or the entry expired) rolls the creation back
   with `ShippingPriceUnresolvedError`; the cart is priced again with nothing
   locked and answered as 409 `total_changed` carrying that quote
-  (`OrderService._refuse_unpriced`). ACS's live price is cached per country, region and
+  (`OrderService._refuse_unpriced`). This 409 does not depend on
+  `expectedTotal`: a client that sent none gets it too. ACS's live price is cached per country, region and
   weight bracket for five minutes (`src/shipping_acs/carrier.py:
   AcsCarrier._fetch_live_quote`), so a polled quote does not reach the carrier
   each time, and a failed call is remembered for 60 seconds (the stored rate is
@@ -357,8 +358,11 @@ and what the order stores).
   the order would have been created at. It is the only amount check the
   order-first path has (cash on delivery, Viva). A price, VAT or markdown edit,
   a promotion starting or ending, a changed rate or fee, a live carrier price
-  leaving its cache and another email than the one quoted with are each a
-  `total_changed`, by design. `error.type` is `invalid_order_data` for now: the
+  leaving its cache and another email than the one quoted with (promotions are
+  evaluated with the checkout email) are each a `total_changed` by design, when
+  they change the amount due that is compared; a change that leaves it equal is
+  not refused. A live carrier price that left its cache is refused as
+  `total_changed` even without `expectedTotal`. `error.type` is `invalid_order_data` for now: the
   enum value follows a storefront release, see
   [OpenAPI contract](/dev/django/openapi-contract#a-new-value-in-a-response-enum-ships-consumer-first).
   The field is optional until the storefront and the gateway send it.
@@ -764,10 +768,11 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
   `cart/create-payment-intent` received. Changing a deduction after the
   intent exists is the usual cause, which is why the storefront drops
   the intent whenever loyalty, gift cards or a coupon change.
-- **409 `total_changed` on `POST /order`.** The client sent `expectedTotal` and
-  the amount due computed under the cart lock is another (a price, promotion,
-  rate, fee or live carrier price moved since the last quote), or the locked
-  quote found no cached carrier price for the parcel. Nothing was created; the
+- **409 `total_changed` on `POST /order`.** Either the client sent
+  `expectedTotal` and the amount due computed under the cart lock is another (a
+  price, promotion, rate, fee or live carrier price moved since the last
+  quote), or, whether or not it sent one, the locked quote found no cached
+  carrier price for the parcel (`_refuse_unpriced`). Nothing was created; the
   body's `error.quote` is what the order would have been created at, so the
   client shows it and orders again.
 - **400 `invalid_order_data` with "the order's rows do not add up".**
@@ -778,9 +783,9 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
   caller tried more new codes than the `gift_card_check` scope allows (6 a
   minute, shared with `/giftcard/check`). Re-sending a code the cart already
   tried is never counted.
-- **A loyalty redemption worth under a cent is refused** as
-  `loyalty_redemption_too_small`, the detail naming the fewest points that make
-  one; order creation answers it as `invalid_order_data` with the message
+- **A loyalty redemption whose discount rounds to 0.00 is refused** as
+  `loyalty_redemption_too_small`, the detail naming the fewest points that
+  round to a cent; order creation answers it as `invalid_order_data` with the message
   under `fieldErrors.loyaltyPointsToRedeem`.
 - **400 `payment_verification` on a Stripe order.** Besides an intent in
   an invalid state, the intent already belongs to another order: a

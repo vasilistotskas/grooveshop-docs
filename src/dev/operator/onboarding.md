@@ -165,8 +165,10 @@ trigger events"). So the migrate command every `migrate_schemas` run uses,
 `src/settings/database.py`), runs the queued checks after each applied or
 unapplied migration when a transaction is open, then defers constraints
 again. Every migration therefore starts as it would in a transaction of its
-own, and provisioning no longer depends on the order the migration graph is
-walked in; a run with no outer transaction (the PreSync deploy) is unchanged.
+own, and provisioning no longer depends on the graph's order for this one
+failure. It does not make the order irrelevant: a migration still declares a
+dependency on the migration that creates any table it reads or alters, and the
+checks run when a migration ends, not between its operations. A run with no outer transaction (the PreSync deploy) is unchanged.
 `tests_mt/test_provisioning_in_one_transaction.py` provisions a store this way
 and asserts every migration of the graph is recorded in it. The rule for
 authors of migrations is in the Django repository's `docs/migrations.md` ("A
@@ -495,12 +497,17 @@ Run after the sync completes and the certificates are `Ready=True`.
   `api.<domain>` row is missing. Re-run provisioning (idempotent) or add
   the row.
 - **`tenant_create` or "Add tenant" stops in a migration with "cannot ALTER
-  TABLE ... because it has pending trigger events".** A data migration queued
-  foreign-key checks that nothing flushed before a later migration altered the
-  same table. The migrate command above flushes them after every migration; with
-  `TENANT_BASE_MIGRATE_COMMAND` set back to Django's own command the
-  provisioning test reproduces exactly this error. The transaction rolled
-  back, so nothing is left to clean up.
+  TABLE ... because it has pending trigger events".** Two causes. A data
+  migration queued foreign-key checks that nothing flushed before a later
+  migration altered the same table: the migrate command above flushes them
+  after every migration, and with `TENANT_BASE_MIGRATE_COMMAND` set back to
+  Django's own command the provisioning test reproduces exactly this error, so
+  check the setting. Or one migration does both, a `RunPython` that writes rows
+  followed by an operation that alters the same table: the flush runs when the
+  migration ends, not between its operations, so the command cannot help; read
+  the failing migration's operations and put the write and the alter in
+  separate migrations. The transaction rolled back, so nothing is left to clean
+  up.
 - **Every search returns HTTP 400.** The Meilisearch index was created
   without settings, or seeding failed. Check the provisioning output.
 - **A pay-way is missing from checkout.** The credential is empty for

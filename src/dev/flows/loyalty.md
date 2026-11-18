@@ -185,10 +185,12 @@ order's VAT lines could not be written. A store whose ratio gives sub-cent
 values sees amounts move by under a cent, and the order's metadata stores the
 discount with two decimals ("4.00", not "4").
 
-**A redemption worth less than a cent is refused.** Points that price at
-0.00 would be spent for nothing, so `_validate_and_price_redemption` raises a
+**A redemption whose discount rounds to 0.00 is refused.** The test is made
+after the rounding above: at a ratio of 200, one point is 0.005 and rounds up
+to 0.01, so it is accepted; a ratio of 1000 prices 4 points at 0.004, which
+rounds to 0.00. Points that price at 0.00 would be spent for nothing, so `_validate_and_price_redemption` raises a
 `ValidationError` coded `loyalty_redemption_too_small` (`REDEMPTION_TOO_SMALL`)
-whose message states the fewest points that make a cent. The quote and the
+whose message states the fewest points that round to a cent. The quote and the
 payment intent answer 400 with that `code`, `/loyalty/redeem` passes the code
 on, and order creation answers its `invalid_order_data` with the message under
 `fieldErrors.loyaltyPointsToRedeem` (its own `code` must stay the enum value
@@ -386,8 +388,8 @@ storefront never advertises a reward the backend will not grant.
   lateral moves are silent by design — and the tier-level cache, which is
   invalidated by any `LoyaltyTier` save but otherwise lives for its TTL.
 - **Redemption rejected at checkout.** Insufficient balance, an unsupported
-  currency, a discount above the goods after promotions, points worth less
-  than a cent (`loyalty_redemption_too_small`), or the program disabled.
+  currency, a discount above the goods after promotions, points whose
+  discount rounds to 0.00 (`loyalty_redemption_too_small`), or the program disabled.
   `_validate_and_price_redemption` raises with the specific message and the
   preview surfaces it before payment.
 - **Points expire that should not have.** `LOYALTY_POINTS_EXPIRATION_DAYS`
