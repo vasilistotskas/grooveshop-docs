@@ -151,7 +151,7 @@ rest is built on it:
 
 | Method | Role |
 |---|---|
-| `quote(...) -> Money` | Price, evaluated in a fixed order: availability (`ShippingUnavailableError`), weight cap (`ShippingWeightExceededError`), free-shipping threshold (judged on `OrderService.threshold_value`, see [Checkout and payment](/dev/flows/checkout-and-payment#_4-shipping-method-decides-which-pay-ways-exist)), then the adapter's `live_quote` or the rate's `price` |
+| `quote(...) -> Money` | Price, evaluated in a fixed order: availability (`ShippingUnavailableError`), weight cap (`ShippingWeightExceededError`), free-shipping threshold (judged on `OrderQuoteService.threshold_value`, see [Checkout and payment](/dev/flows/checkout-and-payment#_4-shipping-method-decides-which-pay-ways-exist)), then the adapter's `live_quote` or the rate's `price` |
 | `assert_available(...)` | Availability and cap without a price; used when a free-shipping promotion zeroes the cost, so a promo can never ship to a country the store does not serve |
 | `shippable_country_codes()` | Countries with at least one active rate, ordered by `Country.sort_order`; backs `GET /api/v1/country?shippable=true` (`src/country/filters.py`), which returns nothing on the platform host |
 | `resolve_home_delivery_provider(country_code)` | The active home-delivery carrier with the lowest `priority` for that country |
@@ -216,10 +216,24 @@ heavy cart to a capped destination (BoxNow Cyprus, 4000 g) gets a
 disabled option with a reason instead of a silently empty step. Rows
 sort by `(priority, provider_code)`.
 
-Order pricing goes through the same service. `OrderService.shipping_cost`
-is the single entry point for every caller (order creation, the
-payment-intent computation in `src/cart/views/cart.py`) and calls
-`ShippingService.quote`. A bare `home_delivery` request resolves through
+Order pricing goes through the same service. `OrderQuoteService.shipping_cost`
+(`src/order/checkout/quote.py`) is the single entry point for every caller
+(`POST /cart/quote`, both order-creation paths, the payment-intent
+computation in `src/cart/views/cart.py`) and calls `ShippingService.quote`;
+`OrderQuoteService.quote` hands it the threshold value, so the quote, the
+intent and the order agree for the same pricing inputs. The inputs can change
+between two requests (a price, a promotion, a rate), and then the later total
+differs: a client that must know sends the quote's `expectedTotal` with the
+order, which is then created only at that total (409 `total_changed`
+otherwise; see [Checkout and payment](/dev/flows/checkout-and-payment#one-total-the-checkout-quote)).
+The `shippingOptions` of the quote are the `available_options` rows priced as an
+order would be, each with `waivedBy`. A delivery that cannot be priced is a
+`ShippingRefusedError` (an `InvalidOrderDataError`): the quote answers it with
+a code of its own (`shipping_unavailable`, `shipping_parcel_too_large`,
+`shipping_weight_exceeded`, `src/shipping/enum/refusal.py`), the payment
+intent and order creation with `invalid_order_data` and `fieldErrors`. A
+live carrier price is resolved before the order-create transaction and read
+from the adapter's cache inside it (`ShippingService.resolve_live_price`). A bare `home_delivery` request resolves through
 `resolve_home_delivery_provider`, and `_resolve_shipping_provider` uses
 the **same helper** to set the order's FK — otherwise the order would be
 priced against one carrier's rate and served by another.
@@ -1144,9 +1158,11 @@ move `Order.status`, which the carrier events drive separately.
 - **Every availability check goes through `ShippingService.active_rate`**:
   options, quotes, promo free shipping, the shippable-country filter and
   order validation cannot disagree about what a store ships.
-- **`OrderService.shipping_cost` and `_resolve_shipping_provider` resolve
-  `home_delivery` through `resolve_home_delivery_provider`**, so the price
-  charged and the carrier assigned always agree.
+- **`OrderQuoteService.shipping_cost` and
+  `OrderService._resolve_shipping_provider` resolve `home_delivery` through
+  `resolve_home_delivery_provider`**, so the price charged and the carrier
+  assigned always agree; a missing `shippingKind` is a home delivery for both
+  (`OrderQuoteService.delivery_kind`).
 - **A BoxNow locker must be in the order's country**; an unsynced locker is
   accepted, a mismatched one is not.
 - **Operational alerts are `ops.*` email types** sent through
@@ -1288,7 +1304,8 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping/admin.py` | `ShippingRateInline` on `ShippingProviderAdmin` |
 | `grooveshop-django-api/src/shipping/carriers/flat_rate.py` | Merchant-fulfilled, lifecycle-only adapter |
 | `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
-| `grooveshop-django-api/src/order/services.py` | `OrderService.shipping_cost`, `_resolve_shipping_provider`, `settle_cod_payment` |
+| `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService.shipping_cost`, `threshold_value`, `delivery_kind`, `resolve_live_shipping` |
+| `grooveshop-django-api/src/order/services.py` | `OrderService._resolve_shipping_provider`, `_resolve_live_shipping`, `settle_cod_payment` |
 | `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger.record_cod_collection` |
 | `grooveshop-django-api/src/shipping/factories.py` | `django_get_or_create = ("code",)` — the defaults trap |
 | `grooveshop-django-api/src/shipping/alerts.py`, `src/shipping/emails.py`, `src/shipping_acs/emails.py` | The two carrier alerts (`alert_admins_*`) and the ops email types they and the ACS tasks send |

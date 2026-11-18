@@ -50,7 +50,9 @@ flowchart LR
 | `uuid`, `created_at`, `updated_at` | from `UUIDModel`, `TimeStampMixinModel` | Read-only everywhere |
 
 `auto_create_schema = True`, so creating the row creates the schema and
-runs the tenant migrations against it. `bootstrap_platform` sets
+runs the tenant migrations against it, inside the caller's transaction (the
+migrate command checks each migration's deferred foreign keys as it goes; see
+[Onboarding](/dev/operator/onboarding#_2-create-the-tenant-record)). `bootstrap_platform` sets
 `auto_create_schema = False` on the instance before saving the public row,
 because that schema already exists.
 

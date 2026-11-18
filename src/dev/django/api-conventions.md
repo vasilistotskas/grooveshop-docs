@@ -63,8 +63,13 @@ routes use `StoreStaffModelPermissions`; object ownership uses
 
 Throttling is global (`AnonRateThrottle`, `UserRateThrottle`, disabled when
 `DEBUG`) plus named scopes for contact, feedback, attachments, payment,
-cart mutation and order creation (`DEFAULT_THROTTLE_RATES`, applied by the
-classes in `src/core/api/throttling.py`). `NUM_PROXIES` is 1 because Traefik
+cart mutation, the checkout quote (`cart_quote`, `cart_quote_anon`: the quote
+is repeated on every change of a checkout and has a budget of its own, not the
+cart's write budget), gift-card guessing (`gift_card_check`, spent by
+`/giftcard/check` and by any quote, payment intent or order carrying
+`giftCardCodes`, counting only codes new to the cart) and order creation
+(`DEFAULT_THROTTLE_RATES`, applied by the classes in
+`src/core/api/throttling.py`). `NUM_PROXIES` is 1 because Traefik
 is the single trusted hop. A guest's cart, order and payment calls made
 through the agent gateway are budgeted per cart or order rather than per
 address, when they carry the gateway's secret and name a cart or an order;

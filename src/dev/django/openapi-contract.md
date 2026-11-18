@@ -100,6 +100,46 @@ field `required`, so:
 The direction matters: Nuxt being stricter than Django is a 422 risk; Nuxt
 being more lenient is safe.
 
+## A new value in a response enum ships consumer first
+
+The storefront's generated Zod enum rejects a value it does not list, so a
+new member of a response enum breaks the storefront that is live exactly as a
+removed field does. `api-contract/README.md` (Django repository) sets the
+direction: a removal, a loosening, a new enum value or a new success status
+ships consumer first, and a Django pull request that breaks the live
+storefront or gateway cannot merge.
+
+The worked case is `total_changed`, the refusal of an order whose
+`expectedTotal` is no longer the amount due (409 on `POST /api/v1/order`; see
+[Checkout and payment](/dev/flows/checkout-and-payment#one-total-the-checkout-quote)).
+`OrderCreateErrorType` (`src/order/enum/create_error.py`) is a response enum,
+and with `total_changed` added to it the contract check reported the
+storefront as broken (`response-property-enum-value-added` on the 400 and 409
+of `POST /api/v1/order`) while the gateway passed. So the transition has
+three steps:
+
+1. **Now (Django):** the 409 carries `code: "total_changed"`, a plain string
+   (`TOTAL_CHANGED_CODE`; the gateway already branches on `code`), and
+   `error.type: "invalid_order_data"`, which the live storefront renders with
+   the translated `detail`. A client that sends no `expectedTotal` receives the
+   409 only when the locked quote finds no cached live carrier price (see
+   [Checkout and payment](/dev/flows/checkout-and-payment#one-total-the-checkout-quote));
+   every other cause needs the field. The enum is unchanged.
+2. **Storefront release:** its generated validator lists `total_changed` in
+   `OrderCreateErrorType`, and the release reaches production. The Zod enum is
+   generated from `openapi/schema.json`, not from the derived YAML, so the
+   release runs the storefront's own regeneration against the Django branch
+   that adds the value: `pnpm generate:schema` (fetch the schema from a local
+   Django, `scripts/fetch-schema.mjs`), `pnpm openapi-ts` (types and Zod into
+   `shared/openapi/`), then `pnpm sync:schema` (the derived YAML files CI
+   checks, `scripts/sync-schema-yml.mjs`). It can start sending `expectedTotal`
+   in the same release.
+3. **Django release:** add `OrderCreateErrorType.TOTAL_CHANGED`, send it as
+   `error.type`, delete `TOTAL_CHANGED_CODE`. The contract check then passes.
+
+Until step 3, a client tells the refusal by `code` and the 409 status, never
+by `error.type`.
+
 ## The schema-drift-detector agent
 
 `.claude/agents/schema-drift-detector.md` at the workspace root is a
@@ -142,6 +182,8 @@ started at the workspace root; subproject sessions do not see the root
 | `grooveshop-django-api/schema.yml` | Committed Django schema |
 | `grooveshop-django-api/src/core/utils/serializers.py` | `create_schema_view_config` |
 | `grooveshop-django-api/src/core/json_schema.py` | `wire_schema` (camelizing published JSON Schemas) |
+| `grooveshop-django-api/api-contract/README.md` | The direction of a verdict: what ships consumer first |
+| `grooveshop-django-api/src/order/enum/create_error.py` | `OrderCreateErrorType` and `TOTAL_CHANGED_CODE` |
 | `grooveshop-storefront-ui-node-nuxt/scripts/fetch-schema.mjs` | `pnpm generate:schema` |
 | `grooveshop-storefront-ui-node-nuxt/scripts/sync-schema-yml.mjs` | `pnpm sync:schema` |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | `pnpm openapi-ts` |
