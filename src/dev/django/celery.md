@@ -176,6 +176,8 @@ non-suspended store), or every store including suspended ones
 | `purge-expired-boxnow-parcel-events` | `tenant.tasks.fanout_purge_expired_boxnow_parcel_events` | every store, suspended too | daily 04:00 † | `shipping_boxnow.tasks.purge_expired_boxnow_parcel_events` |
 | `purge-expired-recommendation-events` | `tenant.tasks.fanout_purge_expired_recommendation_events` | every store, suspended too | daily 04:00 † | `recommendation.tasks.purge_expired_recommendation_events` |
 | `purge-expired-pending-payment-fees` | `tenant.tasks.fanout_purge_expired_pending_payment_fees` | every store, suspended too | daily 04:00 † | `order.tasks.purge_expired_pending_payment_fees` |
+| `deliver-due-agent-order-events` | `tenant.tasks.fanout_deliver_due_agent_order_events` | every store, suspended too | every minute | `agent.tasks.deliver_due_agent_order_events`: the order events owed to the agent gateway whose next attempt is due |
+| `purge-expired-agent-order-events` | `tenant.tasks.fanout_purge_expired_agent_order_events` | every store, suspended too | daily 04:00 † | `agent.tasks.purge_expired_agent_order_events`: delivered and failed events after `AGENT_ORDER_EVENT_RETENTION_DAYS` |
 | `purge-expired-meta-capi-event-logs` | `tenant.tasks.fanout_purge_expired_meta_capi_event_logs` | every store, suspended too | daily 04:00 † | `meta_capi.tasks.purge_expired_meta_capi_event_logs` |
 | `purge-expired-admin-log-entries` | `core.tasks.purge_expired_admin_log_entries` | `public` | daily 04:00 † | Platform staff's admin log, under the public schema's `ADMIN_LOG_RETENTION_DAYS` |
 | `purge-expired-email-logs` | `emails.tasks.purge_expired_email_logs` | `public` | daily 04:00 † | The platform email types' `EmailLog` |
@@ -235,7 +237,8 @@ The retention periods behind the `purge-*` entries are listed in
 |---|---|
 | `src/core/tasks.py` | health monitor, backups, cache clear, session and history cleanup, abandoned carts, Meilisearch sync, inactive-user mail |
 | `src/tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
-| `src/order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment, `push_order_event_to_gateway` |
+| `src/order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment |
+| `src/agent/tasks.py` | the agent gateway's order events: `deliver_agent_order_event` (an event's first attempt), `deliver_due_agent_order_events` (the sweep), `purge_expired_agent_order_events` |
 | `src/order/communications/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
 | `src/shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list (and the order notes for a refused one), COD reconciliation and alerts, arrival notification |
 | `src/shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, the uncertain-creation sweep, arrival notification |
@@ -260,13 +263,15 @@ because a commit hook can run after the request's schema context has
 unwound. `src/tenant/celery.py: dispatch_on_commit()` is the one idiom:
 
 ```python
-if settings.AGENT_GATEWAY_INTERNAL_URL and (
-    status_changed or payment_status_changed or tracking_dispatched
-):
-    dispatch_on_commit(push_order_event_to_gateway, [instance.id])
+def _queue_attempt(event_id: UUID) -> None:
+    from agent.tasks import deliver_agent_order_event
+
+    dispatch_on_commit(deliver_agent_order_event, [str(event_id)])
 ```
 
-(`src/order/signals/handlers.py`). The same handler defers the
+(`src/agent/outbox.py`: an order an agent placed records an `AgentOrderEvent`
+row in the transaction of the change, and its first attempt is queued for
+after the commit). The same handler defers the
 `order_shipment_dispatched` signal, and therefore the carrier voucher
 creation and the shipping email, with `transaction.on_commit` inside a
 `schema_context`. Never call `.delay()` inside the transaction that

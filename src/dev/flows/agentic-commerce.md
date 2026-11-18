@@ -40,9 +40,8 @@ flowchart TD
 
   Platform["UCP / ACP platform"] --> Profile["/.well-known/ucp"]
   Platform --> ACP["/acp/checkout_sessions"]
-  DJ["Django order task"] --> Int["POST /internal/events/order-status"]
-  Int --> Queue["ag:webhooks:orders"]
-  Queue --> Hook["signed webhook to platform"]
+  DJ["Django order-event outbox"] --> Int["POST /internal/events/order-status"]
+  Int --> Hook["signed webhook to platform, in the same call"]
 ```
 
 ## How it works
@@ -715,7 +714,7 @@ A UCP or ACP checkout is a session in the gateway's Redis
   another request's save in between is `ErrSessionChanged` and nothing is
   written. There is no unconditional write of a session. A lost save is answered
   like a busy one (ACP 409 `idempotency_in_flight` with `Retry-After`, UCP a
-  `conflict` tool error, the order-event push a 503 Django sends again).
+  `conflict` tool error, an order event a 503 Django's outbox sends again soon).
 - **The in-progress save is the fence.** `Flow.Complete` sends `POST /order` only
   after its save of `complete_in_progress` was accepted, so of all the
   completions that loaded one ready session, under any lock or key, one reaches
@@ -1179,11 +1178,16 @@ the storefront serves neither.
 
 ### Order events
 
-`src/order/tasks.py` POSTs to `/internal/events/order-status` with the shared
-`X-Internal-Token`, carrying `schemaName`, `orderUuid`, `status`,
-`paymentStatus` and `trackingNumber`. The schema comes from the live
-connection, because the task runs inside the schema captured at dispatch.
-A 5xx from the gateway is raised so Celery retries; a 4xx is logged.
+Django keeps every event of an order an agent placed in its outbox
+(`src/agent/outbox.py`, [Agent order events](/dev/django/reference/agent-order-events)):
+an `AgentOrderEvent` row written in the transaction of the change, its first
+attempt queued after the commit, the rest swept every minute per store. Each
+attempt POSTs to `/internal/events/order-status` with the shared
+`X-Internal-Token`, carrying `eventId` (the row's UUIDv7), `eventType`
+(`created` or `updated`), `occurredAt`, `schemaName`, `orderUuid`,
+`status`, `paymentStatus` and `trackingNumber`. Django connects within 3 s and
+reads the answer for 30 s; the gateway bounds its whole answer at 25 s
+(`orderEventBudget`). An order's events go out in the order they happened.
 
 `internal/server/internalapi.go` checks the token with a constant-time compare
 **before reading the body**, so an unauthenticated caller cannot distinguish a
@@ -1191,10 +1195,28 @@ malformed body from a valid one. It routes the event through the **order
 link**, not the checkout session — the session is gone within a day, while
 shipment and delivery events arrive for weeks — applies it to the session if
 one still exists, and, when the checkout registered a webhook target, fetches
-the order through the private route above and queues the full UCP order entity for delivery.
+the order through the private route above, signs the full UCP order entity and
+posts it once, within the call (`ucp.Webhooks.Send`). Its answer is the
+outcome, which the outbox records on the row:
+
+| Gateway answers | When | The outbox |
+|---|---|---|
+| 204 | Delivered, or no webhook to deliver | marks it `delivered` |
+| 503 | Redis, Django or the store's key failed; the store does not resolve; the post got no answer; the platform answered 408, 429 or 5xx (its `Retry-After` is passed on); the session changed meanwhile (`Retry-After: 1`) | tries again: `Retry-After` held to 30 s-1 h, else its backoff from ten minutes, ten attempts in about 2.8 days |
+| 422 | The platform answered anything else (a redirect included), the target is not a public address, the store's domain is another store's, Django no longer serves the order | marks it `failed` |
+| 400 | A body without its store, order, event id or time | marks it `failed` |
+
+Django sends an order's first event as the order commits, which can be before
+the completion that placed it wrote the order link (`Flow.place`). An event
+with no link is answered 503 with `Retry-After` until `checkout.CompletionBudget`
+(three upstream timeouts) has passed since `occurredAt`; after that, 204 and a
+warn line, since the link is lost. `gateway_order_webhooks_total{outcome}`
+counts `delivered` and the gateway's own `failed`.
 
 Deliveries follow the UCP order-event rules: the body is the order entity,
-headers follow Standard Webhooks (`Webhook-Id`, `Webhook-Timestamp`) with
+headers follow Standard Webhooks (`Webhook-Id` is the outbox row's id and
+`Webhook-Timestamp` its `occurredAt`, both the same on every attempt, as UCP
+requires of a retry; the signature's `created` is the attempt's) with
 `UCP-Agent` naming the tenant's profile, and the request is signed per RFC
 9421 (`Content-Digest`, `Signature-Input`, `Signature`) with the tenant's
 ES256 key — the one algorithm every UCP verifier must support
@@ -1203,27 +1225,11 @@ ES256 key — the one algorithm every UCP verifier must support
 `internal/ucp/webhook.go`), so neither can be changed on a replayed delivery. The client dials only public addresses and never
 follows a redirect, so a registered URL cannot be turned toward the cluster.
 
-The webhook queue is deliberately **not** per schema: one Redis stream
-(`ag:webhooks:orders`) and consumer group for the whole pod pool, one consumer
-per pod name, each delivery carrying its own schema for the signing key.
-Delivery runs in a bounded worker pool because inline delivery let one
-undeliverable endpoint stall every tenant's webhooks, and no one endpoint can
-hold the pool either: a **target** holds at most its share of a pod's workers
-(`perTargetDeliveries`, two of `deliveryWorkers`, in `internal/ucp/webhook.go`).
-The target is the registrable domain of the URL's host, in ASCII (a name under
-one's own domain is free, so a cap per host would give one owner as many shares
-as names), or the address as the rate limiter counts one. A delivery read while
-its target is at the cap waits in process, first in first out, and the worker
-that frees one of the target's slots takes it next; one beyond the queues'
-bounds, or not started within `queueMaxWait` of its read, is left pending for
-reclaim. So an endpoint that does not answer delays its own deliveries, never
-another platform's. Semantics are at-least-once: an entry is acknowledged only
-on a terminal outcome (and never when the store's signing key could not be read);
-a restarted pod replays its own pending entries at once, and a vanished pod's
-are claimed by another after the visibility timeout, never while the pod that
-holds them is still delivering. Two deliveries to one target can run at once, so
-two events of one order can arrive in either order; each carries the full order
-entity.
+Retries, their backoff and their order are the outbox's, and each store is swept
+on its own, one event at a time: a platform that does not answer holds up only
+its own store's retries, each by up to the post's 15 s (`postTimeout`). Until
+v1.47.0 the gateway queued deliveries in a Redis stream of its own
+(`ag:webhooks:orders`); v1.48.0 deleted it (the gateway runbook's section 13).
 
 The tenant's signing key is **sealed at rest** (`internal/ucp/keys.go`).
 `ag:{schema}:ucp:signing_key:es256:aes256gcm` holds the private scalar encrypted
@@ -1248,7 +1254,7 @@ The gateway does not use the platform's shared Redis. `REDIS_URL` points at
 `redis-gateway-config.yaml`, and `agent-gateway.yaml` for the URL and the
 `redis-gateway-auth` password). What it keeps is state, not cache: checkout
 sessions, their locks and order links (kept a year), ACP idempotency records, the
-sealed signing keys, and the order-webhook stream with its consumer group. On the
+and the sealed signing keys. On the
 shared instance, which evicts to make room for cached pages, any of it could be
 dropped, so this one runs `maxmemory-policy noeviction` with AOF persistence: a
 full instance refuses writes (the gateway then fails checkouts, chat turns and
@@ -1480,12 +1486,12 @@ yourself, then bumping the pin in the infrastructure repo.
 - **A checkout answers as missing to a caller that is not its platform.** It was created by
   a signed platform and is read by another caller, or by that platform
   unsigned. A checkout a signed create made is served only to that signer.
-- **Order webhooks stop for one tenant.** One target (a platform's registrable
-  domain) holds at most two of a pod's workers and queues the rest, so a stuck
-  endpoint delays its own deliveries and no other platform's; the symptom is
-  usually that tenant's platform endpoint blackholing. Undelivered entries stay pending in the
-  `dispatch` group (`XPENDING ag:webhooks:orders dispatch`) until a terminal
-  outcome.
+- **Order webhooks stop for one tenant.** Django's admin, *Agent order events*,
+  shows each event's status, attempts and last error (`HTTP 503`, `HTTP 422`,
+  the exception of an unreachable gateway); the gateway logs `order event
+  retried` or `order event failed` with its reason and the event id. Usually
+  the platform's endpoint is down or refusing: *Send again now* sends a
+  `pending` or `failed` event again with a fresh set of attempts.
 - **Deploy changed nothing.** The gateway image is not released by pushing to
   `main`. Tag `vX.Y.Z`, then update the pin in the infrastructure repo.
 
@@ -1521,7 +1527,8 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/storefront/urls.go` | `Site.Links` (page links in a language), `MCPServerCard` and the gateway's own endpoints |
 | `grooveshop-agent-gateway/internal/ucp/profile.go` | Business profile document |
 | `grooveshop-agent-gateway/internal/ucp/handler.go` | Payment handler, instruments, hosted selection |
-| `grooveshop-agent-gateway/internal/ucp/webhook.go` | Order-event queue and signed delivery |
+| `grooveshop-agent-gateway/internal/ucp/webhook.go` | Signed order-webhook delivery, one attempt per call |
+| `grooveshop-agent-gateway/internal/server/internalapi.go` | The order-event route and its answers |
 | `grooveshop-agent-gateway/internal/ucp/negotiate.go` | Capability intersection and authority binding |
 | `grooveshop-agent-gateway/internal/mcpsrv/signature.go`, `grooveshop-agent-gateway/internal/mcpsrv/order.go` | Platform signature verification on `/mcp`, `get_order` and its order-link check |
 | `grooveshop-agent-gateway/internal/ucp/keys.go`, `grooveshop-agent-gateway/internal/ucp/keys_upkeep.go` | The sealed signing key and its startup check |
@@ -1570,7 +1577,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-django-api/src/core/templates/idp/oidc/authorization_form.html`, `src/core/templates/socialaccount/signup.html` | Consent and social sign-up naming the store |
 | `grooveshop-django-api/src/core/templatetags/store_brand.py` | The store's name, logo, favicon and colour for those pages |
 | `grooveshop-django-api/tailwind/input.css` | The `account-*` styles |
-| `grooveshop-django-api/src/order/tasks.py` | Order-event push |
+| `grooveshop-django-api/src/agent/outbox.py`, `src/agent/tasks.py` | The order-event outbox, its first attempt and its sweep |
 | `grooveshop-django-api/src/core/cache/gateway.py` | Feed invalidation call |
 | `grooveshop-storefront-ui-node-nuxt/server/routes/.well-known/oauth-protected-resource/mcp.get.ts` | OAuth protected-resource metadata for `/mcp` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml` | Path routing |
