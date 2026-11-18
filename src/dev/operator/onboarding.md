@@ -151,6 +151,27 @@ transactional, so a failure part-way — a duplicate domain, a typo — rolls
 the schema and its migration history back with everything else and leaves
 nothing to clean up before you retry.
 
+The migrations are part of that one transaction. `Tenant.save()` with
+`auto_create_schema` replays the whole history into the new schema inside the
+caller's transaction (`tenant_create` wraps it in `transaction.atomic()`, and
+the admin's add form is atomic), so no migration commits on its own: an atomic
+one runs in a savepoint. A deploy's `migrate_schemas` is the opposite and
+commits each migration. The difference shows in foreign keys. Django creates
+them `DEFERRABLE INITIALLY DEFERRED`, so the rows a data migration writes are
+checked only at commit, and PostgreSQL refuses to `ALTER` or `DROP` a table
+whose checks are still queued ("cannot ALTER TABLE ... because it has pending
+trigger events"). So the migrate command every `migrate_schemas` run uses,
+`core.db.migrate_command.Command` (`TENANT_BASE_MIGRATE_COMMAND` in
+`src/settings/database.py`), runs the queued checks after each applied or
+unapplied migration when a transaction is open, then defers constraints
+again. Every migration therefore starts as it would in a transaction of its
+own, and provisioning no longer depends on the order the migration graph is
+walked in; a run with no outer transaction (the PreSync deploy) is unchanged.
+`tests_mt/test_provisioning_in_one_transaction.py` provisions a store this way
+and asserts every migration of the graph is recorded in it. The rule for
+authors of migrations is in the Django repository's `docs/migrations.md` ("A
+store's schema is migrated inside one transaction").
+
 **Admin**: <span class="sidebar-path">Control plane → Tenants</span> →
 add. The add form creates the row (and, through `TenantMixin.save()`, the
 schema); provisioning runs from `TenantAdmin.save_related` on
@@ -473,6 +494,13 @@ Run after the sync completes and the certificates are `Ready=True`.
 - **Storefront healthy, real-time and social login broken.** The
   `api.<domain>` row is missing. Re-run provisioning (idempotent) or add
   the row.
+- **`tenant_create` or "Add tenant" stops in a migration with "cannot ALTER
+  TABLE ... because it has pending trigger events".** A data migration queued
+  foreign-key checks that nothing flushed before a later migration altered the
+  same table. The migrate command above flushes them after every migration; with
+  `TENANT_BASE_MIGRATE_COMMAND` set back to Django's own command the
+  provisioning test reproduces exactly this error. The transaction rolled
+  back, so nothing is left to clean up.
 - **Every search returns HTTP 400.** The Meilisearch index was created
   without settings, or seeding failed. Check the provisioning output.
 - **A pay-way is missing from checkout.** The credential is empty for
@@ -522,6 +550,8 @@ Applications.
 |---|---|
 | `grooveshop-django-api/src/tenant/provisioning.py` | `provision_tenant`, `ensure_api_domain`, `ensure_site`, `provision_owner_membership`, `provision_stripe`, `seed_tenant_defaults` |
 | `grooveshop-django-api/src/tenant/management/commands/tenant_create.py` | CLI entry point, arguments, single transaction |
+| `grooveshop-django-api/src/core/db/migrate_command.py`, `src/settings/database.py` | The migrate command that checks each migration's deferred foreign keys (`TENANT_BASE_MIGRATE_COMMAND`) |
+| `grooveshop-django-api/tests_mt/test_provisioning_in_one_transaction.py` | A store provisioned inside one transaction gets every migration |
 | `grooveshop-django-api/src/tenant/management/commands/bootstrap_stripe.py` | `--schema`, `--all-tenants`, `--dry-run`, `--rotate-endpoint` |
 | `grooveshop-django-api/src/tenant/admin.py` | `TenantAdmin.save_related` provisioning, `provision_stripe_webhook` action |
 | `grooveshop-django-api/src/tenant/models.py` | `Tenant` fields, `TenantPlan`, `StoreVertical`, `TenantDomain`, `available_locales`, `stripe_connect_account_id` |

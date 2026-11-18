@@ -265,7 +265,9 @@ dict is language-independent. `Order.language_code` is seeded from it,
 so an order's emails and invoice come in the language the customer
 shopped in. Clients branch on stable codes, never on message text — the
 order-create 400 carries `error.type` (`src/order/enum/create_error.py:
-OrderCreateErrorType`).
+OrderCreateErrorType`), and its 409 for a changed total carries
+`code: "total_changed"` (the enum value follows a storefront release, see
+[OpenAPI contract](/dev/django/openapi-contract#a-new-value-in-a-response-enum-ships-consumer-first)).
 
 Caches key on it in one place per layer: Django's `cache_page` suffixes
 its key with `request.LANGUAGE_CODE` (`django/utils/cache.py`), and every

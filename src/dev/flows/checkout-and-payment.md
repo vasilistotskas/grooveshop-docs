@@ -1,6 +1,6 @@
 ---
 title: Checkout & payment
-description: "Cart to paid order: stock reservation, country-aware address and phone validation, shipping-rate enforcement, pay-way validation, the two order-creation paths, and every payment provider's flow with its webhook."
+description: "Cart to paid order: stock reservation, country-aware address and phone validation, shipping-rate enforcement, pay-way validation, the one checkout quote and expected total, the two order-creation paths, and every payment provider's flow with its webhook."
 ---
 
 # Checkout & payment
@@ -33,6 +33,8 @@ sequenceDiagram
   D-->>N: cart holds replaced
   S->>N: Address, shipping method, pay way
   N->>D: GET pay_way (provider + kind)
+  N->>D: POST cart/quote
+  D-->>N: Total and expectedTotal
   alt Intent-first (Stripe)
     N->>D: POST cart/create-payment-intent
     D->>P: Create PaymentIntent
@@ -43,7 +45,7 @@ sequenceDiagram
     S->>P: Confirm card
     P->>D: payment_intent.succeeded
   else Order-first (Viva)
-    N->>D: POST order, no intent
+    N->>D: POST order, no intent (expectedTotal)
     D-->>N: Order PENDING
     N->>D: POST order/id/create_checkout_session
     D->>P: Create hosted order
@@ -199,15 +201,25 @@ when a provider code is present and to `filter_by_shipping_kind` when it
 is not — home delivery is provider-agnostic in checkout, so the second
 form intersects the rules of every carrier that serves the kind.
 
-Order creation re-applies both layers in
-`src/order/views/order.py: OrderViewSet._validate_pay_way_for_order`, plus a
-credentials gate (`PayWayService.is_provider_configured`). A stale client
-cannot place an order with a method checkout would never have offered.
+Order creation, the payment intent and the quote ask one rule for the same
+answer: `OrderQuoteService.offered_pay_ways`
+(`src/order/checkout/quote.py`) lists the pay ways a shopper is offered for
+the chosen delivery (active, through a provider the store holds credentials
+for, not excluded for that delivery), and
+`src/order/views/order.py: OrderViewSet._validate_pay_way_for_order` accepts a
+pay way exactly when it is on that list, before the two creation paths split.
+A home delivery that names no carrier (the storefront never names one) is
+judged by every carrier that could take it. An order sent without a
+`shippingKind` is a home delivery for the price, the carrier it is assigned
+and this rule alike: all three read `OrderQuoteService.delivery_kind`. A stale
+client cannot place an order with a method checkout would never have offered;
+the refusal is 400 `pay_way_unavailable`, its message under `payWayId` on
+order creation.
 
 **Shipping is priced from the rate, never from a setting.** Every
-caller — both order-creation paths and `cart/create-payment-intent` —
-goes through `OrderService.shipping_cost`, which calls
-`ShippingService.quote`. A free-shipping promotion zeroes the price but
+caller — the quote, both order-creation paths and `cart/create-payment-intent` —
+goes through `OrderQuoteService.shipping_cost`
+(`src/order/checkout/quote.py`), which calls `ShippingService.quote`. A free-shipping promotion zeroes the price but
 still calls `ShippingService.assert_available`, so it cannot ship to a
 country the store does not serve. The storefront reads no shipping
 setting either: `shippingPrice` is the live option price or `null`
@@ -216,17 +228,17 @@ retry that blocks the step, not a fallback number.
 `src/cart/serializers/cart.py` requires `country_id` for the same reason.
 
 **Free shipping and a free pay-way fee are judged on one value.**
-`OrderService.threshold_value(cart_total, discount_total)` is the products
+`OrderQuoteService.threshold_value(cart_total, discount_total)` is the products
 after promotion and coupon discounts, never below zero, excluding shipping
 and the pay-way fee; loyalty points and gift cards are payment, not
 discounts, and do not move it. `ShippingService.quote` makes a rate free
 when that value reaches `ShippingRate.free_shipping_threshold` (a `NULL`
-threshold is never free), and `OrderService.calculate_payment_method_fee`
-waives the fee when it reaches a non-zero `PayWay.free_threshold`. Every
-caller of `shipping_cost` and `calculate_payment_method_fee` passes it:
-both order-creation paths, the payment-first verification and the
-`cart/create-payment-intent` preview (`src/cart/views/cart.py`), so the preview
-and the order cannot disagree. The cart serializer exposes it as
+threshold is never free), and `OrderQuoteService.calculate_payment_method_fee`
+waives the fee when it reaches a non-zero `PayWay.free_threshold`.
+`OrderQuoteService.quote` computes it once and passes it to both, for every
+caller: the quote, both order-creation paths, the payment-first verification
+and the `cart/create-payment-intent` preview (`src/cart/views/cart.py`), so
+the preview and the order cannot disagree. The cart serializer exposes it as
 `freeThresholdValue` (`src/cart/serializers/cart.py:
 get_free_threshold_value`). The storefront compares every "free above X"
 with it, never with the cart total: `useCheckoutForm.ts` sends it as the
@@ -245,12 +257,129 @@ threshold could pay shipping and skip the fee.
 | Settlement is `online`, provider declares `supports_payment_intent`, and a `payment_intent_id` was sent | Payment-first | `OrderService.create_order_from_cart` |
 | Everything else | Order-first | `OrderService.create_order_from_cart_offline` |
 
-The payment-first path verifies the provider's reported amount against a
-server-recomputed total (cart minus promotion discount, plus shipping,
-plus pay-way fee, minus loyalty, minus the gift-card plan) and raises
-`PaymentAmountMismatchError` on a mismatch, logging every input that
-produced it. The order is created `status=PENDING` with the
+The payment-first path verifies the provider's reported amount against the
+quote's `amount_due`, computed under the cart lock (cart minus promotion
+discount, plus shipping, plus pay-way fee, minus loyalty, minus the gift-card
+plan), and raises `PaymentAmountMismatchError` on a mismatch, logging every
+input that produced it. The order is created `status=PENDING` with the
 provider-reported payment status.
+
+#### One total: the checkout quote
+
+`OrderQuoteService.quote` (`src/order/checkout/quote.py`) is the one
+computation of what checkout charges: a rule added there reaches every
+caller. It returns a frozen `CheckoutQuote`: the products, the promotions,
+the parcel (free gifts included), the delivery (`ShippingCharge`: price and
+`waived_by`), the pay-way fee (amount and `waived`), the loyalty discount,
+the gift-card plan, `grand_total` (the goods after promotions plus shipping
+and the fee) and `amount_due` (what is left after loyalty and gift cards,
+and what the order stores).
+
+| Caller | Locks | Reads |
+|---|---|---|
+| `POST /api/v1/cart/quote` (`CartViewSet.quote`) | none | the whole quote; partial input allowed |
+| `POST /api/v1/cart/create-payment-intent` | none | `amount_due` is the intent's amount |
+| `create_order_from_cart` (payment-first) | `lock=True` | the intent's amount is compared with `amount_due` |
+| `create_order_from_cart_offline` (order-first) | `lock=True` | the order's charges |
+
+- **A row is never guessed.** Without a delivery `shipping` is `None`, without
+  a pay way the fee is, and the rows that need both (`grand_total`, the
+  gift-card plan, `amount_due`) are `None` with them.
+- **`lock=True` is order creation.** It locks the candidate `Promotion` rows,
+  the customer's row (when points are redeemed) and the gift cards until
+  commit, so what was quoted is what `PromotionEngine.record`,
+  `LoyaltyService.redeem_points` and `GiftCardService.record_plan` write. A
+  refused attached coupon raises `InvalidCouponError`; without the lock it is
+  reported on the quote (`blockingCoupon`). Both paths take the
+  customer's and gift-card locks before the lines and products.
+- **The order is built from the quote's rows**
+  (`OrderService._quote_under_lock`). `Order.calculate_order_total_amount()`
+  still decides what is stored, and `OrderService._require_quoted_total` rolls
+  the creation back (400 `invalid_order_data`, logged at ERROR) when that sum
+  is not the quote's `amount_due`, so "one total" is enforced, not assumed.
+- **The delivery is priced before the transaction.** A carrier's live price
+  is an HTTP call (ACS: a 15 s timeout) that would hold the cart,
+  promotion, customer and gift-card rows. Both paths call
+  `OrderService._resolve_live_shipping` ahead of their transaction, where the
+  carrier's adapter caches the answer; the locked quote prices with
+  `cached_only` and never calls out. A parcel the cache has no answer for
+  (the cart changed in between, or the entry expired) rolls the creation back
+  with `ShippingPriceUnresolvedError`; the cart is priced again with nothing
+  locked and answered as 409 `total_changed` carrying that quote
+  (`OrderService._refuse_unpriced`). ACS's live price is cached per country, region and
+  weight bracket for five minutes (`src/shipping_acs/carrier.py:
+  AcsCarrier._fetch_live_quote`), so a polled quote does not reach the carrier
+  each time, and a failed call is remembered for 60 seconds (the stored rate is
+  charged meanwhile), so an outage is not re-asked on every attempt.
+- **Points pay for goods, never for shipping or a fee.** The cap on a
+  redemption is the goods after promotions (`threshold_value`), one value for
+  the quote, the intent, both creation paths and `POST /loyalty/redeem`; see
+  [Loyalty](/dev/flows/loyalty#redeeming).
+- **`POST /api/v1/cart/quote`** takes the payment-intent body with every choice
+  optional (`CartQuoteRequestSerializer`). A delivery is priced once
+  `shippingKind` and `countryId` are both given (order creation prices a
+  missing kind as a home delivery; a quote does not assume one). It returns
+  the rows (`itemsSubtotal`, `discountTotal`, `appliedPromotions`,
+  `blockingCoupon`, `freeThresholdValue`, `shipping`, `paymentMethodFee`,
+  `loyaltyDiscount`, `giftCardAmount`, `grandTotal`, `amountDue`,
+  `currency`), `expectedTotal` (`{amount, currency}` in minor units, to send
+  back with the order) and the priced lists `shippingOptions` (each priced
+  as an order would be, with `waivedBy`; null without a country) and `payWays`
+  (each with its fee and `waived`). A row that depends on a choice the request
+  did not make is null.
+  - The cart is found as order creation finds it (`get_existing_cart`): 404
+    `cart_not_found`, never a new cart; an empty one is 400 `cart_empty`.
+  - Refusals are `{detail, reason, code}`. A delivery that cannot be priced
+    has a code of its own (`src/shipping/enum/refusal.py: ShippingRefusal`:
+    `shipping_unavailable`, `shipping_parcel_too_large`,
+    `shipping_weight_exceeded`) so a client drops the selection instead of
+    matching translated text; the payment intent and order creation keep
+    `invalid_order_data` with `fieldErrors` for the same three. The rest are
+    the payment intent's: `pay_way_unavailable`, `pay_way_not_found`,
+    `loyalty_requires_authentication`, `loyalty_redemption_invalid`,
+    `loyalty_redemption_too_small` and the gift card's own reason.
+  - `X-Cart-Token` is accepted: the quote is then the cart owner's price.
+    Points are priced only for the signed-in owner, so a token request that
+    asks to redeem points is refused `loyalty_requires_authentication`, and
+    order creation takes no token: a token quote must not feed the expected
+    total of an anonymous order.
+  - A quote only prices. Stock, the cart's validity, the wholesale minimum,
+    the legal texts and the unpaid-order limit are order creation's to judge.
+  - It has no VAT total: the receipt's VAT taxes shipping and the fee at the
+    goods' rates and spreads the loyalty discount over the lines, while the
+    cart's `totalVatValue` is the goods only.
+- **The expected total.** `POST /api/v1/order` takes an optional
+  `expectedTotal` (`{amount, currency}`, minor units). Both paths compare it,
+  exactly, with the amount due computed under the cart lock and before
+  anything is written. A difference creates nothing (no points, card balance,
+  stock or cart line is taken) and answers **409**
+  `{detail, error: {type, quote}, code: "total_changed"}`, `quote` being what
+  the order would have been created at. It is the only amount check the
+  order-first path has (cash on delivery, Viva). A price, VAT or markdown edit,
+  a promotion starting or ending, a changed rate or fee, a live carrier price
+  leaving its cache and another email than the one quoted with are each a
+  `total_changed`, by design. `error.type` is `invalid_order_data` for now: the
+  enum value follows a storefront release, see
+  [OpenAPI contract](/dev/django/openapi-contract#a-new-value-in-a-response-enum-ships-consumer-first).
+  The field is optional until the storefront and the gateway send it.
+- **Budgets.** The quote is repeated on every change of a checkout and polled
+  by the agent gateway, so it has its own throttle scopes, `cart_quote`
+  (signed-in callers) and `cart_quote_anon` (guests; per cart for a request
+  that carries the gateway's secret), not the cart's write budget
+  (`src/core/api/throttling.py: CartQuoteThrottle`, `CartQuoteAnonThrottle`).
+  Guessing a gift-card code is budgeted on the quote, the payment intent and
+  order creation alike (`gift_card_code_throttles`): only a code new to the
+  cart counts, the cart remembering the codes it was allowed to try for
+  `GIFT_CARD_CODES_SEEN_TTL_SECONDS` as keyed digests (never the code), so
+  re-pricing the same card is never refused. The caller pays from the
+  `gift_card_check` scope that `/giftcard/check` spends too (the signed-in
+  customer, else the cart for a gateway request, else the address); the check
+  and the count are one step under the budget's lock, and the codes are read by
+  the route's own request serializer so a JSON list, repeated form keys and
+  indexed form keys are counted as they are priced.
+- **Not yet moved onto it.** The storefront's
+  `app/composables/useCheckoutTotals.ts` and the gateway's
+  `internal/checkout/pricing.go` still compute totals of their own.
 
 **The provider is asked before the transaction opens.**
 `create_order_from_cart` is not `@transaction.atomic`, and neither is
@@ -586,6 +715,14 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 - **No provider call inside the order-creation transaction**, nor in a
   view-level `atomic`: the intent is read first, and the transaction only
   re-compares its amount and currency with the total computed under lock.
+  A carrier's live price is resolved before the transaction too; the locked
+  quote reads its cache and never calls out.
+- **One total.** The quote, the intent's amount and both creation paths read
+  `OrderQuoteService.quote`; `_require_quoted_total` refuses an order whose
+  own sum differs from it (`src/order/services.py`).
+- **No carrier call under the order-create locks.** The live shipping price
+  is resolved before the transaction; the locked quote only reads its cache
+  (`OrderService._resolve_live_shipping`).
 - **Product rows are locked in ascending pk order, in one statement,
   before the first row that references a product is inserted**
   (`StockManager.lock_products`); a cart-item lock never joins the
@@ -627,6 +764,24 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
   `cart/create-payment-intent` received. Changing a deduction after the
   intent exists is the usual cause, which is why the storefront drops
   the intent whenever loyalty, gift cards or a coupon change.
+- **409 `total_changed` on `POST /order`.** The client sent `expectedTotal` and
+  the amount due computed under the cart lock is another (a price, promotion,
+  rate, fee or live carrier price moved since the last quote), or the locked
+  quote found no cached carrier price for the parcel. Nothing was created; the
+  body's `error.quote` is what the order would have been created at, so the
+  client shows it and orders again.
+- **400 `invalid_order_data` with "the order's rows do not add up".**
+  `_require_quoted_total` fired: a charge was added to the order or to the
+  quote and not the other, or a cart line changed between the quote and the
+  line lock. It is logged at ERROR with both figures; the creation rolled back.
+- **429 on a quote, payment intent or order carrying `giftCardCodes`.** The
+  caller tried more new codes than the `gift_card_check` scope allows (6 a
+  minute, shared with `/giftcard/check`). Re-sending a code the cart already
+  tried is never counted.
+- **A loyalty redemption worth under a cent is refused** as
+  `loyalty_redemption_too_small`, the detail naming the fewest points that make
+  one; order creation answers it as `invalid_order_data` with the message
+  under `fieldErrors.loyaltyPointsToRedeem`.
 - **400 `payment_verification` on a Stripe order.** Besides an intent in
   an invalid state, the intent already belongs to another order: a
   different cart's, or a canceled or deleted one. A repeat for the same
@@ -690,7 +845,14 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `validate_shipping_address`, `shipping_cost`, `threshold_value`, `calculate_payment_method_fee`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `_quote_under_lock`, `_require_quoted_total`, `_resolve_live_shipping`, `_refuse_unpriced`, `validate_shipping_address`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService`: `quote`, `shipping_cost`, `threshold_value`, `free_shipping_progress`, `calculate_payment_method_fee`, `offered_pay_ways`, `delivery_kind`, `resolve_live_shipping`; `CheckoutQuote`, `ExpectedTotal` |
+| `grooveshop-django-api/src/order/serializers/quote.py` | `CartQuoteSerializer`, the quote's response |
+| `grooveshop-django-api/src/order/enum/create_error.py` | `TOTAL_CHANGED_CODE`, `OrderCreateErrorType` |
+| `grooveshop-django-api/src/shipping/enum/refusal.py` | `ShippingRefusal`: the quote's coded delivery refusals |
+| `grooveshop-django-api/src/core/api/throttling.py` | `CartQuoteThrottle`, `CartQuoteAnonThrottle`, `gift_card_code_throttles`, `GiftCardCodeThrottle` |
+| `grooveshop-django-api/src/shipping_acs/carrier.py` | `AcsCarrier._fetch_live_quote`: the cached live price |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutTotals.ts`, `grooveshop-agent-gateway/internal/checkout/pricing.go` | The totals the storefront and the gateway still compute themselves |
 | `grooveshop-django-api/src/order/managers/order.py` | `holding_stock_for_online_payment`, the set the unpaid-order limit counts |
 | `grooveshop-django-api/src/order/exceptions.py` | `UnpaidOrderLimitError` |
 | `grooveshop-django-api/src/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
@@ -706,7 +868,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/country/migrations/0012_seed_iso_countries.py` | The full ISO 3166-1 country seed |
 | `grooveshop-django-api/src/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
-| `grooveshop-django-api/src/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value` |
+| `grooveshop-django-api/src/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value`, `CartQuoteRequestSerializer` |
 | `grooveshop-django-api/src/order/payments/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
 | `grooveshop-django-api/src/order/models/viva_webhook_event.py` | Viva idempotency table |
@@ -720,7 +882,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/pay_way/services.py` | `is_provider_configured`, `filter_by_carrier`, `filter_by_shipping_kind`, `process_payment` |
 | `grooveshop-django-api/src/pay_way/enum/settlement.py` | `PaySettlement` and why the old booleans were replaced |
 | `grooveshop-django-api/src/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
-| `grooveshop-django-api/src/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `create_payment_intent` |
+| `grooveshop-django-api/src/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `quote`, `create_payment_intent` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, shippable countries, shipping options (quoted on `freeThresholdValue`) and their error state, pay-way loading |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/payWayCost.ts` | `payWayDisplayCost`: the fee shown, waived on `freeThresholdValue` |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/phone.ts` | `normalizePhone`, `isPlausiblePhone`, `stripDialCodeForDisplay`, `dialCodeLabel` |

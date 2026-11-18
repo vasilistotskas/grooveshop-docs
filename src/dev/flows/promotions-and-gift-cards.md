@@ -219,11 +219,11 @@ store's `getOfferNearMisses`).
 ### Free shipping: one distance
 
 A cart can reach free shipping two ways, and checkout
-(`OrderService.shipping_cost`) honours both: a live FREE_SHIPPING promotion
+(`OrderQuoteService.shipping_cost`) honours both: a live FREE_SHIPPING promotion
 waives every carrier's price (`free=promotion_result.free_shipping`), and a
 carrier's `ShippingRate.free_shipping_threshold` zeroes that carrier and kind
-once `threshold_value` reaches it. The cart tells the shopper ONE distance,
-`freeShippingProgress`, decided by `OrderService.free_shipping_progress` with
+once `OrderQuoteService.threshold_value` reaches it. The cart tells the shopper ONE distance,
+`freeShippingProgress`, decided by `OrderQuoteService.free_shipping_progress` with
 those same two rules, so the line cannot promise what checkout will not give:
 
 ```mermaid
@@ -599,8 +599,10 @@ help text notes the Greek five-year rule); empty means never.
 
 `plan_redemption(codes, amount_due, lock=...)` computes how much the given
 cards can settle, **smallest balance first** so near-empty cards drain, and
-returns a `RedemptionPlan`. The same maths runs at payment-intent creation,
-at order-create verification and at the actual redemption — parity or
+returns a `RedemptionPlan`. `OrderQuoteService.quote` calls it
+(`src/order/checkout/quote.py`), against what is due after loyalty, so the same
+maths runs in `POST /cart/quote`, at payment-intent creation, at order-create
+verification and at the actual redemption — parity or
 `PaymentAmountMismatchError`.
 
 Two refusals are worth knowing:
@@ -617,6 +619,35 @@ Two refusals are worth knowing:
 `record_plan` writes the negative `REDEEM` rows and mirrors the split into
 `order.metadata["gift_cards"]`; `redeem` is plan-with-lock plus record in one
 step.
+
+### Guessing a code is budgeted, using one is not
+
+The quote, the payment intent and order creation each say what a card settles
+(or that the code is no card), so each could be used to guess codes. A request
+that carries `giftCardCodes` therefore gets a `GiftCardCodeThrottle`, added by
+the one helper `core.api.throttling.gift_card_code_throttles` that the three
+views call from `get_throttles` (`src/core/api/throttling.py`):
+
+- **Only a code new to the cart counts.** The cart keeps the codes it has been
+  allowed to try for `GIFT_CARD_CODES_SEEN_TTL_SECONDS` (default 1800) as keyed
+  digests (`salted_hmac` with SHA-256), never the code, shared by the three
+  routes. A checkout that
+  re-prices one card on every change is never refused; a request with several
+  new codes costs that many. A request this budget refuses records nothing,
+  so its codes stay new.
+- **The caller pays**, from the `gift_card_check` scope (6 a minute) that
+  `/giftcard/check` spends too, so a guess is counted once wherever it is
+  made: the signed-in customer, else the cart for a request carrying the
+  gateway's secret (every buyer of a platform arrives from the gateway's
+  address), else the address. A buyer behind the gateway therefore gets six new
+  codes a minute per cart.
+- **The check and the count are one step per caller**, made while the budget's
+  key is held (`CustomCache.lock`), so guesses that arrive together are counted
+  one after the other.
+- **The codes are read by the route's request serializer's own field**
+  (`get_value`, then `run_validation`), so a JSON list, repeated form keys and
+  indexed form keys are counted exactly as they are priced. A value the field
+  refuses answers 400 with nothing priced and nothing counted.
 
 ### Purchase, delivery and refund
 
@@ -842,8 +873,10 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/product/models/product.py` | `Product.offer_kind`, the indexed `on_offer` field, `get_meilisearch_queryset` |
 | `grooveshop-django-api/src/search/views/product.py` | The `onOffer` search filter |
 | `grooveshop-django-api/src/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
-| `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, payment-intent evaluation |
-| `grooveshop-django-api/src/order/services.py` | Locked evaluation, `record`, `clear_after_order`, `free_shipping_progress`, `FreeShippingProgress` |
+| `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, `quote`, payment-intent evaluation |
+| `grooveshop-django-api/src/core/api/throttling.py` | `GiftCardCheckThrottle`, `GiftCardCodeThrottle`, `gift_card_code_throttles` |
+| `grooveshop-django-api/src/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
+| `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService.quote`, `threshold_value`, `free_shipping_progress`, `FreeShippingProgress` |
 | `grooveshop-django-api/src/shipping/services.py` | `free_threshold_rates`, `initial_country_code` |
 | `grooveshop-django-api/src/cart/serializers/cart.py` | `free_shipping_progress`, `promotion_near_miss` (with `freeShipping`) |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Shipping/FreeShippingNotice.vue` | The default free-shipping line and meter |
