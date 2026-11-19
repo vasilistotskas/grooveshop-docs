@@ -188,6 +188,13 @@ returns `True` for any tenant that is not protected, and writes the row
 every time, so it reports "activated" for a store that was already
 running. Read its `True` as "not refused", not as "something changed".
 
+**A store coming back from suspension gets a search re-sync.** The search
+fan-outs and the deploy's `meilisearch_apply_settings` reach active stores
+only, so a suspended store's indexes miss settings and documents. When the
+store was suspended, `activate_tenant` queues `core.tasks.sync_meilisearch_indexes`
+for its schema once the activation commits (`dispatch_on_commit`); that sync
+applies each index's settings before its documents.
+
 ## Export
 
 `export_tenant_data(tenant, actor=...)` exists because GDPR art. 28(3)(g)
@@ -263,15 +270,20 @@ This is the only irreversible action on the platform.
 The cooldown exists for exactly one failure: an accidental suspension
 followed by an immediate destroy.
 
-One refusal is not a property of the row: `busy`. A destroy first takes the
-store's task lock exclusively (`tenant.celery.hold_store_for_destroy`),
+The gates are judged on the current row first, so a protected or live store is
+refused at once with its own key rather than as `busy` after a wait (a live
+store always has tasks running). One refusal is not a property of the row:
+`busy`. A destroy that passes the gates takes the store's task lock exclusively (`tenant.celery.hold_store_for_destroy`),
 waiting up to `DESTROY_TASKS_WAIT` (30 seconds) for the tasks running in the
 store to end, because a task whose schema is dropped between two of its
 queries would fall through to the public schema's tables of any app both
 schemas share. Tasks that start meanwhile wait for the destroy
 (`holding_store`, a shared advisory lock every `TenantTask` holds while it
 runs), then find no row and do not run. If tasks are still running after the
-wait, the destroy is refused with `busy`: try again a little later. Through
+wait, the destroy is refused with `busy`: try again a little later. The wait
+turns `statement_timeout` off for that one statement, so it always ends as a
+refusal and never as a cancelled query. The row is judged again under its lock
+after the wait. Through
 the platform API the refusal is the stable code `tenant_destroy_<key>`
 (`tenant_destroy_busy`, `tenant_destroy_cooldown`, ...), never the
 exception.
@@ -294,9 +306,11 @@ Two more gates sit above these in the admin path:
 The order is not arbitrary (`src/tenant/lifecycle.py: destroy_tenant`). Inside
 one transaction:
 
-1. Take the store's task lock exclusively (waiting up to 30 seconds for its
-   running tasks, else refuse as `busy`), re-read the row under lock and
-   re-run the refusal gates.
+1. Refuse on the gates at once if they apply (before the transaction). Then
+   take the store's task lock exclusively (waiting up to 30 seconds for its
+   running tasks, else refuse as `busy`), before the row lock so that a task
+   writing the row cannot wait on this transaction while it waits on the task;
+   then re-read the row under lock and re-run the refusal gates.
 2. Read the **last invoice year first**, with
    `offboarding.latest_invoice_year(schema)` — it lives inside the schema
    step 4 destroys. On any read failure it returns the current year rather
@@ -441,7 +455,7 @@ of anything.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/tenant/lifecycle.py` | `is_protected_tenant`, `destroy_refusal`, `suspend_tenant`, `activate_tenant`, `export_tenant_data`, `has_tenant_export`, `destroy_tenant`, `DestroyRefused`, `DESTROY_TASKS_WAIT`, `_dispatch_media_flush`, `SUSPEND_COOLDOWN` |
+| `grooveshop-django-api/src/tenant/lifecycle.py` | `is_protected_tenant`, `destroy_refusal`, `suspend_tenant`, `activate_tenant` (queues the search re-sync), `export_tenant_data`, `has_tenant_export`, `destroy_tenant`, `DestroyRefused`, `DESTROY_TASKS_WAIT`, `_dispatch_media_flush`, `SUSPEND_COOLDOWN` |
 | `grooveshop-django-api/src/tenant/offboarding.py` | `purge_search_indexes`, `purge_tenant_files`, `latest_invoice_year`, `retention_until`, `INVOICE_RETENTION_BASIS`, the private/public path helpers |
 | `grooveshop-django-api/src/tenant/admin.py` | `suspend_tenants`, `activate_tenants`, `destroy_tenants` + confirmation page, `export_tenant_data_action`, `get_actions`, `has_delete_permission`, `TenantArchiveAdmin` |
 | `grooveshop-django-api/src/core/templates/admin/tenant/destroy_confirmation.html` | The second-click confirmation page |
