@@ -478,12 +478,16 @@ sends a protocol; see the chatbot's request below.
 **One order per agent checkout (Django #759; the gateway does not send the
 id yet).** `POST /order` accepts `agentCheckout`, the checkout session's id,
 and Django believes it beside the same `X-Internal-Gateway` secret and from no
-other caller (`src/order/views/order.py: OrderViewSet._named_agent_checkout`).
+other caller (`src/order/views/order.py: OrderViewSet._named_agent_checkout`);
+from a caller without the secret it is dropped before validation, even when
+malformed, with no 400.
 The order stores it (`Order.agent_checkout`, unique when set), so a repeat of
 the call with the same id, which a gateway sends when an order call went
 unanswered, is answered with the order that checkout placed: the same `201`
 and body, with nothing created, refused or sent. The lookup runs before the
-body is validated and again under the cart lock; the rules are the Django
+body is validated, again under the cart lock, and again after a refusal
+(body validation and the pay-way checks included), so a racing commit is
+answered `201` with its order; the rules are the Django
 repo's `docs/order/creation.md` §3.2. The response carries `agentCheckout`,
 and the order-event body carries it as `agentCheckoutId` (see Order events).
 
@@ -1226,8 +1230,8 @@ attempt POSTs to `/internal/events/order-status` with the shared
 (`created` or `updated`), `occurredAt`, `schemaName`, `orderUuid`,
 `status`, `paymentStatus`, `trackingNumber` and `agentCheckoutId` (the
 agent checkout that placed the order, `Order.agent_checkout`, so the event
-alone finds its checkout; empty for an order placed before orders carried
-it). Django connects within 3 s and
+alone finds its checkout; empty whenever the order stores none (an agent order whose creation named no checkout, every older order).
+Django connects within 3 s and
 reads the answer for 30 s; the gateway bounds its whole answer at 25 s
 (`orderEventBudget`). An order's events go out in the order they happened.
 

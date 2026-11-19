@@ -135,7 +135,7 @@ transaction of the change, so it is never lost with a failed call. Each
 attempt is one `POST /internal/events/order-status` carrying `eventId`,
 `eventType`, `occurredAt`, `schemaName`, `orderUuid`, `status`,
 `paymentStatus`, `trackingNumber` and `agentCheckoutId` (the agent checkout that
-placed the order, empty for an order placed before orders carried it),
+placed the order; empty whenever the order stores none: an agent order whose creation named no checkout, and every older order),
 authenticated with `X-Internal-Token`.
 The gateway delivers the platform's webhook within the call and answers the
 outcome: a 2xx is delivered, a 503 is tried again later, a 422 failed for good.
