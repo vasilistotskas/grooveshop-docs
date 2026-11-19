@@ -25,7 +25,10 @@ Source: `src/core/retention.py`, `src/core/tasks.py`, `src/core/history.py`,
 
 All sweeps run daily at 04:00 Athens unless the table says otherwise. A
 per-store sweep fans out to every active store, suspended ones included: a
-store's billing state does not pause a deletion the platform promised.
+store's billing state does not pause a deletion the platform promised. A sweep
+holds its store's task lock while it runs, so destroying a store waits for it
+(and the other way round) instead of letting a sweep's next batch fall through
+to the public schema; see [Suspend, export & destroy](/dev/operator/lifecycle#destroy).
 
 | What is deleted | Scope | Kept for | Setting |
 |---|---|---|---|

@@ -31,7 +31,14 @@ into the worker's log context.
 
 `src/tenant/celery.py: TenantTask` propagates the schema. `apply_async()`
 stamps a `_schema_name` header from `connection.schema_name` unless the
-caller set one; `__call__()` wraps the body in that schema's context.
+caller set one; `__call__()` wraps the body in that schema's context. For a
+store (not the public schema) it also holds a shared Postgres advisory lock on
+that store while the body runs (`holding_store`), which `destroy_tenant` takes
+exclusively: a destroy waits for the store's running tasks (30 seconds, then
+refuses as `busy`), and a task queued for a destroyed store finds no row and
+does not run (`TenantArchive`). Fan-outs that reach suspended stores
+(`include_suspended=True`) are what make this matter: a suspended store is the
+one that can be destroyed.
 
 `src/core/tasks.py: MonitoredTask(TenantTask)` adds `on_success` / `on_failure`
 logging with redacted arguments. A failure is logged once, at ERROR, with
@@ -331,7 +338,7 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 | `grooveshop-django-api/src/scheduler/beat.py` | The beat scheduler |
 | `grooveshop-django-api/src/core/retry.py` | The transient error sets `autoretry_for` names |
 | `grooveshop-django-api/src/settings/celery.py`, `grooveshop-django-api/src/settings/schedule.py` | `CELERY_*` (celery); `SCHEDULE_PRESETS`, `get_celery_beat_schedule()` (schedule) |
-| `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `run_for_all_tenants`, `dispatch_on_commit` |
+| `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `holding_store`, `hold_store_for_destroy`, `run_for_all_tenants`, `dispatch_on_commit` |
 | `grooveshop-django-api/src/tenant/tasks.py` | Fan-out wrappers |
 | `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask`, system tasks |
 | `grooveshop-django-api/src/order/signals/handlers.py` | On-commit dispatch of order side effects |

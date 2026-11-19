@@ -140,7 +140,8 @@ operator turns it on. The cycle runs on the public schema only.
   The resolve endpoint, the WebSocket middleware, the internal domains
   feed and the Celery fan-out all skip inactive tenants as well.
 - `destroy_tenant` refuses protected tenants and enforces a 24-hour
-  cooldown after suspension (`SUSPEND_COOLDOWN`); it records a
+  cooldown after suspension (`SUSPEND_COOLDOWN`), waits up to 30 seconds for the
+tasks running in the store and refuses (`busy`) if they do not end; it records a
   `TenantArchive` row with the invoice retention date
   (`src/tenant/offboarding.py`) and can export the store's data first.
 - `is_protected` is a row attribute so the platform's own store and any
