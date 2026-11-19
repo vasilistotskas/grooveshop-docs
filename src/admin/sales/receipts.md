@@ -150,16 +150,18 @@ Until the postcode and the city are both set, nothing changes: every receipt, co
 ### When the receipt is issued and when the customer gets it
 - It is issued as soon as the courier voucher or the locker parcel exists, before the courier collects it. With `MYDATA_AUTO_SUBMIT` on, nothing for you to do. With it off, press **Issue receipt (myDATA)** on the order before you hand the parcel over.
 - The customer does not receive it, and cannot download it, until the parcel leaves. At that moment it is emailed, as for any receipt.
+- The receipt declares the day the voucher was created as the start of the movement, with no time. The receipt's **Movement of goods** box shows it as **Start of movement**, beside the loading and delivery places.
 - Shipping never waits for myDATA. The voucher, the pickup list and the handover go ahead whatever AADE answers.
+- If a new voucher is made after the receipt was issued (a new locker or address), or the parcel leaves more than 5 days after the receipt, the receipt is left as AADE has it and a note on the order, when the parcel ships, says what differs. Check with your accountant how that movement is documented.
 
 ### If myDATA does not answer
-The receipt is issued anyway, under AADE's procedure for a lost connection, and the parcel ships as usual. It is sent again by itself every few minutes until AADE registers it. You do nothing. The Dashboard shows one warning, **Receipts issued while myDATA was unreachable**, with the count, and it goes away once they are registered.
+The receipt is issued anyway and the parcel ships as usual. It is sent again by itself every few minutes until AADE registers it. While the parcel is still at the store, it is sent again exactly as it was issued. If the parcel leaves before the receipt is registered, the movement started while myDATA was unreachable, so from then on the receipt is sent with AADE's lost-connection indication until it is registered. You do nothing. The Dashboard shows one warning, **Parcels that left while myDATA was unreachable**, with the count of such parcels, and it goes away once their receipts are registered.
 
 ### If myDATA refuses the receipt
 The receipt is **Rejected** with AADE's reason on the order, and counted on the Dashboard as **Receipts rejected by myDATA**. The parcel ships all the same. Fix the data, then press **Send receipt to myDATA** on the order. A locker or station whose address the platform does not know is refused the same way, before anything is sent.
 
 ### If the order is cancelled before the courier collects the parcel
-The receipt never reached the customer, so it is **cancelled in myDATA**, and no credit document is issued for it. This happens once the courier's answer is known: the parcel was stopped, or there was none to stop. If the courier could not stop the parcel, or did not answer, the goods may be on their way: the receipt then stands, reaches the customer, and any refund is credited as usual. If myDATA does not answer, the cancellation is tried again by itself. The cancel and the refund never wait for any of this.
+The receipt never reached the customer, so it is **cancelled in myDATA**, and no credit document is issued for it. This happens once the courier's answer is known: the parcel was stopped, or there was none to stop. If the courier could not stop the parcel, or did not answer, the goods may be on their way: the receipt then stands, reaches the customer, and any refund is credited as usual. If myDATA does not answer, the cancellation is tried again by itself. If myDATA had refused the receipt before, a note on the order asks you to correct it and press **Send receipt to myDATA**; once it is registered it is cancelled in myDATA, with no credit document. A receipt that is still waiting to be cancelled more than 15 minutes after the order was cancelled shows on the Dashboard as **Receipts of canceled orders not canceled in myDATA**, and the order's notes say why. The cancel and the refund never wait for any of this.
 
 ## Set up issuing through myDATA
 
