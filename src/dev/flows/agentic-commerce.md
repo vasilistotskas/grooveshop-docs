@@ -176,22 +176,49 @@ then each pod's memory can each hold the previous config for one TTL.
 ### Django's rate limits on gateway calls
 
 Every buyer an AI platform serves reaches Django from that platform's
-address, so a per-address budget would put them all in one bucket. A guest
-call that carries the gateway's `X-Internal-Gateway` secret is therefore
-budgeted on what it names instead (`src/core/api/throttling.py:
-GatewayAnonThrottle`, `_gateway_ident`): the cart (the hash of its
-`X-Cart-Token`, else `X-Cart-Id`) for cart writes and order creation, and
-the order (the hash of its `?uuid=`) for the payment-link calls. The
-throttles built on it are `CartMutationAnonThrottle`,
-`OrderCreateAnonThrottle` and `PaymentAttemptAnonThrottle`, with their own
-scopes and rates (`DEFAULT_THROTTLE_RATES`). A wrong or missing secret, or
-a call that names neither, falls back to the client address. One cart or
-order still cannot exceed the rate while the cache answers; in a Redis
-outage the order and payment throttles refuse (fail closed) and the cart
-throttle lets writes through (fail open, `ResilientThrottleMixin`). A call
-signed in as an account is held by the user budget alone. Django's 429
-reaches an MCP agent as the `throttled` tool error and an ACP agent as
-`rate_limited`.
+address, so a per-address budget would put them all in one bucket. A call
+that carries the gateway's `X-Internal-Gateway` secret is therefore
+identified by what it names instead. The rule lives once, in
+`GatewayIdentMixin.get_ident` (`src/core/api/throttling.py`, with
+`_gateway_ident`), and every throttle that guards cart, order and payment
+calls uses it:
+
+- the anonymous half of each pair, through `GatewayAnonThrottle`:
+  `CartMutationAnonThrottle`, `CartQuoteAnonThrottle`,
+  `OrderCreateAnonThrottle` and `PaymentAttemptAnonThrottle`;
+- the signed-in half, whose `UserRateThrottle` asks `get_ident` for a caller
+  who is not signed in: `CartMutationThrottle`, `OrderCreateThrottle` and
+  `PaymentAttemptThrottle`;
+- the coupon budget (`CouponApplyThrottle`) and the gift-card guessing
+  budget (`GiftCardCodeThrottle`).
+
+Each keeps its own scope and rate (`DEFAULT_THROTTLE_RATES`). The key is
+settled once per request by `cart.agent_token.existing_gateway_subject`, and
+only for something that exists in the store:
+
+- a cart token that was minted and has not expired, keyed by the **cart its
+  grant names**, so several live tokens for one cart are one budget;
+- else a guest cart, by the uuid the cart lookup parses (one cart whatever
+  the spelling), from `X-Cart-Id`;
+- **only on the payment routes** (`gateway_names_order`): the order the
+  route's `pk` authorizes, when `?uuid=` is that order's uuid in its
+  canonical spelling, keyed by the uuid's hash. Another order's `?uuid=`
+  charges nothing to it, and a cart route's `?uuid=` names no order and is
+  ignored.
+
+**Anything else is keyed on the client address, as for any caller:** a wrong
+or missing secret, an id that is no uuid, or one that names no cart or order
+in the store. An id that earned a budget just by being well formed would let
+a client that makes ids up escape the per-address limit on cart creation
+(a cart-item create and a coupon apply create a cart when the named one is
+missing) and the tight coupon guessing limit. The BoxNow nearest-locker
+budget stays per address: its call names no cart. One cart or order still
+cannot exceed the rate while the cache answers; in a Redis outage the order,
+payment and coupon throttles refuse (fail closed) and the cart throttles let
+writes through (fail open, `ResilientThrottleMixin`). A call signed in as an
+account is keyed on the account. Django's 429 reaches an MCP agent as the
+`throttled` tool error and an ACP agent as `rate_limited`. The full rule is
+the Django repo's `docs/client-ip.md`.
 
 ### MCP
 
@@ -447,6 +474,18 @@ books it the same way with `agentProtocol: "mcp"`
 `internal/mcpsrv/shopper_attribution.go: handlers.cartAttribution`), so it
 reads "AI agent (MCP)". The chat assistant serves the same tool but never
 sends a protocol; see the chatbot's request below.
+
+**One order per agent checkout (Django #759; the gateway does not send the
+id yet).** `POST /order` accepts `agentCheckout`, the checkout session's id,
+and Django believes it beside the same `X-Internal-Gateway` secret and from no
+other caller (`src/order/views/order.py: OrderViewSet._named_agent_checkout`).
+The order stores it (`Order.agent_checkout`, unique when set), so a repeat of
+the call with the same id, which a gateway sends when an order call went
+unanswered, is answered with the order that checkout placed: the same `201`
+and body, with nothing created, refused or sent. The lookup runs before the
+body is validated and again under the cart lock; the rules are the Django
+repo's `docs/order/creation.md` §3.2. The response carries `agentCheckout`,
+and the order-event body carries it as `agentCheckoutId` (see Order events).
 
 A checkout with an order renders from that order, not from the cart.
 `checkout.ComputePricing` reads the order once the session has one, because
@@ -1185,7 +1224,10 @@ attempt queued after the commit, the rest swept every minute per store. Each
 attempt POSTs to `/internal/events/order-status` with the shared
 `X-Internal-Token`, carrying `eventId` (the row's UUIDv7), `eventType`
 (`created` or `updated`), `occurredAt`, `schemaName`, `orderUuid`,
-`status`, `paymentStatus` and `trackingNumber`. Django connects within 3 s and
+`status`, `paymentStatus`, `trackingNumber` and `agentCheckoutId` (the
+agent checkout that placed the order, `Order.agent_checkout`, so the event
+alone finds its checkout; empty for an order placed before orders carried
+it). Django connects within 3 s and
 reads the answer for 30 s; the gateway bounds its whole answer at 25 s
 (`orderEventBudget`). An order's events go out in the order they happened.
 
@@ -1524,7 +1566,9 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/mcpsrv/catalog.go` | Catalog tools, `ratingOf` |
 | `grooveshop-agent-gateway/internal/checkout/discounts.go` | `ApplyDiscountCodes`, shared by UCP and ACP |
 | `grooveshop-django-api/src/tenant/features.py` | `STORE_FEATURES`, `effective_features` |
-| `grooveshop-django-api/src/core/api/throttling.py` | `GatewayAnonThrottle`, `_gateway_ident`: gateway calls budgeted per cart or order |
+| `grooveshop-django-api/src/core/api/throttling.py` | `GatewayIdentMixin`, `GatewayAnonThrottle`, `_gateway_ident`: gateway calls budgeted per cart or order, by every cart, order, payment, coupon and gift-card throttle |
+| `grooveshop-django-api/src/cart/agent_token.py` | `existing_gateway_subject`: the cart or order a gateway call names, only when it exists |
+| `grooveshop-django-api/src/core/cart_id.py`, `src/core/canonical_uuid.py` | The spellings a cart id and an order uuid are read in |
 | `grooveshop-agent-gateway/internal/mcpsrv/discovery.go` | `storeEntry`, `ARDHandler`, `AICatalogHandler` |
 | `grooveshop-agent-gateway/internal/mcpsrv/servercard.go` | `ServerCardHandler`, `IdentityFor`, `publisher`, `publicDocument` |
 | `grooveshop-agent-gateway/internal/storefront/urls.go` | `Site.Links` (page links in a language), `MCPServerCard` and the gateway's own endpoints |

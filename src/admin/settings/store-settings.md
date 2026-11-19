@@ -170,14 +170,16 @@ Fill in the business details **before the first receipt**. They are printed on e
 | `B2B_LOYALTY_ENABLED` | Wholesale orders earn and redeem loyalty points. | off |
 | `MYDATA_ENABLED` | The platform itself issues your retail receipts to AADE's myDATA. Off: you issue them in your own fiscal device or with your provider. | off |
 | `MYDATA_FHM_EXEMPTION_GROUND` | The legal ground of your exemption from a fiscal device, as your accountant confirmed it. While it is empty, no receipt is issued. | empty |
-| `MYDATA_AUTO_SUBMIT` | The receipt is issued by itself when the order ships, and the credit document when money is refunded. | off |
+| `MYDATA_AUTO_SUBMIT` | The receipt is issued by itself when the order ships (for a courier or locker order, before the courier collects the parcel), and the credit document when money is refunded. | off |
 | `MYDATA_ENVIRONMENT` | `dev` for testing (not tax documents) or `prod` for real receipts. | dev |
 | `MYDATA_INVOICE_SERIES_PREFIX`, `MYDATA_CREDIT_SERIES_PREFIX` | The series prefix for receipts and credit documents. | GRVP, GRVC |
 | `MYDATA_ISSUER_BRANCH` | Your AADE branch code; 0 is the head office. | 0 |
 | `MYDATA_GIFT_CARD_PAYMENT_TYPE` | How an amount paid by gift card is declared to AADE: 3 cash, 5 on credit. | 3 |
+| `MYDATA_LOADING_POSTAL_CODE`, `MYDATA_LOADING_CITY` | The postcode (a Greek one) and the city of the place your parcels leave from. With both set, a courier or locker order's receipt is issued before the courier collects the parcel and declares the movement of the goods. Until then it is issued when the order ships, without it. | empty |
+| `MYDATA_LOADING_STREET`, `MYDATA_LOADING_NUMBER` | The street and the number of that place. Optional. | empty |
 | `MYDATA_REQUEST_TIMEOUT_SECONDS` | How many seconds the store waits for AADE to answer. Leave it as it is. | 30 |
 
-Set the myDATA settings together with your accountant. See [Receipts](/admin/sales/receipts).
+Set the myDATA settings together with your accountant. See [Receipts](/admin/sales/receipts), and [Receipts for courier and locker orders](/admin/sales/receipts#receipts-for-courier-and-locker-orders) for the dispatch point.
 
 ### Promotions & Gift Cards
 

@@ -24,8 +24,10 @@ They appear under the greeting, only when something needs fixing:
 - **Your legal pages need an update**: the platform added text to its legal documents. Your pages did not change by themselves, because their text is yours. Open each one to see what to add.
 - **Your business's legal details are missing**: the law requires the store to show who is selling. The alert lists what is missing and has a **Fill in details** link.
 - **Details needed to issue receipts are missing**: only while myDATA is on. Without the company name, VAT ID and tax office, receipts cannot reach AADE.
+- **Set the dispatch point for courier receipts**: only while myDATA is on and ACS or BOX NOW is switched on. A receipt for a courier or locker order must name the place the parcel leaves from, so until it is set those receipts are issued at shipping without the movement. **Open the dispatch point settings** leads to the settings. See [Set your dispatch point](/admin/sales/receipts#set-your-dispatch-point).
+- **Receipts issued while myDATA was unreachable**: receipts issued under AADE's lost-connection procedure and not registered yet. Their parcels ship as usual and they are sent again by themselves, so you do nothing. See [If myDATA does not answer](/admin/sales/receipts#if-mydata-does-not-answer).
 
-Owners and Admins see the last two. Once you fill the details in, the alert goes away.
+Owners and Admins see the two about missing details. Once you fill the details in, the alert goes away.
 
 When a refund needs a person, these appear too. Each lists up to five orders, with links, and an **Open the orders** link to the list. Everyone who can edit orders sees the first three:
 

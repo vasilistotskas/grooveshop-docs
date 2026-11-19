@@ -130,14 +130,17 @@ def fanout_cleanup_abandoned_carts():
     return run_for_all_tenants("core.tasks.cleanup_abandoned_carts")
 ```
 
-`run_for_all_tenants()` (`src/tenant/celery.py`) iterates active,
-non-suspended tenants (suspended ones are skipped except for the wrappers
+`run_for_all_tenants()` (`src/tenant/celery.py`) iterates the active,
+non-suspended stores (`Tenant.objects.active()`); suspended ones are skipped except for the wrappers
 passed `include_suspended=True`: the retention sweeps, the money jobs
 `reconcile-pending-refunds` and `allocate-credit-sources`, because a
-suspended store's open refunds still hold its customers' money, and
+suspended store's open refunds still hold its customers' money,
+`deliver-due-agent-order-events`, which sends nothing for a suspended store
+(`agent.outbox._store_is_active` holds its events and the run stops at the
+first one, with no attempt spent,
 `settle-uncertain-boxnow-creations`, because a canceled order's parcel may
 be live at BoxNow whatever the store's status, and `finish-pending-shipment-cancels`,
-for the same reason) and calls `send_task` with a
+for the same reason. It calls `send_task` with a
 `_schema_name` header per tenant. It returns plain dicts, not
 `AsyncResult` objects, because the JSON result serializer cannot encode
 those. Calling the underlying task directly from beat would run it against
@@ -176,7 +179,7 @@ non-suspended store), or every store including suspended ones
 | `purge-expired-boxnow-parcel-events` | `tenant.tasks.fanout_purge_expired_boxnow_parcel_events` | every store, suspended too | daily 04:00 † | `shipping_boxnow.tasks.purge_expired_boxnow_parcel_events` |
 | `purge-expired-recommendation-events` | `tenant.tasks.fanout_purge_expired_recommendation_events` | every store, suspended too | daily 04:00 † | `recommendation.tasks.purge_expired_recommendation_events` |
 | `purge-expired-pending-payment-fees` | `tenant.tasks.fanout_purge_expired_pending_payment_fees` | every store, suspended too | daily 04:00 † | `order.tasks.purge_expired_pending_payment_fees` |
-| `deliver-due-agent-order-events` | `tenant.tasks.fanout_deliver_due_agent_order_events` | active stores only; a suspended store's events wait | every minute | `agent.tasks.deliver_due_agent_order_events`: the order events owed to the agent gateway whose next attempt is due |
+| `deliver-due-agent-order-events` | `tenant.tasks.fanout_deliver_due_agent_order_events` | every store, suspended too; a suspended store's events wait | every minute | `agent.tasks.deliver_due_agent_order_events`: the order events owed to the agent gateway whose next attempt is due |
 | `purge-expired-agent-order-events` | `tenant.tasks.fanout_purge_expired_agent_order_events` | every store, suspended too | daily 04:00 † | `agent.tasks.purge_expired_agent_order_events`: delivered and failed events after `AGENT_ORDER_EVENT_RETENTION_DAYS` |
 | `purge-expired-meta-capi-event-logs` | `tenant.tasks.fanout_purge_expired_meta_capi_event_logs` | every store, suspended too | daily 04:00 † | `meta_capi.tasks.purge_expired_meta_capi_event_logs` |
 | `purge-expired-admin-log-entries` | `core.tasks.purge_expired_admin_log_entries` | `public` | daily 04:00 † | Platform staff's admin log, under the public schema's `ADMIN_LOG_RETENTION_DAYS` |
@@ -197,7 +200,7 @@ non-suspended store), or every store including suspended ones
 | `reset-demo-stores` | `tenant.tasks.fanout_reset_demo_stores` | demo stores only | daily 04:00 | Not `run_for_all_tenants`: dispatches `devtools.tasks.reset_demo_store_task` only to active, non-suspended stores with `is_demo`, because it deletes orders, reviews, comments and carts |
 | `cleanup-abandoned-carts` | `tenant.tasks.fanout_cleanup_abandoned_carts` | every store | daily 04:00 † | `core.tasks.cleanup_abandoned_carts` |
 | `cleanup-old-guest-carts` | `tenant.tasks.fanout_cleanup_old_guest_carts` | every store | daily 06:00 † | `core.tasks.cleanup_old_guest_carts` |
-| `clear-expired-notifications` | `tenant.tasks.fanout_clear_expired_notifications` | every store | 1st and 15th 06:00 † | `core.tasks.clear_expired_notifications_task`, 365 days |
+| `clear-expired-notifications` | `tenant.tasks.fanout_clear_expired_notifications` | every store, suspended too | 1st and 15th 06:00 † | `core.tasks.clear_expired_notifications_task`, 365 days; a retention sweep, so it reaches suspended stores; its command `expire_notifications --all-tenants` does as well |
 | `sync-meilisearch-indexes` | `tenant.tasks.fanout_sync_meilisearch_indexes` | every store | daily 02:00 † | `core.tasks.sync_meilisearch_indexes` |
 | `cleanup-expired-stock-reservations` | `tenant.tasks.fanout_cleanup_expired_stock_reservations` | every store | hourly | `order.tasks.cleanup_expired_stock_reservations` |
 | `purge-expired-tenant-archives` | `tenant.tasks.purge_expired_tenant_archives` | `public` | daily 03:00 | `TenantArchive` rows live in `public` because their schemas were dropped |

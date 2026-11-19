@@ -117,15 +117,15 @@ unwound.
 
 | Event | Side effects |
 |---|---|
-| Order created | `order_created` → confirmation email (offline and already-paid only), merchant new-order email, `notify_order_created_live`, history note, cart clear unless `awaits_online_payment` |
+| Order created | `order_created` → confirmation email (offline and already-paid only), merchant new-order email, `notify_order_created_live`, history note, cart clear unless `awaits_online_payment`. An order the agent gateway places stores its checkout's id (`Order.agent_checkout`, `agentCheckout` on the request, unique when set), and a repeat of that creation is answered with the first order without running any of this again |
 | Payment succeeded | A CHARGE row on the payment ledger (written before any guard, so a stale or repeated event and a charge on a CANCELED order still leave theirs), `mark_as_paid`, PROCESSING advance with the customer notification suppressed, carrier dispatch on commit, confirmation email, `notify_payment_confirmed_live`, Redis payment-status publish |
 | Payment failed | `payment_status=FAILED`, failure email, `notify_payment_failed_live`. No stock movement |
 | → PROCESSING | `order_paid` when already paid → cart clear, Meta CAPI Purchase. No customer email, no toast |
-| → SHIPPED | `order_shipped`, history row, `send_shipping_notification_email` (self-gates), SHIPPED toast, and the retail receipt: `generate_order_invoice` once for a RECEIPT order while `MYDATA_ENABLED` and `MYDATA_AUTO_SUBMIT` are on (`src/order/accounting/invoicing.py: receipt_issuable`; ΕΛΠ art. 13(a): issued at the start of the shipment), registered with myDATA (11.1) and only then emailed |
+| → SHIPPED | `order_shipped`, history row, `send_shipping_notification_email` (self-gates), SHIPPED toast, and the retail receipt: `generate_order_invoice` once for a RECEIPT order while `MYDATA_ENABLED` and `MYDATA_AUTO_SUBMIT` are on (`src/order/accounting/invoicing.py: receipt_issuable`; ΕΛΠ art. 13(a): issued at the start of the shipment), registered with myDATA (11.1) and only then emailed. That is the path of an order no carrier takes. A courier or locker order's receipt carries the movement of goods and was issued earlier, when its voucher or parcel was recorded (`order_shipment_dispatched` → `issue_receipt_for_pickup`, only once the store has set its dispatch point, `MYDATA_LOADING_*`; `src/order/accounting/movement.py`), so SHIPPED issues nothing new for it and instead emails the receipt it holds. Until the store sets the dispatch point, every receipt is issued here |
 | Tracking first set | `order_shipment_dispatched` → the same shipping email, which sends whichever condition completes second |
 | → DELIVERED | `order_delivered`, status email, DELIVERED toast, then the COMPLETED auto-advance for paid orders |
 | → COMPLETED | `order_completed` → loyalty points earned, status email, COMPLETED toast. Nothing is issued for an `INVOICE` order: invoices are issued by hand in timologio |
-| → CANCELED | Written by `cancel_order`, which also runs the carrier voucher cascade itself (skipped when the cancel already asked the courier). `order_canceled` → credit of whatever gift-card value has not come back yet, loyalty reversal, status email, CANCELED toast |
+| → CANCELED | Written by `cancel_order`, which also runs the carrier voucher cascade itself (skipped when the cancel already asked the courier). `order_canceled` → credit of whatever gift-card value has not come back yet, loyalty reversal, status email, CANCELED toast, and for a courier or locker order whose receipt was issued before the pickup: the receipt is set aside in the cancel's transaction (no credit meanwhile) and, once the courier's answer is recorded, canceled in myDATA (`order.tasks.settle_canceled_receipt`) or released to the credit path |
 | Refund recorded | `order_refunded`, once per REFUND ledger row, carrying that refund's `amount` and the `refund` row → a refund email queued for that row, `notify_order_refunded_live`, Meta CAPI Refund, history row, and the loyalty reversal once `payment_status` is REFUNDED. With auto-issuing on, one retail credit document (myDATA 11.4) per refund recorded after the receipt row was created, once the receipt has a MARK, for the goods part of the refund at the VAT split stored when its money was claimed (`src/order/accounting/credit_documents.py: create_pending_credits`, task `issue_pending_credits`; see [Credit allocation](#credit-allocation)); a returned COD parcel whose payment settles to CANCELED gets one settlement credit |
 | Stored value returned | `order_stored_value_returned`, once per settled `STORED_VALUE` refund attempt → a staff history NOTE, the credit reconciliation (the same `create_pending_credits`), and the loyalty reversal once `payment_status` is REFUNDED. No email, no toast |
 | Status, payment status or tracking changed | An `AgentOrderEvent` for the agent gateway, for an order an agent placed, when `AGENT_GATEWAY_INTERNAL_URL` is set (`record_order_changed`; order creation records `created`) |
@@ -134,7 +134,9 @@ The event is a row in Django's outbox (`src/agent/outbox.py`), written in the
 transaction of the change, so it is never lost with a failed call. Each
 attempt is one `POST /internal/events/order-status` carrying `eventId`,
 `eventType`, `occurredAt`, `schemaName`, `orderUuid`, `status`,
-`paymentStatus` and `trackingNumber`, authenticated with `X-Internal-Token`.
+`paymentStatus`, `trackingNumber` and `agentCheckoutId` (the agent checkout that
+placed the order, empty for an order placed before orders carried it),
+authenticated with `X-Internal-Token`.
 The gateway delivers the platform's webhook within the call and answers the
 outcome: a 2xx is delivered, a 503 is tried again later, a 422 failed for good.
 An order's events go out in the order they happened. See
@@ -1274,6 +1276,7 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/order/accounting/credit_documents.py` | `create_pending_credits` (REFUND rows and settled `STORED_VALUE` attempts after the receipt row, each from its allocation and net of reversals; goods-returned chargebacks), `credit_breakdown` (exactly the allocation's rates, cumulative net, never past the receipt), settlement credit |
 | `grooveshop-django-api/src/order/models/retail_credit.py` | `RetailCredit`, `CreditCounter` |
 | `grooveshop-django-api/src/order/accounting/mydata/builder.py` | myDATA lines and summary from the same VAT lines |
+| `grooveshop-django-api/src/order/accounting/movement.py` | The dispatch point (`loading_address`, `movement_receipts_on`) and the movement block of a courier or locker receipt (`ReceiptMovement`, `receipt_movement`); the rules are the Django repo's `docs/order/fiscal-mydata.md` §7.4 |
 | `grooveshop-django-api/src/shipping/services.py` | `ShippingService.cancel_shipment`, `can_cancel_shipment` |
 | `grooveshop-django-api/src/shipping/exceptions.py` | `CarrierError`, `CarrierUnavailableError` |
 | `grooveshop-django-api/src/giftcard/signals.py` | Gift-card credit on cancel |

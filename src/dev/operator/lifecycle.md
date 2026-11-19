@@ -116,7 +116,7 @@ save (`src/tenant/signals.py: invalidate_tenant_caches`).
 | The store's own staff | The store admin lives on the tenant host, so it is behind the same 503. Staff cannot reach their own panel while suspended |
 | Platform operators | Unaffected — the control plane runs on the public schema at `platform.grooveshop.space` |
 | In-cluster services | The internal tenant feed (`src/tenant/internal.py: build_domains_payload`) drops the store's domains and lists its schema in `suspendedSchemas`; both follow `SuspendedTenantMiddleware`'s rule, `is_active` |
-| Scheduled work | Skipped. `run_for_all_tenants` selects `is_active=True`, so no beat-driven task fans into a suspended schema — no carrier polling, no payout reconciliation, no locker sync burning the merchant's API budget on a frozen store |
+| Scheduled work | Skipped, except the sweeps passed `include_suspended` (below). `run_for_all_tenants` selects `Tenant.objects.active()`, so no other beat-driven task fans into a suspended schema — no carrier polling, no payout reconciliation, no locker sync burning the merchant's API budget on a frozen store |
 | Processed images | Refused by media-stream, **503** `TENANT_SUSPENDED` with `Cache-Control: no-store`, before any cache tier is read; its cached copies are flushed and Cloudflare's purged |
 
 The `SuspendedTenantMiddleware` docstring records why it exists: before
@@ -127,12 +127,15 @@ reads, cart mutations, **order creation** and payment-intent creation
 against their own live provider keys.
 
 ::: tip Retention sweeps also stop
-`run_for_all_tenants` takes an `include_suspended` flag, used by the two
-contact-attachment retention sweeps on the argument that deleting data the
-platform promised to delete should not pause with billing. As written the
-query still requires `is_active=True`, and a suspended store has
-`is_active=False`, so those sweeps do not in fact reach it. Expect a long
-suspension to accumulate expired uploads.
+`run_for_all_tenants` takes an `include_suspended` flag, used by the
+retention sweeps on the argument that deleting data the platform promised to
+delete should not pause with billing, and by the money and parcel jobs that
+finish what the store owes its customers. With the flag it reaches every
+store, suspended ones included (`Tenant.objects.stores()`); without it only
+`Tenant.objects.active()`. A store's own mail and marketing stay off: a
+suspended store reports nothing to Meta's Conversions API
+(`meta_capi.services.is_capi_enabled`), and the agent gateway's order events
+wait in the outbox.
 :::
 
 ### What the media flush touches

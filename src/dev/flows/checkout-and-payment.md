@@ -240,13 +240,33 @@ caller: the quote, both order-creation paths, the payment-first verification
 and the `cart/create-payment-intent` preview (`src/cart/views/cart.py`), so
 the preview and the order cannot disagree. The cart serializer exposes it as
 `freeThresholdValue` (`src/cart/serializers/cart.py:
-get_free_threshold_value`). The storefront compares every "free above X"
-with it, never with the cart total: `useCheckoutForm.ts` sends it as the
-shipping options' `orderValueAmount`, `app/utils/payWayCost.ts:
-payWayDisplayCost` waives the displayed fee on it, and the free-shipping
-notices read it. Before this, free shipping compared the gross cart total
-and the fee compared products plus shipping, so a cart just under a
-threshold could pay shipping and skip the fee.
+get_free_threshold_value`). Nothing on the client compares it by hand: the
+storefront prints the quote's rows, its priced `shippingOptions` and the
+fee of each pay way (`payWays[]`, already 0 when `waived`), and uses the
+cart's `freeThresholdValue` only as the shipping options' `orderValueAmount`
+(`useCheckoutForm.ts`) and as the cap on a points redemption. The gateway
+prices from the same quote. Before the quote, free shipping compared the
+gross cart total and the fee compared products plus shipping, so a cart just
+under a threshold could pay shipping and skip the fee.
+
+**The storefront shows Django's quote and adds nothing up.**
+`useCheckoutQuote` (`app/composables/useCheckoutQuote.ts`) asks
+`POST /api/cart/quote` (the Nuxt proxy `server/api/cart/quote.post.ts`, which
+names the cart as order creation does, never by `X-Cart-Token`) with
+`quoteRequestOf` the order the form would place (`app/utils/checkoutOrder.ts`;
+a choice the shopper has not reached yet is left out, so Django leaves its
+rows null rather than price a pre-selection). It asks again when that request
+changes as a value or the cart does, and not at all without a cart line
+(Django refuses `cart_empty`). The summary, the «Pay …» button, the delivery
+cards and the points cap read the quote as it came.
+`useQuotedPayWayOptions` (`app/composables/useQuotedPayWayOptions.ts`) lists
+the pay ways with the fee the quote priced for each; a pay way the quote has
+no row for shows no fee rather than a guessed one. The order sends the
+quote's `expectedTotal` (`useCheckoutSubmit.ts`): the submit waits for a quote
+in flight (`useCheckoutQuote.current`), places no order at a total the page
+did not show, and a 409 `total_changed` (told by `code`, `error.quote` the new
+quote) shows the new total for the shopper to accept with the next submit.
+`useCheckoutTotals` and `payWayCost.ts` are gone.
 
 ### 5. Order creation: two paths, one endpoint
 
@@ -365,7 +385,8 @@ and what the order stores).
   `total_changed` even without `expectedTotal`. `error.type` is `invalid_order_data` for now: the
   enum value follows a storefront release, see
   [OpenAPI contract](/dev/django/openapi-contract#a-new-value-in-a-response-enum-ships-consumer-first).
-  The field is optional until the storefront and the gateway send it.
+  The storefront and the gateway send it; the field stays optional in the
+  contract.
 - **Budgets.** The quote is repeated on every change of a checkout and polled
   by the agent gateway, so it has its own throttle scopes, `cart_quote`
   (signed-in callers) and `cart_quote_anon` (guests; per cart for a request
@@ -381,9 +402,10 @@ and what the order stores).
   and the count are one step under the budget's lock, and the codes are read by
   the route's own request serializer so a JSON list, repeated form keys and
   indexed form keys are counted as they are priced.
-- **Not yet moved onto it.** The storefront's
-  `app/composables/useCheckoutTotals.ts` and the gateway's
-  `internal/checkout/pricing.go` still compute totals of their own.
+- **Every client reads it.** The storefront prints it
+  (`useCheckoutQuote`, section 4) and the gateway prices its checkout
+  sessions from it (`grooveshop-agent-gateway/internal/checkout/pricing.go`,
+  `django.Client.Quote`); neither adds up a total of its own.
 
 **The provider is asked before the transaction opens.**
 `create_order_from_cart` is not `@transaction.atomic`, and neither is
@@ -630,6 +652,14 @@ arrived through a real checkout — see
 - **Payment-first order creation.** One order per payment intent: a
   repeat for the same cart returns the first order, backed by the
   `order_payment_id_unique` index (section 5).
+- **Agent checkout.** One order per agent checkout: the gateway names its
+  checkout session as `agentCheckout` on order creation, and a repeat is
+  answered with the order that checkout placed (`Order.agent_checkout`, the
+  partial unique index `order_agent_checkout_unique`), looked up before the
+  body is validated and again under the cart lock. Believed only beside the
+  gateway's `X-Internal-Gateway` secret. Full rules in the Django repo's
+  `docs/order/creation.md` §3.2; see
+  [Agentic commerce](/dev/flows/agentic-commerce#order-events).
 - **Stripe webhooks.** `metadata["webhook_processed_<event_id>"]`,
   written under `select_for_update` before processing, except the
   fee events, which write the fee onto the CHARGE row and are safe to
@@ -849,7 +879,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/order/views/order.py` | `OrderViewSet.create`, the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
+| `grooveshop-django-api/src/order/views/order.py` | `OrderViewSet.create` (`_named_agent_checkout`), the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
 | `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `_quote_under_lock`, `_require_quoted_total`, `_resolve_live_shipping`, `_refuse_unpriced`, `validate_shipping_address`, `settle_cod_payment`, `OrderAttributionService` |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService`: `quote`, `shipping_cost`, `threshold_value`, `free_shipping_progress`, `calculate_payment_method_fee`, `offered_pay_ways`, `delivery_kind`, `resolve_live_shipping`; `CheckoutQuote`, `ExpectedTotal` |
 | `grooveshop-django-api/src/order/serializers/quote.py` | `CartQuoteSerializer`, the quote's response |
@@ -857,7 +887,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/shipping/enum/refusal.py` | `ShippingRefusal`: the quote's coded delivery refusals |
 | `grooveshop-django-api/src/core/api/throttling.py` | `CartQuoteThrottle`, `CartQuoteAnonThrottle`, `gift_card_code_throttles`, `GiftCardCodeThrottle` |
 | `grooveshop-django-api/src/shipping_acs/carrier.py` | `AcsCarrier._fetch_live_quote`: the cached live price |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutTotals.ts`, `grooveshop-agent-gateway/internal/checkout/pricing.go` | The totals the storefront and the gateway still compute themselves |
+| `grooveshop-agent-gateway/internal/checkout/pricing.go` | The gateway's checkout pricing, from the quote |
 | `grooveshop-django-api/src/order/managers/order.py` | `holding_stock_for_online_payment`, the set the unpaid-order limit counts |
 | `grooveshop-django-api/src/order/exceptions.py` | `UnpaidOrderLimitError` |
 | `grooveshop-django-api/src/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
@@ -889,7 +919,10 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
 | `grooveshop-django-api/src/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `quote`, `create_payment_intent` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, shippable countries, shipping options (quoted on `freeThresholdValue`) and their error state, pay-way loading |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/payWayCost.ts` | `payWayDisplayCost`: the fee shown, waived on `freeThresholdValue` |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutQuote.ts` | The checkout's one pricing path: asks the quote, `current()` for the order button, the refusal in the page's language |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useQuotedPayWayOptions.ts` | The pay ways with the fee the quote priced for each |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/checkoutOrder.ts` | `quoteRequestOf`, `buildOrderCreateBody` (carries `expectedTotal`), `classifyOrderError` (`total_changed`) |
+| `grooveshop-storefront-ui-node-nuxt/server/api/cart/quote.post.ts` | The quote proxy |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/phone.ts` | `normalizePhone`, `isPlausiblePhone`, `stripDialCodeForDisplay`, `dialCodeLabel` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | Submit orchestration, idempotency key, the three payment flows |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Per-tab landing capture and the override rule |

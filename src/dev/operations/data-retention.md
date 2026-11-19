@@ -45,7 +45,7 @@ store's billing state does not pause a deletion the platform promised.
 | Expired Django sessions | public and per store | session expiry | none (weekly Monday 04:00) |
 | allauth user-session rows whose Django session is gone | public and per store | by state | none (same task as above) |
 | Expired knox API tokens | per store | the token's own expiry | none (same task as above) |
-| Notifications | per store | 365 days | code (`fanout_clear_expired_notifications`) |
+| Notifications | per store, suspended stores included | 365 days | code (`fanout_clear_expired_notifications`, `include_suspended=True`) |
 | Simple-history rows (every audited model) | per store | 365 days, plus a nightly sweep of identical consecutive rows | code (`fanout_clear_old_history`, `fanout_clear_duplicate_history`) |
 | Celery task failures | public | 30 days | `CELERY_RESULT_EXPIRES` |
 
