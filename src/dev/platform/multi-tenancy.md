@@ -183,6 +183,21 @@ Rules the code encodes:
 - Chrome toggles fail open (`default=True`); commercial gates fail closed
   (`IsB2BWholesaleEnabled`, `IsPromotionsRuntimeEnabled`,
   `IsContactAttachmentsEnabled` set `default=False`).
+- A feature that needs another lists that one's gate in its own
+  `STORE_FEATURES` row (`src/tenant/features.py`), and its effective state is
+  on only while every gate it lists is. The catalogue is one such
+  dependency (`favourites`, `gift_cards`, `product_suggestions`,
+  `product_alerts`); customer accounts are another: `customer_accounts`
+  (`CUSTOMER_ACCOUNTS_ENABLED`, a store setting with no plan half) is listed
+  first by `favourites`, `product_reviews`, `account_reviews`,
+  `blog_comments`, `loyalty` and `wholesale`. A store with accounts off
+  reads them all as off and their routes refuse; switching accounts back on
+  restores each as the store left it, since no dependent setting was
+  touched. A setting validator could not express this (it sees one value),
+  so the table is the place. What else the accounts switch takes away (the
+  identity routes, a sign-in a shopper already holds, in-app
+  notifications): `src/tenant/customer_accounts.py` and
+  [Store features, "Customer accounts"](/dev/django/reference/store-features#customer-accounts).
 - The storefront decides every store feature from `TenantConfig.features`
   alone: `app/composables/useStoreFeature.ts` in the app, the route gates
   `app/utils/routeGate.ts: createFeatureGate` behind the
