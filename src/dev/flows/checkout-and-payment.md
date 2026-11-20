@@ -623,6 +623,51 @@ inactive until credentials land). A merchant who wants bank transfer
 creates the row in the admin and fills in the WYSIWYG `instructions`
 field, which the confirmation email renders.
 
+#### Pay now: a new link for the same order
+
+An unpaid online order can be paid after the shopper left the provider's page,
+without a second order. The storefront asks
+`POST /api/orders/{id}/create-checkout-session` (Nuxt's proxy of Django's
+`create_checkout_session` action) as often as the order is payable, and each
+call opens a new provider page (Stripe Checkout or Viva Smart Checkout) for
+the same order (`app/composables/useOrderCheckoutSession.ts`, shared with
+`VivaWalletCheckout.vue` and `StripeCheckout.vue`). The body carries the
+success URL (the order's confirmation, with Stripe's `{CHECKOUT_SESSION_ID}`
+placeholder) and a cancel URL on this store.
+
+- **Where it shows.** `app/components/Order/PayNow.vue` draws the amount due
+  (`amountDue`), the deadline (`paymentHoldExpiresAt`) and a **Pay now**
+  button on the account's order page
+  (`app/components/Storefront/Account/OrderDetail.vue`) and on the order
+  confirmation (`CheckoutSuccess.vue`, both designs), which is also where the
+  payment-failed email links a guest (`order_page_path`,
+  `src/order/storefront_links.py`; a signed-in shopper's link is the account
+  page). A canceled payment returns to the order's page.
+- **When it is offered** (`app/utils/orderPayment.ts: offersPaymentLink`):
+  `paymentHoldExpiresAt` is set (only while the order is PENDING, online and
+  not finally paid), `paymentAwaitsReview` is false (the provider took a charge
+  that did not match the total), and the payment is not PROCESSING, since a
+  second link could charge twice. On the confirmation, a shopper just back
+  from the provider's page is offered it only when the payment reads FAILED
+  (`offersPayment` in `useCheckoutSuccess.ts`).
+- **What Django refuses.** `OrderViewSet._payment_start_refusal`
+  (`src/order/views/order.py`): 400 `order_not_payable` for an order that is
+  paid or no longer PENDING, and 400 `payment_window_expired` once the total
+  window is over (`payment_hold.window_closed`; a new link never extends the
+  hold past `ORDER_ONLINE_PAYMENT_MAX_HOLD_MINUTES` from the order's
+  creation). Both end the offer: the component says so in place of the button
+  and the page reads the order again. Any other failure keeps the button. The
+  deadline passing on the open page does the same.
+- **The reminder.** The checkout records the order it placed that awaits
+  payment in `localStorage` (`rememberAwaitingPaymentOrder`). The cart and
+  the checkout read it again from Django (`useAwaitingPaymentOrder`) and, while
+  it still offers a link, show `OrderAwaitingPaymentReminder`: "Order #N is
+  waiting for your payment", with **Pay now** and **View order**, because
+  Django keeps the cart while the order is unpaid and the shopper could order
+  the same items again. A paid, closed or unreadable (404, 403) order is
+  forgotten; a failed read is not. It is per browser: another device shows no
+  reminder.
+
 ### 7. What the customer sees
 
 | Step | Surface |
@@ -632,6 +677,8 @@ field, which the confirmation email renders.
 | Places a Stripe order | Order created, card form mounts, then `onPaymentSuccess` navigates to the success page |
 | Places a Viva order | "Order created, complete payment" toast, then the hosted page, then back through `viva-return` |
 | Lands on success unpaid | The page polls `GET /api/orders/uuid/{uuid}` every 2s — 15 attempts for Viva, 5 for Stripe — and stops on a settled status |
+| Opens an unpaid online order (account page, or the confirmation from the payment-failed email) | **Pay now** with the amount due and the deadline; a new provider page for the same order |
+| Returns to the cart or checkout with an unpaid online order | "Order #N is waiting for your payment", in this browser only |
 | Lands on success with COD | No polling at all: the kept order says it was placed, which means legitimately unpaid |
 
 The purchase pixels fire once per order from the success page, keyed on
@@ -895,6 +942,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
 | `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
 | `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region; `OrderDetailSerializer.payment_awaits_review` |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Order/PayNow.vue`, `app/components/Order/AwaitingPaymentReminder.vue` | **Pay now** and the cart's and checkout's reminder |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/orderPayment.ts`, `app/composables/useOrderCheckoutSession.ts`, `app/composables/useAwaitingPaymentOrder.ts` | When a link is offered, the refusal codes that end the offer, the new link, the remembered order |
 | `grooveshop-django-api/src/order/payments/payment_hold.py` | `payment_review_orders`, `awaits_payment_review`, `swept_orders`, `decided_by` |
 | `grooveshop-django-api/src/product/services.py` | `ProductService.set_discount` and `clear_discount`: the bulk discount, saved in pk order under row locks |
 | `grooveshop-django-api/src/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |

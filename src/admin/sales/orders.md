@@ -172,6 +172,22 @@ The flag disappears by itself once the order is delivered, completed, returned, 
 2. Enter the number of days and save. The list, the filter and the dashboard follow at once.
 3. Enter `0` to switch the flag off.
 
+## A customer could not pay
+
+A customer who placed a card order and left the payment page, or whose card was declined, does not have to order again. While the order is **Pending** and its payment window is open:
+
+- On their account's order page, and on the order page the payment-failed email links to, they see **Payment pending** with the amount due, the time until which they can pay, and a **Pay now** button. It opens a new payment page for the same order.
+- On their cart and checkout, in the browser they ordered from, they see **Order #N is waiting for your payment** with **Pay now** and **View order**, so they do not order the same items again.
+
+The button is not shown while Viva Wallet or Stripe is still working on a charge (**Processing**), or when the provider took an amount that did not match the total, so nobody is charged twice. Once the order is paid, or the time has run out, it gives way to a message: **This order can no longer be paid** or **The time to pay has run out**, and the order is cancelled automatically (see [What happens automatically](#what-happens-automatically)).
+
+What to tell a customer who says they could not pay:
+
+1. Open the order and check **Payment** and **Status**. **Pending** with payment **Pending** or **Failed** can still be paid; **Processing** means wait; **Completed** means it was paid.
+2. If it can be paid, ask them to open the order from their account (or from the payment-failed email) and press **Pay now**, before the time shown there.
+3. If the time has run out, the order is cancelled and its stock freed. They place a new order from their cart. The time to pay can be extended only by a new payment link, and never beyond the limit in [What happens automatically](#what-happens-automatically).
+4. If they were charged but the order is still unpaid, do not ask them to pay again: see [A customer paid twice](#a-customer-paid-twice).
+
 ## Cancellations by the customer
 
 A customer can cancel an order from their account while it is **Pending** or **Processing** and the courier can still take the parcel back. The courier is asked first:
