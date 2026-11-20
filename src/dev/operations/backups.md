@@ -58,7 +58,7 @@ server major so `pg_dump` and the engine agree.
 Where it lands: `BASE_DIR/backups/scheduled/` in the container, which is
 the `grooveshop-backend-backups-enc-pvc` (20Gi, `longhorn-rwx-encrypted`) mounted at
 `/home/app/backups` on both the backend and celery-worker Deployments
-(`base/backend.yaml`). Retention: seven days for the scheduled directory
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`). Retention: seven days for the scheduled directory
 (the chained cleanup), thirty days for anything under `backups/` by the
 weekly `cleanup-old-backups` entry.
 
@@ -77,13 +77,13 @@ kubectl -n grooveshop exec deploy/backend -- .venv/bin/python manage.py backup_d
 ```
 
 The Zalando operator's own logical backup is deliberately disabled in
-`base/backend-database.yaml` (`enableLogicalBackup` is not set) because the
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend-database.yaml` (`enableLogicalBackup` is not set) because the
 operator's backup provider has no target configured; the dump above is the
 database backup, and the comment there says so.
 
 ## What is copied off the cluster
 
-`manifests/app-constructs/longhorn-system/setup/offsite-backup.yaml` declares
+`grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/offsite-backup.yaml` declares
 the Longhorn backup target `s3://grooveshop-backups@auto/` (a Cloudflare R2
 bucket in the EU jurisdiction, credentials in the sealed Secret
 `longhorn-r2-backup`) and two recurring jobs on the `offsite-backup` group:
@@ -91,7 +91,7 @@ bucket in the EU jurisdiction, credentials in the sealed Secret
 (`30 2 * * 0`, keeps 4). A volume is in the group when its claim carries the
 labels `recurring-job.longhorn.io/source: enabled` and
 `recurring-job-group.longhorn.io/offsite-backup: enabled`, which the production
-overlay patch `overlays/production/patches/pvc-offsite-backup-patch.yaml` adds to
+overlay patch `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/patches/pvc-offsite-backup-patch.yaml` adds to
 exactly four claims:
 
 | Claim | Holds |
@@ -136,7 +136,7 @@ extensions. A production restore would follow the same shape:
 1. Scale the backend, celery-worker and celery-beat Deployments to zero so
    nothing writes.
 2. Copy the chosen dump off the backups PVC (`kubectl cp` from a backend
-   pod, or mount it in `utils/debug.yaml`).
+   pod, or mount it in `grooveshop-infrastructure/utils/debug.yaml`).
 3. Inside the Postgres pod, as the `postgres` superuser over the unix
    socket, drop and recreate `groovedb` owned by `groovedbu`, then
    `pg_restore --no-owner --role=groovedbu` the dump.
@@ -152,7 +152,7 @@ rehearsal.
 ## Longhorn
 
 - `defaultClassReplicaCount: 1` and `storageOverProvisioningPercentage:
-  200` in `manifests/app-constructs/longhorn-system/values.yaml`. One
+  200` in `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/values.yaml`. One
   replica means a node disk loss takes the volume; the only second copy of
   the four volumes above is the R2 backup, and every other volume has none.
 - Over-provisioning counts **requests**, not bytes written. At the chart
@@ -161,16 +161,16 @@ rehearsal.
   what its workload needs at its worst (an AOF rewrite needs three to four
   times `maxmemory`), not by round numbers.
 - The CSI snapshot CRDs and `snapshot-controller` are installed
-  (`longhorn-system/setup/kustomization.yaml`). The off-site backup is
+  (`grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/kustomization.yaml`). The off-site backup is
   Longhorn's own (the `BackupTarget` and the two backup `RecurringJob`s in
-  `setup/offsite-backup.yaml`); a bare snapshot stays on the same disk and is not
-  a backup. A weekly `filesystem-trim-weekly` job (`setup/filesystem-trim.yaml`)
+  `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/offsite-backup.yaml`); a bare snapshot stays on the same disk and is not
+  a backup. A weekly `filesystem-trim-weekly` job (`grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/filesystem-trim.yaml`)
   trims the volumes of the `default` group, which leaves out the encrypted ones.
 - The Redis CR's `storage:` is declared intent only: StatefulSet
   `volumeClaimTemplates` are immutable and the operator drops a change
   silently. Expand the live PVC in place and keep the manifest in step.
 - The Longhorn chart version is pinned in
-  `manifests/app-directory/app-longhorn.yaml`; read the upstream upgrade
+  `grooveshop-infrastructure/manifests/app-directory/app-longhorn.yaml`; read the upstream upgrade
   notes for the exact skew rules before moving it, since every PVC on the
   cluster rides on it.
 
@@ -191,12 +191,12 @@ What exists:
   then re-raises. It says nothing about a dump that fails later, inside
   `backup_database_task`.
 - VictoriaLogs (`app-victoria-logs`) for log search; Argo CD notifications
-  for sync events (`manifests/app-constructs/argocd/argocd-notifications-cm-patch.yaml`).
+  for sync events (`grooveshop-infrastructure/manifests/app-constructs/argocd/argocd-notifications-cm-patch.yaml`).
 - Flower for task state, behind basic-auth.
 
 What alerts on the backups: `GrooveShopBackupFailed`, `GrooveShopBackupStale`,
 `GrooveShopBackupsMissing` and `GrooveShopBackupSizeNearFreeTier` in
-`victoria-metrics/rules/vmrule-grooveshop.yaml` (see
+`grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/rules/vmrule-grooveshop.yaml` (see
 [Monitoring and alerting](/dev/operations/monitoring)). They watch the Longhorn
 backups to R2, not the dump itself: a nightly dump that did not happen is seen
 through the task mail above and the file listing.
@@ -211,15 +211,15 @@ What does not exist:
 ## Invariants
 
 - The scheduled dump is a Celery task, not a Kubernetes resource
-  (`src/settings/schedule.py`, `src/core/tasks.py`, `base/backend-database.yaml` comment).
+  (`src/settings/schedule.py`, `src/core/tasks.py`, `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend-database.yaml` comment).
 - A failed `pg_dump` fails the task (`backup_database.py` raises
   `CommandError`; `backup_database_task` propagates it).
 - The dump shares the cluster, the storage class and the replica count with the
   data it protects; the R2 copy is what survives the cluster
-  (`base/backend.yaml`, `longhorn-system/values.yaml`, `setup/offsite-backup.yaml`).
+  (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`, `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/values.yaml`, `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/offsite-backup.yaml`).
 - Never add an age-based expiry rule to the R2 bucket: retention is the
   recurring jobs' count, and an expiry rule would corrupt restore points
-  (the comment in `setup/offsite-backup.yaml`).
+  (the comment in `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/offsite-backup.yaml`).
 
 ## Failure modes
 
@@ -245,8 +245,8 @@ What does not exist:
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` | Backups, media, media-private and static PVCs and mounts |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend-database.yaml` | Postgres CR, logical backup disabled, the gap statement |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis.yaml`, `backend-message-broker.yaml` | Redis and RabbitMQ volumes |
-| `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/values.yaml`, `setup/kustomization.yaml` | Replica count, over-provisioning, snapshot CRDs |
-| `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/offsite-backup.yaml`, `setup/filesystem-trim.yaml` | The R2 backup target, the daily and weekly backup jobs, the weekly trim |
+| `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/values.yaml`, `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/kustomization.yaml` | Replica count, over-provisioning, snapshot CRDs |
+| `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/offsite-backup.yaml`, `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/filesystem-trim.yaml` | The R2 backup target, the daily and weekly backup jobs, the weekly trim |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/patches/pvc-offsite-backup-patch.yaml` | The four claims in the off-site group |
 | `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/rules/vmrule-grooveshop.yaml` | `GrooveShopBackup*` alerts |
 | `grooveshop-infrastructure/docs/backups.md` | The runbook: retention, cost, credentials, tested restores |

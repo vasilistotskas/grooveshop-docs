@@ -124,6 +124,19 @@ From then on, every link in your texts that leads to another site opens in a new
 
 An order placed before this time on a working day ships the same day. After it, or on a weekend or public holiday, it ships the next working day. The estimated delivery date and the "order before…" line on the store come from this. Empty means every order on a working day ships that day.
 
+### Run the store without customer accounts
+
+For a store that sells to guests only, or presents its work and sells nothing.
+
+1. Open the setting `CUSTOMER_ACCOUNTS_ENABLED`.
+2. Untick **Value (Boolean)** and click **Save**.
+
+From then on nobody can sign up or sign in on the store. The sign-in and sign-up pages, password reset, sign-in with Google or Facebook, the account pages and linking an AI assistant to an account are gone, and the store shows no sign-in button. A customer who was signed in is signed out on their next visit.
+
+What needs an account goes off with it: favourites, reviews (with the stars on product cards), blog comments and likes, loyalty and wholesale. Their own settings keep their values, so when you switch accounts back on, each one comes back as you left it, and customers sign in again with their existing accounts.
+
+Guests still check out, and the links in their order emails open the order without a sign-in. That link works for 14 days after the order (the default), so a delivery email sent after that no longer opens it: send the customer their order details yourself if they ask. A link already sent in an order email before you switched accounts off still points to the customer's account page, which a store without accounts no longer serves, and a sent email cannot be changed: be ready to help those customers too. The newsletter form, product alerts and the contact form keep working. Your customers' details, orders and addresses are kept. You and your team sign in to the admin as before.
+
 ## Settings by category
 
 Defaults are the values a new store starts with. Amounts are in euros.
@@ -284,6 +297,7 @@ See [Messages & feedback](/admin/customers/messages-and-feedback).
 | Setting | What it does | Default |
 |---|---|---|
 | `CATALOGUE_ENABLED` | Product lists, product pages and search. Switch it off only if the store presents work and does not sell. | on |
+| `CUSTOMER_ACCOUNTS_ENABLED` | Customer accounts: sign-up, sign-in and the account pages. Off also switches off favourites, reviews, blog comments, loyalty and wholesale. See the task above. | on |
 | `PRODUCT_SUGGESTIONS_ENABLED` | Switches product suggestions on. | off |
 | `DISPATCH_CUTOFF` | The same-day dispatch time. See the task above. | 15:00 |
 | `RETURN_WINDOW_DAYS` | How many days after delivery a customer can return a product, as your return policy page says. Google then shows your return terms for every country you ship to. Leave it at 0 to give Google only the link to your return policy page. Google reads this setting, not the page: when you change the return window on the page, change it here too (the admin reminds you each time you save the return policy page). | 0 |
