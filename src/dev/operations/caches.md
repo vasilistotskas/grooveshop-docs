@@ -239,9 +239,14 @@ most runs. It runs once per build: it records the build in the
 run, and a restarted pod of a warm build logs `build already warm` and
 requests nothing. A second pass forces every stale page to revalidate at
 once against a backend that may have just restarted (2026-10-20: 3-10 s
-first loads on demo). `promote.py` prints its latest line and never waits
-for it; a run that fails logs an `error` line and runs again when its pod
-next starts.
+first loads on demo). A try that leaves the build unrecorded (a sitemap
+that answered 503, a store with nothing rendered, pages no pod was left
+for) is repeated with the sitemaps read again, up to `attempts` tries
+`retrySeconds` apart (the chart's `values.yaml`). A run that cannot start,
+or whose last try still left the build unrecorded, logs an `error` line,
+which `GrooveShopLoggedErrors` reports, and runs again only when its pod
+next starts. After a promote that moves the storefront, `promote.py`
+prints its latest line with its time; it never waits for it.
 
 The tenant host sits in a different place in each key family, and the
 purge endpoint's host scoping (`server/utils/cacheKey.ts:
