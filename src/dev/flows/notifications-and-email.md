@@ -146,9 +146,24 @@ schema-scoped, so a ticket minted on one tenant finds nothing on another.
 The storefront side is `app/plugins/websocket.client.ts`. It fetches a
 ticket through `server/api/websocket/user/ticket.get.ts`, connects to
 `wss://{apiDomain}/ws/notifications/?ticket=…`, disables automatic
-reconnect (the ticket is spent) and reconnects manually with exponential
-backoff, fetching a fresh ticket each time. A `BroadcastChannel` keeps
-tabs in step.
+reconnect (the ticket is spent) and reconnects manually, fetching a fresh
+ticket each time. A `BroadcastChannel` keeps tabs in step.
+
+**Reconnecting.** Every attempt that fails schedules the next: a socket
+that drops, and a ticket that cannot be fetched (the network down, a 5xx).
+Only a 401 or 403 on the ticket stops it, because the session is gone and
+goes through `auth:change`. The delay starts at `RECONNECT_BASE_DELAY_MS`
+(1 s) and doubles up to `RECONNECT_MAX_DELAY_MS` (30 s). It starts over
+only after a socket the server answered `STABLE_ANSWERED_HEARTBEATS` times
+(two pongs, about a minute of proven life), so a socket that opens and is
+closed again soon cannot reconnect every second. Each attempt carries a
+number that every close and every new attempt moves: a ticket that arrives
+after a sign-out opens nothing, and the late close event of a socket closed
+on purpose schedules nothing. A drop is logged as one browser line
+(`Disconnected`, with the close code, the attempt and the delay), since
+every line is a request to the rate-limited `/api/_evlog/ingest`; the
+socket's `error` event is not logged, because a browser gives it no detail
+and the close that follows carries the code.
 
 **The heartbeat.** The plugin sends `ping` every 30 seconds and closes a
 socket that sends nothing back within 5 seconds of a ping (any frame
@@ -160,10 +175,11 @@ notification handler, which reads JSON only. The two sides share the
 strings (`HEARTBEAT_PING` and `HEARTBEAT_PONG` in the consumer, the same
 names in the plugin), so a change to one changes both; the interval and
 the timeout are the plugin's alone (`HEARTBEAT_INTERVAL_MS`,
-`HEARTBEAT_PONG_TIMEOUT_MS`). A consumer that does not answer makes every
-signed-in tab reconnect about every 36 seconds; a client that does not
-treat `pong` as the answer parses it as a notification and logs
-`ws:parse` every 30 seconds.
+`HEARTBEAT_PONG_TIMEOUT_MS`). A consumer that does not answer gets every
+socket closed at the first pong deadline, 35 seconds after it opens, and
+the reconnect delay then grows to its cap; a client that does not treat
+`pong` as the answer parses it as a notification and logs `ws:parse`
+every 30 seconds.
 
 ### The email system
 
