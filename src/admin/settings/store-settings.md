@@ -135,7 +135,7 @@ From then on nobody can sign up or sign in on the store. The sign-in and sign-up
 
 What needs an account goes off with it: favourites, reviews (with the stars on product cards), blog comments and likes, loyalty and wholesale. Their own settings keep their values, so when you switch accounts back on, each one comes back as you left it, and customers sign in again with their existing accounts.
 
-Guests still check out, and the links in their order emails open the order without a sign-in. The newsletter form, product alerts and the contact form keep working. Your customers' details, orders and addresses are kept. You and your team sign in to the admin as before.
+Guests still check out, and the links in their order emails open the order without a sign-in. That link works for 14 days after the order (the default), so a delivery email sent after that no longer opens it: send the customer their order details yourself if they ask. A link already sent in an order email before you switched accounts off still points to the customer's account page, which a store without accounts no longer serves, and a sent email cannot be changed: be ready to help those customers too. The newsletter form, product alerts and the contact form keep working. Your customers' details, orders and addresses are kept. You and your team sign in to the admin as before.
 
 ## Settings by category
 
