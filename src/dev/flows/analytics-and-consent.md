@@ -147,7 +147,12 @@ Still kept without consent, as decisions rather than gaps: the visitor's own
 accessibility choices and a dismissed announcement, which they asked for; the
 per-order flags that stop a purchase being counted twice; and the per-tab
 `order-attribution` and `recommendation-attribution` in `sessionStorage`,
-sent only to our own order and add-to-cart calls.
+sent only to our own order and add-to-cart calls; and
+`localStorage["order-awaiting-payment"]`, which holds `{ uuid, until }` (the
+order's uuid and its payment deadline, nothing else). It is strictly necessary
+to pay for the order the shopper placed, read by no tracker and only by our own
+`GET /api/orders/uuid/<uuid>`, and removed after the deadline, when the order is
+paid or closed, or on a 404 or 403 (`app/utils/orderPayment.ts`).
 
 ### Embedded players
 

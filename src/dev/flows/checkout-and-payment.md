@@ -659,8 +659,12 @@ placeholder) and a cancel URL on this store.
   and the page reads the order again. Any other failure keeps the button. The
   deadline passing on the open page does the same.
 - **The reminder.** The checkout records the order it placed that awaits
-  payment in `localStorage` (`rememberAwaitingPaymentOrder`). The cart and
-  the checkout read it again from Django (`useAwaitingPaymentOrder`) and, while
+  payment in `localStorage["order-awaiting-payment"]` as `{ uuid, until }`
+  (its uuid and payment deadline, nothing else; strictly necessary storage,
+  see [Analytics & consent](/dev/flows/analytics-and-consent), dropped past the
+  deadline and moved by a new link: `rememberAwaitingPaymentOrder`,
+  `extendAwaitingPaymentOrder`). The cart and the checkout read the order again
+  from Django (`useAwaitingPaymentOrder`) and, while
   it still offers a link, show `OrderAwaitingPaymentReminder`: "Order #N is
   waiting for your payment", with **Pay now** and **View order**, because
   Django keeps the cart while the order is unpaid and the shopper could order
