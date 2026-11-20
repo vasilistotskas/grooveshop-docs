@@ -183,6 +183,21 @@ Rules the code encodes:
 - Chrome toggles fail open (`default=True`); commercial gates fail closed
   (`IsB2BWholesaleEnabled`, `IsPromotionsRuntimeEnabled`,
   `IsContactAttachmentsEnabled` set `default=False`).
+- A feature that needs another lists that one's gate in its own
+  `STORE_FEATURES` row (`src/tenant/features.py`), and its effective state is
+  on only while every gate it lists is. The catalogue is one such
+  dependency (`favourites`, `gift_cards`, `product_suggestions`,
+  `product_alerts`, `cart`); customer accounts are another:
+  `customer_accounts` (`CUSTOMER_ACCOUNTS_ENABLED`, a store setting with no
+  plan half) is listed first by `favourites`, `product_reviews`, `account_reviews`,
+  `blog_comments`, `loyalty` and `wholesale`. A store with accounts off
+  reads them all as off and their routes refuse; switching accounts back on
+  restores each as the store left it, since no dependent setting was
+  touched. A setting validator could not express this (it sees one value),
+  so the table is the place. What else the accounts switch takes away (the
+  identity routes, a sign-in a shopper already holds, in-app
+  notifications): `src/tenant/customer_accounts.py` and
+  [Store features, "Customer accounts"](/dev/django/reference/store-features#customer-accounts).
 - The storefront decides every store feature from `TenantConfig.features`
   alone: `app/composables/useStoreFeature.ts` in the app, the route gates
   `app/utils/routeGate.ts: createFeatureGate` behind the
@@ -191,9 +206,8 @@ Rules the code encodes:
   `shared/utils/storeFeature.ts: storeFeatureOn`. It never combines a plan
   flag with a setting or keeps a fallback of its own; the plan flags still
   travel raw on `TenantConfig`, but no storefront gate reads them. The
-  boolean settings that are not store features (presentation preferences,
-  and `CART_ENABLED` / `CATALOGUE_ENABLED` until the API gates them) are
-  read through `app/composables/useStorePreference.ts` over
+  boolean settings that are not store features (presentation preferences)
+  are read through `app/composables/useStorePreference.ts` over
   `shared/utils/storePreference.ts: STORE_PREFERENCES`, which states what a
   missing row means. The gateway-consumed values are
   **folded** in the serializer (`get_agent_commerce_enabled`,
