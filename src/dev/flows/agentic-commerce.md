@@ -786,7 +786,17 @@ A UCP or ACP checkout is a session in the gateway's Redis
   that held it (under that checkout's own lock). A holder whose order is being
   placed or awaits payment, or an open checkout of another protocol or one
   another platform signed, keeps the cart: the create is a `conflict`. An unpaid
-  online order Django has canceled releases it. Django also refuses an agent's
+  online order Django has canceled releases it. So does a holder this release
+  cannot read (`CartHolder.Unread`, `errCartUnread` in
+  `internal/mcpsrv/ucp_checkout.go`): the cart's record names a session that is
+  not stored under this release's key, because another release's pod still
+  serves it while a key move rolls out, or because Redis lost the session while
+  its cart record lives. An order may exist, so the `conflict` hint says not to
+  start another checkout: read the checkout with `get_checkout`, the order with
+  `get_order` or `track_order`, or ask the shopper for the store's confirmation
+  email. The cart is released when the record ends, with the lifetime its
+  session gave it. ACP never meets this case: its create always makes a new
+  cart for the session (`checkout.CartHolder{}`) and takes no `cart_id`. Django also refuses an agent's
   order from a cart whose earlier order still awaits its payment, which holds
   whatever Redis lost.
 - **A handler holds a snapshot** and answers from it only through its exit
