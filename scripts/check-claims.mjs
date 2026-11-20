@@ -455,7 +455,7 @@ function brokenAdvice(cite) {
   const named = REPOS.some(r => c.startsWith(`${r}/`))
   const scoped = [...SCOPED_ONLY].filter(r => absent.includes(r))
   const hint = scoped.length && !named
-    ? `; if it is a file of ${scoped.join(' or ')}, which is not checked out here, write it as \`${scoped[0]}/${c}\``
+    ? `; if it is a file of ${scoped.join(' or ')}, which is not checked out here, cite it as \`${scoped[0]}/<its full path from that repository's root>\``
     : ''
   return `no checked-out repository has it${hint}`
 }

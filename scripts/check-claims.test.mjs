@@ -59,7 +59,8 @@ test('a bare path found nowhere fails although a repository is not checked out',
 
 test('the failure says to name the repository when the path may belong to the one not checked out', () => {
   const { output } = runGate({ page: 'See `manifests/app-root.yaml`.\n', repos: CODE })
-  assert.match(output, /write it as `grooveshop-infrastructure\/manifests\/app-root\.yaml`/)
+  assert.match(output, /cite it as `grooveshop-infrastructure\/<its full path from that repository's root>`/)
+  assert.doesNotMatch(output, /grooveshop-infrastructure\/manifests\/app-root\.yaml/)
 })
 
 test('a path addressed to a repository that is not checked out is skipped, not failed', () => {
