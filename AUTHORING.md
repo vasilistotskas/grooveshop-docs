@@ -14,6 +14,10 @@ page templates and the list of facts to verify.
    point the gates at a checkout of it with `GROOVESHOP_<REPO>_DIR`, for
    example `GROOVESHOP_DJANGO_API_DIR=../.wt-django pnpm check:claims`
    (`scripts/workspace.mjs` lists the names). If you cannot find it in code, leave it out.
+   Cite a file of `grooveshop-infrastructure` as
+   `grooveshop-infrastructure/manifests/...`, never from a subfolder
+   (`base/backend.yaml`): CI cannot read that private repository, so
+   `pnpm check:claims` fails any bare path that is not in a public one.
 2. **Every page has frontmatter** with `title` and `description` (one
    sentence, plain text). Both feed search and `llms.txt`.
 3. **Admin guide pages exist twice**: `src/admin/<path>.md` (English) and

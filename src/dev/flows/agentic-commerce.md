@@ -1263,7 +1263,7 @@ dropped, so this one runs `maxmemory-policy noeviction` with AOF persistence: a
 full instance refuses writes (the gateway then fails checkouts, chat turns and
 feed sweeps) instead of losing a record. A record without a TTL or with a long
 one is never evicted. The volume carries the backup labels
-(`overlays/production/patches/pvc-offsite-backup-patch.yaml`), because a store's
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/patches/pvc-offsite-backup-patch.yaml`), because a store's
 signing key and the year-long order links are not rebuilt by anything; the
 infrastructure repository's `docs/backups.md` has the restore. The key that seals
 the signing keys is `SIGNING_KEY_ENCRYPTION_KEY` in `agent-gateway-secrets`: a

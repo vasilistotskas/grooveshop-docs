@@ -565,7 +565,7 @@ host, full size (`…/0/0/inside/center/transparent/0/90.{format}`), so an
 old link (a pin, an image search result, rich text) keeps working and a
 suspended store's images are refused there; anything under `/media` that
 media-stream does not serve as an image is 404 in public
-(grooveshop-infrastructure `base/static.yaml`). A suspension therefore
+(grooveshop-infrastructure `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml`). A suspension therefore
 moves no file: refusing the store is media-stream's job, and the flush only
 drops cached copies. Reactivating flushes and purges again, which makes
 media-stream serve the store at once and drops what was cached while it
