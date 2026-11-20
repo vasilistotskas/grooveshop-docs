@@ -635,12 +635,23 @@ non-JSON or oversized body, or a missing key, is a 400 before that.
 
 An order being placed has a deadline: `checkout.Flow.CompletionDeadline` is the
 session's in-progress save plus three upstream timeouts. Until then a call on
-the session is 409 with a `Retry-After` of the time left. Past it the outcome
-was never recorded and never will be, because the session stays
-`complete_in_progress` until it expires: 502 `order_outcome_unknown`, with no
-`Retry-After`. The platform must not complete again or start a new checkout,
-since the order may exist; the buyer receives the store's confirmation email if
-it does.
+the session is 409 with a `Retry-After` of the time left. Past it no
+completion of the session can still be running, and the outcome was not
+recorded: 502 `order_outcome_unknown` with `Retry-After`
+(`mcptool.UnavailableRetryAfter`, 30 seconds). **Complete the same session
+again after it, and never start a new checkout**, since the order may exist.
+That complete resumes the placement (`Flow.Resumable`, `Flow.Resume`): it sends
+the order again with the checkout's id, and Django answers the order the
+checkout already placed, places it now, or refuses it. A session stored
+unconfirmed (Django left the order unanswered) is resumable at once; one whose
+last save failed reads in flight until its `UpdatedAt` plus the completion
+budget (409 `idempotency_in_flight` with `Retry-After`), and a complete after
+that resumes it. A repeat complete once the order exists places no second
+order: `completeClosed` answers the session (`completed`), refuses a
+`canceled` one as closed, and answers a `complete_in_progress` one with the
+pending answer. A completion left unanswered while a resume placed the order
+answers that order's session instead of "unknown"; it stays unknown only while
+the session is still `complete_in_progress`.
 
 #### Idempotency
 
@@ -675,11 +686,13 @@ is kept for 24 hours, the spec's minimum, unless Redis evicts it.
   key." (`noteKept`). The key is freed, and the same key runs again as a new
   request, for an answer that asks for the same request again: a 5xx, a 409
   `idempotency_in_flight` and a 429.
-- **Two 5xx answers of a complete are kept all the same**: 502
-  `order_outcome_unknown` and 500 `order_placed` for an order whose session
-  could not be saved. An order may exist behind each while the stored session
-  may not say so, so a retry run afresh could be answered by that session. The
-  key stays spent and every retry is told what the first attempt was.
+- **One 5xx answer of a complete is kept all the same**: 500 `order_placed`
+  for an order whose session could not be saved. An order exists while the
+  stored session may not say so, so a retry run afresh could be answered by
+  that session. The key stays spent and every retry is told what the first
+  attempt was. 502 `order_outcome_unknown` is not kept (`keptAgainstKey`, a 5xx
+  without a stored order): the same key frees and the retry resumes the
+  completion, which never orders twice.
 - **An update or a cancel marks the session it changes** (`Session.AppliedBy`:
   the endpoint, the key and the body, hashed), in the save that applies it. A
   request whose save was stored and which then could not answer (its render
@@ -728,7 +741,9 @@ A UCP or ACP checkout is a session in the gateway's Redis
 
 - **Keys.** `ag:{schema}:cs:v7:{id}` is the session, that plus `:lock` its
   lock, that plus `:order` the order it placed. The version is of how sessions
-  are written, not only of their shape: it moves whenever an older pod writing
+  are written, not only of their shape (v7: every order a session sends names
+  its checkout, and a complete resumes a session whose order went unanswered):
+  it moves whenever an older pod writing
   the key its own way could undo what a newer one relies on, so the two never
   share a session and one under an older key is simply not found
   (`TestSessionKeyIsVersioned`). The session that holds a cart is named in
@@ -1475,10 +1490,13 @@ yourself, then bumping the pin in the infrastructure repo.
   The platform sends no `API-Version` header, or a version the body's
   `supported_versions` does not list.
 - **An ACP complete answers 502 `order_outcome_unknown`.** The store never
-  confirmed whether the order was placed, and the session stays
-  `complete_in_progress` until it expires. Do not complete again or start a new
-  checkout: the buyer receives the store's confirmation email if the order was
-  placed.
+  confirmed whether the order was placed. Complete the same session again after
+  the `Retry-After` (30 seconds), with the same `Idempotency-Key`: the complete
+  resumes the placement and Django answers the existing order, places it, or
+  refuses it. Never start a new checkout. On UCP the same answer is
+  `order_outcome_unknown` with `retry_after`, and the retry needs a new
+  `meta.idempotency-key`, because the complete that left the outcome unknown
+  spent its own.
 - **A feed answers 503 though Django is back.** A failed generation marks the
   store for a minute (`ag:{schema}:feed:failed`), and a missing feed fails at
   once meanwhile. Wait the minute, or invalidate the store's feeds
