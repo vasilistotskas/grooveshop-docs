@@ -475,8 +475,8 @@ books it the same way with `agentProtocol: "mcp"`
 reads "AI agent (MCP)". The chat assistant serves the same tool but never
 sends a protocol; see the chatbot's request below.
 
-**One order per agent checkout (Django #759; the gateway does not send the
-id yet).** `POST /order` accepts `agentCheckout`, the checkout session's id,
+**One order per agent checkout (Django #759; the gateway sends its checkout
+session id, `internal/checkout/flow.go`).** `POST /order` accepts `agentCheckout`, the checkout session's id,
 and Django believes it beside the same `X-Internal-Gateway` secret and from no
 other caller (`src/order/views/order.py: OrderViewSet._named_agent_checkout`);
 from a caller without the secret it is dropped before validation, even when

@@ -28,7 +28,7 @@ They appear under the greeting, only when something needs fixing:
 - **Parcels that left while myDATA was unreachable**: parcels that left before myDATA registered their receipt, because myDATA did not answer. The receipt is sent again by itself, with AADE's lost-connection indication, until it is registered, so you do nothing. See [If myDATA does not answer](/admin/sales/movement-receipts#if-mydata-does-not-answer).
 - **Receipts of canceled orders not canceled in myDATA**: a receipt of an order canceled before its parcel left that is still waiting, more than 15 minutes later, to be canceled in myDATA. The order's notes say why; if myDATA had refused the receipt, correct it and press **Send receipt to myDATA**. See [If the order is cancelled before the courier collects the parcel](/admin/sales/movement-receipts#if-the-order-is-cancelled-before-the-courier-collects-the-parcel).
 
-Owners and Admins see the two about missing details. Once you fill the details in, the alert goes away.
+Owners and Admins see the two about missing details. Once you fill the details in, the alert goes away. The three myDATA alerts about the dispatch point, parcels that left while myDATA was unreachable, and canceled receipts not canceled are shown to platform staff only.
 
 When a refund needs a person, these appear too. Each lists up to five orders, with links, and an **Open the orders** link to the list. Everyone who can edit orders sees the first three:
 

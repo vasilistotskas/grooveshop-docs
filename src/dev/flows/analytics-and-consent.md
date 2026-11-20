@@ -152,7 +152,9 @@ sent only to our own order and add-to-cart calls; and
 order's uuid and its payment deadline, nothing else). It is strictly necessary
 to pay for the order the shopper placed, read by no tracker and only by our own
 `GET /api/orders/uuid/<uuid>`, and removed after the deadline, when the order is
-paid or closed, or on a 404 or 403 (`app/utils/orderPayment.ts`).
+paid or closed, or on a 404 or 403 (`app/utils/orderPayment.ts`, and
+`app/composables/useAwaitingPaymentOrder.ts` for the paid, closed, 404 and 403
+cases).
 
 ### Embedded players
 
