@@ -118,7 +118,7 @@ placeholders may be present at build time. The same applies to any
   `src/settings/env.py` reads both.
 - **The sealing key itself**: the controller's active RSA key in the
   `sealed-secrets` namespace is the one secret that decrypts every other.
-  Export it with `scripts/export-sealed-secrets-key.sh` into an encrypted
+  Export it with `grooveshop-infrastructure/scripts/export-sealed-secrets-key.sh` into an encrypted
   vault after initial setup and after every rotation; rotate by relabeling
   the active key and restarting the controller; restore a rebuilt cluster
   by applying the backed-up key before anything else. Full procedure:
@@ -129,7 +129,7 @@ placeholders may be present at build time. The same applies to any
 - `base/` contains no Secret and no SealedSecret; only overlays do
   (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/kustomization.yaml`).
 - `untracked/` is gitignored; `seal.sh` reads from it and writes into the
-  overlay (`.gitignore`, `untracked/secrets/seal.sh`).
+  overlay (`.gitignore`, `grooveshop-infrastructure/untracked/secrets/seal.sh`).
 - The backend refuses to start in production without `SECRET_KEY` and
   `CELERY_BROKER_URL` (`src/settings/env.py`, `src/settings/celery.py`); Flower refuses to start without
   `FLOWER_BASIC_AUTH` (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`).

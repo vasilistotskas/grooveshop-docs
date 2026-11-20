@@ -47,7 +47,7 @@ whole host is already behind the staging gate
 
 Tenant storefront and API hosts are the production names with a
 `-staging` suffix; the platform hosts are the three listed above. The
-`REWRITES` table in `scripts/staging-refresh.sh` (step 5) and the
+`REWRITES` table in `grooveshop-infrastructure/scripts/staging-refresh.sh` (step 5) and the
 per-tenant Ingress overlays under `overlays/staging/tenants/` must agree;
 a tenant present in one and not the other either fails DNS or 404s at
 `tenant/resolve`. A platform default is never a tenant's hostname.
@@ -59,7 +59,7 @@ kubectl config use-context <production cluster>
 ./scripts/staging-refresh.sh        # prompts unless --yes
 ```
 
-The script (`scripts/staging-refresh.sh`) refuses to run against any
+The script (`grooveshop-infrastructure/scripts/staging-refresh.sh`) refuses to run against any
 other kubectl context, then:
 
 1. `pg_dump`s production's database in custom format, excluding the

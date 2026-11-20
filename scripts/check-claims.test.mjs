@@ -83,3 +83,26 @@ test('a bare path that exists only in grooveshop-infrastructure fails with the f
   assert.equal(status, 1)
   assert.match(output, /write `grooveshop-infrastructure\/manifests\/app-constructs\/grooveshop\/base\/backend\.yaml`/)
 })
+
+test('a path qualified with a checked-out repository never resolves through another repository', () => {
+  // `src/app.module.ts` exists in the media repository only.
+  const infra = { ...CODE, 'grooveshop-infrastructure': ['manifests/app-root.yaml'] }
+  const { status, output } = runGate({ page: 'See `grooveshop-infrastructure/src/app.module.ts`.\n', repos: infra })
+  assert.equal(status, 1)
+  assert.match(output, /path does not exist: grooveshop-infrastructure\/src\/app\.module\.ts/)
+})
+
+test('a path qualified with a repository that is not checked out is skipped even if another has the file', () => {
+  const { status, output } = runGate({ page: 'See `grooveshop-infrastructure/src/app.module.ts`.\n', repos: CODE })
+  assert.equal(status, 0)
+  assert.match(output, /1 citation\(s\) skipped/)
+})
+
+test('a shell script citation is checked like any other path', () => {
+  const repos = { 'grooveshop-media-stream': ['src/app.module.ts', 'scripts/smoke.sh'] }
+  assert.equal(runGate({ page: 'See `grooveshop-media-stream/scripts/smoke.sh`.\n', repos }).status, 0)
+  const missing = runGate({ page: 'See `grooveshop-media-stream/scripts/missing.sh`.\n', repos })
+  assert.equal(missing.status, 1)
+  assert.match(missing.output, /path does not exist: grooveshop-media-stream\/scripts\/missing\.sh/)
+  assert.equal(runGate({ page: 'See `scripts/missing.sh`.\n', repos }).status, 1)
+})

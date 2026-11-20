@@ -86,7 +86,7 @@ authenticates the order-event push the other way.
 | Email | The backend and Celery worker patches set `EMAIL_HOST=mailpit` (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/patches/backend-deployment-patch.yaml`); the inbox is reached with `kubectl port-forward svc/mailpit 8025:8025`, never through an ingress, because the database is a clone of production |
 | Gateway | `ENV=staging`: production network rules, sandbox payment-handler label |
 
-`scripts/staging-refresh.sh` in the infrastructure repo dumps and restores
+`grooveshop-infrastructure/scripts/staging-refresh.sh` in the infrastructure repo dumps and restores
 production's database and media into staging, rewrites production
 hostnames to their staging twins, rebuilds the search indexes, re-seeds
 the demo tenant and arms every feature on the clone

@@ -47,7 +47,7 @@ const REPOS = [
  */
 const SCOPED_ONLY = new Set(['grooveshop-infrastructure'])
 const SKIP = new Set(['node_modules', '.git', '.venv', 'dist', '.output', '.nuxt', '__pycache__', 'staticfiles', 'coverage', '.vitepress'])
-const CODE_EXT = /\.(py|ts|mts|cts|vue|js|mjs|cjs|go|yaml|yml|html|txt|json|toml|mod|lock)$/
+const CODE_EXT = /\.(py|ts|mts|cts|vue|js|mjs|cjs|go|yaml|yml|html|txt|json|toml|mod|lock|sh)$/
 /** Only these are worth scanning for symbol definitions. */
 const SYMBOL_EXT = /\.(py|ts|mts|cts|vue|js|mjs|cjs|go)$/
 
@@ -411,7 +411,7 @@ for (const what of SIDEBAR?.unreadable ?? []) {
 const stats = { paths: 0, screens: 0 }
 
 /** A citation that looks like a path: has a slash or a known code extension. */
-const PATH_RE = /`([A-Za-z0-9_.\-/]+\.(?:py|ts|mts|cts|vue|js|mjs|cjs|go|yaml|yml|json|html|txt|toml|lock|mod))`/g
+const PATH_RE = /`([A-Za-z0-9_.\-/]+\.(?:py|ts|mts|cts|vue|js|mjs|cjs|go|yaml|yml|json|html|txt|toml|lock|mod|sh))`/g
 /** A citation that looks like a code identifier rather than prose. */
 const IDENT_RE = /`([A-Za-z_$][\w$]*(?:\(\))?)`/g
 const SPAN_RE = /<span class="sidebar-path">([^<]+)<\/span>/g
@@ -435,7 +435,6 @@ function pathResolves(cite) {
   if (c.includes('...')) return true // deliberately elided
   if (/^(?:django_celery_beat|celery|django|allauth|rest_framework|knox|parler)\//.test(c)) return true // library
   if (filesByPath.has(c)) return true
-  for (const r of REPOS) if (filesByPath.has(c.replace(`${r}/`, ''))) return true
   // Explicitly addressed to a repository that is not checked out here.
   if (absent.some(r => c.startsWith(`${r}/`))) return null
   const tail = c.split('/').pop()
