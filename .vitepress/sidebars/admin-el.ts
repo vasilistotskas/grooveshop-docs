@@ -21,6 +21,7 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
       { text: 'Επιστροφές χρημάτων και αμφισβητήσεις', link: '/el/admin/sales/refunds-and-disputes' },
       { text: 'Πηγή παραγγελίας', link: '/el/admin/sales/order-source' },
       { text: 'Αποδείξεις και πιστωτικά παραστατικά', link: '/el/admin/sales/receipts' },
+      { text: 'Αποδείξεις courier και locker', link: '/el/admin/sales/movement-receipts' },
       { text: 'Καλάθια', link: '/el/admin/sales/carts' },
       { text: 'Τζίρος', link: '/el/admin/sales/turnover' },
       { text: 'Κέρδος', link: '/el/admin/sales/profit' },

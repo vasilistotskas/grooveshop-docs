@@ -175,11 +175,10 @@ Fill in the business details **before the first receipt**. They are printed on e
 | `MYDATA_INVOICE_SERIES_PREFIX`, `MYDATA_CREDIT_SERIES_PREFIX` | The series prefix for receipts and credit documents. | GRVP, GRVC |
 | `MYDATA_ISSUER_BRANCH` | Your AADE branch code; 0 is the head office. | 0 |
 | `MYDATA_GIFT_CARD_PAYMENT_TYPE` | How an amount paid by gift card is declared to AADE: 3 cash, 5 on credit. | 3 |
-| `MYDATA_LOADING_POSTAL_CODE`, `MYDATA_LOADING_CITY` | The postcode (a Greek one) and the city of the place your parcels leave from. With both set, a courier or locker order's receipt is issued before the courier collects the parcel and declares the movement of the goods. Until then it is issued when the order ships, without it. | empty |
-| `MYDATA_LOADING_STREET`, `MYDATA_LOADING_NUMBER` | The street and the number of that place. Optional. | empty |
+| The four dispatch point settings (street, number, postcode, city) | The street, the number, the postcode (a Greek one) and the city of the place your parcels leave from. Fill in all four: then a courier or locker order's receipt is issued before the courier collects the parcel and declares the movement of the goods. Until then it is issued when the order ships, without it. The **Open the dispatch point settings** link on the Dashboard alert leads to them. | empty |
 | `MYDATA_REQUEST_TIMEOUT_SECONDS` | How many seconds the store waits for AADE to answer. Leave it as it is. | 30 |
 
-Set the myDATA settings together with your accountant. See [Receipts](/admin/sales/receipts), and [Receipts for courier and locker orders](/admin/sales/receipts#receipts-for-courier-and-locker-orders) for the dispatch point.
+Set the myDATA settings together with your accountant. See [Receipts](/admin/sales/receipts), and [Receipts for courier and locker orders](/admin/sales/movement-receipts) for the dispatch point.
 
 ### Promotions & Gift Cards
 

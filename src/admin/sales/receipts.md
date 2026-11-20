@@ -13,7 +13,7 @@ The entries appear when myDATA is switched on in Store Settings, even before the
 
 The platform issues receipts itself, through AADE's myDATA, only for a business exempt from the fiscal device. Then it issues:
 
-- the **receipt** when an order ships, or, for a courier or locker order, before the courier collects the parcel (see [Receipts for courier and locker orders](#receipts-for-courier-and-locker-orders));
+- the **receipt** when an order ships, or, for a courier or locker order, before the courier collects the parcel (see [Receipts for courier and locker orders](/admin/sales/movement-receipts));
 - a **credit document** (the retail credit note) for every refund of goods made after the receipt.
 
 Both lists are archives: you can browse, search and download, never edit or add.
@@ -117,7 +117,7 @@ Stripe can report a refund failed days after it went through. If its credit docu
 
 ## When documents are issued
 
-- **The receipt**, once a receipt order **ships**, cash on delivery included. It is issued once per order and emailed to the customer in their language. A courier or locker order is the exception once you have set the dispatch point: its receipt is issued earlier, as [below](#receipts-for-courier-and-locker-orders).
+- **The receipt**, once a receipt order **ships**, cash on delivery included. It is issued once per order and emailed to the customer in their language. A courier or locker order is the exception once you have set the dispatch point: its receipt is issued earlier, as [described here](/admin/sales/movement-receipts).
 - **Net of earlier refunds.** If money went back before the receipt (to the card, or onto gift cards), the receipt shows only what was finally paid. Giving back a duplicate payment does not reduce it, and points were never on it. If everything went back, no receipt is issued.
 - **Not while another refund's share depends on an unanswered one.** A refund still waiting for the provider's answer does not delay the receipt by itself. The receipt waits only when another refund reached the order meanwhile and its share depends on that answer; once the first refund is settled, the receipt is issued on its own. See [A receipt is waiting for a refund](#a-receipt-is-waiting-for-a-refund).
 - **A credit document for each refund after the receipt**, once the receipt is registered. It covers what went back for the goods: money to the card, cash you paid back, or value returned onto gift cards. The part of a refund that gives back a duplicate payment gets none, and neither do points given back (see [How a refund is judged](/admin/sales/refunds-and-disputes#how-a-refund-is-judged)).
@@ -126,42 +126,15 @@ Stripe can report a refund failed days after it went through. If its credit docu
 - **A lost card dispute is credited only if the goods came back**, once you say so with **Settle chargeback (goods)** on the order (see [Card disputes](/admin/sales/refunds-and-disputes#card-disputes)). If the customer kept the goods, the bank took the money back but you did not undo the sale, so no credit document is issued.
 - **Never past the receipt.** If the refunds for goods add up to more than the receipt holds, the part past it gets no credit document, and the order is listed on the [Dashboard](/admin/getting-started/dashboard#alerts) for you to check (see [Clear a receipt difference](#clear-a-receipt-difference)).
 - **One closing credit document** when an order ends without a sale after its receipt, such as a cash-on-delivery parcel that came back.
-- **Orders cancelled before shipping** never get a receipt that reaches the customer. For a courier or locker order whose receipt was already issued, it is cancelled in myDATA (see [below](#receipts-for-courier-and-locker-orders)).
+- **Orders cancelled before shipping** never get a receipt that reaches the customer. For a courier or locker order whose receipt was already issued, it is cancelled in myDATA (see [Receipts for courier and locker orders](/admin/sales/movement-receipts)).
 
 With `MYDATA_AUTO_SUBMIT` off, nothing is issued on its own: use **Issue receipt (myDATA)** and **Issue credit documents (myDATA)** on the order. Pressing them twice never issues twice.
 
 ## Receipts for courier and locker orders
 
-When an order is delivered to the customer by a courier (ACS) or to a locker (BOX NOW), the law asks for a receipt that declares the movement of the goods: where the parcel leaves from, where it goes, and when. AADE must receive it before the courier collects the parcel. So for these orders the receipt is issued earlier than for the others.
+When an order goes by courier (ACS) or to a locker (BOX NOW), the law asks for a receipt that declares the movement of the goods, and AADE must receive it before the courier collects the parcel. So the receipt is issued earlier than for other orders, as soon as the voucher or the locker parcel exists, once you have set your dispatch point. The customer gets it when the parcel leaves.
 
-This applies only when the platform issues your receipts. If you issue them in your own fiscal device or with your provider, nothing changes for you.
-
-### Set your dispatch point
-Tell the platform the place your parcels leave from. Under <span class="sidebar-path">Settings → Store Settings</span> fill in:
-
-| Setting | What to enter |
-|---|---|
-| `MYDATA_LOADING_POSTAL_CODE` | The Greek postcode of the place. Required. |
-| `MYDATA_LOADING_CITY` | The city. Required. |
-| `MYDATA_LOADING_STREET`, `MYDATA_LOADING_NUMBER` | The street and the number. Optional for AADE; fill them in. |
-
-Until the postcode and the city are both set, nothing changes: every receipt, courier orders included, is issued when the order ships and carries no movement. Your <span class="sidebar-path">Dashboard</span> then shows **Set the dispatch point for courier receipts**, with a link to these settings, as long as ACS or BOX NOW is switched on for the store.
-
-### When the receipt is issued and when the customer gets it
-- It is issued as soon as the courier voucher or the locker parcel exists, before the courier collects it. With `MYDATA_AUTO_SUBMIT` on, nothing for you to do. With it off, press **Issue receipt (myDATA)** on the order before you hand the parcel over.
-- The customer does not receive it, and cannot download it, until the parcel leaves. At that moment it is emailed, as for any receipt.
-- The receipt declares the day the voucher was created as the start of the movement, with no time. The receipt's **Movement of goods** box shows it as **Start of movement**, beside the loading and delivery places.
-- Shipping never waits for myDATA. The voucher, the pickup list and the handover go ahead whatever AADE answers.
-- If a new voucher is made after the receipt was issued (a new locker or address), or the parcel leaves more than 5 days after the receipt, the receipt is left as AADE has it and a note on the order, when the parcel ships, says what differs. Check with your accountant how that movement is documented.
-
-### If myDATA does not answer
-The receipt is issued anyway and the parcel ships as usual. It is sent again by itself every few minutes until AADE registers it. While the parcel is still at the store, it is sent again exactly as it was issued. If the parcel leaves before the receipt is registered, the movement started while myDATA was unreachable, so from then on the receipt is sent with AADE's lost-connection indication until it is registered. You do nothing. The Dashboard shows one warning, **Parcels that left while myDATA was unreachable**, with the count of such parcels, and it goes away once their receipts are registered.
-
-### If myDATA refuses the receipt
-The receipt is **Rejected** with AADE's reason on the order, and counted on the Dashboard as **Receipts rejected by myDATA**. The parcel ships all the same. Fix the data, then press **Send receipt to myDATA** on the order. A locker or station whose address the platform does not know is refused the same way, before anything is sent.
-
-### If the order is cancelled before the courier collects the parcel
-The receipt never reached the customer, so it is **cancelled in myDATA**, and no credit document is issued for it. This happens once the courier's answer is known: the parcel was stopped, or there was none to stop. If the courier could not stop the parcel, or did not answer, the goods may be on their way: the receipt then stands, reaches the customer, and any refund is credited as usual. If myDATA does not answer, the cancellation is tried again by itself. If myDATA had refused the receipt before, a note on the order asks you to correct it and press **Send receipt to myDATA**; once it is registered it is cancelled in myDATA, with no credit document. A receipt that is still waiting to be cancelled more than 15 minutes after the order was cancelled shows on the Dashboard as **Receipts of canceled orders not canceled in myDATA**, and the order's notes say why. The cancel and the refund never wait for any of this.
+The [Receipts for courier and locker orders](/admin/sales/movement-receipts) page covers the dispatch point, what the receipt shows, resends when myDATA does not answer, refusals, and what a cancellation does to it.
 
 ## Set up issuing through myDATA
 
@@ -172,7 +145,7 @@ Only for a business exempt from the fiscal device. Ask your accountant first: se
 3. In **Store Settings**, write the legal ground of your exemption in `MYDATA_FHM_EXEMPTION_GROUND`, as your accountant confirms it.
 4. Switch on `MYDATA_ENABLED`, and `MYDATA_AUTO_SUBMIT` if you want documents issued without pressing a button.
 5. `MYDATA_ENVIRONMENT` is `dev` (AADE's test system) by default. Set it to `prod` when you are ready to issue real tax documents.
-6. If you ship with ACS or BOX NOW, set your [dispatch point](#set-your-dispatch-point).
+6. If you ship with ACS or BOX NOW, set your [dispatch point](/admin/sales/movement-receipts#set-your-dispatch-point).
 
 Until myDATA is switched on, with the legal ground and the user ID and key in place, the order page shows no **Invoicing & myDATA** menu. Its **Receipt** card then reads **Issued by the store outside the platform**.
 
