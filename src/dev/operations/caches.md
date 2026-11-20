@@ -753,6 +753,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook, once per storefront tag |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build, beside the sync |
+| `grooveshop-infrastructure/scripts/promote.py` | Prints the warm-up's latest line, with its time, after a promote that moves the storefront; never waits for it |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/custom-page.ts` | Nitro page cache for custom pages |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |
