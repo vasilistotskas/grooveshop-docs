@@ -10,7 +10,7 @@ Application (namespace `monitoring`): VictoriaMetrics stores the series,
 vmalert evaluates the rules, Alertmanager routes them to Discord, and
 Grafana shows them at `grafana.grooveshop.space`, behind its own
 Cloudflare Access application. Grafana signs you in from the Access token
-itself (`auth.jwt` in `victoria-metrics/values.yaml`), so the Access
+itself (`auth.jwt` in `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/values.yaml`), so the Access
 one-time code is the only login; see `docs/operator-dashboards.md` in the
 infrastructure repository. Logs live in VictoriaLogs
 (`app-victoria-logs`); a second vmalert turns log lines into alerts.
@@ -41,18 +41,18 @@ flowchart LR
 
 | Source | Scrape object | What it answers |
 |---|---|---|
-| Traefik | `victoria-metrics/scrapes/vmpodscrape-traefik.yaml` | Every request by Service, by router (one per Ingress host, so one per store) and by status. Django and the storefront export no metrics of their own |
-| Flower | `grooveshop/base/metrics-scrapes.yaml` | Celery task events (`flower_events_total`, including `task-failed`), runtimes, workers online |
+| Traefik | `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/scrapes/vmpodscrape-traefik.yaml` | Every request by Service, by router (one per Ingress host, so one per store) and by status. Django and the storefront export no metrics of their own |
+| Flower | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/metrics-scrapes.yaml` | Celery task events (`flower_events_total`, including `task-failed`), runtimes, workers online |
 | Agent gateway | same file | Routes, status codes, Django upstream latency and outcomes (a caller that hung up is counted `canceled`, not as an upstream failure), rate limiting, tenant cache, failed feed generations (`gateway_feed_generation_failures_total`, any store; the log line names the store), MCP tool calls that reach their handler, by server, tool and outcome (`gateway_tool_calls_total`; each such call also logs one `tool call` line) |
 | Media stream | same file | Sharp pipelines, cache layers, admission control. Requires a bearer token, see below |
 | RabbitMQ | same file | Node metrics from `/metrics`, per-queue depth and consumers from `/metrics/detailed` |
 | Patroni | same file | Primary role, PostgreSQL running, timeline, WAL position |
-| PostgreSQL | same file, from `grooveshop/base/postgres-exporter.yaml` | Connections by state against `max_connections`, transactions, locks, long and idle-in-transaction transactions, deadlocks, database and WAL size, checkpointer, the top 100 statements (normalised text) |
-| Redis | same file, from the `redisExporter` sidecar in `grooveshop/base/redis.yaml` | Memory against `maxmemory`, evictions, hit ratio, clients, AOF size, and whether the last AOF rewrite, AOF write and RDB save succeeded |
+| PostgreSQL | same file, from `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/postgres-exporter.yaml` | Connections by state against `max_connections`, transactions, locks, long and idle-in-transaction transactions, deadlocks, database and WAL size, checkpointer, the top 100 statements (normalised text) |
+| Redis | same file, from the `redisExporter` sidecar in `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis.yaml` | Memory against `maxmemory`, evictions, hit ratio, clients, AOF size, and whether the last AOF rewrite, AOF write and RDB save succeeded |
 | cert-manager, Argo CD controller, Longhorn, VictoriaLogs | `victoria-metrics/scrapes/vmservicescrape-*.yaml` | Certificate Ready and renewal, Application health and sync, volume robustness, log ingestion |
 | Kubernetes | the chart | Nodes, kubelet and cAdvisor, kube-state-metrics, the API server |
 
-`grooveshop/base/metrics-scrapes.yaml` carries no namespace, so each
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/metrics-scrapes.yaml` carries no namespace, so each
 overlay places a copy in its own namespace and production and staging are
 scraped separately. vmagent picks the objects up in every namespace.
 
@@ -71,19 +71,19 @@ selector:
 The chart's own dashboards go to the **Cluster** folder. Dashboards for
 hardware and topologies this cluster does not have (Windows, AIX, macOS,
 multi-cluster, Prometheus) are disabled, and every upstream source is
-pinned to a tag or commit in `victoria-metrics/values.yaml`.
+pinned to a tag or commit in `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/values.yaml`.
 
 To change a dashboard, edit its JSON and push; the dashboards are
 `editable: false` because a change saved in the UI would vanish on the next
-restart. The generator in `victoria-metrics/dashboards/kustomization.yaml`
+restart. The generator in `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/dashboards/kustomization.yaml`
 wraps each file into the ConfigMap the Grafana sidecar loads.
 
 ## Alerts
 
 | Rule file | Covers |
 |---|---|
-| `victoria-metrics/rules/vmrule-grooveshop.yaml` | 5xx on the storefront and API, load shedding, certificates (cert-manager not Ready, served certificate near expiry), Celery task failures, no Celery workers, a queue with work and no consumer, a RabbitMQ memory or disk alarm (`GrooveShopBrokerAlarm`: publishers are blocked; a task queued after a commit (`dispatch_on_commit`) is kept as a `DeferredDispatch` row, and a task published by a running task waits for the broker, so workers stall; [Celery](/dev/django/celery)), no PostgreSQL primary, PostgreSQL unreachable, connection saturation, a transaction idle for over 5 minutes, deadlocks, Redis down or failing to persist, an unhealthy Longhorn volume, Argo CD applications unhealthy or auto-synced and stuck OutOfSync, log ingestion stopped |
-| `victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | Any ERROR, CRITICAL or FATAL log line in production, by container; the storefront rejecting a Django response; a switched-off feature still being called; repeated 5xx with one error code on one route; a checkout or payment flow failing; ACS rejecting tracking polls |
+| `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/rules/vmrule-grooveshop.yaml` | 5xx on the storefront and API, load shedding, certificates (cert-manager not Ready, served certificate near expiry), Celery task failures, no Celery workers, a queue with work and no consumer, a RabbitMQ memory or disk alarm (`GrooveShopBrokerAlarm`: publishers are blocked; a task queued after a commit (`dispatch_on_commit`) is kept as a `DeferredDispatch` row, and a task published by a running task waits for the broker, so workers stall; [Celery](/dev/django/celery)), no PostgreSQL primary, PostgreSQL unreachable, connection saturation, a transaction idle for over 5 minutes, deadlocks, Redis down or failing to persist, an unhealthy Longhorn volume, Argo CD applications unhealthy or auto-synced and stuck OutOfSync, log ingestion stopped |
+| `grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml` | Any ERROR, CRITICAL or FATAL log line in production, by container; the storefront rejecting a Django response; a switched-off feature still being called; repeated 5xx with one error code on one route; a checkout or payment flow failing; ACS rejecting tracking polls |
 | chart (`vmks-rule-*`) | Kubernetes itself, including `TargetDown` for any scrape that fails |
 
 The log rules exist because some failures produce no metric: the tasks
@@ -123,7 +123,7 @@ the router. Traefik names an Ingress router
 `Normalize(namespace-ingress-host+path)`, and the host rules rebuild that
 key from `kube_ingress_path`, which carries the real host. Routers on
 `websecure` carry Traefik's `websecure-` prefix, which the rules strip.
-Router metrics are enabled in `traefik/helmchartconfig.yaml`
+Router metrics are enabled in `grooveshop-infrastructure/manifests/app-constructs/traefik/helmchartconfig.yaml`
 (`addRoutersLabels`).
 
 Dashboards and alerts read these series. Do not filter raw Traefik series
@@ -133,7 +133,7 @@ by a namespace regex.
 
 - Log rules and log panels match the parsed `log.level` field, never the
   message text. Vector nests every JSON log line under `log.*`, so `_msg`
-  holds only the message (`victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml`).
+  holds only the message (`grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml`).
 - Every LogsQL alert carries its own `_time:` window; vmalert's `step` is
   ignored by VictoriaLogs.
 - media-stream's `/metrics` accepts only `Authorization: Bearer` with the
@@ -149,10 +149,10 @@ by a namespace regex.
   restart the single-member database and receive the superuser's
   credentials. It logs in as `postgres_exporter`, a member of `pg_monitor`
   only, which the operator creates on every cluster as an infrastructure
-  role (`postgres-op/v2.0.3/configmap.yaml`). One password is sealed three
+  role (`grooveshop-infrastructure/manifests/app-constructs/postgres-op/v2.0.3/configmap.yaml`). One password is sealed three
   times: for the operator and for each app namespace.
 - The storefront's evlog events have no message key. VictoriaLogs'
-  `VL-Msg-Field` list (`victoria-logs/values.yaml`) falls back to their
+  `VL-Msg-Field` list (`grooveshop-infrastructure/manifests/app-constructs/victoria-logs/values.yaml`) falls back to their
   error text, request path or tag, so their lines are readable. Media
   stream logs JSON in production (`src/main.ts` in its repository).
   Because of that fallback a storefront request's path is its `_msg`,
@@ -216,7 +216,7 @@ by a namespace regex.
   longest long-animation-frame script. The server keeps only the report's
   own fields (`redactClientInpReport`).
 - Traefik's request-duration histograms use 11 buckets from 25 ms to
-  10 s (`traefik/helmchartconfig.yaml`), so a storefront p95 moves when a
+  10 s (`grooveshop-infrastructure/manifests/app-constructs/traefik/helmchartconfig.yaml`), so a storefront p95 moves when a
   render gets faster. No query pins an `le` value.
 - vmalert-vmks loads 42 groups and 264 rules. A different count after a
   change means a selector or a rule file broke.
@@ -227,7 +227,7 @@ by a namespace regex.
   as healthy. Platform Health shows "Scrape targets down", and
   `TargetDown` alerts on it.
 - **Longhorn metrics refused.** Longhorn's own NetworkPolicy admits only
-  its pods; `longhorn-system/setup/networkpolicy-allow-metrics.yaml` opens
+  its pods; `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` opens
   port 9500 to vmagent. Remove it and both manager targets go down.
 - **media-stream target returns 401.** The pod and the VMPodScrape
   disagree on the token, or the Secret was rotated without the pods

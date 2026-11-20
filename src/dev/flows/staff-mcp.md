@@ -80,7 +80,7 @@ The scope table is `STAFF_SCOPE_PERMISSIONS` (`src/agent/staff.py`). The role co
 - **A staff token never opens the shopper surface.** It is not in the store's token table, and its resource is not `/mcp`.
 - **No structured field carries a street or phone.** Order detail carries city and country; customers carry name, email and order counts. Free text is the exception: a review, an order note or a contact message is returned as the customer wrote it (marked untrusted), street or phone included.
 - **No customer data or token in logs.** The gateway logs the tool, store, outcome and duration of each call. Django's request log already redacts `Authorization`.
-- **The platform host keeps its basic-auth.** The connect host serves only the issuer (`src/agent/urls_connect.py`), so leaving it outside basic-auth opens nothing else. On staging, the connect host's browser pages stay behind staging basic-auth (`overlays/staging/ingress-connect.yaml`).
+- **The platform host keeps its basic-auth.** The connect host serves only the issuer (`src/agent/urls_connect.py`), so leaving it outside basic-auth opens nothing else. On staging, the connect host's browser pages stay behind staging basic-auth (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-connect.yaml`).
 
 ## Failure modes
 

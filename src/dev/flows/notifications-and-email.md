@@ -146,9 +146,30 @@ schema-scoped, so a ticket minted on one tenant finds nothing on another.
 The storefront side is `app/plugins/websocket.client.ts`. It fetches a
 ticket through `server/api/websocket/user/ticket.get.ts`, connects to
 `wss://{apiDomain}/ws/notifications/?ticket=…`, disables automatic
-reconnect (the ticket is spent) and reconnects manually with exponential
-backoff, fetching a fresh ticket each time. A `BroadcastChannel` keeps
-tabs in step.
+reconnect (the ticket is spent) and reconnects manually, fetching a fresh
+ticket each time. A `BroadcastChannel` keeps tabs in step.
+
+**Reconnecting.** Every attempt that fails schedules the next: a socket
+that drops, and a ticket that cannot be fetched (the network down, a 5xx).
+Two cases stop it. A 401 or 403 on the ticket means the session is gone, and
+goes through `auth:change`. A store with no API host to connect to (neither
+the tenant's `apiDomain` nor `NUXT_PUBLIC_DJANGO_HOST_NAME`) gets a warning
+and no socket, and no retry follows: a retry cannot fix configuration, so
+the socket stays off until the host is set and the page is reloaded. The delay starts at `RECONNECT_BASE_DELAY_MS`
+(1 s) and doubles up to `RECONNECT_MAX_DELAY_MS` (30 s). It starts over
+only after a socket the server answered `STABLE_ANSWERED_HEARTBEATS` times
+(two pongs, about a minute of proven life), so a socket that opens and is
+closed again soon cannot reconnect every second. Each attempt carries a
+number that every close and every new attempt moves. A ticket that arrives
+after a sign-out, or after a newer attempt started, opens nothing, and the
+late close event of a socket closed on purpose neither schedules a
+reconnect nor logs a line. A drop is logged as one browser line
+(`Disconnected`, with the close code, the attempt and the delay), and a
+sign-out as one (`Closed`), since every line is a request to
+`/api/_evlog/ingest`, which `server/middleware/2.evlog-ingest-rate-limit.ts`
+limits per IP and store; the
+socket's `error` event is not logged, because a browser gives it no detail
+and the close that follows carries the code.
 
 **The heartbeat.** The plugin sends `ping` every 30 seconds and closes a
 socket that sends nothing back within 5 seconds of a ping (any frame
@@ -160,10 +181,12 @@ notification handler, which reads JSON only. The two sides share the
 strings (`HEARTBEAT_PING` and `HEARTBEAT_PONG` in the consumer, the same
 names in the plugin), so a change to one changes both; the interval and
 the timeout are the plugin's alone (`HEARTBEAT_INTERVAL_MS`,
-`HEARTBEAT_PONG_TIMEOUT_MS`). A consumer that does not answer makes every
-signed-in tab reconnect about every 36 seconds; a client that does not
-treat `pong` as the answer parses it as a notification and logs
-`ws:parse` every 30 seconds.
+`HEARTBEAT_PONG_TIMEOUT_MS`). A consumer that does not answer gets every
+socket closed at the first pong deadline, 35 seconds after it opens, unless
+some other frame (a notification) arrived in those 5 seconds; the reconnect
+delay then grows to its cap; a client that does not treat
+`pong` as the answer parses it as a notification and logs `ws:parse`
+every 30 seconds.
 
 ### The email system
 
@@ -770,5 +793,6 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `dispatch_on_commit` |
 | `grooveshop-django-api/src/core/templates/emails/` | Every template pair and `base/email_base.html` |
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/websocket.client.ts` | Connect, heartbeat, reconnect, cross-tab broadcast |
+| `grooveshop-storefront-ui-node-nuxt/server/middleware/2.evlog-ingest-rate-limit.ts` | The per-IP, per-store limit on the browser-log ingest the socket's lines go through |
 | `grooveshop-storefront-ui-node-nuxt/server/api/websocket/user/ticket.get.ts` | Ticket proxy |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/` | Mailpit patches |

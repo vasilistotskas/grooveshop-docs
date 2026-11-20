@@ -53,11 +53,13 @@ If a new voucher is made after the receipt was issued (a new locker, station or 
 
 ## If myDATA does not answer
 
-The receipt is issued anyway and the parcel ships as usual. The receipt is sent again by itself about every 15 minutes until AADE registers it.
+The receipt is issued anyway and the parcel ships as usual. The receipt is sent again by itself, about every 15 minutes, until AADE registers it. Plain receipts and credit documents are sent again the same way, not only these.
 
+- A send that is still waiting for AADE's answer is never sent over. It is sent again only once the time it had to answer has passed, which can be a little longer than 15 minutes.
 - While the parcel is still at the store, it is sent again exactly as it was issued. If the day has changed, only the date of the movement moves to today, because AADE refuses an earlier one.
 - Before each new send, the platform asks AADE whether it already holds the receipt, so it is never registered twice.
-- If the parcel leaves before the receipt is registered, the movement started while myDATA was unreachable. From then on the receipt is sent with AADE's lost-connection indication until it is registered.
+- If the parcel leaves while a send of the receipt has no answer, the movement started while myDATA was unreachable. The receipt is then built again and sent with AADE's lost-connection indication, and every later send carries it until the receipt is registered. A receipt AADE refused is not marked this way: that is no loss of connection.
+- If AADE refuses the store's credentials, the receipt keeps being tried about every 15 minutes until they work, with one note on the order.
 
 You do nothing. The Dashboard shows one warning, **Parcels that left while myDATA was unreachable**, with the count of such parcels, and it goes away once their receipts are registered.
 
@@ -84,7 +86,7 @@ The cancel and the refund never wait for any of this.
 
 Sometimes myDATA does not find the receipt at all with the store's current myDATA credentials. It may be registered, or already cancelled, under other credentials, for example after a change of VAT number or of credentials, or between the test and the real system. Cancelling it again changes nothing, and a credit document could count the same tax document twice, so the platform does not decide for you.
 
-- The receipt is held for you. One note on the order says so, and nothing is done automatically after that. The note reads: "myDATA cannot see receipt … with the store's current myDATA credentials … Check with your accountant whether it was registered or canceled under other credentials, then press "Cancel receipt in myDATA" or "Issue credit documents (myDATA)". It is not settled automatically."
+- The receipt is held for you. One note on the order says so, and nothing is done automatically after that. The note reads: "myDATA cannot see receipt … with the store's current myDATA credentials: it answers its cancel with 301 (not found) and does not list it. Check with your accountant whether it was registered or canceled under other credentials, then press "Cancel receipt in myDATA (issued in error)" or "Issue credit documents (myDATA)". It is not settled automatically."
 - It stays on the Dashboard as **Receipts of canceled orders not canceled in myDATA**.
 - Check with your accountant whether it was registered or cancelled under other credentials. Then on the order press **Cancel receipt in myDATA (issued in error)** once myDATA sees it, or **Issue credit documents (myDATA)** to release it to the normal credit path: the receipt stands, reaches the customer, and its credit document is issued.
 

@@ -111,7 +111,7 @@ a task killed mid-run is redelivered, so bodies must be idempotent.
   it runs in `public` and could never prune per-tenant tables.
   `tenant/migrations/0039` drops the ones an earlier `TENANT_APPS` entry
   created.
-  **No Deployment overrides the backend** — `base/backend.yaml` carries an
+  **No Deployment overrides the backend** — `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` carries an
   explicit comment saying so on all four backend containers, because the
   results used to go to Redis DB 1 and shared one `allkeys-lru` budget
   with the Django cache. `src/settings/celery.py` then narrows what gets

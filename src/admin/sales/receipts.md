@@ -87,6 +87,8 @@ Once the receipt has a MARK, **VAT Rate** is read-only.
 2. **Send receipt to myDATA** resends a receipt that was rejected or never answered. **Issue credit documents (myDATA)** does the same for the credit documents.
 3. Refresh the list to see the new status and the MARK.
 
+You rarely need it for a document AADE never answered: the platform sends a receipt or a credit document whose send got no answer again by itself, about every 15 minutes, until AADE registers it. A send still waiting for AADE's answer is never sent over: it is sent again only once its time to answer has passed. A rejected document waits for you, because AADE refused its content or the store's credentials.
+
 ### Cancel a document issued in error
 Use **Cancel receipt in myDATA (issued in error)** on the order, or **Cancel in myDATA (issued in error)** on the credit documents list. AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, so in practice the right tool is almost always a credit document.
 

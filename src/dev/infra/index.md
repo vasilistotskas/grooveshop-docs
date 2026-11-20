@@ -13,7 +13,7 @@ app-of-apps layout. A push to this repository is a deploy.
 
 | Path | Role |
 |---|---|
-| `manifests/app-root.yaml` | The root Application pointing at `app-directory/` |
+| `grooveshop-infrastructure/manifests/app-root.yaml` | The root Application pointing at `app-directory/` |
 | `manifests/app-directory/` | One Argo CD Application per component: the platform app, its staging twin, the two tenant ApplicationSets, Argo CD itself, and the operators (cert-manager, Longhorn, Postgres, Redis, RabbitMQ, Reloader, Sealed Secrets, VictoriaLogs) |
 | `manifests/app-constructs/grooveshop/base/` | Deployments, Services, ConfigMaps, HPAs, PDBs, shared Traefik middlewares, and the `Redis`, `RabbitmqCluster` and `postgresql` custom resources. The docs site is here too (`docs.yaml`) |
 | `manifests/app-constructs/grooveshop/overlays/production/`, `overlays/staging/` | Ingresses, sealed secrets, patches, and one directory per tenant under `tenants/` (copy `TEMPLATE`) |
@@ -21,7 +21,7 @@ app-of-apps layout. A push to this repository is a deploy.
 | `docs/` | Runbooks: deploying, staging, tenant onboarding, missing secrets, sealed-secrets keys |
 | `untracked/` | Gitignored: plaintext secrets, `seal.sh`, local scripts |
 
-Image tags are pinned in `manifests/app-directory/app-grooveshop.yaml`
+Image tags are pinned in `grooveshop-infrastructure/manifests/app-directory/app-grooveshop.yaml`
 in **six** places: five kustomize images (Django, storefront, media stream,
 agent gateway, docs) and the PreSync hook's Helm tag, which must equal the
 Django tag. Chart and image versions are read from the manifests, never

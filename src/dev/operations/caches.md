@@ -222,19 +222,31 @@ plain. To read an entry by hand, strip the `br:`, base64-decode and
 brotli-decompress it.
 
 The `storefront-warm` Deployment fills the new namespace
-(`scripts/warm-cache.mjs`, run from the storefront image; a Deployment beside
-the sync rather than a PostSync hook, so a warm-up that grows with the page
-count never holds the sync open): every page in
+(`scripts/warm-cache.mjs`, run from the storefront image): every page in
 every store's sitemap, plus its twin in each other locale the store
 serves (read from the home page's `hreflang` alternates, because the
 sitemap lists products and posts in the default locale only), for every
-device class, the page and its `_payload.json`, shallowest pages first. It
-runs once per build: it records the build in the `storefront-rollout-state`
-ConfigMap (key `warmedBuild`) after a complete run, and a sync that keeps
-the storefront build logs `build already warm` and requests nothing. A
-second pass after a Django-only release forced every stale page to
-revalidate at once against a backend that had just restarted (2026-10-20:
-3-10 s first loads on demo).
+device class, the page and its `_payload.json`, shallowest pages first.
+It is not an Argo CD hook: a hook holds the sync open until it finishes,
+and the warm-up held production deploys for 7-16 minutes until a promote
+timed out on it (2026-11-20). Its pod is replaced when the storefront tag
+moves, waits for the `frontend-nuxt` and `backend` rollouts itself, then
+renders on every ready storefront pod at once, one page at a time on each,
+re-reading the pods so one the HPA adds gets its share. Through the
+Service, its keep-alive connections had put every render on one pod in
+most runs. It runs once per build: it records the build in the
+`storefront-rollout-state` ConfigMap (key `warmedBuild`) after a complete
+run, and a restarted pod of a warm build logs `build already warm` and
+requests nothing. A second pass forces every stale page to revalidate at
+once against a backend that may have just restarted (2026-10-20: 3-10 s
+first loads on demo). A try that leaves the build unrecorded (a sitemap
+that answered 503, a store with nothing rendered, pages no pod was left
+for) is repeated with the sitemaps read again, up to `attempts` tries
+`retrySeconds` apart (the chart's `values.yaml`). A run that cannot start,
+or whose last try still left the build unrecorded, logs an `error` line,
+which `GrooveShopLoggedErrors` reports, and runs again only when its pod
+next starts. After a promote that moves the storefront, `promote.py`
+prints its latest line with its time; it never waits for it.
 
 The tenant host sits in a different place in each key family, and the
 purge endpoint's host scoping (`server/utils/cacheKey.ts:
@@ -567,7 +579,7 @@ host, full size (`…/0/0/inside/center/transparent/0/90.{format}`), so an
 old link (a pin, an image search result, rich text) keeps working and a
 suspended store's images are refused there; anything under `/media` that
 media-stream does not serve as an image is 404 in public
-(grooveshop-infrastructure `base/static.yaml`). A suspension therefore
+(grooveshop-infrastructure `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/static.yaml`). A suspension therefore
 moves no file: refusing the store is media-stream's job, and the flush only
 drops cached copies. Reactivating flushes and purges again, which makes
 media-stream serve the store at once and drops what was cached while it
@@ -658,7 +670,7 @@ Two purges keep the edge honest (`src/core/cache/edge.py`):
   five a minute per account. On the public schema it purges every store.
 - **After a storefront deploy.** The `backend-edge-purge` PostSync hook
   runs `manage.py purge_edge_cache`, which purges the `storefront-html` tag
-  from every zone before the warm-up: an edge copy from the previous build
+  from every zone: an edge copy from the previous build
   points at `/_nuxt` chunks the new pods no longer serve. It purges only
   when the storefront tag moved: it records the tag it purged for in the
   `storefront-rollout-state` ConfigMap (key `edgePurgedStorefront`) after
@@ -740,7 +752,8 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/src/core/cache/edge.py`, `src/core/tasks.py` (`purge_edge_cache_task`), `src/core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy; by prefix for a tenant's media (`tenant_media_purges`, `purge_media`) |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook, once per storefront tag |
-| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build, beside the sync |
+| `grooveshop-infrastructure/scripts/promote.py` | Prints the warm-up's latest line, with its time, after a promote that moves the storefront; never waits for it |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/custom-page.ts` | Nitro page cache for custom pages |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |

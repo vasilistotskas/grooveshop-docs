@@ -1,3 +1,18 @@
+## [1.2.247](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.246...v1.2.247) (2026-11-20)
+
+## [1.2.246](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.245...v1.2.246) (2026-11-20)
+
+## [1.2.245](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.244...v1.2.245) (2026-11-20)
+
+
+### Bug Fixes
+
+* **check-claims:** fail a bare path no checked-out repository has ([#184](https://github.com/vasilistotskas/grooveshop-docs/issues/184)) ([3b66537](https://github.com/vasilistotskas/grooveshop-docs/commit/3b66537f96c77d1fd9f7bc16b73611728efb1e86))
+
+## [1.2.244](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.243...v1.2.244) (2026-11-20)
+
+## [1.2.243](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.242...v1.2.243) (2026-11-19)
+
 ## [1.2.242](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.241...v1.2.242) (2026-11-18)
 
 ## [1.2.241](https://github.com/vasilistotskas/grooveshop-docs/compare/v1.2.240...v1.2.241) (2026-11-18)
