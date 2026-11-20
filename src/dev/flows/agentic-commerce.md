@@ -36,7 +36,7 @@ flowchart TD
   Gate -- "yes" --> Ident["optional bearer verify"]
   Ident --> Tools["MCP tools"]
   Tools --> API["Django REST, X-Forwarded-Host"]
-  Tools --> Sess["Redis ag:schema:cs:v5:id"]
+  Tools --> Sess["Redis ag:schema:cs:v7:id"]
 
   Platform["UCP / ACP platform"] --> Profile["/.well-known/ucp"]
   Platform --> ACP["/acp/checkout_sessions"]
@@ -726,7 +726,7 @@ capabilitiesOf`); with promotions off every submitted code comes back in
 A UCP or ACP checkout is a session in the gateway's Redis
 (`internal/checkout/store.go`, `internal/checkout/session.go`).
 
-- **Keys.** `ag:{schema}:cs:v5:{id}` is the session, that plus `:lock` its
+- **Keys.** `ag:{schema}:cs:v7:{id}` is the session, that plus `:lock` its
   lock, that plus `:order` the order it placed. The version is of how sessions
   are written, not only of their shape: it moves whenever an older pod writing
   the key its own way could undo what a newer one relies on, so the two never
