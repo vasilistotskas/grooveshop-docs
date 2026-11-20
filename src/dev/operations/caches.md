@@ -221,8 +221,10 @@ it; a value under 1 KiB (a rate-limit counter, a tenant epoch) is stored
 plain. To read an entry by hand, strip the `br:`, base64-decode and
 brotli-decompress it.
 
-The `storefront-warm` PostSync hook fills the new namespace
-(`scripts/warm-cache.mjs`, run from the storefront image): every page in
+The `storefront-warm` Deployment fills the new namespace
+(`scripts/warm-cache.mjs`, run from the storefront image; a Deployment beside
+the sync rather than a PostSync hook, so a warm-up that grows with the page
+count never holds the sync open): every page in
 every store's sitemap, plus its twin in each other locale the store
 serves (read from the home page's `hreflang` alternates, because the
 sitemap lists products and posts in the default locale only), for every
@@ -738,7 +740,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/src/core/cache/edge.py`, `src/core/tasks.py` (`purge_edge_cache_task`), `src/core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy; by prefix for a tenant's media (`tenant_media_purges`, `purge_media`) |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/edge-cache.ts`, `server/utils/edgeCache.ts` | Edge directive and cache tags |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/edge-purge-job.yaml` | Post-deploy purge hook, once per storefront tag |
-| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm-job.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/storefront-warm-helm/templates/warm.yaml`, `grooveshop-storefront-ui-node-nuxt/scripts/warm-cache.mjs` | Post-deploy warm-up, once per storefront build |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/custom-page.ts` | Nitro page cache for custom pages |
 | `grooveshop-storefront-ui-node-nuxt/server/handlers/rss-feed.ts`, `server/utils/rssFeed.ts`, `shared/constants/feeds.ts` | The RSS feeds, their `rss:*` cached functions and edge headers |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-store-urls.ts`, `server/utils/sitemapStoreUrls.ts`, `server/utils/sitemapIncomplete.ts`, `server/plugins/sitemap-tenant-gate.ts` | The sitemap's store URLs; an incomplete sitemap answers 503 and is cached nowhere |

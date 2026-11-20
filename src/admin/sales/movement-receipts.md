@@ -13,7 +13,16 @@ This applies only when the platform issues your receipts through myDATA. If you 
 
 ## Set your dispatch point
 
-Tell the platform the place your parcels leave from. Under <span class="sidebar-path">Settings → Store Settings</span> there are four settings for it: the street, the number, the postcode (a Greek one) and the city of that place. The quickest way to them is the **Open the dispatch point settings** link of the Dashboard alert below.
+Tell the platform the place your parcels leave from. Under <span class="sidebar-path">Settings → Store Settings</span> there are four dispatch point settings, one for each part of that place's address:
+
+| Setting | What to enter |
+|---|---|
+| `MYDATA_LOADING_STREET` | The street. |
+| `MYDATA_LOADING_NUMBER` | The street number. |
+| `MYDATA_LOADING_POSTAL_CODE` | The postcode, a Greek one. |
+| `MYDATA_LOADING_CITY` | The city. |
+
+The quickest way to them is the **Open the dispatch point settings** link of the Dashboard alert below.
 
 All four are needed. The place is also the address the receipt gives for your store, and AADE requires the street number of it. Until all four are filled in, nothing changes: every receipt, courier orders included, is issued when the order ships and carries no movement.
 
@@ -44,7 +53,7 @@ If a new voucher is made after the receipt was issued (a new locker, station or 
 
 ## If myDATA does not answer
 
-The receipt is issued anyway and the parcel ships as usual. The receipt is sent again by itself every few minutes until AADE registers it.
+The receipt is issued anyway and the parcel ships as usual. The receipt is sent again by itself about every 15 minutes until AADE registers it.
 
 - While the parcel is still at the store, it is sent again exactly as it was issued. If the day has changed, only the date of the movement moves to today, because AADE refuses an earlier one.
 - Before each new send, the platform asks AADE whether it already holds the receipt, so it is never registered twice.
@@ -58,7 +67,7 @@ The receipt is marked **Rejected** with AADE's reason on the order, and counted 
 
 Missing data is caught before anything is sent: a store name that is blank, or a buyer without a name, a country or a full address, is refused at once with the reason on the order.
 
-A locker or station whose address the platform does not know yet is refused the same way, once, with a note. The receipt is then built again by itself every few minutes until the next sync of the carrier's list adds that address, so you normally do nothing.
+A locker or station whose address the platform does not know yet is also marked **Rejected**, before anything is sent. The order's history gets one note, "myDATA rejected …: PICKUP …", and the code shown on the receipt is `PICKUP`. The receipt is then built again by itself about every 15 minutes, and goes out once the next sync of the carrier's list has added that address, so you normally do nothing. If the address never appears, check the pickup point with the carrier.
 
 ## If the order is cancelled before the courier collects the parcel
 
@@ -75,7 +84,7 @@ The cancel and the refund never wait for any of this.
 
 Sometimes myDATA does not find the receipt at all with the store's current myDATA credentials. It may be registered, or already cancelled, under other credentials, for example after a change of VAT number or of credentials, or between the test and the real system. Cancelling it again changes nothing, and a credit document could count the same tax document twice, so the platform does not decide for you.
 
-- The receipt is held for you. One note on the order says that myDATA cannot see it, and nothing is done automatically after that.
+- The receipt is held for you. One note on the order says so, and nothing is done automatically after that. The note reads: "myDATA cannot see receipt … with the store's current myDATA credentials … Check with your accountant whether it was registered or canceled under other credentials, then press "Cancel receipt in myDATA" or "Issue credit documents (myDATA)". It is not settled automatically."
 - It stays on the Dashboard as **Receipts of canceled orders not canceled in myDATA**.
 - Check with your accountant whether it was registered or cancelled under other credentials. Then on the order press **Cancel receipt in myDATA (issued in error)** once myDATA sees it, or **Issue credit documents (myDATA)** to release it to the normal credit path: the receipt stands, reaches the customer, and its credit document is issued.
 
