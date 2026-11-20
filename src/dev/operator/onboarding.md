@@ -122,7 +122,7 @@ opt-in, and it needs its own DNS, ingress hosts, certificates and domain
 rows. See [Domains & certificates](/dev/operator/domains).
 
 An unmapped host that resolves to the cluster but has no tenant ingress
-hits `overlays/production/ingress-tenant-catchall.yaml`: HTTP only,
+hits `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-tenant-catchall.yaml`: HTTP only,
 priority 1, redirect to HTTPS, where the handshake then fails for want of
 a certificate. That visible TLS error is the intended signal that the
 ingress step has not happened yet.
@@ -371,7 +371,7 @@ cp -r manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE \
 ```
 
 The template renders **five** Ingress objects
-(`tenants/TEMPLATE/ingress.yaml`):
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml`):
 
 | Ingress | Hosts / paths | Middleware chain | TLS secret |
 |---|---|---|---|
@@ -392,7 +392,7 @@ Three certificates per store: `<slug>-tls`, `<slug>-www-tls`,
 Two rules that have each cost an incident:
 
 - **Do not add the directory to
-  `overlays/production/kustomization.yaml`.** The ApplicationSet already
+  `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/kustomization.yaml`.** The ApplicationSet already
   generates a `tenant-<slug>` Application from it. Listed in both, the
   same Ingress objects sit under two Applications that each run
   `prune: true` and `selfHeal: true`; each reads the other's tracking
@@ -407,7 +407,7 @@ Two rules that have each cost an incident:
 
 ## 7. Argo sync
 
-`manifests/app-directory/appset-grooveshop-tenants.yaml` watches every
+`grooveshop-infrastructure/manifests/app-directory/appset-grooveshop-tenants.yaml` watches every
 directory under `overlays/production/tenants/` except `TEMPLATE` and
 generates a `tenant-<slug>` Application per directory, with
 `prune: true`, `selfHeal: true` and a `resources-finalizer`. Pushing the
@@ -545,7 +545,7 @@ Its DNS, certificate-ownership and blast-radius sections are still
 accurate and are the reason this page repeats them.
 
 One stale comment sits outside that runbook: the header of
-`manifests/app-directory/appset-grooveshop-tenants.yaml` still says "Zero
+`grooveshop-infrastructure/manifests/app-directory/appset-grooveshop-tenants.yaml` still says "Zero
 instances render today (only TEMPLATE exists, and it is excluded)". Three
 production tenant directories exist under
 `overlays/production/tenants/`, so the generator renders three

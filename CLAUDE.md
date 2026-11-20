@@ -29,7 +29,7 @@ pnpm check:admin      # fails if the admin guide names anything from the codebas
 pnpm check:claims     # fails if a page cites a file that no longer exists, or a sidebar path the admin menu does not have
                       # (needs the sibling repos; it reports what it could not check)
 pnpm typecheck        # vue-tsc over .vitepress/
-pnpm test             # synced reference pages build whatever HTML-looking text they hold
+pnpm test             # synced reference pages build whatever HTML-looking text they hold; the gates' own tests
 ```
 
 `sync:sources` expects every GrooveShop repository checked out as a sibling
@@ -55,7 +55,7 @@ root than the gates read the code from (CI does). Sources are declared in
 
 These are the quality gate that makes the docs usable by AI agents. They are not optional.
 
-- **Source of truth is the code.** Every developer page names the files it describes (repo-relative paths in backticks) in a "Source" line or table, so an agent can verify before acting. If a claim cannot be tied to a file, do not make it.
+- **Source of truth is the code.** Every developer page names the files it describes (repo-relative paths in backticks) in a "Source" line or table, so an agent can verify before acting. If a claim cannot be tied to a file, do not make it. A file of the private `grooveshop-infrastructure` is always cited with its repository and its full path (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`): CI cannot read that repository, so `pnpm check:claims` judges every other path against the public ones and fails a bare path it does not find.
 - **No dependency versions in prose** (workspace rule). Name a major only where it changes how code is written.
 - **Greek is written natively**, never machine-translated, and every Greek admin page has the same path as its English twin under `/el/`. Add a page to both sidebars in the same change.
 - **The admin guide names NOTHING from the codebase.** No file paths, module, class, constant or app-label names, no "built by"/"rendered by" phrasing. The reader is a shop owner. On-screen labels, sidebar paths, admin URLs and the keys listed in Settings → Store Settings are allowed, because the reader sees those. Full rule and rewrite examples in `AUTHORING.md`. Developer pages are the opposite and must cite sources.

@@ -242,9 +242,9 @@ the preview and the order cannot disagree. The cart serializer exposes it as
 `freeThresholdValue` (`src/cart/serializers/cart.py:
 get_free_threshold_value`). The storefront compares every "free above X"
 with it, never with the cart total: `useCheckoutForm.ts` sends it as the
-shipping options' `orderValueAmount`, `app/utils/payWayCost.ts:
-payWayDisplayCost` waives the displayed fee on it, and the free-shipping
-notices read it. Before this, free shipping compared the gross cart total
+shipping options' `orderValueAmount`, the pay-way fee shown is the quote's own
+(`useQuotedPayWayOptions.ts`, from the quote's `payWays`, already 0 when
+waived), and the free-shipping notices read it. Before this, free shipping compared the gross cart total
 and the fee compared products plus shipping, so a cart just under a
 threshold could pay shipping and skip the fee.
 
@@ -381,9 +381,9 @@ and what the order stores).
   and the count are one step under the budget's lock, and the codes are read by
   the route's own request serializer so a JSON list, repeated form keys and
   indexed form keys are counted as they are priced.
-- **Not yet moved onto it.** The storefront's
-  `app/composables/useCheckoutTotals.ts` and the gateway's
-  `internal/checkout/pricing.go` still compute totals of their own.
+- **Not yet moved onto it.** The gateway's `internal/checkout/pricing.go`
+  still computes totals of its own. The storefront has moved: it adds up no
+  total and prints this quote (`app/composables/useCheckoutQuote.ts`).
 
 **The provider is asked before the transaction opens.**
 `create_order_from_cart` is not `@transaction.atomic`, and neither is
@@ -857,7 +857,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/shipping/enum/refusal.py` | `ShippingRefusal`: the quote's coded delivery refusals |
 | `grooveshop-django-api/src/core/api/throttling.py` | `CartQuoteThrottle`, `CartQuoteAnonThrottle`, `gift_card_code_throttles`, `GiftCardCodeThrottle` |
 | `grooveshop-django-api/src/shipping_acs/carrier.py` | `AcsCarrier._fetch_live_quote`: the cached live price |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutTotals.ts`, `grooveshop-agent-gateway/internal/checkout/pricing.go` | The totals the storefront and the gateway still compute themselves |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutQuote.ts` | The checkout's total, rows and amount due: Django's quote, nothing added up in the storefront |
+| `grooveshop-agent-gateway/internal/checkout/pricing.go` | The totals the gateway still computes itself |
 | `grooveshop-django-api/src/order/managers/order.py` | `holding_stock_for_online_payment`, the set the unpaid-order limit counts |
 | `grooveshop-django-api/src/order/exceptions.py` | `UnpaidOrderLimitError` |
 | `grooveshop-django-api/src/order/models/order.py` | `PAYMENT_ID_UNIQUE_CONSTRAINT` and the partial unique index on `payment_id` |
@@ -889,7 +890,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/pay_way/migrations/0019_seed_default_pay_ways.py` | Which pay-ways a fresh tenant gets |
 | `grooveshop-django-api/src/cart/views/cart.py` | `reserve_stock`, `release_reservations`, `quote`, `create_payment_intent` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutForm.ts` | Zod step schemas, shippable countries, shipping options (quoted on `freeThresholdValue`) and their error state, pay-way loading |
-| `grooveshop-storefront-ui-node-nuxt/app/utils/payWayCost.ts` | `payWayDisplayCost`: the fee shown, waived on `freeThresholdValue` |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useQuotedPayWayOptions.ts` | The pay-way fee shown: the quote's `payWays` row, 0 when waived |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/phone.ts` | `normalizePhone`, `isPlausiblePhone`, `stripDialCodeForDisplay`, `dialCodeLabel` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useCheckoutSubmit.ts` | Submit orchestration, idempotency key, the three payment flows |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useOrderAttribution.ts` | Per-tab landing capture and the override rule |

@@ -127,12 +127,12 @@ placeholders may be present at build time. The same applies to any
 ## Invariants
 
 - `base/` contains no Secret and no SealedSecret; only overlays do
-  (`manifests/app-constructs/grooveshop/base/kustomization.yaml`).
+  (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/kustomization.yaml`).
 - `untracked/` is gitignored; `seal.sh` reads from it and writes into the
   overlay (`.gitignore`, `untracked/secrets/seal.sh`).
 - The backend refuses to start in production without `SECRET_KEY` and
   `CELERY_BROKER_URL` (`src/settings/env.py`, `src/settings/celery.py`); Flower refuses to start without
-  `FLOWER_BASIC_AUTH` (`base/backend.yaml`).
+  `FLOWER_BASIC_AUTH` (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`).
 - Merchant credentials have no env fallback (`src/tenant/credentials.py`).
 - Purge and internal-admin tokens are used only from inside the cluster.
 

@@ -87,7 +87,7 @@ are cached with the store host's own rules.
 | `basemap.json` answers 404 | The archive is missing: the `seed` init container's log, then run a refresh |
 | A refresh Job failed | Its log. Nothing is renamed before `verify` passes, so the old archive keeps serving |
 | Tiles blank when zoomed in somewhere | Outside the region; add it to `region.geojson` and refresh |
-| "My location" in the locker picker always says access is not allowed | The storefront's `Permissions-Policy` must allow `geolocation=(self)` (`base/ingress-traefik.yaml`, `security-headers`) |
+| "My location" in the locker picker always says access is not allowed | The storefront's `Permissions-Policy` must allow `geolocation=(self)` (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/ingress-traefik.yaml`, `security-headers`) |
 
 ## Source
 

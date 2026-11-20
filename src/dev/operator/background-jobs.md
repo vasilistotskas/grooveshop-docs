@@ -45,7 +45,7 @@ Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `src/settings/cel
 `TIME_ZONE`, default `Europe/Athens`, with `CELERY_ENABLE_UTC = True`.
 
 - **A restart loses nothing.** Beat runs as one pod with the `Recreate` strategy
-  (`base/backend.yaml` in `grooveshop-infrastructure`), so each deploy leaves a
+  (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` in `grooveshop-infrastructure`), so each deploy leaves a
   short gap. A run is saved as soon as it is sent, and the new pod sends an overdue
   entry once, however many slots passed.
 - **A failed publish is sent again** rather than waiting for the next slot, so a
@@ -57,7 +57,7 @@ Celery's crontab decides, in Athens time: `CELERY_TIMEZONE` in `src/settings/cel
   goes quiet: on 2026-10-25 a `*/5` job had a 65-minute gap, a `*/15` job 75 and
   an hourly job 120. No job ran twice. Nothing here needs that hour.
 
-`GrooveShopBeatSilent` (`victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml`
+`GrooveShopBeatSilent` (`grooveshop-infrastructure/manifests/app-constructs/victoria-metrics/logs-alerting/vmrule-grooveshop-logs.yaml`
 in `grooveshop-infrastructure`) fires when beat sends nothing for 15 minutes,
 because the liveness probe only checks that the process exists. It fires once
 a year for that repeated hour, and that one needs no action.

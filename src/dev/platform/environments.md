@@ -83,14 +83,14 @@ authenticates the order-event push the other way.
 | Argo CD | `app-grooveshop-staging`, **manual sync only**; `appset-grooveshop-staging-tenants` generates one Application per `overlays/staging/tenants/*` |
 | Access | Traefik basic auth (`middleware-basic-auth.yaml`, secret `staging-basic-auth`) on HTML and API hosts; the asset origins and the payment/carrier webhook paths are exempt (`ingress-webhooks.yaml`) |
 | Platform hosts | `platform-staging.grooveshop.space`, `assets-staging.grooveshop.space`, `static-staging.grooveshop.space`, `docs-staging.grooveshop.space` |
-| Email | The backend and Celery worker patches set `EMAIL_HOST=mailpit` (`overlays/staging/patches/backend-deployment-patch.yaml`); the inbox is reached with `kubectl port-forward svc/mailpit 8025:8025`, never through an ingress, because the database is a clone of production |
+| Email | The backend and Celery worker patches set `EMAIL_HOST=mailpit` (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/patches/backend-deployment-patch.yaml`); the inbox is reached with `kubectl port-forward svc/mailpit 8025:8025`, never through an ingress, because the database is a clone of production |
 | Gateway | `ENV=staging`: production network rules, sandbox payment-handler label |
 
 `scripts/staging-refresh.sh` in the infrastructure repo dumps and restores
 production's database and media into staging, rewrites production
 hostnames to their staging twins, rebuilds the search indexes, re-seeds
 the demo tenant and arms every feature on the clone
-(`scripts/staging-arm-features.py`). Two consequences to remember every
+(`grooveshop-infrastructure/scripts/staging-arm-features.py`). Two consequences to remember every
 time:
 
 - The refresh **re-clones production's credentials** over the tenant
@@ -98,7 +98,7 @@ time:
   stays off because it has no test environment, and analytics and Meta
   CAPI stay blank so staging never reports into production datasets.
 - Deploying a new image tag to staging is a manual `argocd app sync` after
-  the pins in `manifests/app-directory/app-grooveshop-staging.yaml` change.
+  the pins in `grooveshop-infrastructure/manifests/app-directory/app-grooveshop-staging.yaml` change.
 
 The full runbook is `grooveshop-infrastructure/docs/staging.md`; the docs
 page is [Staging](/dev/operations/staging).
@@ -111,8 +111,8 @@ page is [Staging](/dev/operations/staging).
 | Argo CD | `app-grooveshop` with `automated` sync, `prune` and `selfHeal`: a push to the infrastructure repo deploys. `appset-grooveshop-tenants` generates a `tenant-<slug>` Application from every directory under `overlays/production/tenants/` |
 | Edge | Cloudflare proxies the zones in front of Traefik; the real client IP arrives in `CF-Connecting-IP` and is forwarded to Django as `X-Real-IP` (`grooveshop-storefront-ui-node-nuxt/server/utils/auth.ts`) |
 | TLS | cert-manager with the `letsencrypt-http01-cluster-issuer` ClusterIssuer, one Certificate per host, HTTP-01 through Traefik; a new host needs DNS pointing at the cluster before its certificate can issue |
-| Ingress middlewares | `redirect-https`, `security-headers`, `compress-responses`, `rate-limit-api`, `rate-limit-agent`, `rate-limit-chat`, `limit-attachment-body` (`base/ingress-traefik.yaml`, `base/middleware-ratelimit.yaml`, `base/middleware-body-limit.yaml`), plus `platform-basic-auth` on the control plane and `docs-basic-auth` on this site's developer tree |
-| Image pins | Six places in `manifests/app-directory/app-grooveshop.yaml`: five kustomize images (Django, storefront, media stream, gateway, docs) and the PreSync hook's Helm tag, which must equal the Django tag |
+| Ingress middlewares | `redirect-https`, `security-headers`, `compress-responses`, `rate-limit-api`, `rate-limit-agent`, `rate-limit-chat`, `limit-attachment-body` (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/ingress-traefik.yaml`, `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/middleware-ratelimit.yaml`, `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/middleware-body-limit.yaml`), plus `platform-basic-auth` on the control plane and `docs-basic-auth` on this site's developer tree |
+| Image pins | Six places in `grooveshop-infrastructure/manifests/app-directory/app-grooveshop.yaml`: five kustomize images (Django, storefront, media stream, gateway, docs) and the PreSync hook's Helm tag, which must equal the Django tag |
 
 The PreSync hook Job runs four steps once per deploy before any pod rolls:
 `migrate_schemas`, `collectstatic`, the Meilisearch index-settings apply and
@@ -129,12 +129,12 @@ tenant hostname must never appear as a platform default.
 
 | Host | Serves | Manifest |
 |---|---|---|
-| `platform.grooveshop.space` | The control plane (Django public schema), behind basic auth | `overlays/production/ingress-platform.yaml` |
-| `assets.grooveshop.space` | The media stream, the default image origin | `overlays/production/ingress-platform-assets.yaml` |
+| `platform.grooveshop.space` | The control plane (Django public schema), behind basic auth | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-platform.yaml` |
+| `assets.grooveshop.space` | The media stream, the default image origin | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-platform-assets.yaml` |
 | `static.grooveshop.space` | Static nginx, the default static origin | same file |
-| `payments.grooveshop.space` | UCP payment-handler documents served by the gateway | `overlays/production/ingress-payments-handler.yaml` |
+| `payments.grooveshop.space` | UCP payment-handler documents served by the gateway | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-payments-handler.yaml` |
 | `maps.grooveshop.space` | The basemap's vector tiles for every storefront map, staging included (no `-staging` twin); see [Maps](/dev/operations/maps) | `overlays/production/maps/` |
-| `docs.grooveshop.space` | This site; `/dev` behind basic auth | `overlays/production/ingress-docs.yaml` |
+| `docs.grooveshop.space` | This site; `/dev` behind basic auth | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-docs.yaml` |
 
 Staging twins carry a `-staging` suffix on the first label.
 
@@ -142,7 +142,7 @@ Staging twins carry a `-staging` suffix on the first label.
 
 A tenant's hostnames are `TenantDomain` rows, not configuration. The
 standard set is the primary domain, `www.` and `api.`; the infra template
-(`overlays/production/tenants/TEMPLATE/ingress.yaml`) provisions ingresses
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml`) provisions ingresses
 and certificates for exactly those three and path-routes the agent
 surfaces on the primary host. A white-label tenant may add
 `assets.<domain>` and `static.<domain>` rows and the matching ingress

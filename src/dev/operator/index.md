@@ -237,7 +237,7 @@ they are platform operations and never one store's.
 `CELERY_TASK_IGNORE_RESULT` is on and
 `CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED` is on, so **only failures** are
 written; the result backend is `django-db` and the manifests deliberately
-do not override it (`base/backend.yaml`). Task Results is therefore a short
+do not override it (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml`). Task Results is therefore a short
 failure log for the whole estate, not a task history. See
 [Scheduled work & platform data](/dev/operator/background-jobs) and
 [Celery & background jobs](/dev/django/celery).

@@ -83,7 +83,7 @@ moved; it does not commit or push.
 ## A push alone changes nothing
 
 Both files are Argo `Application` manifests managed by the app-of-apps
-root (`manifests/app-root.yaml`, path `manifests/app-directory`). A commit
+root (`grooveshop-infrastructure/manifests/app-root.yaml`, path `manifests/app-directory`). A commit
 changes the manifest in git; the child's spec in the cluster changes only
 when `app-root` syncs it. Until then the child reports **Synced against the
 old pins**. Force the root, then confirm the child's spec:
@@ -110,7 +110,7 @@ kubectl -n grooveshop rollout status deploy/backend --timeout=600s
 
 ## The PreSync job
 
-`prepare-helm/templates/job.yaml` runs one shell script per deploy, before
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml` runs one shell script per deploy, before
 any pod rolls. Step 0, `migration_preflight`, and steps 1 and 2,
 `migrate_schemas` and `collectstatic`, run under `set -e` and abort the
 sync on failure. Steps 3
@@ -176,12 +176,12 @@ docs change reaches a new image tag without a docs-repo edit; moving the
 image pin in the infra repository stays the deploy step, as for every
 release.
 
-The workload is `base/docs.yaml` in the shared construct: Deployment
+The workload is `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/docs.yaml` in the shared construct: Deployment
 `docs-deployment` running nginx on port 80 behind Service `docs-svc`, with
 the same `preStop` sleep as every other Traefik-facing pod. Its Ingress is
 **not** in `base/` — each overlay publishes its own host:
 
-- **Production** (`overlays/production/ingress-docs.yaml`) serves
+- **Production** (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-docs.yaml`) serves
   `docs.grooveshop.space` as two Ingress objects on one host, because the
   middleware chains differ. Everything is public except `/dev`, which goes
   through the `docs-basic-auth` middleware; Traefik matches the longer
@@ -189,7 +189,7 @@ the same `preStop` sleep as every other Traefik-facing pod. Its Ingress is
   `llms.txt` corpora follow the same split. Only the first Ingress carries
   the `cert-manager` annotation; a second owner on the same host would
   make ingress-shim fight over the `Certificate`.
-- **Staging** (`overlays/staging/ingress-docs.yaml`) serves
+- **Staging** (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-docs.yaml`) serves
   `docs-staging.grooveshop.space` as a single Ingress with the whole host
   behind the staging basic-auth, so the production path split is moot
   there.
@@ -300,7 +300,7 @@ Deployment.
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/prepare-helm/templates/job.yaml` | PreSync hook |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/*.yaml` | Deployments, Reloader annotations, `preStop` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/docs.yaml` | Documentation Deployment and Service |
-| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-docs.yaml`, `overlays/staging/ingress-docs.yaml` | Documentation hosts and the `/dev` basic-auth split |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-docs.yaml`, `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-docs.yaml` | Documentation hosts and the `/dev` basic-auth split |
 | `grooveshop-infrastructure/docs/deploying.md` | The runbook this page distils |
 | `grooveshop-infrastructure/.claude/skills/update-deploy-version/SKILL.md` | Pin-bump skill |
 | `grooveshop-django-api/.github/workflows/ci.yml`, `docker.yml` | Release and image publish; the `Migration Check` deploy replay |

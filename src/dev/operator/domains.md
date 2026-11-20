@@ -259,7 +259,7 @@ Onboarding the routing is: copy `TEMPLATE` to `<store-slug>/`, replace
 every `TENANT_SLUG` and `TENANT_DOMAIN`, commit and push. That is the whole
 infrastructure step.
 
-`TEMPLATE/ingress.yaml` renders five Ingress objects:
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/tenants/TEMPLATE/ingress.yaml` renders five Ingress objects:
 
 | Object | Hosts | Backend | Middlewares |
 |---|---|---|---|
@@ -281,7 +281,7 @@ resource added later never has the label baked into an immutable selector.
 
 ### The ApplicationSet that discovers them
 
-`manifests/app-directory/appset-grooveshop-tenants.yaml` is a git
+`grooveshop-infrastructure/manifests/app-directory/appset-grooveshop-tenants.yaml` is a git
 **directory generator** over
 `overlays/production/tenants/*`, with `TEMPLATE` explicitly excluded. Every
 other directory becomes an Argo Application named `tenant-<basename>`, in
@@ -294,7 +294,7 @@ breaks parks **its own** Application unhealthy instead of degrading
 `app-grooveshop` and masking a real platform incident.
 
 ::: danger Never register the tenant directory in the parent overlay
-`overlays/production/kustomization.yaml` must **not** list
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/kustomization.yaml` must **not** list
 `tenants/<store-slug>`. The parent overlay and the generated
 `tenant-<slug>` Application would then both own the same Ingress objects,
 both with `prune: true` and `selfHeal: true`. Each reads the other's
@@ -307,7 +307,7 @@ recreates.
 
 Every host gets its **own** Certificate from the
 `letsencrypt-http01-cluster-issuer` ClusterIssuer
-(`cert-manager/setup/issuers/letsencrypt-http01.cluster-issuer.yaml`),
+(`grooveshop-infrastructure/manifests/app-constructs/cert-manager/setup/issuers/letsencrypt-http01.cluster-issuer.yaml`),
 solved over **HTTP-01** through Traefik. There is no wildcard and no
 DNS-01 solver configured.
 
@@ -352,14 +352,14 @@ consequences:
 - **Client IP.** Traefik keeps `X-Forwarded-For` only from Cloudflare's
   address ranges, and a middleware sees it before Traefik appends its own
   hop, so every rate-limit middleware sets `ipStrategy.depth: 1`
-  (`base/middleware-ratelimit.yaml`): the visitor Cloudflare appended. A
+  (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/middleware-ratelimit.yaml`): the visitor Cloudflare appended. A
   DNS-only host's visitors arrive from non-Cloudflare peers, whose header
   Traefik deletes, so they share one bucket per router. The full model is
   `docs/edge-trust-boundary.md` in the infrastructure repository.
 
 ### Unmapped hosts
 
-`overlays/production/ingress-tenant-catchall.yaml` is a router of priority
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/production/ingress-tenant-catchall.yaml` is a router of priority
 1 with no host rule, HTTP-only (no `tls:` stanza, so Traefik never tries to
 terminate TLS for a host it has no certificate for) and only the
 `redirect-https` middleware. Any explicit per-tenant rule outranks it. A

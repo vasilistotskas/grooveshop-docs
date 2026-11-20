@@ -20,14 +20,14 @@ origins `assets-staging.grooveshop.space` and
 
 Every HTML, API and static route on staging sits behind a Traefik
 BasicAuth middleware
-(`overlays/staging/middleware-basic-auth.yaml`, secret `staging-basic-auth`,
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/middleware-basic-auth.yaml`, secret `staging-basic-auth`,
 key `users`, htpasswd format, `removeHeader: true` so Django never sees the
 `Authorization` header as a token). The plaintext password lives only in
 `untracked/secrets/unsealed/staging/`; the cluster holds the bcrypt line.
 
 ### Exempted paths, and why
 
-`overlays/staging/ingress-staging.yaml` routes a few prefixes through
+`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-staging.yaml` routes a few prefixes through
 separate Ingress objects **without** the basic-auth middleware:
 
 | Path or host | Reason |
@@ -35,13 +35,13 @@ separate Ingress objects **without** the basic-auth middleware:
 | `/_nuxt`, `/_ipx` on the storefront host | The browser fetches the Nuxt module graph, image proxy and font files (`/_nuxt/fonts`) without credentials. A 401 on a `/_nuxt` chunk does not show an error page; hydration silently hangs and the page looks dead. |
 | the media-stream host (`/media_stream-image`) | Images are loaded by `<img>` tags, same reasoning; the media origin has its own rate limiting. |
 | `/mcp`, `/.well-known/ucp`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json`, `/feeds`, `/acp`, `/chat` on the storefront host | Agent-gateway surfaces called by external agents; they have their own rate-limit middlewares. |
-| `/stripe/webhook`, `/viva-wallet/webhook/`, `/boxnow/webhook/` on the API host | Provider webhooks cannot send basic-auth (`overlays/staging/ingress-webhooks.yaml`). |
+| `/stripe/webhook`, `/viva-wallet/webhook/`, `/boxnow/webhook/` on the API host | Provider webhooks cannot send basic-auth (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-webhooks.yaml`). |
 
 Everything else keeps the gate: the API host, the platform host, the
 static host, and the documentation host. Production splits the docs host
 so only `/dev` needs credentials; staging does not bother, because the
 whole host is already behind the staging gate
-(`overlays/staging/ingress-docs.yaml`).
+(`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-docs.yaml`).
 
 ## Hostnames
 
@@ -82,7 +82,7 @@ other kubectl context, then:
    (`Vat.objects.get(value=STANDARD_VAT_RATE)` in `src/devtools/demo_store.py`),
    and the seed fails without that row rather than seeding unrated products;
    every store gets it from its `vat` migrations.
-8. Pipes `scripts/staging-arm-features.py` into `manage.py shell` against
+8. Pipes `grooveshop-infrastructure/scripts/staging-arm-features.py` into `manage.py shell` against
    the first store's clone: every plan flag and `extra_settings` row on,
    Viva forced to demo mode, Meta CAPI off, one promotion of each kind, a
    B2B price list. The script supplies no third-party credentials, is
@@ -118,7 +118,7 @@ and the tenant's `TenantDomain`. Step 5 rewrites them; if a dry-run reads
 
 ## Mailpit
 
-Staging never sends real mail. `overlays/staging/mailpit.yaml` deploys
+Staging never sends real mail. `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/mailpit.yaml` deploys
 Mailpit, and the backend and celery-worker patches set `EMAIL_HOST` to
 `mailpit` with no credentials. It is not published on a hostname because
 the cloned customer data would sit behind basic-auth alone; port-forward
@@ -179,7 +179,7 @@ PreSync hook runs the same steps as production. Watch it with
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-webhooks.yaml` | Webhook exemptions |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/ingress-docs.yaml`, `ingress-platform-assets.yaml` | Documentation host and the neutral platform asset origins |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/patches/backend-hpa-patch.yaml`, `frontend-hpa-patch.yaml` | HPAs pinned to one replica |
-| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/mailpit.yaml`, `patches/backend-deployment-patch.yaml` | Mailpit |
+| `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/mailpit.yaml`, `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/patches/backend-deployment-patch.yaml` | Mailpit |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/tenants/` | Per-tenant Ingress overlays |
 | `grooveshop-infrastructure/scripts/staging-refresh.sh` | Refresh script |
 | `grooveshop-infrastructure/scripts/staging-arm-features.py` | Feature arming, step 8 |

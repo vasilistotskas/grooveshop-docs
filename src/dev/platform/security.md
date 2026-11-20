@@ -238,7 +238,7 @@ Traefik middlewares in `grooveshop-infrastructure/.../base/`:
 | `rate-limit-agent`, `rate-limit-chat` | The gateway paths on storefront hosts; chat is the strictest because it pays per token |
 | `limit-attachment-body` | The contact-attachment upload path |
 | `platform-basic-auth`, `docs-basic-auth` | The control plane, in front of Django auth, so schema-dropping actions never sit on a tenant's cookie or CSP surface; and `/dev` on the docs host |
-| `basic-auth` (`overlays/staging/middleware-basic-auth.yaml`, secret `staging-basic-auth`) | Every staging HTML and API host, with the build-asset prefixes and webhook receivers exempt |
+| `basic-auth` (`grooveshop-infrastructure/manifests/app-constructs/grooveshop/overlays/staging/middleware-basic-auth.yaml`, secret `staging-basic-auth`) | Every staging HTML and API host, with the build-asset prefixes and webhook receivers exempt |
 
 The gateway adds its own per-IP limiter and a stricter one on `/chat`
 (`internal/httpmw`); the media stream has an adaptive per-tenant-and-IP

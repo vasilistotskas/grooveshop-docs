@@ -34,6 +34,18 @@ const REPOS = [
   'grooveshop-agent-gateway',
   'grooveshop-infrastructure',
 ]
+/**
+ * Repositories whose files a citation must address by repository name
+ * (`grooveshop-infrastructure/manifests/...`), never by a bare path.
+ *
+ * grooveshop-infrastructure is private, so CI cannot check it out and cannot
+ * tell a broken bare path from one that lives there. Letting a bare path resolve
+ * into it only on a machine that has it would give one page two verdicts, and
+ * is what let CI skip every bare path it could not find. A citation into one of
+ * these repositories therefore has to say so, and a bare path is judged against
+ * the repositories every run can read.
+ */
+const SCOPED_ONLY = new Set(['grooveshop-infrastructure'])
 const SKIP = new Set(['node_modules', '.git', '.venv', 'dist', '.output', '.nuxt', '__pycache__', 'staticfiles', 'coverage', '.vitepress'])
 const CODE_EXT = /\.(py|ts|mts|cts|vue|js|mjs|cjs|go|yaml|yml|html|txt|json|toml|mod|lock)$/
 /** Only these are worth scanning for symbol definitions. */
@@ -71,6 +83,8 @@ if (!present.length) {
 /** Index the source tree once: file paths, basenames, and defined symbols. */
 const filesByPath = new Set()
 const filesByName = new Map()
+/** Files of the SCOPED_ONLY repositories, by repository name, to say where a bare citation points. */
+const scopedFiles = new Map()
 const symbols = new Set()
 
 const DEFINITIONS = [
@@ -90,10 +104,15 @@ for (const repoName of [...present, null]) {
   const root = repoName ? repoDir(repoName) : REPO
   for (const file of walk(root, CODE_EXT)) {
     const rel = relative(root, file).replace(/\\/g, '/')
-    filesByPath.add(rel)
-    // Addressable by repository name too: pages cite this repo's own files
+    // Addressable by repository name: pages cite this repo's own files
     // (`grooveshop-docs/.github/workflows/docker.yml`) as readily as a sibling's.
     filesByPath.add(`${repoName ?? 'grooveshop-docs'}/${rel}`)
+    if (SCOPED_ONLY.has(repoName)) {
+      if (!scopedFiles.has(repoName)) scopedFiles.set(repoName, [])
+      scopedFiles.get(repoName).push(rel)
+      continue
+    }
+    filesByPath.add(rel)
     const base = rel.split('/').pop()
     if (!filesByName.has(base)) filesByName.set(base, [])
     filesByName.get(base).push(rel)
@@ -403,10 +422,12 @@ let skipped = 0
 /**
  * `true` resolved, `false` broken, `null` not checkable in this checkout.
  *
- * A tree holding only some repositories can only judge citations into the ones
- * it has. CI checks out a subset, and calling every citation into an absent
- * repository broken would fail the build on prose that is correct — the same
- * half-applied-rule trap the admin-prose gate hit on a sparse checkout.
+ * Only a citation addressed to a repository that is not checked out here is
+ * `null`: calling it broken would fail the build on prose that is correct, the
+ * same half-applied-rule trap the admin-prose gate hit on a sparse checkout. A
+ * bare path (no repository named) is never `null`. It resolves against the
+ * repositories every run can read or it is broken, so a gate that sees fewer
+ * repositories cannot pass what a complete checkout fails (see SCOPED_ONLY).
  */
 function pathResolves(cite) {
   // A citation may be written relative to a repository root ("./openapi/…").
@@ -420,8 +441,24 @@ function pathResolves(cite) {
   const tail = c.split('/').pop()
   const hits = filesByName.get(tail)
   if (hits && (!c.includes('/') || hits.some(h => h.endsWith(`/${c}`) || h === c))) return true
-  // Unprefixed and unfound: only a complete checkout can call this broken.
-  return absent.length ? null : false
+  return false
+}
+
+/** What to do about a bare citation that resolved nowhere. */
+function brokenAdvice(cite) {
+  const c = cite.replace(/\\/g, '/').replace(/^\.\//, '')
+  for (const [repo, files] of scopedFiles) {
+    const found = files.filter(f => f === c || f.endsWith(`/${c}`))
+    if (found.length) {
+      return `it is in ${repo}, which a citation must name: write ${found.map(f => `\`${repo}/${f}\``).join(' or ')}`
+    }
+  }
+  const named = REPOS.some(r => c.startsWith(`${r}/`))
+  const scoped = [...SCOPED_ONLY].filter(r => absent.includes(r))
+  const hint = scoped.length && !named
+    ? `; if it is a file of ${scoped.join(' or ')}, which is not checked out here, write it as \`${scoped[0]}/${c}\``
+    : ''
+  return `no checked-out repository has it${hint}`
 }
 
 for (const file of walk(SRC, /\.md$/)) {
@@ -446,7 +483,7 @@ for (const file of walk(SRC, /\.md$/)) {
         continue
       }
       stats.paths++
-      if (!verdict) problems.push(`${where}  path does not exist: ${cite}`)
+      if (!verdict) problems.push(`${where}  path does not exist: ${cite} (${brokenAdvice(cite)})`)
     }
 
     if (SIDEBAR?.paths.size) {
