@@ -625,8 +625,8 @@ step.
 The quote, the payment intent and order creation each say what a card settles
 (or that the code is no card), so each could be used to guess codes. A request
 that carries `giftCardCodes` therefore gets a `GiftCardCodeThrottle`, added by
-the one helper `core.api.throttling.gift_card_code_throttles` that the three
-views call from `get_throttles` (`src/core/api/throttling.py`):
+the one helper `giftcard.throttles.gift_card_code_throttles` that the three
+views call from `get_throttles` (`src/giftcard/throttles.py`):
 
 - **Only a code new to the cart counts.** The cart keeps the codes it has been
   allowed to try for `GIFT_CARD_CODES_SEEN_TTL_SECONDS` (default 1800) as keyed
@@ -885,7 +885,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/search/views/product.py` | The `onOffer` search filter |
 | `grooveshop-django-api/src/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
 | `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, `quote`, payment-intent evaluation |
-| `grooveshop-django-api/src/core/api/throttling.py` | `GiftCardCheckThrottle`, `GiftCardCodeThrottle`, `gift_card_code_throttles` |
+| `grooveshop-django-api/src/giftcard/throttles.py` | `GiftCardCheckThrottle`, `GiftCardCodeThrottle`, `gift_card_code_throttles` |
 | `grooveshop-django-api/src/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService.quote`, `threshold_value`, `free_shipping_progress`, `FreeShippingProgress` |
 | `grooveshop-django-api/src/shipping/services.py` | `free_threshold_rates`, `initial_country_code` |
