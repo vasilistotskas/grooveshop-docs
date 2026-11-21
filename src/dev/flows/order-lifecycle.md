@@ -70,9 +70,9 @@ number of them, until nothing is left to refund.
 
 ### The fulfilment table is the only writer
 
-`OrderService.update_order_status` (`src/order/services.py`) takes a row
+`OrderLifecycleService.update_order_status` (`src/order/lifecycle/service.py`) takes a row
 lock, re-reads the committed status, validates the pair against
-`allowed_transitions`, then writes `status` and `status_updated_at`. No
+`ALLOWED_TRANSITIONS` (the table in the same module), then writes `status` and `status_updated_at`. No
 other code should assign `order.status` — the exception is the Viva
 webhook, which flips PENDING to PROCESSING inline because it already
 holds the row lock and knows the prior state.
@@ -96,9 +96,9 @@ read payment "Pending" forever (`0058_settle_returned_unpaid_orders`).
 | PENDING/PROCESSING → SHIPPED | Carrier event (`in_transit`, `at_destination`, `out_for_delivery`, `attempted`; or a `new` shipment whose tracking history holds a non-print checkpoint) | `AcsService._apply_order_status_transition`, `AcsService._has_left_sender`, `BoxNowService._apply_order_status_transition` |
 | PENDING/PROCESSING → SHIPPED | Admin attaching tracking | `OrderService.add_tracking_info`, `POST /api/v1/order/{id}/add_tracking` |
 | SHIPPED → DELIVERED | Carrier event | Both carriers' `_apply_order_status_transition` |
-| DELIVERED → COMPLETED | Automatic, when paid: inline on the carrier DELIVERED and the COD reconcile, and hourly for anything paid outside those two moments | `OrderService.maybe_advance_to_completed`, `order.tasks.complete_paid_delivered_orders` |
+| DELIVERED → COMPLETED | Automatic, when paid: inline on the carrier DELIVERED and the COD reconcile, and hourly for anything paid outside those two moments | `OrderLifecycleService.maybe_advance_to_completed`, `order.tasks.complete_paid_delivered_orders` |
 | SHIPPED/DELIVERED → RETURNED | Carrier event (`returned`, `lost`) | `AcsService.order_status_for_shipment_state` |
-| → CANCELED | Customer, staff, the cleanup task, or the ACS status sync for a voucher retired before dispatch (a BoxNow `canceled` parcel does not cancel the order). Only `cancel_order` does it | `OrderService.cancel_order`, `OrderService.cancel_for_dead_shipment` |
+| → CANCELED | Customer, staff, the cleanup task, or the ACS status sync for a voucher retired before dispatch (a BoxNow `canceled` parcel does not cancel the order). Only `cancel_order` does it | `OrderLifecycleService.cancel_order`, `OrderLifecycleService.cancel_for_dead_shipment` |
 | RETURNED → REFUNDED | Staff, manually; refused with `RefundOutstandingError` while `PaymentLedger.refund_open` holds. The admin action reports the refusal; `update_status` answers `409 refund_outstanding` naming what is left | `POST /api/v1/order/{id}/update_status`, the `mark_as_refunded` admin action |
 | Any pair the table allows | Staff, manually. A CANCELED request is refused: `update_status` answers 400 `cancel_through_cancel_action` (`update_order_status` raises `InvalidStatusTransitionError` for it) | `OrderViewSet.update_status`, admin bulk actions in `src/order/admin.py` |
 
@@ -154,7 +154,7 @@ would get two near-identical messages milliseconds apart:
 3. An admin attaching tracking, which walks PENDING to PROCESSING to
    SHIPPED.
 
-`OrderService._suppress_customer_status_notifications(order, status)`
+`OrderLifecycleService.suppress_customer_status_notifications(order, status)`
 pre-stamps two metadata keys: the email task's own reservation key, and
 `suppress_status_ws_<status>` which `handle_order_status_changed` reads.
 Internal state still flows — the signal fires, history is written, the
@@ -186,7 +186,7 @@ that `log_payment_update` writes on every payment transition.
 
 ### Cancellation
 
-`OrderService.cancel_order` is the only way an order is cancelled:
+`OrderLifecycleService.cancel_order` is the only way an order is cancelled:
 `update_order_status` refuses CANCELED and the staff `update_status`
 endpoint answers 400 `cancel_through_cancel_action`. Its
 keyword-only `customer_initiated` decides who has the last word on the
@@ -213,13 +213,13 @@ Entry points:
 | Customer or guest | `POST /api/v1/order/{id}/cancel` (`OrderViewSet.cancel`; guests authorise with `?uuid=`, for `GUEST_ORDER_ACCESS_DAYS` after the order) | `True` |
 | Store staff | The same action (the view passes `not is_store_staff(user)`), or the `mark_as_canceled` bulk action in `src/order/admin.py` | `False` |
 | Automatic | `auto_cancel_stuck_pending_orders`, always with `refund_payment=False` | `False` |
-| Carrier-driven | `OrderService.cancel_for_dead_shipment`, called only by the ACS status sync for a retired voucher. BoxNow never calls it: a `canceled` parcel event leaves the order as it is, and `src/order/lifecycle/follow_up.py` flags it only while it is PENDING or PROCESSING and not awaiting its online payment (see [Shipping](/dev/flows/shipping)). Always `refund_payment=False` | `False` |
+| Carrier-driven | `OrderLifecycleService.cancel_for_dead_shipment`, called only by the ACS status sync for a retired voucher. BoxNow never calls it: a `canceled` parcel event leaves the order as it is, and `src/order/lifecycle/follow_up.py` flags it only while it is PENDING or PROCESSING and not awaiting its online payment (see [Shipping](/dev/flows/shipping)). Always `refund_payment=False` | `False` |
 
 #### A customer cancel asks the courier first
 
 An order keeps PENDING or PROCESSING from the moment its voucher exists
 until a tracking poll sees the parcel move, so in that window the courier
-may already hold it. `OrderService._ask_courier_to_cancel` runs before the
+may already hold it. `OrderLifecycleService._ask_courier_to_cancel` runs before the
 row is locked and outside any transaction, because it is a carrier HTTP
 call: it re-reads the status (an order that will not cancel gets the usual
 status error and the courier is not asked), then calls
@@ -261,7 +261,7 @@ courier could not be reached, so try again in a few minutes.
 #### Staff and system cancels are best-effort at the courier
 
 These cancel first and ask the courier afterwards, through
-`OrderService.cancel_attached_shipment`, which `cancel_order` registers with
+`OrderLifecycleService.cancel_attached_shipment`, which `cancel_order` registers with
 `transaction.on_commit`: `cancel_order` is the only path that produces CANCELED,
 so every cancel of an order whose shipment is still alive reaches the courier.
 The ask follows the commit, so no order, product or shipment row is locked
@@ -273,7 +273,7 @@ cancels inside its own transaction and row lock, gets it when that transaction
 commits.
 
 The cancel writes `metadata["shipment_cancel_pending"]`
-(`SHIPMENT_CANCEL_PENDING_FLAG`, `src/order/services.py`) in the same save, and
+(`SHIPMENT_CANCEL_PENDING_FLAG`, `src/order/lifecycle/service.py`) in the same save, and
 the courier's answer is merged into the order's metadata under its row lock,
 with the flag removed in the same write. A worker that stops between the commit
 and the courier leaves the flag, and the beat task
@@ -1028,7 +1028,7 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 ## Invariants
 
 - **Never assign `order.status` to cancel.** Going through
-  `OrderService.cancel_order` is what releases stock, cascades to the
+  `OrderLifecycleService.cancel_order` is what releases stock, cascades to the
   carrier, writes history and sends the email.
 - **A customer cancel changes nothing the courier did not agree to.**
   Only `CarrierError` subclasses are the courier's answer
@@ -1148,7 +1148,7 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
   bypassing `save()`.
 - **An order was repaired by hand in a shell.** Signals were bypassed.
   Roll the status back to PENDING and drive it through
-  `OrderService.cancel_order` so the canonical path fires.
+  `OrderLifecycleService.cancel_order` so the canonical path fires.
 - **A customer says the cancel button was refused.** A 400
   `parcel_with_courier` means the courier refused (the voucher is on a
   pickup list, or the BoxNow parcel is past `NEW`): the order is untouched
@@ -1255,7 +1255,8 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/order/exceptions.py` | `OrderCancellationError`, `ParcelWithCourierError`, `CourierUnreachableError`, `DisputeOpenError`, `RefundOutstandingError`, `UnpaidOrderLimitError` |
 | `grooveshop-django-api/src/order/models/order.py` | `Order.save()` timestamp rules, `mark_as_paid`, `can_be_canceled`, `can_be_canceled_by_customer`, `awaits_online_payment`, `calculate_order_total_amount`, `AMOUNT_MISMATCH_FLAG` |
 | `grooveshop-django-api/src/order/managers/order.py` | `with_shipments`, `for_list`, `refund_owed`, `holding_stock_for_online_payment` |
-| `grooveshop-django-api/src/order/services.py` | `update_order_status` table, `_suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `_refund_canceled_order`, `confirm_offline_payment`, `add_tracking_info` |
+| `grooveshop-django-api/src/order/lifecycle/service.py` | `OrderLifecycleService`: `update_order_status` and `ALLOWED_TRANSITIONS`, `suppress_customer_status_notifications`, `maybe_advance_to_completed`, `cancel_order`, `_ask_courier_to_cancel`, `_note_shipment_canceled_without_order`, `cancel_attached_shipment`, `cancel_for_dead_shipment`, `_refund_canceled_order`, `reorder_to_cart` |
+| `grooveshop-django-api/src/order/services.py` | `confirm_offline_payment`, `add_tracking_info` |
 | `grooveshop-django-api/src/order/refunds/service.py` | `RefundService`: `refund_order`, `_claim_refund`, `_allocate_claim`, `_allocate_lines_claim`, `_waiting_error`, `reason_text`, `_attempts_to_resume`, `_pending_request_shares`, `unresumable_reason`, `_require_resumable`, `resumes_a_refund`, `_make_refund`, `book_share`, `_return_stored_value`, `RefundResult`, `_note_refund_declined` |
 | `grooveshop-django-api/src/order/payments/payment.py` | `refund_payment` per provider (Stripe writes `metadata.refund_attempt`), `find_refunds` and `confirm_refund` per provider, `StripePaymentProvider.retrieve_refund`, `refund_attempt_key`, `_ACCEPTED_REFUND_STATUSES`, `money_from_minor_units`, `VIVA_REFUND_TRANSACTION_TYPE_IDS` |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | `_verify_viva_reversal`, `_handle_reversal_created`, `_record_viva_chargeback` |

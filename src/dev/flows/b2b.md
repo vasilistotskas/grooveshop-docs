@@ -186,7 +186,7 @@ that carry an existing context onto a re-materialised instance:
 | `src/cart/views/item.py: _repoint_to_bound_cart` (two call sites) | Same problem on the item endpoints, for `get_object` and `list`; only items of the request's own cart are re-pointed, so staff listings of other carts stay untouched |
 
 **One path materialises a cart and does not bind.**
-`OrderService.reorder_to_cart`, behind `POST /api/v1/order/{id}/reorder`,
+`OrderLifecycleService.reorder_to_cart`, behind `POST /api/v1/order/{id}/reorder`,
 does `Cart.objects.get_or_create(user=user)` and then
 `CartItem.objects.create(...)` with no bind and no transplant. Because
 `CartItem.save()` snapshots `price_at_add` from `final_price`, and
@@ -321,7 +321,7 @@ points-earned promise and the redemption widget.
 - **The binding must ride every cart materialisation.** Nothing is stored on
   the cart row; a fresh instance prices at retail. Any new path that produces
   a `Cart` object must bind or transplant. Every priced path does today
-  except `OrderService.reorder_to_cart`, described above.
+  except `OrderLifecycleService.reorder_to_cart`, described above.
 - **Re-pointing matters as much as binding.** A prefetch or a
   `select_related("cart")` hands lines an unbound cart instance, and the
   serializer then prices lines at retail while the cart totals say wholesale.
