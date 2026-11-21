@@ -105,7 +105,7 @@ different moments.
 
 **Spent points come back in parts, with the refund.** A refund is in the
 value of what came back, and the provider's money is paid back first
-(`OrderService.refund_order`, see
+(`RefundService.refund_order`, see
 [Order lifecycle](/dev/flows/order-lifecycle#refunds)). Only the excess
 goes back onto the order's gift cards and points, split in proportion to
 what each has not got back. The points share is
@@ -425,6 +425,7 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/src/loyalty/signals.py` | Order hooks (reversal on cancel, on REFUNDED through `order_refunded` or `order_stored_value_returned`, on a chargeback that completes the return, and on the REFUNDED status), tier-change detection, tier-up notification |
 | `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED; `stored_value`, what the order's points are still owed |
 | `grooveshop-django-api/src/loyalty/tasks.py` | `process_order_points`, `reverse_order_points`, expiry, tier-up notification |
+| `grooveshop-django-api/src/order/refunds/service.py` | `RefundService.refund_order`: the refund that pays back the provider first and returns the excess to gift cards and spent points |
 | `grooveshop-django-api/src/loyalty/views/loyalty.py` | Summary, transactions, redeem, product points, tiers |
 | `grooveshop-django-api/src/loyalty/urls.py` | Endpoint paths |
 | `grooveshop-django-api/src/core/monitored_task.py` | `MonitoredTask`, which extends `TenantTask` |
