@@ -29,7 +29,7 @@ flowchart LR
 
 ## Layer 1: Django `CustomCache` (Redis)
 
-`CACHES["default"]` is `core.caches.CustomCache`, a `RedisCache` subclass,
+`CACHES["default"]` is `core.cache_backend.CustomCache`, a `RedisCache` subclass,
 with `KEY_FUNCTION = tenant.cache.make_tenant_key`. Every key is prefixed
 with the active schema, `{schema}:{prefix}:{version}:{key}`, so one store's
 cache is never visible to another. Keys that start with `global:` swap the
@@ -747,7 +747,7 @@ PageSpeed runs while Traefik's counters never moved.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/core/caches.py` | `CustomCache`, resilience options, SCAN helpers |
+| `grooveshop-django-api/src/core/cache_backend.py` | `CustomCache`, resilience options, SCAN helpers |
 | `grooveshop-django-api/src/tenant/cache.py`, `src/tenant/signals.py`, `src/tenant/models.py` | `make_tenant_key`, `tenant_resolve_key`, `tenant_domains_key`, `bump_cache_generation`, `Tenant.cache_generation` |
 | `grooveshop-django-api/src/core/cache/registry.py`, `surfaces.py`, `service.py`, `invalidation.py`, `protected.py`, `nuxt.py`, `gateway.py`, `models.py` | Surface registry, purge service, signal wiring, Nuxt and gateway clients, `CachePurgeLog` |
 | `grooveshop-django-api/src/admin/admin.py`, `src/core/admin.py` | Cache tool and purge log admin |
