@@ -895,13 +895,13 @@ straight to DELIVERED or RETURNED, and for DELIVERED it calls
 `maybe_advance_to_completed` so an already-paid order lands on COMPLETED
 in the same pass. A `canceled` shipment state — produced only by the
 admin retire action or a voucher cancel, never by tracking — routes the
-order through `OrderService.cancel_for_dead_shipment` instead, a real
+order through `OrderLifecycleService.cancel_for_dead_shipment` instead, a real
 `cancel_order` (stock restored, reservation released, cancellation
 recorded) with `refund_payment=False`: nobody asked for it, so a paid
 order is logged at WARNING and left for staff to refund by hand.
 The courier is not asked to cancel, since the shipment already is: the
 order records `shipment_cancel = {attempted: false, dispatched: true}`
-(`SHIPMENT_ALREADY_CANCELED` in `src/order/services.py`), so no courier
+(`SHIPMENT_ALREADY_CANCELED` in `src/order/lifecycle/service.py`), so no courier
 call runs inside the sync's transaction. An order whose status no
 longer allows a cancel raises `OrderNotCancelableError`, which BoxNow's
 sync drops with a warning; any other `OrderCancellationError` is a
@@ -915,7 +915,7 @@ BoxNow does not. A `canceled` parcel event (webhook or tracking poll) is
 recorded on the shipment and moves no order
 (`BoxNowService._apply_order_status_transition`): BoxNow defines it as
 "canceled by the sender", and the sender is the store, so the parcel was
-canceled on purpose (a wrong locker, a re-issue). `OrderService.cancel_for_dead_shipment`
+canceled on purpose (a wrong locker, a re-issue). `OrderLifecycleService.cancel_for_dead_shipment`
 has ACS as its only caller. The open order keeps its status, stock and
 payment and is flagged for follow-up at once: `canceled_shipment_q` on the
 carrier adapter (`src/shipping_boxnow/carrier.py`, aggregated by

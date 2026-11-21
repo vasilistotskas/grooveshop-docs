@@ -108,7 +108,7 @@ buyer reads their own order.
 
 ### Store staff
 
-Roles live on `UserTenantMembership.role` (`src/tenant/models.py:
+Roles live on `UserTenantMembership.role` (`src/tenant/enum.py:
 TenantMembershipRole`): `staff` sees the operational admin, `admin` also
 manages settings and the team, `owner` is an admin who cannot be demoted or
 removed by other admins, and a tenant always keeps at least one owner.
