@@ -409,7 +409,7 @@ could not reconstruct.
 | Viva event 1797 (`src/order/views/viva_webhook.py: _handle_reversal_created`) | A refund made anywhere, the Viva dashboard included; see below |
 
 **`refund_order(order, amount=None, reason="", *, repayment_reference="", lines=(), include_shipping=False, reason_code="", retry_request_id=None)`**
-(`src/order/services.py`) runs in three steps, so that **no transaction is
+(`src/order/refunds/service.py`) runs in three steps, so that **no transaction is
 open while a provider answers**: every connection kills a session idle in
 a transaction after ten seconds (`idle_in_transaction_session_timeout`), and
 a refund made at the provider and rolled back here is money lost to the
