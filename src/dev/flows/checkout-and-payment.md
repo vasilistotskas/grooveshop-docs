@@ -738,7 +738,7 @@ arrived through a real checkout — see
 
 Every order records where the shopper came from, as one
 `OrderAttribution` row written in the creation transaction by
-`OrderAttributionService.record` (`src/order/services.py`), on both paths.
+`OrderAttributionService.record` (`src/order/checkout/attribution_service.py`), on both paths.
 
 **Capture, in the browser.** `app/plugins/attribution.client.ts` runs
 once per page load, synchronously, and reads `window.location` and
@@ -937,7 +937,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/order/views/order.py` | `OrderViewSet.create` (`_named_agent_checkout`), the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `_quote_under_lock`, `_require_quoted_total`, `_resolve_live_shipping`, `_refuse_unpriced`, `validate_shipping_address`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `_quote_under_lock`, `_require_quoted_total`, `_resolve_live_shipping`, `_refuse_unpriced`, `validate_shipping_address`, `settle_cod_payment` |
+| `grooveshop-django-api/src/order/checkout/attribution_service.py` | `OrderAttributionService`: `input_from_request`, `classify_for_store`, `record` |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService`: `quote`, `shipping_cost`, `threshold_value`, `free_shipping_progress`, `calculate_payment_method_fee`, `offered_pay_ways`, `delivery_kind`, `resolve_live_shipping`; `CheckoutQuote`, `ExpectedTotal` |
 | `grooveshop-django-api/src/order/serializers/quote.py` | `CartQuoteSerializer`, the quote's response |
 | `grooveshop-django-api/src/order/enum/create_error.py` | `TOTAL_CHANGED_CODE`, `OrderCreateErrorType` |

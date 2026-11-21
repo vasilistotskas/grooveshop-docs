@@ -553,7 +553,7 @@ together.
   it. The old design set a boolean before sending, so an OOM-killed
   worker blocked the email forever.
 - **Chained transitions** call
-  `OrderService._suppress_customer_status_notifications`, which
+  `OrderLifecycleService.suppress_customer_status_notifications`, which
   pre-stamps the email reservation key **and** `suppress_status_ws_<status>`.
   `handle_order_status_changed` reads the second one and skips the live
   dispatch, so the two channels stay in lockstep.

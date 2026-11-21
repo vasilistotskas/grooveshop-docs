@@ -464,7 +464,7 @@ of anything.
 | `grooveshop-django-api/src/tenant/celery.py` | `holding_store`, `hold_store_for_destroy`: the store task lock |
 | `grooveshop-django-api/src/tenant/views.py` | `TenantAdminViewSet.destroy`/`suspend`/`activate`, `IsPlatformOperator`, `tenant_resolve` |
 | `grooveshop-django-api/src/tenant/urls_public.py` | Lifecycle routes, mounted only on the control-plane host |
-| `grooveshop-django-api/src/tenant/models.py` | `Tenant.is_protected`, `suspended_at`, `suspended_reason`, `SuspendedReason`, `Tenant.delete(force_drop=…)`, `TenantArchive` |
+| `grooveshop-django-api/src/tenant/models/tenant.py`, `grooveshop-django-api/src/tenant/enum.py`, `grooveshop-django-api/src/tenant/models/archive.py` | `Tenant.is_protected`, `suspended_at`, `suspended_reason`, `SuspendedReason` (`enum.py`), `Tenant.delete(force_drop=…)`, `TenantArchive` (`archive.py`) |
 | `grooveshop-django-api/src/tenant/signals.py` | `reactivate_on_renewal`, resolve-cache invalidation |
 | `grooveshop-django-api/src/tenant/middleware.py` | `SuspendedTenantMiddleware` (503) |
 | `grooveshop-django-api/src/tenant/middleware_ws.py` | WebSocket 4004 for an inactive tenant |

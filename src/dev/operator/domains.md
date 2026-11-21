@@ -38,7 +38,8 @@ flowchart TD
 
 ## The `TenantDomain` row
 
-`src/tenant/models.py: TenantDomain` adds nothing but `Meta` and `__str__` to
+`src/tenant/models/domain.py: TenantDomain` adds only the hostname validator on
+`domain` (and a `save()` that runs it), `Meta` and `__str__` to
 django-tenants' `DomainMixin`, so the fields are that mixin's:
 
 | Field | Shape |
@@ -438,7 +439,7 @@ brand domain, or the white-label asset hosts):
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/tenant/models.py` | `TenantDomain` |
+| `grooveshop-django-api/src/tenant/models/domain.py` | `TenantDomain` |
 | `grooveshop-django-api/src/tenant/middleware.py` | `SuspendedTenantMiddleware`, `TenantCookieDomainMiddleware`, `origin_belongs_to_tenant`, `tenant_domain_set` |
 | `grooveshop-django-api/src/tenant/middleware_ws.py` | WebSocket resolution, close code 4004 |
 | `grooveshop-django-api/src/tenant/views.py` | `tenant_resolve`, the internal-token variant |

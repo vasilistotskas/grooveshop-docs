@@ -6,8 +6,8 @@ description: Every field on the Tenant row group by group — identity, presenta
 # The tenant record
 
 One row in the public schema is the whole definition of a store:
-`src/tenant/models.py: Tenant` (the class opens just under the choice enums at
-the top of the file). It is a `django_tenants.TenantMixin`, so saving a new
+`src/tenant/models/tenant.py: Tenant` (its choice enums are in
+`src/tenant/enum.py`). It is a `django_tenants.TenantMixin`, so saving a new
 row creates the PostgreSQL schema; everything else on it is either
 identity, presentation, commercial terms, or that merchant's own
 third-party credentials.
@@ -98,7 +98,7 @@ only by the lifecycle actions and the billing task. `is_active`, `plan` and
 | `store_description` | `TextField`, blank |
 | `store_description_i18n` | `JSONField`, `{locale: text}` for the store's other storefront locales (`el`, `en`); never the tenant's `default_locale`, whose text is `store_description`. Served on the resolve payload as `storeDescriptionI18n`; the storefront prints `storeDescriptionI18n[locale]`, else `store_description` |
 | `logo_light_url`, `logo_dark_url`, `favicon_url` | `URLField`, blank |
-| `socials_*` | Nine `URLField`s (discord, facebook, instagram, pinterest, reddit, tiktok, linkedin, twitter, youtube). `Tenant._validate_social_urls` requires `https://` on every non-empty one; empty hides the footer link |
+| `socials_*` | Nine `URLField`s (discord, facebook, instagram, pinterest, reddit, tiktok, linkedin, twitter, youtube). `tenant_rules.validate_social_urls` requires `https://` on every non-empty one; empty hides the footer link |
 
 A store's colours, corners and fonts are not on this row: they are its theme document in the page builder ([`builder`](/dev/django/reference/builder/documents#where-a-store-s-theme-document-comes-from)).
 
@@ -112,7 +112,7 @@ A store's colours, corners and fonts are not on this row: they are its theme doc
 
 `available_locales` is an allow-list on top of the platform-wide locale
 set. Every entry must be a code in `settings.LANGUAGES`, must not repeat,
-and `Tenant._validate_available_locales` adds the cross-field rule the
+and `tenant_rules.validate_available_locales` adds the cross-field rule the
 field validator cannot see: a non-empty list **must contain
 `default_locale`**, or the storefront would 404 the store's own default
 language. Empty means single-language on `default_locale` — that is the
@@ -238,7 +238,7 @@ allowed to be".
 | `clarity_project_id` | alphanumeric | Microsoft Clarity off, **and its origins are left out of the CSP** |
 | `ga_tracking_id` | must start `G-` or `UA-` | GA off |
 
-Each has its own `_validate_*` method on the model. The alphanumeric rule
+Each has its own `validate_*` rule in `src/tenant/models/tenant_rules.py`, which `Tenant.clean()` runs. The alphanumeric rule
 on `openai_pixel_id` is not cosmetic: the value pasted out of the vendor's
 snippet once carried a stray trailing character, and a malformed id stops
 conversions being attributed silently rather than failing loudly.
@@ -252,7 +252,7 @@ Conversions API dataset, so there is no separate dataset id.
 `JSONField(default=list)`: extra origins the storefront's CSP allows on
 `connect-src`, `img-src`, `script-src` and `frame-src`. Every entry must be
 a string starting `https://`, `http://localhost` or `wss://`
-(`Tenant._validate_allowed_csp_sources`). It is **not** merchant-editable:
+(the JSON schema `tenant.json_schemas.allowed_csp_sources`, `src/tenant/json_schemas.py`). It is **not** merchant-editable:
 it is security policy, and a merchant able to append an origin could
 whitelist anything. Adding a third-party widget for a store — a locker map,
 an embedded player — usually means adding every CDN hop it uses here.
@@ -421,7 +421,7 @@ a common bug:
 - **Every credential field is excluded from the audit history.**
 - **Every `Tenant` save moves the resolve cache on** for all of that
   tenant's domains: `Tenant.save` bumps `cache_generation`, which is part of
-  every resolve and domain-set key (`src/tenant/models.py`, `src/tenant/cache.py`).
+  every resolve and domain-set key (`src/tenant/models/tenant.py`, `src/tenant/cache.py`).
   That is why the console never needs a manual purge for a branding change,
   even across a Redis outage.
 - **A new public extra-setting must be added to `PUBLIC_SETTING_KEYS`** or
@@ -458,7 +458,7 @@ a common bug:
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
+| `grooveshop-django-api/src/tenant/models/tenant.py`, `grooveshop-django-api/src/tenant/models/tenant_rules.py`, `grooveshop-django-api/src/tenant/enum.py` | `Tenant`, `history` exclusions and the platform-storefront constraint; the cross-field `validate_*` rules (`tenant_rules.py`); `TenantPlan`, `StoreVertical`, `SuspendedReason` (`enum.py`) |
 | `grooveshop-django-api/src/tenant/validators.py` | `validate_reserved_schema_name`, `validate_store_hostname`, `RESERVED_SCHEMA_NAMES` |
 | `grooveshop-django-api/src/tenant/json_schemas.py` | The JSON schemas of `available_locales`, `store_description_i18n` and `allowed_csp_sources` |
 | `grooveshop-django-api/src/tenant/credentials.py` | The credential helpers and the no-fallback rule |

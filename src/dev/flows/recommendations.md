@@ -196,7 +196,7 @@ rather than a 500 — and a shell or a preset seeding a bad row is caught the
 same way.
 
 `src/recommendation/presets.py` keys a per-surface chain, weights and limits by
-`tenant.models.StoreVertical`. Chain order is priority, not tier — a preset
+`tenant.enum.StoreVertical`. Chain order is priority, not tier — a preset
 freely names an unregistered code ahead of a registered one, and the
 unregistered one simply starts contributing the day it ships. Two chains do
 not lead with `curated`: both fashion chains that have a variant group lead

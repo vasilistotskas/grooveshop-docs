@@ -24,7 +24,7 @@ behalf through a dedicated gateway.
 The distinction between the second and third rows is structural, not a
 flag: `UserTenantMembership` lives in the public schema and its `user`
 foreign key targets the public user table, so a shopper cannot hold one
-(`src/tenant/models.py`, class docstring). See
+(`src/tenant/models/tenant.py`, class docstring). See
 [Security model](/dev/platform/security) for what each identity may do.
 
 ## What a tenant gets
@@ -68,7 +68,7 @@ HTTP basic auth in front of Django auth for this host
 
 ### The Tenant row
 
-`src/tenant/models.py: Tenant` is the single record for a store. The fields
+`src/tenant/models/tenant.py: Tenant` is the single record for a store. The fields
 that matter to the business model:
 
 | Group | Fields | Meaning |
@@ -81,7 +81,7 @@ that matter to the business model:
 | Platform storefront | `is_platform_storefront` | At most one row may carry this (database constraint `tenant_single_platform_storefront`); it renders the bundled brand and the platform-only AI discovery surfaces |
 | Credentials | Stripe, Viva Wallet, ACS, BoxNow, Meta CAPI, `acp_bearer_token`, `chat_api_key` | Tenant-only; excluded from the audit history (`HistoricalRecords(excluded_fields=...)`) |
 
-A tenant's domains are `TenantDomain` rows (`src/tenant/models.py`, a
+A tenant's domains are `TenantDomain` rows (`src/tenant/models/domain.py`, a
 django-tenants `DomainMixin`). The primary row is the storefront host;
 provisioning also creates `api.<primary>` because the storefront dials the
 tenant's own API host for WebSocket, social login and CSP
@@ -188,7 +188,7 @@ Details, domain families and configuration conventions are in
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/tenant/models.py` | `Tenant`, `TenantDomain`, `TenantPlan`, `SuspendedReason`, `StoreVertical`, `UserTenantMembership`, `TenantArchive` |
+| `grooveshop-django-api/src/tenant/models/` (`tenant.py`, `domain.py`, `membership.py`, `archive.py`), `grooveshop-django-api/src/tenant/enum.py` | `Tenant`, `TenantDomain`, `UserTenantMembership`, `TenantArchive`; `TenantPlan`, `SuspendedReason`, `StoreVertical` (`enum.py`) |
 | `grooveshop-django-api/src/tenant/billing.py` | `billing_state`, `target_stage`, `run_billing_cycle` |
 | `grooveshop-django-api/src/tenant/lifecycle.py` | `suspend_tenant`, `activate_tenant`, `destroy_tenant`, `is_protected_tenant` |
 | `grooveshop-django-api/src/tenant/offboarding.py` | Data export, file purge, invoice retention |
