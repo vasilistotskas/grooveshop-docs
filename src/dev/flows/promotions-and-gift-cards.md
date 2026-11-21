@@ -787,7 +787,7 @@ whose plan enables it, and Django still gates the data.
   exact (`_teaser_holds` simulates it).
 
 - **The offers page is stale after editing a promotion.** The `promotions`
-  cache surface in `src/core/cache/surfaces.py` declares **no `invalidated_by` at
+  cache surface in `src/promotion/cache_surfaces.py` declares **no `invalidated_by` at
   all**, so it takes the `CacheSurface` default of an empty tuple. Signal
   wiring in `src/core/cache/invalidation.py` only ever connects the models a
   surface lists, so no signal, admin hook or save purges it. The signals in
@@ -901,7 +901,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/giftcard/tasks.py` | Delivery, receipts, reminders, expiry, refund credit |
 | `grooveshop-django-api/src/giftcard/admin.py` | `save_model` issuing, Resend delivery action |
 | `grooveshop-django-api/src/giftcard/views.py` | `check`, `purchase`, `purchase_status`, `mine` |
-| `grooveshop-django-api/src/core/cache/surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
+| `grooveshop-django-api/src/promotion/cache_surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
 | `grooveshop-django-api/src/tenant/permissions.py` | The plan and runtime permission classes |
 | `grooveshop-django-api/src/tenant/switches.py` | `on_switch_change`: reprice on the promotions switch, pause sync on the gift-cards switch |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/offers/index.vue` | The offers page |

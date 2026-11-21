@@ -169,8 +169,8 @@ non-suspended store), or every store including suspended ones
 
 | Beat entry | Task | Runs in | Cadence | Notes |
 |---|---|---|---|---|
-| `monitor-system-health` | `core.tasks.monitor_system_health` | `public` | every 30 min † | Emails `ADMINS` and raises on any failed check, including Redis persistence status |
-| `scheduled-database-backup` | `core.tasks.scheduled_database_backup` | `public` | daily 03:00 † | `pg_dump` into `backups/scheduled` on the backups PVC; see [Backups](/dev/operations/backups). Dropped when `DATABASE_BACKUPS_ENABLED` is off (staging) |
+| `monitor-system-health` | `core.tasks.monitor_system_health` (a task name only; the handler is in `src/tenant/tasks.py`) | `public` | every 30 min † | Emails `ADMINS` and raises on any failed check, including Redis persistence status |
+| `scheduled-database-backup` | `core.tasks.scheduled_database_backup` (a task name only; the handler is in `src/tenant/tasks.py`) | `public` | daily 03:00 † | `pg_dump` into `backups/scheduled` on the backups PVC; see [Backups](/dev/operations/backups). Dropped when `DATABASE_BACKUPS_ENABLED` is off (staging) |
 | `cleanup-old-backups` | `core.tasks.cleanup_old_backups` | `public` | Sun 05:00 † | 30-day retention on `backups/` (`kwargs`). Dropped with the entry above |
 | `clear-duplicate-history` | `tenant.tasks.fanout_clear_duplicate_history` | every store | daily 05:00 † | `core.tasks.clear_duplicate_history_task`: simple-history pruning |
 | `clear-old-history` | `tenant.tasks.fanout_clear_old_history` | every store | Sun 03:00 † | `core.tasks.clear_old_history_task`, 365 days |
@@ -248,7 +248,8 @@ The retention periods behind the `purge-*` entries are listed in
 
 | Module | What lives there |
 |---|---|
-| `src/core/tasks.py` | health monitor, backups, cache clear, session and history cleanup |
+| `src/core/tasks.py` | the backup dump and cleanup, cache clear, session and history cleanup |
+| `src/tenant/tasks.py` (besides the `fanout_*` wrappers) | the health monitor and the scheduled backup, which alert the operators (named `core.tasks.*`) |
 | `src/core/monitored_task.py` | `MonitoredTask`, the base class of the tasks |
 | `src/cart/tasks.py` | abandoned-cart and guest-cart cleanups (named `core.tasks.*`) |
 | `src/user/tasks.py` | the inactive-user mail (named `core.tasks.send_inactive_user_notifications`) |

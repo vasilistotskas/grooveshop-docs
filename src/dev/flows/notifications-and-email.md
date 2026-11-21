@@ -766,7 +766,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/src/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
 | `grooveshop-django-api/src/emails/preview.py` | The admin preview of any registered email |
 | `grooveshop-django-api/src/emails/admin.py`, `src/emails/switches.py`, `src/emails/figures.py`, `src/emails/testsend.py` | The Emails pages of the store admin and the platform admin: grouping, figures, test send |
-| `grooveshop-django-api/src/tenant/emails.py`, `src/core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
+| `grooveshop-django-api/src/tenant/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
 | `grooveshop-django-api/src/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
 | `grooveshop-django-api/src/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
 | `grooveshop-django-api/src/core/utils/tenant_urls.py` | `STOREFRONT_LOCALES`, `STOREFRONT_DEFAULT_LOCALE`, `storefront_locale_prefix`, `get_tenant_frontend_url`, `localize_storefront_url`, `storefront_path` |
