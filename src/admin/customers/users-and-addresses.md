@@ -27,7 +27,7 @@ Search finds a customer by email, name, phone, city or address. In the filters o
 
 A customer's page has the tabs **Account**, **Profile**, **Address**, **Social**, **Permissions** and **Loyalty & Engagement**. Three more tabs show their **User Addresses**, their newsletter **User Subscriptions** and their **Orders**, newest first, each linking to the order.
 
-The **Addresses** list shows every saved address of every customer. The **Is Main** column marks each customer's default address.
+The **Addresses** list shows every saved address of every customer. The **Is Main** column marks each customer's default address. An address can also hold an **Address line 2** (a flat, a floor or a building), which checkout prefills from a saved address.
 
 ## Tasks
 
