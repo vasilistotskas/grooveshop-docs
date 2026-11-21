@@ -186,7 +186,10 @@ What to tell a customer who says they could not pay:
 1. Open the order and check **Payment** and **Status**. **Pending** with payment **Pending** or **Failed** can still be paid; **Processing** means wait; **Completed** means it was paid.
 2. If it can be paid, ask them to open the order from their account (or from the payment-failed email) and press **Pay now**, before the time shown there.
 3. If the time has run out, the order is cancelled and its stock freed. They place a new order from their cart. The time to pay can be extended only by a new payment link, and never beyond the limit in [What happens automatically](#what-happens-automatically).
-4. If they were charged but the order is still unpaid, do not ask them to pay again: see [A customer paid twice](#a-customer-paid-twice).
+4. If they say they were charged once but the order still shows unpaid, do not ask them to pay again until you know why:
+   - Read the order's history. A note such as "Viva Wallet payment … collected 40.00 but the order is for 45.00. It was not marked paid: reconcile it with the customer." means the provider took an amount that did not match the total. The platform does not mark the order paid and never cancels it automatically, your team gets an email, and **Pay now** is not offered. Agree with the customer: refund the charge in your Viva Wallet or Stripe account (the refund reaches the order on its own, see [Refunds and disputes](/admin/sales/refunds-and-disputes)) and have them pay again, or settle the difference another way.
+   - With no such note and the payment **Processing**, the provider is still confirming. Wait a few minutes and look the payment up in your Viva Wallet or Stripe account. If the money was taken there and the order stays unpaid, [contact support](/admin/help/contact-support) with the order number.
+   - A customer who was charged twice is a different case: see [A customer paid twice](#a-customer-paid-twice).
 
 ## Cancellations by the customer
 

@@ -36,7 +36,7 @@ Until you do, the Dashboard of platform staff shows **Set the dispatch point for
 
 ## What the receipt shows
 
-- The buyer's name and address. AADE requires them on a receipt that carries a movement, and the platform sends them nowhere else.
+- The buyer's name and address. AADE requires them on a receipt that carries a movement, and the receipt uses them for nothing else. The same name and address also go to the courier when ACS makes the voucher, because it needs them to deliver the parcel.
 - A **Movement of goods** box on the printed receipt: the purpose (a sale), **Start of movement**, the loading place (your dispatch point), the delivery place and the unit.
 - The delivery place is the ACS station or the BOX NOW locker for a pickup order, and the customer's shipping address otherwise.
 - The start of the movement is the day the voucher or parcel was created, with no time.
