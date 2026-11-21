@@ -60,6 +60,10 @@ This email receives the contact-form messages and shows at the bottom of the sto
 3. Click **Save**.
 4. Switch the method or courier on. See [Payment methods](/admin/settings/payment-methods) and [Shipping providers](/admin/settings/shipping-providers).
 
+### When Viva Wallet is offered at checkout
+
+Viva Wallet is offered to customers only when all four of its credentials are filled in on the **Payments** tab: **Viva Wallet Client ID**, **Viva Wallet Client Secret**, **Viva Wallet Merchant ID** and **Viva Wallet API Key**. If any one of them is empty, Viva Wallet is hidden at checkout, with no error shown. There is no platform default to fall back on, so a store that leaves one empty takes no Viva Wallet payments. See [Payment methods](/admin/settings/payment-methods).
+
 ### Take Viva Wallet or BoxNow live
 
 Both have separate credentials for testing and for real sales.
