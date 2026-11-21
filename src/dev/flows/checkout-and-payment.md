@@ -130,10 +130,12 @@ decrement and oversell in one place. Physical movements are recorded as
 ### 3. Address and phone validation runs twice
 
 The storefront validates with Zod in
-`app/composables/useCheckoutForm.ts`: `step1Schema` (identity and
-address, phone through `isPlausiblePhone`), `step2Schema` (shipping
-method plus the locker or station id the method requires) and
-`step3Schema` (a pay-way id). The phone is validated on the normalised
+`app/composables/useCheckoutForm.ts`: `step1Schema` (the **Details** step:
+contact, recipient name, country, order notes; phone through
+`isPlausiblePhone`), `step2Schema` (the **Delivery** step: the shipping method,
+the locker or station id a pickup method requires, and for a home delivery the
+street, number, postcode, city and region, plus the receipt or invoice choice)
+and `step3Schema` (a pay-way id). The phone is validated on the normalised
 value that will actually be submitted, so the error appears on the step
 that owns the field instead of as a late 400.
 
@@ -184,6 +186,56 @@ Two deliberate asymmetries: the storefront requires a street number that
 Django allows blank (the courier voucher needs one), and the Greek VAT
 number on an invoice order is checksum-validated on both sides so the
 buyer never gets a late rejection.
+
+#### The delivery address: home delivery or pickup point
+
+The address belongs to the delivery step, because only a home delivery needs
+one (`app/components/Checkout/StepShipping.vue`; the webside design has its
+own copies under `app/components/variants/webside/Checkout/`).
+
+- **Home delivery.** `app/components/Checkout/DeliveryAddress.vue` asks for the
+  street, number, postcode, city and region (and offers to save the address to
+  the address book). The street may be sent as one line with the number at its
+  end, the Greek and Cypriot form: order creation splits it in one place
+  (`src/core/validators/address.py: split_street_line`) so the order stores the
+  two columns the courier voucher, the invoice and myDATA read. A number written
+  first, or text after the number, is not guessed: the order is refused with
+  400 `street_number_missing` on `street`. A `streetNumber` that is sent is
+  used as sent. An optional second field, **Address line 2** (a flat, a floor or a
+  building), is sent as `addressLine2` on a home-delivery order only, never on a
+  pickup order, and is kept when the address is saved; the account's address
+  forms, the address cards, checkout's saved-address cards and the review summary
+  show it after the street. Django stores it on
+  `Order.address_line_2` apart from the customer's note; the order pages print
+  `fullAddress`, which already holds it after the street, the receipt and the
+  order emails print it under the street, and the ACS voucher's `Delivery_Notes`
+  carry it after the order's floor (which checkout does not ask for) and before the customer's note
+  (`src/shipping/services.py: CourierNotes`, `docs/order/creation-address.md`).
+- **Pickup point.** Only the picker is shown, and no address is sent. For
+  `shipping_kind=pickup_point` the buyer's street, number, city and postcode
+  are not required or kept: order creation stores the point's address from the
+  carrier's catalogue (`ShippingService.pickup_point_address`,
+  `ShippingCarrierInterface.address_of_pickup_point`: the BOX NOW locker, or
+  the exact ACS station and branch) as the order's delivery address, with
+  no region, floor, location type or address line 2
+  (`src/order/serializers/order.py`, the pickup branch of the order
+  validation). One snapshot is what the receipt, the ACS voucher and the order
+  page read. Name, email and phone stay required.
+- **Refusals** (400, on the carrier's location field): `pickup_point_required`
+  (no point chosen), `pickup_point_unknown` (the catalogue does not hold it;
+  a point that is missing is looked up once by resyncing the carrier's
+  catalogue, for at most `PICKUP_POINT_RESYNC_TIMEOUT_SECONDS`) and
+  `pickup_point_in_another_country`. The storefront sends the shopper back to
+  the delivery step with a message under the picker
+  (`shared/constants/orderRefusals.ts`). A 503
+  `pickup_point_check_unavailable` with `Retry-After`
+  (`src/shipping/api_errors.py: PickupPointCheckUnavailable`) means the point
+  could not be judged because the cache holding the resync guard is down:
+  `server/api/orders/index.post.ts` lets that one body through, and the
+  checkout says to try again, keeping the order's idempotency key.
+- **Receipt or invoice.** `app/components/Checkout/DocumentChoice.vue` sits under
+  the address. "Same as delivery" is offered only for a home delivery; an
+  invoice to a pickup point must name the company's address.
 
 ### 4. Shipping method decides which pay-ways exist
 
@@ -369,6 +421,16 @@ and what the order stores).
   - It has no VAT total: the receipt's VAT taxes shipping and the fee at the
     goods' rates and spreads the loyalty discount over the lines, while the
     cart's `totalVatValue` is the goods only.
+- **The cart digest** (Django #765, refined by #770; it is not part of the pickup change). A quote with a delivery chosen also returns
+  `cartDigest`, an HMAC over what the order would be made of (each line, the
+  promotions with their codes and amounts, the delivery with its pickup point; not the pay way, so a changed pay way does not change it, and not the shipping charge, fee, loyalty or gift-card amounts, which `expectedTotal` holds);
+  `POST /api/v1/order` takes an optional `expectedCartDigest` and, on a
+  difference, creates nothing and answers 409 `cart_changed` with the fresh
+  quote. It catches what the total cannot, such as a line swapped for one at
+  the same price or another locker at the same rate
+  (`OrderQuoteService.cart_digest`, `order.enum.create_error.CART_CHANGED_CODE`).
+  Like `total_changed` it is a `code` under `error.type` `invalid_order_data`,
+  and it stays optional until the storefront and the gateway send it.
 - **The expected total.** `POST /api/v1/order` takes an optional
   `expectedTotal` (`{amount, currency}`, minor units). Both paths compare it,
   exactly, with the amount due computed under the cart lock and before
@@ -676,7 +738,7 @@ placeholder) and a cancel URL on this store.
 
 | Step | Surface |
 |---|---|
-| Enters checkout | Three steps in `app/pages/checkout/index.vue`; stock is reserved on submit, not on arrival |
+| Enters checkout | Three steps in `app/pages/checkout/index.vue`: **Details**, **Delivery** (the address, for a home delivery only, and the receipt or invoice choice) and payment; stock is reserved on submit, not on arrival |
 | Places a COD order | Success toast, then `/checkout/success` with the order in `sessionStorage`; order-received email |
 | Places a Stripe order | Order created, card form mounts, then `onPaymentSuccess` navigates to the success page |
 | Places a Viva order | "Order created, complete payment" toast, then the hosted page, then back through `viva-return` |
