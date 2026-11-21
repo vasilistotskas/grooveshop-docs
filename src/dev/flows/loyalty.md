@@ -105,7 +105,7 @@ different moments.
 
 **Spent points come back in parts, with the refund.** A refund is in the
 value of what came back, and the provider's money is paid back first
-(`OrderService.refund_order`, see
+(`RefundService.refund_order`, see
 [Order lifecycle](/dev/flows/order-lifecycle#refunds)). Only the excess
 goes back onto the order's gift cards and points, split in proportion to
 what each has not got back. The points share is
