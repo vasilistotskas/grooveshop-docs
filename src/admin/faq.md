@@ -51,7 +51,7 @@ It is for the platform team only. If you need something from there, see [When to
 
 ### How do I change the logo and colours?
 
-In <span class="sidebar-path">Settings → Store Profile</span>, on the **Branding** tab. See [Store profile](/admin/settings/store-profile).
+The logo is in <span class="sidebar-path">Settings → Store Profile</span>, on the **Branding** tab; see [Store profile](/admin/settings/store-profile). The colours are in the page builder; see [Change the colours, corners and fonts](/admin/content/page-builder#change-the-colours-corners-and-fonts).
 
 ### How do I add an announcement above the header?
 
