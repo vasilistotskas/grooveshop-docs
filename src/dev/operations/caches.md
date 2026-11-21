@@ -270,7 +270,7 @@ Until 2026-09-18 only the first shape was recognised: a tenant purge of
 `page_config` cleared the handler JSON and left every rendered page, and
 a `sitemap_seo` purge matched nothing — each reporting success. The
 endpoint also marked a key as handled before its regex ran, so of the
-five `nuxt_routes()` patterns in `page_config` only the first ever
+five route patterns the `page_config` surface declared then, only the first ever
 matched. Both are pinned by `test/unit/server/api/admin/cache/purge.post.spec.ts`
 against keys copied from the production keyspace.
 

@@ -248,7 +248,7 @@ The retention periods behind the `purge-*` entries are listed in
 
 | Module | What lives there |
 |---|---|
-| `src/core/tasks.py` | the backup dump and cleanup, cache clear, session and history cleanup |
+| `src/core/tasks.py` | the backup dump and cleanup (`backup_database_task`, `cleanup_old_backups`); cache clearing and invalidation (`clear_all_cache_task`, `invalidate_cache_surfaces_task`, `purge_store_pages_task`, `purge_store_locales_task`, `purge_edge_cache_task`); `release_due_publications_task`; session, history, admin-log, cache-purge-log and notification cleanup (`clear_expired_sessions_task`, `clear_duplicate_history_task`, `clear_old_history_task`, `purge_expired_admin_log_entries`, `purge_expired_cache_purge_logs`, `clear_expired_notifications_task`); `clear_development_log_files_task` |
 | `src/tenant/tasks.py` (besides the `fanout_*` wrappers) | the health monitor and the scheduled backup, which alert the operators (named `core.tasks.*`) |
 | `src/core/monitored_task.py` | `MonitoredTask`, the base class of the tasks |
 | `src/cart/tasks.py` | abandoned-cart and guest-cart cleanups (named `core.tasks.*`) |
