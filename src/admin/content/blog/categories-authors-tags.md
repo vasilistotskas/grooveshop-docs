@@ -24,7 +24,7 @@ Blog categories are separate from product categories, and blog tags are separate
 ### Add a category
 1. Open <span class="sidebar-path">Content → Blog → Blog Categories</span> and click **Add**.
 2. Write the **Name** and, if you like, a **Description** in every language. For a subcategory, pick a **Parent**.
-3. Upload an **Image** if it should show in the blog's category list.
+3. Upload an **Image** if it should show in the blog's category list. A photo fills its tile and is cropped to it. An SVG is drawn as an icon: whole, never cropped or stretched, on the theme's **Secondary colour** (see [Change the colours, corners and fonts](/admin/content/page-builder#change-the-colours-corners-and-fonts)), so a single light glyph (white, for example) reads best.
 4. Save. To change the order, drag the rows in the list.
 
 ### Add an author
