@@ -36,7 +36,7 @@ flowchart TD
   Gate -- "yes" --> Ident["optional bearer verify"]
   Ident --> Tools["MCP tools"]
   Tools --> API["Django REST, X-Forwarded-Host"]
-  Tools --> Sess["Redis ag:schema:cs:v5:id"]
+  Tools --> Sess["Redis ag:schema:cs:v7:id"]
 
   Platform["UCP / ACP platform"] --> Profile["/.well-known/ucp"]
   Platform --> ACP["/acp/checkout_sessions"]
@@ -176,22 +176,49 @@ then each pod's memory can each hold the previous config for one TTL.
 ### Django's rate limits on gateway calls
 
 Every buyer an AI platform serves reaches Django from that platform's
-address, so a per-address budget would put them all in one bucket. A guest
-call that carries the gateway's `X-Internal-Gateway` secret is therefore
-budgeted on what it names instead (`src/core/api/throttling.py:
-GatewayAnonThrottle`, `_gateway_ident`): the cart (the hash of its
-`X-Cart-Token`, else `X-Cart-Id`) for cart writes and order creation, and
-the order (the hash of its `?uuid=`) for the payment-link calls. The
-throttles built on it are `CartMutationAnonThrottle`,
-`OrderCreateAnonThrottle` and `PaymentAttemptAnonThrottle`, with their own
-scopes and rates (`DEFAULT_THROTTLE_RATES`). A wrong or missing secret, or
-a call that names neither, falls back to the client address. One cart or
-order still cannot exceed the rate while the cache answers; in a Redis
-outage the order and payment throttles refuse (fail closed) and the cart
-throttle lets writes through (fail open, `ResilientThrottleMixin`). A call
-signed in as an account is held by the user budget alone. Django's 429
-reaches an MCP agent as the `throttled` tool error and an ACP agent as
-`rate_limited`.
+address, so a per-address budget would put them all in one bucket. A call
+that carries the gateway's `X-Internal-Gateway` secret is therefore
+identified by what it names instead. The rule lives once, in
+`GatewayIdentMixin.get_ident` (`src/core/api/throttling.py`, with
+`_gateway_ident`), and every throttle that guards cart, order and payment
+calls uses it:
+
+- the anonymous half of each pair, through `GatewayAnonThrottle`:
+  `CartMutationAnonThrottle`, `CartQuoteAnonThrottle`,
+  `OrderCreateAnonThrottle` and `PaymentAttemptAnonThrottle`;
+- the signed-in half, whose `UserRateThrottle` asks `get_ident` for a caller
+  who is not signed in: `CartMutationThrottle`, `OrderCreateThrottle` and
+  `PaymentAttemptThrottle`;
+- the coupon budget (`CouponApplyThrottle`) and the gift-card guessing
+  budget (`GiftCardCodeThrottle`).
+
+Each keeps its own scope and rate (`DEFAULT_THROTTLE_RATES`). The key is
+settled once per request by `cart.agent_token.existing_gateway_subject`, and
+only for something that exists in the store:
+
+- a cart token that was minted and has not expired, keyed by the **cart its
+  grant names**, so several live tokens for one cart are one budget;
+- else a guest cart, by the uuid the cart lookup parses (one cart whatever
+  the spelling), from `X-Cart-Id`;
+- **only on the payment routes** (`gateway_names_order`): the order the
+  route's `pk` authorizes, when `?uuid=` is that order's uuid in its
+  canonical spelling, keyed by the uuid's hash. Another order's `?uuid=`
+  charges nothing to it, and a cart route's `?uuid=` names no order and is
+  ignored.
+
+**Anything else is keyed on the client address, as for any caller:** a wrong
+or missing secret, an id that is no uuid, or one that names no cart or order
+in the store. An id that earned a budget just by being well formed would let
+a client that makes ids up escape the per-address limit on cart creation
+(a cart-item create and a coupon apply create a cart when the named one is
+missing) and the tight coupon guessing limit. The BoxNow nearest-locker
+budget stays per address: its call names no cart. One cart or order still
+cannot exceed the rate while the cache answers; in a Redis outage the order,
+payment and coupon throttles refuse (fail closed) and the cart throttles let
+writes through (fail open, `ResilientThrottleMixin`). A call signed in as an
+account is keyed on the account. Django's 429 reaches an MCP agent as the
+`throttled` tool error and an ACP agent as `rate_limited`. The full rule is
+the Django repo's `docs/client-ip.md`.
 
 ### MCP
 
@@ -448,6 +475,22 @@ books it the same way with `agentProtocol: "mcp"`
 reads "AI agent (MCP)". The chat assistant serves the same tool but never
 sends a protocol; see the chatbot's request below.
 
+**One order per agent checkout (Django #759; the gateway sends its checkout
+session id, `internal/checkout/flow.go`).** `POST /order` accepts `agentCheckout`, the checkout session's id,
+and Django believes it beside the same `X-Internal-Gateway` secret and from no
+other caller (`src/order/views/order.py: OrderViewSet._named_agent_checkout`);
+from a caller without the secret it is dropped before validation, even when
+malformed, with no 400.
+The order stores it (`Order.agent_checkout`, unique when set), so a repeat of
+the call with the same id, which a gateway sends when an order call went
+unanswered, is answered with the order that checkout placed: the same `201`
+and body, with nothing created, refused or sent. The lookup runs before the
+body is validated, again under the cart lock, and again after a refusal
+(body validation and the pay-way checks included), so a racing commit is
+answered `201` with its order; the rules are the Django
+repo's `docs/order/creation.md` §3.2. The response carries `agentCheckout`,
+and the order-event body carries it as `agentCheckoutId` (see Order events).
+
 A checkout with an order renders from that order, not from the cart.
 `checkout.ComputePricing` reads the order once the session has one, because
 Django deletes the cart with the order (on payment, for an online method) and a
@@ -592,12 +635,23 @@ non-JSON or oversized body, or a missing key, is a 400 before that.
 
 An order being placed has a deadline: `checkout.Flow.CompletionDeadline` is the
 session's in-progress save plus three upstream timeouts. Until then a call on
-the session is 409 with a `Retry-After` of the time left. Past it the outcome
-was never recorded and never will be, because the session stays
-`complete_in_progress` until it expires: 502 `order_outcome_unknown`, with no
-`Retry-After`. The platform must not complete again or start a new checkout,
-since the order may exist; the buyer receives the store's confirmation email if
-it does.
+the session is 409 with a `Retry-After` of the time left. Past it no
+completion of the session can still be running, and the outcome was not
+recorded: 502 `order_outcome_unknown` with `Retry-After`
+(`mcptool.UnavailableRetryAfter`, 30 seconds). **Complete the same session
+again after it, and never start a new checkout**, since the order may exist.
+That complete resumes the placement (`Flow.Resumable`, `Flow.Resume`): it sends
+the order again with the checkout's id, and Django answers the order the
+checkout already placed, places it now, or refuses it. A session stored
+unconfirmed (Django left the order unanswered) is resumable at once; one whose
+last save failed reads in flight until its `UpdatedAt` plus the completion
+budget (409 `idempotency_in_flight` with `Retry-After`), and a complete after
+that resumes it. A repeat complete once the order exists places no second
+order: `completeClosed` answers the session (`completed`), refuses a
+`canceled` one as closed, and answers a `complete_in_progress` one with the
+pending answer. A completion left unanswered while a resume placed the order
+answers that order's session instead of "unknown"; it stays unknown only while
+the session is still `complete_in_progress`.
 
 #### Idempotency
 
@@ -632,11 +686,13 @@ is kept for 24 hours, the spec's minimum, unless Redis evicts it.
   key." (`noteKept`). The key is freed, and the same key runs again as a new
   request, for an answer that asks for the same request again: a 5xx, a 409
   `idempotency_in_flight` and a 429.
-- **Two 5xx answers of a complete are kept all the same**: 502
-  `order_outcome_unknown` and 500 `order_placed` for an order whose session
-  could not be saved. An order may exist behind each while the stored session
-  may not say so, so a retry run afresh could be answered by that session. The
-  key stays spent and every retry is told what the first attempt was.
+- **One 5xx answer of a complete is kept all the same**: 500 `order_placed`
+  for an order whose session could not be saved. An order exists while the
+  stored session may not say so, so a retry run afresh could be answered by
+  that session. The key stays spent and every retry is told what the first
+  attempt was. 502 `order_outcome_unknown` is not kept (`keptAgainstKey`, a 5xx
+  without a stored order): the same key frees and the retry resumes the
+  completion, which never orders twice.
 - **An update or a cancel marks the session it changes** (`Session.AppliedBy`:
   the endpoint, the key and the body, hashed), in the save that applies it. A
   request whose save was stored and which then could not answer (its render
@@ -683,9 +739,11 @@ capabilitiesOf`); with promotions off every submitted code comes back in
 A UCP or ACP checkout is a session in the gateway's Redis
 (`internal/checkout/store.go`, `internal/checkout/session.go`).
 
-- **Keys.** `ag:{schema}:cs:v5:{id}` is the session, that plus `:lock` its
+- **Keys.** `ag:{schema}:cs:v7:{id}` is the session, that plus `:lock` its
   lock, that plus `:order` the order it placed. The version is of how sessions
-  are written, not only of their shape: it moves whenever an older pod writing
+  are written, not only of their shape (v7: every order a session sends names
+  its checkout, and a complete resumes a session whose order went unanswered):
+  it moves whenever an older pod writing
   the key its own way could undo what a newer one relies on, so the two never
   share a session and one under an older key is simply not found
   (`TestSessionKeyIsVersioned`). The session that holds a cart is named in
@@ -728,7 +786,17 @@ A UCP or ACP checkout is a session in the gateway's Redis
   that held it (under that checkout's own lock). A holder whose order is being
   placed or awaits payment, or an open checkout of another protocol or one
   another platform signed, keeps the cart: the create is a `conflict`. An unpaid
-  online order Django has canceled releases it. Django also refuses an agent's
+  online order Django has canceled releases it. So does a holder this release
+  cannot read (`CartHolder.Unread`, `errCartUnread` in
+  `internal/mcpsrv/ucp_checkout.go`): the cart's record names a session that is
+  not stored under this release's key, because another release's pod still
+  serves it while a key move rolls out, or because Redis lost the session while
+  its cart record lives. An order may exist, so the `conflict` hint says not to
+  start another checkout: read the checkout with `get_checkout`, the order with
+  `get_order` or `track_order`, or ask the shopper for the store's confirmation
+  email. The cart is released when the record ends, with the lifetime its
+  session gave it. ACP never meets this case: its create always makes a new
+  cart for the session (`checkout.CartHolder{}`) and takes no `cart_id`. Django also refuses an agent's
   order from a cart whose earlier order still awaits its payment, which holds
   whatever Redis lost.
 - **A handler holds a snapshot** and answers from it only through its exit
@@ -1185,7 +1253,10 @@ attempt queued after the commit, the rest swept every minute per store. Each
 attempt POSTs to `/internal/events/order-status` with the shared
 `X-Internal-Token`, carrying `eventId` (the row's UUIDv7), `eventType`
 (`created` or `updated`), `occurredAt`, `schemaName`, `orderUuid`,
-`status`, `paymentStatus` and `trackingNumber`. Django connects within 3 s and
+`status`, `paymentStatus`, `trackingNumber` and `agentCheckoutId` (the
+agent checkout that placed the order, `Order.agent_checkout`, so the event
+alone finds its checkout; empty whenever the order stores none (an agent order whose creation named no checkout, every older order).
+Django connects within 3 s and
 reads the answer for 30 s; the gateway bounds its whole answer at 25 s
 (`orderEventBudget`). An order's events go out in the order they happened.
 
@@ -1429,10 +1500,13 @@ yourself, then bumping the pin in the infrastructure repo.
   The platform sends no `API-Version` header, or a version the body's
   `supported_versions` does not list.
 - **An ACP complete answers 502 `order_outcome_unknown`.** The store never
-  confirmed whether the order was placed, and the session stays
-  `complete_in_progress` until it expires. Do not complete again or start a new
-  checkout: the buyer receives the store's confirmation email if the order was
-  placed.
+  confirmed whether the order was placed. Complete the same session again after
+  the `Retry-After` (30 seconds), with the same `Idempotency-Key`: the complete
+  resumes the placement and Django answers the existing order, places it, or
+  refuses it. Never start a new checkout. On UCP the same answer is
+  `order_outcome_unknown` with `retry_after`, and the retry needs a new
+  `meta.idempotency-key`, because the complete that left the outcome unknown
+  spent its own.
 - **A feed answers 503 though Django is back.** A failed generation marks the
   store for a minute (`ag:{schema}:feed:failed`), and a missing feed fails at
   once meanwhile. Wait the minute, or invalidate the store's feeds
@@ -1524,7 +1598,9 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/mcpsrv/catalog.go` | Catalog tools, `ratingOf` |
 | `grooveshop-agent-gateway/internal/checkout/discounts.go` | `ApplyDiscountCodes`, shared by UCP and ACP |
 | `grooveshop-django-api/src/tenant/features.py` | `STORE_FEATURES`, `effective_features` |
-| `grooveshop-django-api/src/core/api/throttling.py` | `GatewayAnonThrottle`, `_gateway_ident`: gateway calls budgeted per cart or order |
+| `grooveshop-django-api/src/core/api/throttling.py` | `GatewayIdentMixin`, `GatewayAnonThrottle`, `_gateway_ident`: gateway calls budgeted per cart or order, by every cart, order, payment, coupon and gift-card throttle |
+| `grooveshop-django-api/src/cart/agent_token.py` | `existing_gateway_subject`: the cart or order a gateway call names, only when it exists |
+| `grooveshop-django-api/src/core/cart_id.py`, `src/core/canonical_uuid.py` | The spellings a cart id and an order uuid are read in |
 | `grooveshop-agent-gateway/internal/mcpsrv/discovery.go` | `storeEntry`, `ARDHandler`, `AICatalogHandler` |
 | `grooveshop-agent-gateway/internal/mcpsrv/servercard.go` | `ServerCardHandler`, `IdentityFor`, `publisher`, `publicDocument` |
 | `grooveshop-agent-gateway/internal/storefront/urls.go` | `Site.Links` (page links in a language), `MCPServerCard` and the gateway's own endpoints |

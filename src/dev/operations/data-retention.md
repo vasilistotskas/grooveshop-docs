@@ -25,7 +25,10 @@ Source: `src/core/retention.py`, `src/core/tasks.py`, `src/core/history.py`,
 
 All sweeps run daily at 04:00 Athens unless the table says otherwise. A
 per-store sweep fans out to every active store, suspended ones included: a
-store's billing state does not pause a deletion the platform promised.
+store's billing state does not pause a deletion the platform promised. A sweep
+holds its store's task lock while it runs, so destroying a store waits for it
+(and the other way round) instead of letting a sweep's next batch fall through
+to the public schema; see [Suspend, export & destroy](/dev/operator/lifecycle#destroy).
 
 | What is deleted | Scope | Kept for | Setting |
 |---|---|---|---|
@@ -45,7 +48,7 @@ store's billing state does not pause a deletion the platform promised.
 | Expired Django sessions | public and per store | session expiry | none (weekly Monday 04:00) |
 | allauth user-session rows whose Django session is gone | public and per store | by state | none (same task as above) |
 | Expired knox API tokens | per store | the token's own expiry | none (same task as above) |
-| Notifications | per store | 365 days | code (`fanout_clear_expired_notifications`) |
+| Notifications | per store, suspended stores included | 365 days | code (`fanout_clear_expired_notifications`, `include_suspended=True`) |
 | Simple-history rows (every audited model) | per store | 365 days, plus a nightly sweep of identical consecutive rows | code (`fanout_clear_old_history`, `fanout_clear_duplicate_history`) |
 | Celery task failures | public | 30 days | `CELERY_RESULT_EXPIRES` |
 

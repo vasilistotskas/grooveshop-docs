@@ -20,7 +20,7 @@ Search looks in the comment text, the commenter's name and email, and the post t
 | ticked | The comment shows under the post and counts in its comments. |
 | not ticked | The comment and its replies do not show. |
 
-Comments show on the blog post page in the store designs that have them. There they are part of the article page itself, so every visitor, signed in or not, sees them (and their count) as soon as the page opens, and **Load more** brings the next, older comments. A store design without a comments section shows none, whatever is approved here.
+Comments show on the blog post page in the store designs that have them. There they are part of the article page itself, so every visitor, signed in or not, sees them (and their count) as soon as the page opens, and **Load more** brings the next, older comments. A store design without a comments section shows none, whatever is approved here. Some designs leave comments out on purpose, for example the design of a store that has customer accounts switched off: comments need an account, so such a store has none to show and no one to write them.
 
 ## Tasks
 

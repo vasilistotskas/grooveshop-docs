@@ -116,7 +116,7 @@ save (`src/tenant/signals.py: invalidate_tenant_caches`).
 | The store's own staff | The store admin lives on the tenant host, so it is behind the same 503. Staff cannot reach their own panel while suspended |
 | Platform operators | Unaffected — the control plane runs on the public schema at `platform.grooveshop.space` |
 | In-cluster services | The internal tenant feed (`src/tenant/internal.py: build_domains_payload`) drops the store's domains and lists its schema in `suspendedSchemas`; both follow `SuspendedTenantMiddleware`'s rule, `is_active` |
-| Scheduled work | Skipped. `run_for_all_tenants` selects `is_active=True`, so no beat-driven task fans into a suspended schema — no carrier polling, no payout reconciliation, no locker sync burning the merchant's API budget on a frozen store |
+| Scheduled work | Skipped, except the sweeps passed `include_suspended` (below). `run_for_all_tenants` selects `Tenant.objects.active()`, so no other beat-driven task fans into a suspended schema — no carrier polling, no payout reconciliation, no locker sync burning the merchant's API budget on a frozen store |
 | Processed images | Refused by media-stream, **503** `TENANT_SUSPENDED` with `Cache-Control: no-store`, before any cache tier is read; its cached copies are flushed and Cloudflare's purged |
 
 The `SuspendedTenantMiddleware` docstring records why it exists: before
@@ -127,12 +127,15 @@ reads, cart mutations, **order creation** and payment-intent creation
 against their own live provider keys.
 
 ::: tip Retention sweeps also stop
-`run_for_all_tenants` takes an `include_suspended` flag, used by the two
-contact-attachment retention sweeps on the argument that deleting data the
-platform promised to delete should not pause with billing. As written the
-query still requires `is_active=True`, and a suspended store has
-`is_active=False`, so those sweeps do not in fact reach it. Expect a long
-suspension to accumulate expired uploads.
+`run_for_all_tenants` takes an `include_suspended` flag, used by the
+retention sweeps on the argument that deleting data the platform promised to
+delete should not pause with billing, and by the money and parcel jobs that
+finish what the store owes its customers. With the flag it reaches every
+store, suspended ones included (`Tenant.objects.stores()`); without it only
+`Tenant.objects.active()`. A store's own mail and marketing stay off: a
+suspended store reports nothing to Meta's Conversions API
+(`meta_capi.services.is_capi_enabled`), and the agent gateway's order events
+wait in the outbox.
 :::
 
 ### What the media flush touches
@@ -184,6 +187,13 @@ Unlike `suspend_tenant` it carries **no already-in-that-state guard**: it
 returns `True` for any tenant that is not protected, and writes the row
 every time, so it reports "activated" for a store that was already
 running. Read its `True` as "not refused", not as "something changed".
+
+**A store coming back from suspension gets a search re-sync.** The search
+fan-outs and the deploy's `meilisearch_apply_settings` reach active stores
+only, so a suspended store's indexes miss settings and documents. When the
+store was suspended, `activate_tenant` queues `core.tasks.sync_meilisearch_indexes`
+for its schema once the activation commits (`dispatch_on_commit`); that sync
+applies each index's settings before its documents.
 
 ## Export
 
@@ -249,7 +259,7 @@ This is the only irreversible action on the platform.
 ### Every condition under which it is refused
 
 `destroy_refusal(tenant)` returns the first that applies, and
-`destroy_tenant` raises `ValueError` on any of them:
+`destroy_tenant` raises `DestroyRefused` (a `ValueError`; its `refusal` is the key) on any of them:
 
 | Key | Condition | Message |
 |---|---|---|
@@ -259,6 +269,24 @@ This is the only irreversible action on the platform.
 
 The cooldown exists for exactly one failure: an accidental suspension
 followed by an immediate destroy.
+
+The gates are judged on the current row first, so a protected or live store is
+refused at once with its own key rather than as `busy` after a wait (a live
+store always has tasks running). One refusal is not a property of the row:
+`busy`. A destroy that passes the gates takes the store's task lock exclusively (`tenant.celery.hold_store_for_destroy`),
+waiting up to `DESTROY_TASKS_WAIT` (30 seconds) for the tasks running in the
+store to end, because a task whose schema is dropped between two of its
+queries would fall through to the public schema's tables of any app both
+schemas share. Tasks that start meanwhile wait for the destroy
+(`holding_store`, a shared advisory lock every `TenantTask` holds while it
+runs), then find no row and do not run. If tasks are still running after the
+wait, the destroy is refused with `busy`: try again a little later. The wait
+turns `statement_timeout` off for that one statement, so it always ends as a
+refusal and never as a cancelled query. The row is judged again under its lock
+after the wait. Through
+the platform API the refusal is the stable code `tenant_destroy_<key>`
+(`tenant_destroy_busy`, `tenant_destroy_cooldown`, ...), never the
+exception.
 
 Two more gates sit above these in the admin path:
 
@@ -278,7 +306,11 @@ Two more gates sit above these in the admin path:
 The order is not arbitrary (`src/tenant/lifecycle.py: destroy_tenant`). Inside
 one transaction:
 
-1. Re-read the row under lock and re-run the refusal gates.
+1. Refuse on the gates at once if they apply (before the transaction). Then
+   take the store's task lock exclusively (waiting up to 30 seconds for its
+   running tasks, else refuse as `busy`), before the row lock so that a task
+   writing the row cannot wait on this transaction while it waits on the task;
+   then re-read the row under lock and re-run the refusal gates.
 2. Read the **last invoice year first**, with
    `offboarding.latest_invoice_year(schema)` — it lives inside the schema
    step 4 destroys. On any read failure it returns the current year rather
@@ -395,6 +427,10 @@ of anything.
   looks inactive: `is_active` was flipped on the change form, so
   `suspended_at` is empty. Run the Suspend action — it stamps the anchor
   — and wait out the cooldown.
+- **Destroy refused as `busy`** (`tenant_destroy_busy` on the API): tasks were
+  still running in the store after 30 seconds, typically a long sweep or
+  export. Wait for them (the store is suspended, so no new work starts apart
+  from the retention and money sweeps) and run the destroy again.
 - **Suspension "did nothing"** (returned `False`): the store was already
   fully suspended, or it is protected. Re-suspending is intentionally a
   no-op.
@@ -419,10 +455,11 @@ of anything.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/tenant/lifecycle.py` | `is_protected_tenant`, `destroy_refusal`, `suspend_tenant`, `activate_tenant`, `export_tenant_data`, `has_tenant_export`, `destroy_tenant`, `_dispatch_media_flush`, `SUSPEND_COOLDOWN` |
+| `grooveshop-django-api/src/tenant/lifecycle.py` | `is_protected_tenant`, `destroy_refusal`, `suspend_tenant`, `activate_tenant` (queues the search re-sync), `export_tenant_data`, `has_tenant_export`, `destroy_tenant`, `DestroyRefused`, `DESTROY_TASKS_WAIT`, `_dispatch_media_flush`, `SUSPEND_COOLDOWN` |
 | `grooveshop-django-api/src/tenant/offboarding.py` | `purge_search_indexes`, `purge_tenant_files`, `latest_invoice_year`, `retention_until`, `INVOICE_RETENTION_BASIS`, the private/public path helpers |
 | `grooveshop-django-api/src/tenant/admin.py` | `suspend_tenants`, `activate_tenants`, `destroy_tenants` + confirmation page, `export_tenant_data_action`, `get_actions`, `has_delete_permission`, `TenantArchiveAdmin` |
 | `grooveshop-django-api/src/core/templates/admin/tenant/destroy_confirmation.html` | The second-click confirmation page |
+| `grooveshop-django-api/src/tenant/celery.py` | `holding_store`, `hold_store_for_destroy`: the store task lock |
 | `grooveshop-django-api/src/tenant/views.py` | `TenantAdminViewSet.destroy`/`suspend`/`activate`, `IsPlatformOperator`, `tenant_resolve` |
 | `grooveshop-django-api/src/tenant/urls_public.py` | Lifecycle routes, mounted only on the control-plane host |
 | `grooveshop-django-api/src/tenant/models.py` | `Tenant.is_protected`, `suspended_at`, `suspended_reason`, `SuspendedReason`, `Tenant.delete(force_drop=…)`, `TenantArchive` |

@@ -13,7 +13,7 @@ The entries appear when myDATA is switched on in Store Settings, even before the
 
 The platform issues receipts itself, through AADE's myDATA, only for a business exempt from the fiscal device. Then it issues:
 
-- the **receipt** when an order ships;
+- the **receipt** when an order ships, or, for a courier or locker order, before the courier collects the parcel (see [Receipts for courier and locker orders](/admin/sales/movement-receipts));
 - a **credit document** (the retail credit note) for every refund of goods made after the receipt.
 
 Both lists are archives: you can browse, search and download, never edit or add.
@@ -50,7 +50,7 @@ The same columns, with **Credit Number** and **Reason**. The reason is **Refund*
 | **Rejected** | AADE refused it. Fix the cause and resend it from the order. Rejected receipts are counted on the [Dashboard](/admin/getting-started/dashboard) as **Receipts rejected by myDATA**. |
 | **Canceled in myDATA** | Cancelled as issued in error. |
 
-The customer is emailed a receipt or credit document only once AADE has registered it.
+The customer is emailed a receipt or credit document only once AADE has registered it. A receipt for a courier or locker order is also held back until the parcel leaves.
 
 ## Tasks
 
@@ -87,6 +87,8 @@ Once the receipt has a MARK, **VAT Rate** is read-only.
 2. **Send receipt to myDATA** resends a receipt that was rejected or never answered. **Issue credit documents (myDATA)** does the same for the credit documents.
 3. Refresh the list to see the new status and the MARK.
 
+You rarely need it for a document AADE never answered: the platform sends a receipt or a credit document whose send got no answer again by itself, about every 15 minutes, until AADE registers it. A send still waiting for AADE's answer is never sent over: it is sent again only once its time to answer has passed. A rejected document waits for you, because AADE refused its content or the store's credentials.
+
 ### Cancel a document issued in error
 Use **Cancel receipt in myDATA (issued in error)** on the order, or **Cancel in myDATA (issued in error)** on the credit documents list. AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, so in practice the right tool is almost always a credit document.
 
@@ -117,7 +119,7 @@ Stripe can report a refund failed days after it went through. If its credit docu
 
 ## When documents are issued
 
-- **The receipt**, once a receipt order **ships**, cash on delivery included. It is issued once per order and emailed to the customer in their language.
+- **The receipt**, once a receipt order **ships**, cash on delivery included. It is issued once per order and emailed to the customer in their language. A courier or locker order is the exception once you have set the dispatch point: its receipt is issued earlier, as [described here](/admin/sales/movement-receipts).
 - **Net of earlier refunds.** If money went back before the receipt (to the card, or onto gift cards), the receipt shows only what was finally paid. Giving back a duplicate payment does not reduce it, and points were never on it. If everything went back, no receipt is issued.
 - **Not while another refund's share depends on an unanswered one.** A refund still waiting for the provider's answer does not delay the receipt by itself. The receipt waits only when another refund reached the order meanwhile and its share depends on that answer; once the first refund is settled, the receipt is issued on its own. See [A receipt is waiting for a refund](#a-receipt-is-waiting-for-a-refund).
 - **A credit document for each refund after the receipt**, once the receipt is registered. It covers what went back for the goods: money to the card, cash you paid back, or value returned onto gift cards. The part of a refund that gives back a duplicate payment gets none, and neither do points given back (see [How a refund is judged](/admin/sales/refunds-and-disputes#how-a-refund-is-judged)).
@@ -126,9 +128,15 @@ Stripe can report a refund failed days after it went through. If its credit docu
 - **A lost card dispute is credited only if the goods came back**, once you say so with **Settle chargeback (goods)** on the order (see [Card disputes](/admin/sales/refunds-and-disputes#card-disputes)). If the customer kept the goods, the bank took the money back but you did not undo the sale, so no credit document is issued.
 - **Never past the receipt.** If the refunds for goods add up to more than the receipt holds, the part past it gets no credit document, and the order is listed on the [Dashboard](/admin/getting-started/dashboard#alerts) for you to check (see [Clear a receipt difference](#clear-a-receipt-difference)).
 - **One closing credit document** when an order ends without a sale after its receipt, such as a cash-on-delivery parcel that came back.
-- **Orders cancelled before shipping** never get a receipt.
+- **Orders cancelled before shipping** never get a receipt that reaches the customer. For a courier or locker order whose receipt was already issued, it is cancelled in myDATA (see [Receipts for courier and locker orders](/admin/sales/movement-receipts)).
 
 With `MYDATA_AUTO_SUBMIT` off, nothing is issued on its own: use **Issue receipt (myDATA)** and **Issue credit documents (myDATA)** on the order. Pressing them twice never issues twice.
+
+## Receipts for courier and locker orders
+
+When an order goes by courier (ACS) or to a locker (BOX NOW), the law asks for a receipt that declares the movement of the goods, and AADE must receive it before the courier collects the parcel. So the receipt is issued earlier than for other orders, as soon as the voucher or the locker parcel exists, once you have set your dispatch point. The customer gets it when the parcel leaves.
+
+The [Receipts for courier and locker orders](/admin/sales/movement-receipts) page covers the dispatch point, what the receipt shows, resends when myDATA does not answer, refusals, and what a cancellation does to it.
 
 ## Set up issuing through myDATA
 
@@ -139,6 +147,7 @@ Only for a business exempt from the fiscal device. Ask your accountant first: se
 3. In **Store Settings**, write the legal ground of your exemption in `MYDATA_FHM_EXEMPTION_GROUND`, as your accountant confirms it.
 4. Switch on `MYDATA_ENABLED`, and `MYDATA_AUTO_SUBMIT` if you want documents issued without pressing a button.
 5. `MYDATA_ENVIRONMENT` is `dev` (AADE's test system) by default. Set it to `prod` when you are ready to issue real tax documents.
+6. If you ship with ACS or BOX NOW, set your [dispatch point](/admin/sales/movement-receipts#set-your-dispatch-point).
 
 Until myDATA is switched on, with the legal ground and the user ID and key in place, the order page shows no **Invoicing & myDATA** menu. Its **Receipt** card then reads **Issued by the store outside the platform**.
 

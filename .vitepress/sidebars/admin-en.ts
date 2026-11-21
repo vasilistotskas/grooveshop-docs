@@ -25,6 +25,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
       { text: 'Refunds and disputes', link: '/admin/sales/refunds-and-disputes' },
       { text: 'Order source', link: '/admin/sales/order-source' },
       { text: 'Receipts and credit documents', link: '/admin/sales/receipts' },
+      { text: 'Courier and locker receipts', link: '/admin/sales/movement-receipts' },
       { text: 'Carts', link: '/admin/sales/carts' },
       { text: 'Turnover', link: '/admin/sales/turnover' },
       { text: 'Profit', link: '/admin/sales/profit' },
