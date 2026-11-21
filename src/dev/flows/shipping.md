@@ -223,8 +223,8 @@ computation in `src/cart/views/cart.py`) and calls `ShippingService.quote`;
 `OrderQuoteService.quote` hands it the threshold value, so the quote, the
 intent and the order agree for the same pricing inputs. The inputs can change
 between two requests (a price, a promotion, a rate), and then the later total
-differs: a client that must know sends the quote's `expectedTotal` with the
-order, which is then created only at that total (409 `total_changed`
+differs: every order is created with the quote's `expectedTotal`, which is
+required, and only at that total (409 `total_changed`
 otherwise; see [Checkout and payment](/dev/flows/checkout-and-payment#one-total-the-checkout-quote)).
 The `shippingOptions` of the quote are the `available_options` rows priced as an
 order would be, each with `waivedBy`. A delivery that cannot be priced is a
