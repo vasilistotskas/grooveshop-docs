@@ -68,8 +68,8 @@ is repeated on every change of a checkout and has a budget of its own, not the
 cart's write budget), gift-card guessing (`gift_card_check`, spent by
 `/giftcard/check` and by any quote, payment intent or order carrying
 `giftCardCodes`, counting only codes new to the cart) and order creation
-(`DEFAULT_THROTTLE_RATES`, applied by the classes in
-`src/core/api/throttling.py`). `NUM_PROXIES` is 1 because Traefik
+(`DEFAULT_THROTTLE_RATES`, applied by the classes in each app's
+`throttles.py` on the bases in `src/core/api/throttling.py`). `NUM_PROXIES` is 1 because Traefik
 is the single trusted hop. A guest's cart, order and payment calls made
 through the agent gateway are budgeted per cart or order rather than per
 address, when they carry the gateway's secret and name a cart or an order;
@@ -184,7 +184,7 @@ The schema itself is served at `/api/v1/schema`, with Swagger UI at
 
 ## Health endpoints
 
-- `GET /api/v1/health` (`src/core/api/views.py: health_check`) pings the
+- `GET /api/v1/health` (`src/core/api/health_api.py: health_check`) pings the
   database, Redis and Celery workers and returns
   `{"database": bool, "redis": bool, "celery": bool}`. Suitable for a
   startup gate.
@@ -232,11 +232,13 @@ not a second prefix.
 | `grooveshop-django-api/src/core/api/tokens.py` | `BoundedTokenAuthentication`, `SessionTokenStrategy` |
 | `grooveshop-django-api/src/tenant/api_tokens.py` | `PlatformStaffTokenAuthentication` |
 | `grooveshop-django-api/src/core/api/permissions.py` | Permission classes |
-| `grooveshop-django-api/src/core/api/throttling.py` | Scoped throttles |
+| `grooveshop-django-api/src/core/api/throttling.py` | The throttle bases (`ResilientThrottleMixin`, `UserOrIpRateThrottle`, `GatewayIdentMixin`, `StaffLoginThrottle`) |
+| `grooveshop-django-api/src/cart/throttles.py`, `src/order/throttles.py`, `src/giftcard/throttles.py`, `src/contact/throttles.py`, `src/search/throttles.py` | The scoped throttles, one module per app (also `agent`, `b2b`, `emails`, `product`, `recommendation`, `shipping_acs`, `shipping_boxnow`, `user`) |
 | `grooveshop-django-api/src/core/pagination/` | Envelope |
 | `grooveshop-django-api/src/core/utils/views.py` | Multipart translation folding |
 | `grooveshop-django-api/src/core/api/exception_handler.py` | The one DRF exception handler: `code` and `fields` |
 | `grooveshop-django-api/src/core/api/schema.py` | `ERROR_SCHEMAS`, `publish_error_schemas` |
 | `grooveshop-django-api/src/core/api/serializers.py` | `ErrorResponseSerializer`, `HealthCheckResponseSerializer` |
-| `grooveshop-django-api/src/core/api/views.py` | `health_check`, `health_live`, `unpaginated_actions` |
+| `grooveshop-django-api/src/core/api/health_api.py` | `health_check`, `health_live` |
+| `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet`, `unpaginated_actions` |
 | `grooveshop-django-api/src/notification/views/websocket.py`, `src/core/middleware/channels.py` | WebSocket ticket and auth |

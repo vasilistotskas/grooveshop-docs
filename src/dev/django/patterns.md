@@ -418,7 +418,8 @@ factory by name.
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/core/models.py` | Abstract models, `Translation` |
-| `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet` and its mixins, health views, settings views |
+| `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet` and its mixins |
+| `grooveshop-django-api/src/core/api/health_api.py`, `src/core/api/settings_api.py` | The health views and the settings views |
 | `grooveshop-django-api/src/core/utils/views.py` | `TranslationsProcessingMixin`, `cache_methods` |
 | `grooveshop-django-api/src/core/utils/serializers.py` | `ActionConfig`, `crud_config`, `create_schema_view_config` |
 | `grooveshop-django-api/src/core/api/serializers.py` | `RequiredDefaultTranslationMixin`, `ErrorResponseSerializer`, `MeasurementSerializerField` |

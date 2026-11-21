@@ -132,7 +132,7 @@ It means **no task has failed inside the retention window**, which is
 `CELERY_RESULT_EXPIRES = 30 days`. It does not mean nothing ran: successes
 were never written. "Did the nightly job run at all?" is answered by
 `PeriodicTask.last_run_at` on the Periodic Tasks screen, or by
-`MonitoredTask`'s own success log line (`src/core/tasks.py`) — never from this
+`MonitoredTask`'s own success log line (`src/core/monitored_task.py`) — never from this
 table.
 
 Pruning is `celery.backend_cleanup`, which Celery's scheduler installs on

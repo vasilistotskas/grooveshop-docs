@@ -105,7 +105,7 @@ different moments.
 
 **Spent points come back in parts, with the refund.** A refund is in the
 value of what came back, and the provider's money is paid back first
-(`OrderService.refund_order`, see
+(`RefundService.refund_order`, see
 [Order lifecycle](/dev/flows/order-lifecycle#refunds)). Only the excess
 goes back onto the order's gift cards and points, split in proportion to
 what each has not got back. The points share is
@@ -261,7 +261,7 @@ iterates the active, non-public, non-suspended tenants and sends **one
 message per tenant**, each stamped with a `_schema_name` header; the
 subtasks enter their own schema later, in the worker.
 
-That entry is `src/core/tasks.py: MonitoredTask`, which every loyalty task uses
+That entry is `src/core/monitored_task.py: MonitoredTask`, which every loyalty task uses
 and which **subclasses `TenantTask`** — so `apply_async` stamps the header
 and `__call__` enters the tenant on the way in, while the base adds
 success/failure logging with secret-looking kwargs masked. `__call__` uses
@@ -425,9 +425,10 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/src/loyalty/signals.py` | Order hooks (reversal on cancel, on REFUNDED through `order_refunded` or `order_stored_value_returned`, on a chargeback that completes the return, and on the REFUNDED status), tier-change detection, tier-up notification |
 | `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger.refund_status`, which decides when an order is REFUNDED; `stored_value`, what the order's points are still owed |
 | `grooveshop-django-api/src/loyalty/tasks.py` | `process_order_points`, `reverse_order_points`, expiry, tier-up notification |
+| `grooveshop-django-api/src/order/refunds/service.py` | `RefundService.refund_order`: the refund that pays back the provider first and returns the excess to gift cards and spent points |
 | `grooveshop-django-api/src/loyalty/views/loyalty.py` | Summary, transactions, redeem, product points, tiers |
 | `grooveshop-django-api/src/loyalty/urls.py` | Endpoint paths |
-| `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask`, which extends `TenantTask` |
+| `grooveshop-django-api/src/core/monitored_task.py` | `MonitoredTask`, which extends `TenantTask` |
 | `grooveshop-django-api/src/tenant/tasks.py` | `fanout_process_points_expiration` |
 | `grooveshop-django-api/src/tenant/celery.py` | `run_for_all_tenants`, `TenantTask` schema entry |
 | `grooveshop-django-api/src/tenant/permissions.py` | `IsLoyaltyEnabled` |
