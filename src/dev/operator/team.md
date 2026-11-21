@@ -95,7 +95,7 @@ existing session cookie kept working for its remaining life.
 
 ## What each store role can do
 
-`TenantMembershipRole` (`src/tenant/models.py`) has four values; `member` is
+`TenantMembershipRole` (`src/tenant/enum.py`) has four values; `member` is
 retired and issues nothing (the rows it once carried were removed in
 `tenant/migrations/0015`). The other three are turned into Django model
 permissions at request time by `TenantRolePermissionBackend`
@@ -339,7 +339,7 @@ that an operator could otherwise edit the wrong thing". See
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/tenant/models.py` | `TenantMembershipRole`, `UserTenantMembership`, `can_manage_tenant`, `is_tenant_staff`, `PlatformStaffToken` |
+| `grooveshop-django-api/src/tenant/enum.py`, `grooveshop-django-api/src/tenant/models/membership.py`, `grooveshop-django-api/src/tenant/models/staff_token.py` | `TenantMembershipRole` (`enum.py`); `UserTenantMembership`, `can_manage_tenant`, `is_tenant_staff` (`membership.py`); `PlatformStaffToken` (`staff_token.py`) |
 | `grooveshop-django-api/src/tenant/auth_backends.py` | `PlatformStaffBackend`, `TenantRolePermissionBackend`, `_permissions_for_role`, `PLATFORM_IDENTITY_ATTR`, `is_platform_staff_session` |
 | `grooveshop-django-api/src/tenant/role_scopes.py` | `PLATFORM_ONLY_APP_LABELS`, `STORE_SHARED_APP_LABELS`, `STORE_SETTINGS_APP_LABELS`, `store_app_labels()`, `operational_app_labels()`, `TENANT_SELF_EDITABLE_FIELDS` |
 | `grooveshop-django-api/src/tenant/membership.py` | `get_membership`, `is_store_staff`, `is_platform_superuser`, `get_current_tenant` |

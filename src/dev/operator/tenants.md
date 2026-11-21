@@ -6,8 +6,8 @@ description: Every field on the Tenant row group by group — identity, presenta
 # The tenant record
 
 One row in the public schema is the whole definition of a store:
-`src/tenant/models.py: Tenant` (the class opens just under the choice enums at
-the top of the file). It is a `django_tenants.TenantMixin`, so saving a new
+`src/tenant/models/tenant.py: Tenant` (its choice enums are in
+`src/tenant/enum.py`). It is a `django_tenants.TenantMixin`, so saving a new
 row creates the PostgreSQL schema; everything else on it is either
 identity, presentation, commercial terms, or that merchant's own
 third-party credentials.
@@ -421,7 +421,7 @@ a common bug:
 - **Every credential field is excluded from the audit history.**
 - **Every `Tenant` save moves the resolve cache on** for all of that
   tenant's domains: `Tenant.save` bumps `cache_generation`, which is part of
-  every resolve and domain-set key (`src/tenant/models.py`, `src/tenant/cache.py`).
+  every resolve and domain-set key (`src/tenant/models/tenant.py`, `src/tenant/cache.py`).
   That is why the console never needs a manual purge for a branding change,
   even across a Redis outage.
 - **A new public extra-setting must be added to `PUBLIC_SETTING_KEYS`** or
@@ -458,7 +458,7 @@ a common bug:
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/tenant/models.py` | `Tenant`, `TenantPlan`, `StoreVertical`, `SuspendedReason`, every `_validate_*` method, `history` exclusions, the platform-storefront constraint |
+| `grooveshop-django-api/src/tenant/models/tenant.py`, `grooveshop-django-api/src/tenant/models/tenant_rules.py`, `grooveshop-django-api/src/tenant/enum.py` | `Tenant`, `history` exclusions and the platform-storefront constraint; the cross-field `validate_*` rules (`tenant_rules.py`); `TenantPlan`, `StoreVertical`, `SuspendedReason` (`enum.py`) |
 | `grooveshop-django-api/src/tenant/validators.py` | `validate_reserved_schema_name`, `validate_store_hostname`, `RESERVED_SCHEMA_NAMES` |
 | `grooveshop-django-api/src/tenant/json_schemas.py` | The JSON schemas of `available_locales`, `store_description_i18n` and `allowed_csp_sources` |
 | `grooveshop-django-api/src/tenant/credentials.py` | The credential helpers and the no-fallback rule |

@@ -400,7 +400,7 @@ points-earned promise and the redemption widget.
 | `grooveshop-django-api/src/order/models/order.py` | Billing snapshot columns |
 | `grooveshop-django-api/src/order/serializers/order.py` | Invoice cross-field validation |
 | `grooveshop-django-api/src/order/admin.py` | `OrderAdmin.timologio_summary`, the `timologio_*` fields |
-| `grooveshop-django-api/src/tenant/models.py` | `b2b_enabled` and the invoicing exception |
+| `grooveshop-django-api/src/tenant/models/tenant.py` | `b2b_enabled` and the invoicing exception |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/b2b-enabled.ts` | Fail-closed two-tier gate |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useB2BPricing.ts` | Post-hydration price swap |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/account/business/index.vue` | Profile page |
