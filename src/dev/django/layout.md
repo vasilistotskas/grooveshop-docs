@@ -27,7 +27,10 @@ it. The code wins over this page; the per-app map is
   `src/search/views/` (`product`, `blog`, `click`, `report`, `trending`),
   `src/builder/views/` (`documents`, `publish`, `schedules`, `links`,
   `previews`, `presence`, `features`, `public`), `src/product/admin/`
-  (one module per admin, plus `stock_history`).
+  (one module per admin, plus `stock_history`),
+  `src/promotion/engine/` (`evaluation` holds `PromotionEngine`; `eligibility`, `benefits`,
+  `stacking`, `bxgy`, `scope`, `teasers`, `redemptions`, `results`), with `coupons`,
+  `product_offers` and `coupon_picker` beside it.
 - **`order` is one Django app split into subpackages**: `accounting`,
   `checkout` (`quote.py`: `OrderQuoteService`), `communications`, `enum`,
   `inventory`, `lifecycle`, `payments`, `refunds`, `reporting`, `models`,

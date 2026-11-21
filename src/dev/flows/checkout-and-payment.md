@@ -307,7 +307,7 @@ and what the order stores).
   gift-card plan, `amount_due`) are `None` with them.
 - **`lock=True` is order creation.** It locks the candidate `Promotion` rows,
   the customer's row (when points are redeemed) and the gift cards until
-  commit, so what was quoted is what `PromotionEngine.record`,
+  commit, so what was quoted is what `record_redemptions`,
   `LoyaltyService.redeem_points` and `GiftCardService.record_plan` write. A
   refused attached coupon raises `InvalidCouponError`; without the lock it is
   reported on the quote (`blockingCoupon`). Both paths take the

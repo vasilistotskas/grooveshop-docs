@@ -823,7 +823,7 @@ Every line also stores the part of the order's discount it carries
 (`src/order/models/item.py: OrderItem.discount_allocation`). A promotion lands
 on the lines it covers, not on every line: the engine splits each applied
 promotion over the cart lines in its scope
-(`src/promotion/services.py: PromotionEngine._clamp`, reported as
+(`src/promotion/engine/stacking.py: clamp`, reported as
 `CartDiscountResult.line_discounts`), both checkout paths freeze that on the
 order lines (`src/order/services.py: OrderService._snapshot_line_discounts`), and
 the loyalty redemption, being order-wide, is spread over the value left on
