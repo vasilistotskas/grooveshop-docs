@@ -39,7 +39,7 @@ sequenceDiagram
     N->>D: POST cart/create-payment-intent
     D->>P: Create PaymentIntent
     D-->>N: client_secret
-    N->>D: POST order with payment_intent_id
+    N->>D: POST order with payment_intent_id and expectedTotal
     D->>P: Verify intent amount
     D-->>N: Order PENDING
     S->>P: Confirm card
@@ -53,7 +53,7 @@ sequenceDiagram
     P->>D: Webhook 1796
     P->>N: Redirect to viva-return
   else Order-first (collected on delivery)
-    N->>D: POST order, no intent
+    N->>D: POST order with expectedTotal, no intent
     D->>C: Dispatch voucher on commit
   end
   D->>C: Dispatch voucher on commit

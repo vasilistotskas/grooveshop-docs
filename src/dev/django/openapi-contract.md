@@ -121,7 +121,9 @@ three steps:
 1. **Now (Django):** the 409 carries `code: "total_changed"`, a plain string
    (`TOTAL_CHANGED_CODE`; the gateway already branches on `code`), and
    `error.type: "invalid_order_data"`, which the live storefront renders with
-   the translated `detail`. `expectedTotal` is required on the order, so every order is compared; the
+   the translated `detail`. `expectedTotal` is required on the order, so every new order is compared (a
+   repeat of an agent checkout that already placed its order is answered with that
+   order before anything is validated, so it is not compared again); the
    409 also answers a locked quote that finds no cached live carrier price (see
    [Checkout and payment](/dev/flows/checkout-and-payment#one-total-the-checkout-quote)).
    The enum is unchanged.
@@ -184,6 +186,8 @@ started at the workspace root; subproject sessions do not see the root
 | `grooveshop-django-api/src/core/json_schema.py` | `wire_schema` (camelizing published JSON Schemas) |
 | `grooveshop-django-api/api-contract/README.md` | The direction of a verdict: what ships consumer first |
 | `grooveshop-django-api/src/order/enum/create_error.py` | `OrderCreateErrorType` and `TOTAL_CHANGED_CODE` |
+| `grooveshop-django-api/src/order/serializers/order.py` | `OrderCreateFromCartSerializer.expected_total`, the required field |
+| `grooveshop-django-api/src/order/services.py` | The comparison with the quote under the cart lock, on both creation paths |
 | `grooveshop-storefront-ui-node-nuxt/scripts/fetch-schema.mjs` | `pnpm generate:schema` |
 | `grooveshop-storefront-ui-node-nuxt/scripts/sync-schema-yml.mjs` | `pnpm sync:schema` |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | `pnpm openapi-ts` |
