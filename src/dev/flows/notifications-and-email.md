@@ -69,14 +69,17 @@ an entry that resolves empty, and creates the `NotificationUser` row
 inside one atomic block.
 
 **A notification is written once per dispatch.** Inside a task the creator
-stamps `Notification.dispatch_key`, made of the task id, the user and
-everything the notification says (`tenant.celery.dispatch_key`), and the
+stamps `Notification.dispatch_key`, made of what the notification is about:
+the task id, the user, the type, the link and `distinct_by`
+(`tenant.celery.dispatch_key`), never its words, so a copy that renders it
+differently (a product renamed in between) is the same notification. The
 column is unique when set (`notification_dispatch_key_unique`). Another copy
 of the task (a retry, a message delivered again, the sweep's copy of a
-publish) gets back the row the first one wrote, and no second push is
-queued; a copy running at the same moment waits on the unique index for the
-first to commit. One task can still write two different notifications to one
-user, because their content differs.
+publish) gets back the row the first one wrote, or nothing when the user has
+removed it since, and no second push is queued; a copy running at the same
+moment waits on the unique index for the first to commit. A task that writes
+several notifications of one type and link to one user tells them apart with
+`distinct_by`: `blog.tasks.notify_comment_liked_task` passes the liker.
 
 ### WebSocket delivery
 
