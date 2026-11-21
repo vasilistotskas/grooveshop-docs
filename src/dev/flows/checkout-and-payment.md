@@ -45,7 +45,7 @@ sequenceDiagram
     S->>P: Confirm card
     P->>D: payment_intent.succeeded
   else Order-first (Viva)
-    N->>D: POST order, no intent (expectedTotal)
+    N->>D: POST order with expectedTotal, no intent
     D-->>N: Order PENDING
     N->>D: POST order/id/create_checkout_session
     D->>P: Create hosted order
@@ -326,8 +326,9 @@ and what the order stores).
   (the cart changed in between, or the entry expired) rolls the creation back
   with `ShippingPriceUnresolvedError`; the cart is priced again with nothing
   locked and answered as 409 `total_changed` carrying that quote
-  (`OrderService._refuse_unpriced`). This 409 does not depend on
-  `expectedTotal`: a client that sent none gets it too. ACS's live price is cached per country, region and
+  (`OrderService._refuse_unpriced`). This 409 is a separate refusal from the
+  `expectedTotal` comparison below, and its quote is the one the order would
+  have been created at. ACS's live price is cached per country, region and
   weight bracket for five minutes (`src/shipping_acs/carrier.py:
   AcsCarrier._fetch_live_quote`), so a polled quote does not reach the carrier
   each time, and a failed call is remembered for 60 seconds (the stored rate is
@@ -369,8 +370,12 @@ and what the order stores).
   - It has no VAT total: the receipt's VAT taxes shipping and the fee at the
     goods' rates and spreads the loyalty discount over the lines, while the
     cart's `totalVatValue` is the goods only.
-- **The expected total.** `POST /api/v1/order` takes an optional
-  `expectedTotal` (`{amount, currency}`, minor units). Both paths compare it,
+- **The expected total.** `POST /api/v1/order` requires
+  `expectedTotal` (`{amount, currency}`, minor units, as the quote returned it;
+  `OrderCreateFromCartSerializer.expected_total`, `src/order/serializers/order.py`):
+  an order without it is refused 400 on the field, and both `OrderService`
+  creation paths need it, so no order is placed without the total check. Both
+  paths compare it,
   exactly, with the amount due computed under the cart lock and before
   anything is written. A difference creates nothing (no points, card balance,
   stock or cart line is taken) and answers **409**
@@ -382,11 +387,12 @@ and what the order stores).
   evaluated with the checkout email) are each a `total_changed` by design, when
   they change the amount due that is compared; a change that leaves it equal is
   not refused. A live carrier price that left its cache is refused as
-  `total_changed` even without `expectedTotal`. `error.type` is `invalid_order_data` for now: the
+  `total_changed` whatever total the client sent. `error.type` is `invalid_order_data` for now: the
   enum value follows a storefront release, see
   [OpenAPI contract](/dev/django/openapi-contract#a-new-value-in-a-response-enum-ships-consumer-first).
-  The storefront and the gateway send it; the field stays optional in the
-  contract.
+  The storefront and the gateway send it on every order (the gateway since
+  v1.49.0), which is why it could become required; the Django reference is
+  `docs/order/creation.md` §3.0.
 - **Budgets.** The quote is repeated on every change of a checkout and polled
   by the agent gateway, so it has its own throttle scopes, `cart_quote`
   (signed-in callers) and `cart_quote_anon` (guests; per cart for a request
@@ -849,10 +855,10 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
   `cart/create-payment-intent` received. Changing a deduction after the
   intent exists is the usual cause, which is why the storefront drops
   the intent whenever loyalty, gift cards or a coupon change.
-- **409 `total_changed` on `POST /order`.** Either the client sent
-  `expectedTotal` and the amount due computed under the cart lock is another (a
+- **409 `total_changed` on `POST /order`.** Either the amount due computed under the cart lock is not the order's
+  `expectedTotal` (a
   price, promotion, rate, fee or live carrier price moved since the last
-  quote), or, whether or not it sent one, the locked quote found no cached
+  quote), or the locked quote found no cached
   carrier price for the parcel (`_refuse_unpriced`). Nothing was created; the
   body's `error.quote` is what the order would have been created at, so the
   client shows it and orders again.
@@ -945,7 +951,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
 | `grooveshop-django-api/src/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
 | `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
-| `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region; `OrderDetailSerializer.payment_awaits_review` |
+| `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region; the required `expected_total`; `OrderDetailSerializer.payment_awaits_review` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Order/PayNow.vue`, `app/components/Order/AwaitingPaymentReminder.vue` | **Pay now** and the cart's and checkout's reminder |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/orderPayment.ts`, `app/composables/useOrderCheckoutSession.ts`, `app/composables/useAwaitingPaymentOrder.ts` | When a link is offered, the refusal codes that end the offer, the new link, the remembered order |
 | `grooveshop-django-api/src/order/payments/payment_hold.py` | `payment_review_orders`, `awaits_payment_review`, `swept_orders`, `decided_by` |

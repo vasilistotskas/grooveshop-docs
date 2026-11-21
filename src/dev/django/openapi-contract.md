@@ -121,10 +121,10 @@ three steps:
 1. **Now (Django):** the 409 carries `code: "total_changed"`, a plain string
    (`TOTAL_CHANGED_CODE`; the gateway already branches on `code`), and
    `error.type: "invalid_order_data"`, which the live storefront renders with
-   the translated `detail`. A client that sends no `expectedTotal` receives the
-   409 only when the locked quote finds no cached live carrier price (see
-   [Checkout and payment](/dev/flows/checkout-and-payment#one-total-the-checkout-quote));
-   every other cause needs the field. The enum is unchanged.
+   the translated `detail`. `expectedTotal` is required on the order, so every order is compared; the
+   409 also answers a locked quote that finds no cached live carrier price (see
+   [Checkout and payment](/dev/flows/checkout-and-payment#one-total-the-checkout-quote)).
+   The enum is unchanged.
 2. **Storefront release:** its generated validator lists `total_changed` in
    `OrderCreateErrorType`, and the release reaches production. The Zod enum is
    generated from `openapi/schema.json`, not from the derived YAML, so the
@@ -132,8 +132,8 @@ three steps:
    that adds the value: `pnpm generate:schema` (fetch the schema from a local
    Django, `scripts/fetch-schema.mjs`), `pnpm openapi-ts` (types and Zod into
    `shared/openapi/`), then `pnpm sync:schema` (the derived YAML files CI
-   checks, `scripts/sync-schema-yml.mjs`). It can start sending `expectedTotal`
-   in the same release.
+   checks, `scripts/sync-schema-yml.mjs`). It sends `expectedTotal` on every order
+   from the same release, which is what lets Django require it.
 3. **Django release:** add `OrderCreateErrorType.TOTAL_CHANGED`, send it as
    `error.type`, delete `TOTAL_CHANGED_CODE`. The contract check then passes.
 
