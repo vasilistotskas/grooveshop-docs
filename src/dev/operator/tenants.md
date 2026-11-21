@@ -98,7 +98,7 @@ only by the lifecycle actions and the billing task. `is_active`, `plan` and
 | `store_description` | `TextField`, blank |
 | `store_description_i18n` | `JSONField`, `{locale: text}` for the store's other storefront locales (`el`, `en`); never the tenant's `default_locale`, whose text is `store_description`. Served on the resolve payload as `storeDescriptionI18n`; the storefront prints `storeDescriptionI18n[locale]`, else `store_description` |
 | `logo_light_url`, `logo_dark_url`, `favicon_url` | `URLField`, blank |
-| `socials_*` | Nine `URLField`s (discord, facebook, instagram, pinterest, reddit, tiktok, linkedin, twitter, youtube). `Tenant._validate_social_urls` requires `https://` on every non-empty one; empty hides the footer link |
+| `socials_*` | Nine `URLField`s (discord, facebook, instagram, pinterest, reddit, tiktok, linkedin, twitter, youtube). `tenant_rules.validate_social_urls` requires `https://` on every non-empty one; empty hides the footer link |
 
 A store's colours, corners and fonts are not on this row: they are its theme document in the page builder ([`builder`](/dev/django/reference/builder/documents#where-a-store-s-theme-document-comes-from)).
 
@@ -112,7 +112,7 @@ A store's colours, corners and fonts are not on this row: they are its theme doc
 
 `available_locales` is an allow-list on top of the platform-wide locale
 set. Every entry must be a code in `settings.LANGUAGES`, must not repeat,
-and `Tenant._validate_available_locales` adds the cross-field rule the
+and `tenant_rules.validate_available_locales` adds the cross-field rule the
 field validator cannot see: a non-empty list **must contain
 `default_locale`**, or the storefront would 404 the store's own default
 language. Empty means single-language on `default_locale` — that is the
@@ -238,7 +238,7 @@ allowed to be".
 | `clarity_project_id` | alphanumeric | Microsoft Clarity off, **and its origins are left out of the CSP** |
 | `ga_tracking_id` | must start `G-` or `UA-` | GA off |
 
-Each has its own `_validate_*` method on the model. The alphanumeric rule
+Each has its own `validate_*` rule in `src/tenant/models/tenant_rules.py`, which `Tenant.clean()` runs. The alphanumeric rule
 on `openai_pixel_id` is not cosmetic: the value pasted out of the vendor's
 snippet once carried a stray trailing character, and a malformed id stops
 conversions being attributed silently rather than failing loudly.
@@ -252,7 +252,7 @@ Conversions API dataset, so there is no separate dataset id.
 `JSONField(default=list)`: extra origins the storefront's CSP allows on
 `connect-src`, `img-src`, `script-src` and `frame-src`. Every entry must be
 a string starting `https://`, `http://localhost` or `wss://`
-(`Tenant._validate_allowed_csp_sources`). It is **not** merchant-editable:
+(the JSON schema `tenant.json_schemas.allowed_csp_sources`, `src/tenant/json_schemas.py`). It is **not** merchant-editable:
 it is security policy, and a merchant able to append an origin could
 whitelist anything. Adding a third-party widget for a store — a locker map,
 an embedded player — usually means adding every CDN hop it uses here.
