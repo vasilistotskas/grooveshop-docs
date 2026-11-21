@@ -291,7 +291,7 @@ retail documents the platform does issue.
 | Route gate | `app/middleware/b2b-enabled.ts` |
 | Price hydration | `app/composables/useB2BPricing.ts` |
 | Proxies | `server/api/b2b/profile.get.ts`, `profile.put.ts`, `prices.get.ts` |
-| Invoice fields | `app/components/Checkout/StepPersonalInfo.vue`, `app/composables/useCheckoutForm.ts` |
+| Invoice fields | `app/components/Checkout/DocumentChoice.vue` (and its webside copy under `app/components/variants/webside/Checkout/`), `app/composables/useCheckoutForm.ts` |
 
 `b2b-enabled.ts` is `createFeatureGate('wholesale')` (`app/utils/routeGate.ts`),
 like every feature gate: it reads the `wholesale` store feature
