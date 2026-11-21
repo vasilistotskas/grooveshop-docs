@@ -48,7 +48,7 @@ One file (JSON format) with only the customer's own data:
 
 - profile and contact details
 - saved addresses
-- orders, with products, prices and delivery details
+- orders, with products, prices and delivery details. For each order the file lists the contact details (name, email, phone), the delivery address including **Address line 2**, the note the customer left, the billing details, the reason given when the order was cancelled, and the browser details stored with the order: IP address, user agent and the browser and click ids Meta uses for conversion tracking
 - favourite products
 - product reviews
 - blog comments and liked blog posts
@@ -67,7 +67,7 @@ Other people's data is never included.
 - **The file stays available for 7 days.** After that it is deleted automatically. The customer simply requests a new export.
 - **One request at a time.** Clicking again while the file is being prepared does not start a second one.
 - **The file is not public.** Only the customer downloads it, from their account.
-- **What deletion does:** orders stay for tax reasons, but without name, email, phone and address. Everything else linked to the account is erased. Contact-form messages, and product alerts they asked for as a visitor, are not linked to the account and stay; delete the messages under <span class="sidebar-path">Customers → Messages</span>. The customer is signed out of every device at once.
+- **What deletion does:** orders stay for tax reasons, but the customer's personal details on them are cleared: name, email, phone, the delivery address including **Address line 2**, the note the customer left, the cancellation reason, and the browser details stored with the order (IP address, user agent, Meta ids). The **billing details** are the exception: they stay with the order's invoice, which is a legal document. The courier records of those orders are cleared too: for ACS and BOX NOW, the copies of failed requests, the call history, the delivery notes and checkpoint notes the courier sent back, and the receiver named on a cash-on-delivery payout. The tracking checkpoints themselves and the payout amounts stay. Everything else linked to the account is erased. Contact-form messages, and product alerts they asked for as a visitor, are not linked to the account and stay; delete the messages under <span class="sidebar-path">Customers → Messages</span>. The customer is signed out of every device at once.
 - **Receipts already issued do not change**, because they are legal documents.
 
 ## Related
