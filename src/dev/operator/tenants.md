@@ -185,7 +185,7 @@ How the two tiers combine:
   effective state in `TenantConfig.features` and `TenantConfig.preferences`
   (`src/tenant/features.py`). `GET /api/v1/settings/public` serves store
   VALUES only (prices, texts, hours, loyalty figures), whose allowlist is
-  `src/core/api/views.py: PUBLIC_SETTING_KEYS`; a test refuses a feature or
+  `src/core/store_settings.py: PUBLIC_SETTING_KEYS`; a test refuses a feature or
   preference key in it.
 - **Both must be on.** `agent_commerce_enabled` defaults to `True` and
   `blog_enabled` to `True` because those surfaces predate their flags; the
@@ -470,7 +470,7 @@ a common bug:
 | `grooveshop-django-api/src/tenant/serializers.py` | `TenantConfigSerializer`, `TenantAdminSerializer` and its read-only lifecycle fields |
 | `grooveshop-django-api/src/tenant/signals.py` | Resolve-cache invalidation, `reactivate_on_renewal` |
 | `grooveshop-django-api/src/tenant/provisioning.py` | What a new row gets after it is saved |
-| `grooveshop-django-api/src/core/api/views.py` | `PUBLIC_SETTING_KEYS`, the public settings endpoints |
+| `grooveshop-django-api/src/core/store_settings.py`, `src/core/api/settings_api.py` | `PUBLIC_SETTING_KEYS`, the public settings endpoints |
 | `grooveshop-django-api/src/recommendation/presets.py`, `src/recommendation/strategies/base.py` | The per-vertical slot presets; `min_plan` and `plan_allows` |
 | `grooveshop-storefront-ui-node-nuxt/shared/i18n/tenantLocales.ts` | `tenantAllowedLocales` |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/locale-available.global.ts` | The 404 for an unlisted locale prefix |

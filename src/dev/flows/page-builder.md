@@ -522,7 +522,7 @@ Pages and menus come from the store's published release.
   `builderDataTargets`.
 - **Cache.** Both handlers are cached 5 minutes with a stale hour, keyed on the
   store, the language and the epoch; Django's purge after a release names them
-  (`src/core/cache/surfaces.py`, the `builder` surface), so renaming a handler stops a
+  (`src/builder/cache_surfaces.py`, the `builder` surface), so renaming a handler stops a
   release reaching visitors until the TTL runs out. A rename of a record shows
   within that TTL, with no release.
 - **The sitemap** lists the published pages (`publishedPagesForHost`).

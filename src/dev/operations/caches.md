@@ -88,10 +88,12 @@ match inside the key and reach every release's entries.
 `src/core/cache/registry.py` holds `CacheSurface` objects, each with a `code`,
 Django key patterns, Nuxt key patterns, an optional `invalidated_by` list
 of model labels and `related` surfaces. `src/core/cache/surfaces.py` registers
-the core set: `pay_way`, `recommendations`, `shipping`, `products`,
-`categories`, `blog`, `regions_countries`, `loyalty`, `page_config`,
-`store_texts`, `builder`,
-`promotions`, `tags`, `settings`, `store_pages`, `sitemap_seo`. Parler's
+only the core ones, `settings`, `store_pages` and `sitemap_seo`, and collects the
+others: each app declares its own in `src/<app>/cache_surfaces.py` (a `SURFACES`
+tuple; two modules declaring one code stop the boot):
+`pay_way`, `recommendations`, `shipping`, `products` and `categories`, `blog`,
+`regions_countries`, `loyalty`, `page_config`, `store_texts`, `builder` (and
+`builder_documents`), `promotions` and `tags`. Parler's
 translation cache is off (`PARLER_ENABLE_CACHING`), so there is no
 translations surface: translated lists prefetch their translations. Apps
 may add their own in `AppConfig.ready()`.
@@ -268,7 +270,7 @@ Until 2026-09-18 only the first shape was recognised: a tenant purge of
 `page_config` cleared the handler JSON and left every rendered page, and
 a `sitemap_seo` purge matched nothing — each reporting success. The
 endpoint also marked a key as handled before its regex ran, so of the
-five `_nuxt_routes()` patterns in `page_config` only the first ever
+five route patterns the `page_config` surface declared then, only the first ever
 matched. Both are pinned by `test/unit/server/api/admin/cache/purge.post.spec.ts`
 against keys copied from the production keyspace.
 
@@ -346,7 +348,8 @@ As released:
   `sitemap_seo` surfaces stale. `availability` registers `availability_flipped` for
   `product.Product`.
 - The `recommendations` surface lists `product.Product` too and ignores the sale
-  fields (`SALE_UPDATE_FIELDS`, `src/core/cache/surfaces.py`): the engine reads
+  fields (`SALE_UPDATE_FIELDS`, `src/core/cache/surfaces.py`; the surface itself is
+  `src/recommendation/cache_surfaces.py`): the engine reads
   stock live and drops sold-out products, so a sale does not purge its strips (a
   hydrated strip can show an old "only 2 left" until its TTL), while a product that
   sells out or comes back does, through the same predicate.
@@ -439,7 +442,7 @@ refreshes.
 
 Django's `sitemap_seo` surface (`src/core/cache/surfaces.py:
 SITEMAP_SEO_SURFACE`, label "Sitemap & SEO") is what purges them: its Nuxt
-patterns are `_nuxt_functions("sitemap", "rss")` (so
+patterns are `nuxt_functions("sitemap", "rss")` (so
 `cache:nitro:functions:rss*`), the `/sitemap.xml` route and the
 `nuxt-ai-ready` handlers, and its `invalidated_by` names the blog post,
 blog category, product, product category and content page models and their
@@ -736,7 +739,7 @@ PageSpeed runs while Traefik's counters never moved.
   edge's stale-while-revalidate.
 - The page builder's Nitro handlers are `builderPage` (a page) and
   `builderChrome` (the menus), both purged by the `builder` surface
-  (`src/core/cache/surfaces.py`).
+  (`src/builder/cache_surfaces.py`).
 - Purge tokens and internal secrets never leave the cluster; run purges
   from inside a pod.
 

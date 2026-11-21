@@ -338,7 +338,7 @@ then the theme. `open()`, the Publish list, the presence heartbeat and the versi
 history's picker read it, so they cannot disagree about what "the open documents" are.
 
 After a release that holds the theme Django purges the `builder` surface
-(`invalidated_by=("builder.BuilderRelease",)`, `src/core/cache/surfaces.py`), which
+(`invalidated_by=("builder.BuilderRelease",)`, `src/builder/cache_surfaces.py`), which
 is registered with `invalidates_tenant_config`, and moves the store's cache
 generation (`tenant.signals`), so every cached page of the store is re-keyed and
 shows the new look, and the store's emails read the new primary colour. Nothing
