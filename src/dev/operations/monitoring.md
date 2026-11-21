@@ -201,7 +201,7 @@ by a namespace regex.
 
 - A failed Celery task logs one ERROR line from `MonitoredTask.on_failure`
   with the traceback in `log.exception` and redacted arguments
-  (`src/core/tasks.py`); Celery's own `celery.app.trace` line also carries
+  (`src/core/monitored_task.py`, logger `core.monitored_task`); Celery's own `celery.app.trace` line also carries
   one. The `MonitoredTask.on_failure` line, not Celery's, and the success line
   from `MonitoredTask.on_success` carry
   `log.duration_ms`, `log.db_queries` and `log.db_ms`, measured around the
@@ -274,7 +274,7 @@ by a namespace regex.
 | `grooveshop-django-api/src/core/middleware/access_log.py` | Django's per-request access line, with the error code of an error response and the request's database cost |
 | `grooveshop-django-api/src/core/db_cost.py` | `measure`: counts and times every query on every alias, as `db_queries` and `db_ms` |
 | `grooveshop-django-api/src/core/api/exception_handler.py` | Puts the `code` on every raised API error |
-| `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask`: the task completion and failure lines, with the task's duration and database cost, and the failure's traceback |
+| `grooveshop-django-api/src/core/monitored_task.py` | `MonitoredTask`: the task completion and failure lines, with the task's duration and database cost, and the failure's traceback |
 | `grooveshop-infrastructure/manifests/app-constructs/longhorn-system/setup/networkpolicy-allow-metrics.yaml` | Opens Longhorn metrics to vmagent |
 | `grooveshop-media-stream/src/MediaStream/Metrics/guards/metrics-token.guard.ts` | The bearer check on `/metrics` |
 | `grooveshop-agent-gateway/internal/obs/metrics.go` | The gateway's registry: `gateway_feed_generation_failures_total`, upstream outcomes, tenant cache |

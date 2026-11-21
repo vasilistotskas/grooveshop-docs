@@ -75,6 +75,7 @@ export const devSidebar: DefaultTheme.SidebarItem[] = [
     text: 'Django API',
     items: [
       { text: 'App map', link: '/dev/django/reference/app-map' },
+      { text: 'Layout and guardrails', link: '/dev/django/layout' },
       { text: 'Base classes & patterns', link: '/dev/django/patterns' },
       { text: 'API conventions', link: '/dev/django/api-conventions' },
       { text: 'Admin (Unfold)', link: '/dev/django/admin' },
