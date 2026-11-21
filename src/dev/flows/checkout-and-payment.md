@@ -209,7 +209,7 @@ own copies under `app/components/variants/webside/Checkout/`).
   `Order.address_line_2` apart from the customer's note; the order pages print
   `fullAddress`, which already holds it after the street, the receipt and the
   order emails print it under the street, and the ACS voucher's `Delivery_Notes`
-  carry it after the floor and before the customer's note
+  carry it after the order's floor (which checkout does not ask for) and before the customer's note
   (`src/shipping/services.py: CourierNotes`, `docs/order/creation-address.md`).
 - **Pickup point.** Only the picker is shown, and no address is sent. For
   `shipping_kind=pickup_point` the buyer's street, number, city and postcode

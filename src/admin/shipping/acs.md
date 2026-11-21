@@ -275,7 +275,7 @@ When BoxNow is switched off, the menu shows **ACS Stations** directly under **Sh
 
 ## Things to know
 
-- **What the voucher's notes hold.** The notes printed on the voucher start with the floor the customer chose, then the order's **Address line 2** (a flat or a building), then the customer's own note, within ACS's 500 characters. Only the customer's note is ever cut. The street line carries nothing else, because ACS reads it as the street alone.
+- **What the voucher's notes hold.** The notes printed on the voucher start with the order's **Floor**, when one is set (checkout does not ask for it), then its **Address line 2** (a flat or a building), then the customer's own note, within ACS's 500 characters. Only the customer's note is ever cut. The street line carries nothing else, because ACS reads it as the street alone.
 - **ACS sometimes rejects a request.** The platform retries by itself, as long as the request never reached ACS. A request that may have reached it without an answer is never sent again by itself: see [A voucher request that got no answer](#a-voucher-request-that-got-no-answer). If the problem stays, tell the platform team.
 - **When ACS keeps failing,** the voucher requests wait and are sent by themselves once ACS answers again: see [Voucher requests waiting for ACS](#voucher-requests-waiting-for-acs).
 - **A wrong address or Smartpoint** is not retried. You receive an email at once and a note is written on the order. The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store); the note is always written.
