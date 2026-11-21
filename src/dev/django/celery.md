@@ -74,7 +74,8 @@ that breaks this. The ACS pickup list, for example, retries only
 and notes the orders, and any other ACS refusal fails the task without a retry
 (`src/shipping_acs/tasks.py`).
 `task_acks_late=True` plus `CELERY_TASK_REJECT_ON_WORKER_LOST = True` means
-a task killed mid-run is redelivered, so bodies must be idempotent.
+a task killed mid-run is redelivered, so a body must be safe to run twice
+([Copies of one dispatch](#copies-of-one-dispatch)).
 
 ## Broker and result backend
 
@@ -290,6 +291,41 @@ creation and the shipping email, with `transaction.on_commit` inside a
 `schema_context`. Never call `.delay()` inside the transaction that
 creates the order.
 
+### Copies of one dispatch
+
+One dispatch can run more than once: a `retry()`, a message delivered again
+after its worker was lost, and the copy `redispatch_deferred_tasks` publishes
+for a publish that failed but may still have written its message (a broker
+blocking publishers under a memory alarm does both). Every copy carries the
+same task id: `dispatch_on_commit` gives each call an id of its own unless
+the caller chose one, the `DeferredDispatch` row keeps it in its options, and
+a retry keeps it. A dispatch made inside a task, such as a chain's next link,
+is a dispatch of its own with an id of its own. Each effect is keyed so that a
+copy finds it done:
+
+| Effect | Mechanism | Examples |
+|---|---|---|
+| A row the task creates | A key from `tenant.celery.dispatch_key(namespace, *parts)`, the task id plus what tells the task's effects apart, in a column unique when set | `Notification.dispatch_key`, `RecommendationEvent.event_key` |
+| A state of a row | A compare-and-set on that state | `NotificationUser.pushed_at`, `ProductAlert.notified_at` |
+| A call to another service | An id fixed before the task runs again (the provider's idempotency key, the event id), and the check and the call under `core.db.locks.held_across_calls`, so a copy that starts while another is calling waits and then finds it done | Email delivery (`emails.log.delivering`), Meta CAPI events, gift card delivery |
+
+`held_across_calls` holds a PostgreSQL advisory lock on the session, outside
+any transaction, because a transaction open across a network call is ended
+by `idle_in_transaction_session_timeout`; inside an atomic block, such as a
+task applied eagerly, it takes the transaction's lock instead. A worker that
+dies takes its session and the lock along: at once when its process ends,
+and within about a minute when its node is lost without closing the socket,
+because every session sets TCP keepalives (`DB_TCP_KEEPALIVES_*` in
+`src/settings/database.py`: 30 seconds idle, then 3 probes 10 seconds apart;
+the server's own probes take about half an hour). Django connects to
+PostgreSQL directly, with no pooler, so the server's probes reach the
+worker's own socket. A wait that runs out (`statement_timeout`) raises
+`OperationalError`, which the task retries.
+
+The reference pages hold the per-app detail:
+[Deferred dispatch](/dev/django/reference/deferred-dispatch) and
+[Email delivery](/dev/django/reference/emails/delivery).
+
 ## Eager mode in tests
 
 `tests/conftest.py` sets `CELERY_TASK_ALWAYS_EAGER = True`, so `.delay()`
@@ -302,7 +338,8 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 
 1. Put it in the owning app's `tasks.py` with
    `@celery_app.task(base=MonitoredTask)` (or `@shared_task(base=...)`),
-   keyword arguments only, JSON-serialisable, idempotent.
+   keyword arguments only, JSON-serialisable, and safe to run twice for
+   one dispatch ([Copies of one dispatch](#copies-of-one-dispatch)).
 2. If it reads store tables and should run on a schedule, add a
    `fanout_<name>` wrapper in `src/tenant/tasks.py` that calls
    `run_for_all_tenants("<app>.tasks.<name>")`, and schedule the wrapper in
@@ -329,6 +366,9 @@ callbacks immediately. A test therefore sees the full signal cascade of an
   tables, because a tenant copy would sit ahead of `public` on the search
   path and hide the row from both the control plane and
   `celery.backend_cleanup`.
+- **A mail, a toast or an event went out twice for one change**: its
+  effect was not keyed on the dispatch, or a dispatch was made with a fresh
+  `task_id` for a copy; see [Copies of one dispatch](#copies-of-one-dispatch).
 - **Worker stays in English after a Rosetta edit**: the overlay handlers
   were connected without `weak=False`; the AST test
   `tests/unit/core/test_celery_handlers_are_connected.py` guards this.
