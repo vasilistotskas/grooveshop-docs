@@ -163,7 +163,7 @@ admission control and per-resource deduplication.
 
 | Layer | Store | Key shape | Notes |
 |---|---|---|---|
-| Django cache | Redis via `src/core/caches.py: CustomCache` | `{schema}:{prefix}:{version}:{key}` from `src/tenant/cache.py: make_tenant_key` (registered as `KEY_FUNCTION`) | A `global:` key prefix opts out of schema scoping for families like `tenant_resolve`, which any schema reads |
+| Django cache | Redis via `src/core/cache_backend.py: CustomCache` | `{schema}:{prefix}:{version}:{key}` from `src/tenant/cache.py: make_tenant_key` (registered as `KEY_FUNCTION`) | A `global:` key prefix opts out of schema scoping for families like `tenant_resolve`, which any schema reads |
 | Tenant resolve | Django cache, 1 hour | `global:tenant_resolve:{shape}:{tenant pk}.{generation}:{domain}` | The shape fingerprint of `TenantConfigSerializer` is part of the key, so adding a field never serves a stale shape; `Tenant.cache_generation` is bumped by every write the payload depends on, so invalidation never relies on a Redis delete |
 | Nuxt tenant config | Process memory, 5 minutes, dropped early when the store's epoch moves | host | `server/utils/tenant.ts`; negative results are never cached. Each pod re-reads the store's tenant-config epoch from the shared cache storage at most every 5 s (`EPOCH_CHECK_MS`); a purge sent with `tenantConfig: true` moves it (`invalidateTenantConfigs`) |
 | Nuxt route cache | Nitro cache in Redis | `tenantCacheKey(event, ...)` from `server/utils/cacheKey.ts`: `host__locale__key__e<epoch>` | Every tenant-specific `defineCachedEventHandler` must use it; the locale keeps an English entry from being served to a Greek page, the epoch keeps an entry rendered from an old tenant config from being read after a purge, and the key carries a hash because Nitro strips punctuation |
@@ -227,7 +227,7 @@ Purging procedures are in [Caches & purging](/dev/operations/caches).
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | Type and Zod generation |
 | `grooveshop-django-api/src/settings/env.py`, `grooveshop-django-api/src/settings/security.py`, `grooveshop-django-api/src/settings/api.py`, `grooveshop-django-api/src/settings/cache.py` | `USE_X_FORWARDED_HOST` (env), `SECURE_PROXY_SSL_HEADER` (security), `SPECTACULAR_SETTINGS` (api), `CACHES` (cache) |
 | `grooveshop-django-api/src/tenant/cache.py` | `make_tenant_key`, `tenant_resolve_key` |
-| `grooveshop-django-api/src/core/caches.py` | `CustomCache` |
+| `grooveshop-django-api/src/core/cache_backend.py` | `CustomCache` |
 | `grooveshop-django-api/src/core/cache/nuxt.py` | SSR cache purge client |
 | `grooveshop-django-api/src/asgi/__init__.py` | HTTP and WebSocket routing |
 | `grooveshop-agent-gateway/internal/server/routes.go` | Gateway route table |
