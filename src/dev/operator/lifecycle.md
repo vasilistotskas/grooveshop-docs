@@ -161,11 +161,13 @@ them (see [the caches page](../operations/caches.md#layer-4-media-stream-image-c
 Two properties to rely on:
 
 - **It runs after the commit and cannot block a suspension.** The
-  task is queued with `dispatch_on_commit(..., robust=True)`
-  (`src/tenant/celery.py`): media-stream re-reads the feed when the flush
-  reaches it, so it must never run before the new state is visible, and a
-  broker failure is logged rather than raised. The task retries on its
-  own; a media-stream outage delays the flush, never the suspension.
+  task is queued with `dispatch_on_commit` (`src/tenant/lifecycle.py`):
+  media-stream re-reads the feed when the flush reaches it, so it must never
+  run before the new state is visible, and a broker failure is never raised:
+  the dispatch is kept as a `DeferredDispatch` and published again, for up to
+  `DEFERRED_DISPATCH_RETENTION_DAYS` (7 days); one still unpublished then is
+  given up and logged at ERROR. The task retries on its own; a media-stream
+  outage delays the flush, never the suspension.
 - **Reactivation always sends it.** `activate_tenant` queues the same
   flush and purge whether or not media was restored: it is what makes
   media-stream serve the store again at once rather than at its next poll.

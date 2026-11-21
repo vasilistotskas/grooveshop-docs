@@ -68,6 +68,19 @@ falls back `en` then `el` for a locale the caller did not supply, skips
 an entry that resolves empty, and creates the `NotificationUser` row
 inside one atomic block.
 
+**A notification is written once per dispatch.** Inside a task the creator
+stamps `Notification.dispatch_key`, made of what the notification is about:
+the task id, the user, the type, the link and `distinct_by`
+(`tenant.celery.dispatch_key`), never its words, so a copy that renders it
+differently (a product renamed in between) is the same notification. The
+column is unique when set (`notification_dispatch_key_unique`). Another copy
+of the task (a retry, a message delivered again, the sweep's copy of a
+publish) gets back the row the first one wrote, or nothing when the user has
+removed it since, and no second push is queued; a copy running at the same
+moment waits on the unique index for the first to commit. A task that writes
+several notifications of one type and link to one user tells them apart with
+`distinct_by`: `blog.tasks.notify_comment_liked_task` passes the liker.
+
 ### WebSocket delivery
 
 `NotificationUser` post-save fires `src/notification/signals.py:
@@ -84,7 +97,15 @@ each Redis command, and one `group_send` sends several. The task's own
 `soft_time_limit` and `time_limit` are two and three times the deadline
 (`NOTIFICATION_TASK_SOFT_TIME_LIMIT`, `NOTIFICATION_TASK_TIME_LIMIT` in
 `src/settings/websocket.py`), backstops for a send the deadline cannot
-interrupt.
+interrupt. The task claims the row before it pushes, by stamping
+`NotificationUser.pushed_at` where it is empty (a compare-and-set), and gives
+the claim back when the push raises, so the retry pushes it: a copy that
+finds the row claimed pushes nothing, because the storefront shows a toast
+for every frame. Two windows remain. A worker that dies between the claim
+and the push loses that toast; the notification stays in the user's list.
+A push that raises after some of the user's sockets already got the frame
+gives the claim back too, and its retry shows those sockets the toast a
+second time.
 
 **The group name is `tenant_{schema_name}_user_{user_id}`.** The schema
 segment is what stops tenant A's user 42 receiving tenant B's user 42's
@@ -260,11 +281,27 @@ can quote the recipient. Rows older than `EMAIL_LOG_RETENTION_DAYS` (store
 setting, 90, `0` keeps) are deleted nightly with their provider events; see
 [Data retention](/dev/operations/data-retention).
 
+**One delivery per dispatch.** Inside a task the row's `uuid` is the
+delivery id, derived from the task id plus the type, the recipient's hash
+and the subject (`src/emails/log.py: delivery_id`), so every copy of one
+dispatch (a retry, a message delivered again, the sweep's copy of a
+publish) finds the row the first one wrote: a row the provider has is not
+sent again. Any other goes back to `queued` and is sent, once the copy has
+passed the same gates as the first: an opt-out, a suppression or a switch
+that holds now ends it with a skip row of its own. `log.delivering`
+reads the row, and the transport sends, under an advisory lock on the
+delivery (`core.db.locks.held_across_calls`), so a copy that starts while
+another is sending waits for its answer and then finds the row `sent`. A
+send outside a task is a delivery of its own, under a fresh uuid. See
+[Email delivery](/dev/django/reference/emails/delivery) and
+[Copies of one dispatch](/dev/django/celery#copies-of-one-dispatch).
+
 `settings.EMAIL_TRANSPORT` picks the one transport that carries the mail:
 `smtp` (Django's backend over the `EMAIL_HOST*` relay) or `resend` (Resend's
 HTTP API, `src/emails/resend.py`). Resend returns a message id, which is stored
 and sent back in the webhook; SMTP returns none. A message posted to Resend
-carries `Idempotency-Key` (the log row's uuid) and two hidden tags,
+carries `Idempotency-Key` (the log row's uuid, the same for every copy of
+one dispatch) and two hidden tags,
 `schema` and `log`, never a header. **Which team's key signs the request is
 decided by the sending domain**: a store that sends from its own verified
 domain uses the key on its `Tenant` row and, with none, fails instead of
@@ -578,21 +615,27 @@ no credential fields and every `tenant.credentials.*` read would see the
 store as unconfigured. `MonitoredTask` adds success and failure logging
 with arguments scrubbed by `_safe_repr`.
 
-Retry policy differs by intent. The six **reservation-guarded** customer
-emails — confirmation, payment failed, refund confirmation, status update,
-shipping notification and invoice — use
-`max_retries=3, default_retry_delay=300`, catch broadly, and release the
-reservation on permanent failure (the flag, or for the refund email its
-`RefundNotification` claim). The rest do not follow that shape:
-the merchant and dispute emails and the two sweep tasks use
-`autoretry_for=(Exception,)` with backoff and jitter and hold no
-reservation flag at all, `send_invoice_to_mydata` uses
-`max_retries=5, default_retry_delay=120`, and the two B2B profile emails
-use `max_retries=5` with backoff and jitter. Live-notification tasks
-(`src/order/communications/notifications.py: TASK_DEFAULTS`) retry **only** on
-`OperationalError` with backoff and jitter: `IntegrityError` will not
-resolve on retry, and re-running a partially completed task would create
-a second `Notification` row because the helper is not idempotent.
+Retry policy differs by intent, and no task retries every exception: each
+`autoretry_for` names a transient set from `src/core/retry.py` (see
+[Retry policy](/dev/django/celery#retry-policy)). The six
+**reservation-guarded** customer emails — confirmation, payment failed,
+refund confirmation, status update, shipping notification and invoice — use
+`max_retries=3, default_retry_delay=300` (the status update adds backoff and
+jitter), catch broadly and retry through `MonitoredTask.retry`, which stops
+at once on a permanent failure (`core.retry.is_permanent_failure`), and
+release the reservation on permanent failure (the flag, or for the refund
+email its `RefundNotification` claim). The rest do not follow that shape:
+the merchant and dispute emails hold no reservation and use
+`autoretry_for=MAIL_TRANSIENT_ERRORS` with backoff and jitter,
+`send_invoice_to_mydata` uses `max_retries=5, default_retry_delay=120`, and
+the two B2B profile emails use `max_retries=5` with `MAIL_TRANSIENT_ERRORS`,
+backoff and jitter. Live-notification tasks
+(`src/order/communications/notifications.py: TASK_DEFAULTS`) retry only on
+`TRANSIENT_DB_ERRORS` (`OperationalError`, `InterfaceError`) with backoff and
+jitter: an `IntegrityError` will not resolve on retry. A retried or
+redelivered task writes no second `Notification` and sends no second mail
+([A notification is written once per dispatch](#the-notification-model),
+[One delivery per dispatch](#the-email-log-and-the-transports)).
 
 `dispatch_on_commit` is the standard enqueue — it defers to
 `transaction.on_commit` so a worker never sees a row the creating
@@ -690,6 +733,13 @@ so a staging refresh cannot email real customers. See
   write into another store.
 - **A send leaves an `EmailLog` row whatever happens**, and no column of it
   holds an address, a body or a provider's error text.
+- **A copy of a dispatch repeats no effect that is recorded as done.** The
+  mail's row and `Idempotency-Key` come from the task id, the notification
+  from its `dispatch_key`, the push from its `pushed_at` claim. A worker lost
+  between an effect and its record is the window that stays: a toast claimed
+  and never pushed is lost, and a mail that left before its row was marked is
+  sent again by the next copy, which Resend drops by its `Idempotency-Key`
+  and SMTP does not.
 - **A store with its own verified domain never sends with the platform's
   Resend key.** `emails.sender.own_sender()` decides, and a missing store key
   is `ResendNotConfigured`, not a fallback.
@@ -733,12 +783,16 @@ so a staging refresh cannot email real customers. See
   a platform type, `RESEND_API_KEY` is empty. Fix the credential; the task does
   not retry it.
 - **A row stays `queued`.** The process died between creating the row and the
-  transport answering; the mail may or may not have left.
+  transport answering; the mail may or may not have left. The copy of the
+  task that runs next (its message is delivered again) finds the row and
+  sends it under the same `Idempotency-Key`. Resend answers that repeat with
+  the first send's response and sends nothing (a key is kept 24 hours); SMTP
+  has no such key, so over SMTP the mail can arrive twice.
 - **Plain-text mail shows raw markup.** An admin-authored HTML field was
   rendered into a `.txt` template without the strip-and-unescape step.
-- **A notification task retries forever on the same error.** Only
-  `OperationalError` is retryable by design; anything else is a bug being
-  surfaced rather than masked.
+- **A notification task fails on the same error every time.** Only a
+  dropped database connection (`TRANSIENT_DB_ERRORS`) is retried, three
+  times; anything else is a bug being surfaced rather than masked.
 
 ## Source
 

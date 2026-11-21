@@ -251,7 +251,10 @@ counts.
 
 `src/recommendation/events.py: record_events` revalidates every enum rather than
 trusting the task payload, because the payload crossed a broker, and it
-**refuses `attach` outright** — that kind is derived from orders.
+**refuses `attach` outright** — that kind is derived from orders. Each row it
+writes carries an `event_key`, unique when set (`rec_event_key_unique`), so
+another copy of the task (a retry, a message delivered again) writes nothing
+more.
 
 On the storefront, `app/composables/useRecommendationTracking.ts` posts both
 kinds with `keepalive: true` and swallows failures. The Nuxt proxy
@@ -336,7 +339,8 @@ drawer and in webside's strip); the cached body is anonymous.
   id; the impression is a separate client call.
 - **`attach` is server-side only.** `record_events` drops it; only
   `record_attach_events` writes it.
-- **Attach is idempotent** through the partial unique constraint, so the task
+- **Every event is written once per task.** `attach` through its partial
+  unique constraint, impressions and clicks through `event_key`, so each task
   is safe to retry.
 - **Seeding never overwrites.** `backfill_recommendation_slots` is
   `get_or_create`; only "Reset to preset" re-applies a preset.
