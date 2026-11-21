@@ -342,20 +342,23 @@ Meta counts the conversion twice.
 **Browser plus server** events need the same id on both: `InitiateCheckout`
 and `Purchase`. `Refund` is the one the comment in `useMetaPixel` groups with
 them but which has no browser leg: nothing has to match its id, which is the
-dispatch's own (`src/meta_capi/services.py: refund_event_id`, `refund-` and a
-key made of the task id), so every copy of one refund's task sends the same
-event.
+refund's own ledger row (`src/meta_capi/services.py: build_refund_event`,
+`refund-<REFUND row>`, passed by every `order_refunded` sender), so a refund is
+one event however its task runs.
 
 Every server id is fixed before a task can run again, because a task queued
 after a commit can run more than once
 ([Copies of one dispatch](/dev/django/celery#copies-of-one-dispatch)) and a
 fresh id per run was a second event at Meta. Without a browser-minted id,
-`Purchase` falls back to `purchase-<order id>`, `InitiateCheckout` to
-`initiate-checkout-<order id>` and `CompleteRegistration` to
-`complete-registration-<user id>`. `src/meta_capi/tasks.py: _dispatch`
-checks `MetaCapiEventLog` for a `SENT` row of the id and sends under an
-advisory lock on the event (`core.db.locks.held_across_calls`), so two
-copies at the same moment send once.
+`Purchase` falls back to `purchase-<order id>` and `InitiateCheckout` to
+`initiate-checkout-<order id>`; `CompleteRegistration` is always
+`complete-registration-<user id>`, and the storefront's browser leg of it
+mints its own id, which is not deduplicated against the server's.
+`src/meta_capi/tasks.py: _dispatch` checks `MetaCapiEventLog` for a `SENT`
+row of the id and sends under an advisory lock on the event
+(`core.db.locks.held_across_calls`), so two copies at the same moment send
+once. A copy whose wait for the lock runs out retries and then finds the
+event sent; the request to Meta is bounded by `META_CAPI_TIMEOUT_SECONDS`.
 
 `app/composables/useCheckoutSubmit.ts: buildMetaPayload` mints them at
 checkout and returns **`null` when `ad_storage` is not granted**, so no dedup

@@ -324,8 +324,12 @@ because every session sets TCP keepalives (`DB_TCP_KEEPALIVES_*` in
 `src/settings/database.py`: 30 seconds idle, then 3 probes 10 seconds apart;
 the server's own probes take about half an hour). Django connects to
 PostgreSQL directly, with no pooler, so the server's probes reach the
-worker's own socket. A wait that runs out (`statement_timeout`) raises
-`OperationalError`, which the task retries.
+worker's own socket. A wait that runs out (`statement_timeout`, or a
+`lock_timeout`) raises `core.db.locks.LockWaitRanOut`, an `OperationalError`
+raised only while the lock is taken, and the task retries it: the holder is
+still at work, and the next attempt finds the work done. A call made under
+the lock is bounded well inside that wait (the Conversions API request by
+`META_CAPI_TIMEOUT_SECONDS`).
 
 The reference pages hold the per-app detail:
 [Deferred dispatch](/dev/django/reference/deferred-dispatch) and
