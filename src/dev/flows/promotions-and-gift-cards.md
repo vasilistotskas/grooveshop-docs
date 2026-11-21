@@ -860,7 +860,15 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/promotion/models/redemption.py` | `PromotionRedemption`, the usage ledger |
 | `grooveshop-django-api/src/promotion/enum.py` | Trigger, benefit, scope, rejection vocabulary |
 | `grooveshop-django-api/src/promotion/managers/promotion.py` | `publicly_listable`, `publishable_code_q` — the ONE advertisability rule |
-| `grooveshop-django-api/src/promotion/engine/` | `evaluation.py: PromotionEngine` (`evaluate`, `classify`), `eligibility.py`, `benefits.py`, `stacking.py` (`resolve_stacking`, `clamp`), `bxgy.py`, `scope.py` (`matching_items`), `teasers.py`, `redemptions.py` (`record_redemptions`), `results.py` |
+| `grooveshop-django-api/src/promotion/engine/evaluation.py` | `PromotionEngine`: `evaluate`, `classify`, `single_unit_discount`, `is_enabled` |
+| `grooveshop-django-api/src/promotion/engine/eligibility.py` | `collect_candidates`, `check_eligibility` |
+| `grooveshop-django-api/src/promotion/engine/benefits.py` | `benefit_amount`, `gift_entitlement`, `gift_pairs` |
+| `grooveshop-django-api/src/promotion/engine/stacking.py` | `resolve_stacking`, `clamp` |
+| `grooveshop-django-api/src/promotion/engine/bxgy.py` | `bxgy_amount`, `bxgy_discounted_units` |
+| `grooveshop-django-api/src/promotion/engine/scope.py` | `matching_items`, category scope expansion |
+| `grooveshop-django-api/src/promotion/engine/teasers.py` | `teaser_cost`, `items_after_teaser`, `minimum_near_miss`, `bxgy_shortfall`, `worthless_code_reason` |
+| `grooveshop-django-api/src/promotion/engine/redemptions.py` | `record_redemptions` |
+| `grooveshop-django-api/src/promotion/engine/results.py` | `CartDiscountResult` and the other value types an evaluation returns |
 | `grooveshop-django-api/src/promotion/coupons.py` | `CouponService`, `CouponError` |
 | `grooveshop-django-api/src/promotion/product_offers.py` | `ProductPromotionService` |
 | `grooveshop-django-api/src/promotion/coupon_picker.py` | `CouponPickerService` |
