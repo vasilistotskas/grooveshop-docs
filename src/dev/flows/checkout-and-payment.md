@@ -203,7 +203,9 @@ own copies under `app/components/variants/webside/Checkout/`).
   400 `street_number_missing` on `street`. A `streetNumber` that is sent is
   used as sent. An optional second field, **Address line 2** (a flat, a floor or a
   building), is sent as `addressLine2` on a home-delivery order only, never on a
-  pickup order, and is kept when the address is saved. Django stores it on
+  pickup order, and is kept when the address is saved; the account's address
+  forms, the address cards, checkout's saved-address cards and the review summary
+  show it after the street. Django stores it on
   `Order.address_line_2` apart from the customer's note; the order pages print
   `fullAddress`, which already holds it after the street, the receipt and the
   order emails print it under the street, and the ACS voucher's `Delivery_Notes`
