@@ -43,7 +43,7 @@ releases the lock too: the psycopg pool resets every returned connection with
 `pg_advisory_unlock_all()` (`src/settings/database.py:
 _release_session_locks`), so no advisory lock outlives a request or a task.
 
-`src/core/tasks.py: MonitoredTask(TenantTask)` adds `on_success` / `on_failure`
+`src/core/monitored_task.py: MonitoredTask(TenantTask)` adds `on_success` / `on_failure`
 logging with redacted arguments. A failure is logged once, at ERROR, with
 the traceback (`exc_info=exc`: Celery's `einfo.exception` is a wrapper
 with no traceback frames):
@@ -169,8 +169,8 @@ non-suspended store), or every store including suspended ones
 
 | Beat entry | Task | Runs in | Cadence | Notes |
 |---|---|---|---|---|
-| `monitor-system-health` | `core.tasks.monitor_system_health` | `public` | every 30 min † | Emails `ADMINS` and raises on any failed check, including Redis persistence status |
-| `scheduled-database-backup` | `core.tasks.scheduled_database_backup` | `public` | daily 03:00 † | `pg_dump` into `backups/scheduled` on the backups PVC; see [Backups](/dev/operations/backups). Dropped when `DATABASE_BACKUPS_ENABLED` is off (staging) |
+| `monitor-system-health` | `core.tasks.monitor_system_health` (a task name only; the handler is in `src/tenant/tasks.py`) | `public` | every 30 min † | Emails `ADMINS` and raises on any failed check, including Redis persistence status |
+| `scheduled-database-backup` | `core.tasks.scheduled_database_backup` (a task name only; the handler is in `src/tenant/tasks.py`) | `public` | daily 03:00 † | `pg_dump` into `backups/scheduled` on the backups PVC; see [Backups](/dev/operations/backups). Dropped when `DATABASE_BACKUPS_ENABLED` is off (staging) |
 | `cleanup-old-backups` | `core.tasks.cleanup_old_backups` | `public` | Sun 05:00 † | 30-day retention on `backups/` (`kwargs`). Dropped with the entry above |
 | `clear-duplicate-history` | `tenant.tasks.fanout_clear_duplicate_history` | every store | daily 05:00 † | `core.tasks.clear_duplicate_history_task`: simple-history pruning |
 | `clear-old-history` | `tenant.tasks.fanout_clear_old_history` | every store | Sun 03:00 † | `core.tasks.clear_old_history_task`, 365 days |
@@ -205,13 +205,13 @@ non-suspended store), or every store including suspended ones
 | `purge-unconfirmed-guest-subscriptions` | `tenant.tasks.fanout_purge_unconfirmed_guest_subscriptions` | every store, suspended too | daily 04:00 † | `user.tasks.purge_unconfirmed_guest_subscriptions`: guest newsletter sign-ups unconfirmed after 30 days |
 | `purge-unconfirmed-guest-alerts` | `tenant.tasks.fanout_purge_unconfirmed_guest_alerts` | every store, suspended too | daily 04:00 † | `product.tasks.purge_unconfirmed_guest_alerts` |
 | `cleanup-expired-data-exports` | `tenant.tasks.fanout_cleanup_expired_data_exports` | every store | daily 03:00 † | `user.tasks.cleanup_expired_data_exports` |
-| `send-inactive-user-notifications` | `tenant.tasks.fanout_send_inactive_user_notifications` | every store | 1st of month 06:00 † | `core.tasks.send_inactive_user_notifications` |
+| `send-inactive-user-notifications` | `tenant.tasks.fanout_send_inactive_user_notifications` | every store | 1st of month 06:00 † | `core.tasks.send_inactive_user_notifications` (a task name only; the handler is in `src/user/tasks.py`) |
 | `clear-all-cache` | `core.tasks.clear_all_cache_task` | `public` | 1st of month 04:00 | Deliberately no `DEBUG` override, so development does not clear the whole cache hourly |
 | `reset-demo-stores` | `tenant.tasks.fanout_reset_demo_stores` | demo stores only | daily 04:00 | Not `run_for_all_tenants`: dispatches `devtools.tasks.reset_demo_store_task` only to active, non-suspended stores with `is_demo`, because it deletes orders, reviews, comments and carts |
-| `cleanup-abandoned-carts` | `tenant.tasks.fanout_cleanup_abandoned_carts` | every store | daily 04:00 † | `core.tasks.cleanup_abandoned_carts` |
-| `cleanup-old-guest-carts` | `tenant.tasks.fanout_cleanup_old_guest_carts` | every store | daily 06:00 † | `core.tasks.cleanup_old_guest_carts` |
+| `cleanup-abandoned-carts` | `tenant.tasks.fanout_cleanup_abandoned_carts` | every store | daily 04:00 † | `core.tasks.cleanup_abandoned_carts` (a task name only; the handler is in `src/cart/tasks.py`) |
+| `cleanup-old-guest-carts` | `tenant.tasks.fanout_cleanup_old_guest_carts` | every store | daily 06:00 † | `core.tasks.cleanup_old_guest_carts` (a task name only; the handler is in `src/cart/tasks.py`) |
 | `clear-expired-notifications` | `tenant.tasks.fanout_clear_expired_notifications` | every store, suspended too | 1st and 15th 06:00 † | `core.tasks.clear_expired_notifications_task`, 365 days; a retention sweep, so it reaches suspended stores; its command `expire_notifications --all-tenants` does as well |
-| `sync-meilisearch-indexes` | `tenant.tasks.fanout_sync_meilisearch_indexes` | every store | daily 02:00 † | `core.tasks.sync_meilisearch_indexes` |
+| `sync-meilisearch-indexes` | `tenant.tasks.fanout_sync_meilisearch_indexes` | every store | daily 02:00 † | `core.tasks.sync_meilisearch_indexes` (a task name only; the handler is in `src/meili/tasks.py`) |
 | `cleanup-expired-stock-reservations` | `tenant.tasks.fanout_cleanup_expired_stock_reservations` | every store | hourly | `order.tasks.cleanup_expired_stock_reservations` |
 | `purge-expired-tenant-archives` | `tenant.tasks.purge_expired_tenant_archives` | `public` | daily 03:00 | `TenantArchive` rows live in `public` because their schemas were dropped |
 | `process-tenant-billing` | `tenant.tasks.process_tenant_billing` | `public` | daily 06:00 † | Billing terms and dunning are public `Tenant` rows |
@@ -248,7 +248,12 @@ The retention periods behind the `purge-*` entries are listed in
 
 | Module | What lives there |
 |---|---|
-| `src/core/tasks.py` | health monitor, backups, cache clear, session and history cleanup, abandoned carts, Meilisearch sync, inactive-user mail |
+| `src/core/tasks.py` | the backup dump and cleanup (`backup_database_task`, `cleanup_old_backups`); cache clearing and invalidation (`clear_all_cache_task`, `invalidate_cache_surfaces_task`, `purge_store_pages_task`, `purge_store_locales_task`, `purge_edge_cache_task`); `release_due_publications_task`; session, history, admin-log, cache-purge-log and notification cleanup (`clear_expired_sessions_task`, `clear_duplicate_history_task`, `clear_old_history_task`, `purge_expired_admin_log_entries`, `purge_expired_cache_purge_logs`, `clear_expired_notifications_task`); `clear_development_log_files_task` |
+| `src/tenant/tasks.py` (besides the `fanout_*` wrappers) | the health monitor and the scheduled backup, which alert the operators (named `core.tasks.*`) |
+| `src/core/monitored_task.py` | `MonitoredTask`, the base class of the tasks |
+| `src/cart/tasks.py` | abandoned-cart and guest-cart cleanups (named `core.tasks.*`) |
+| `src/user/tasks.py` | the inactive-user mail (named `core.tasks.send_inactive_user_notifications`) |
+| `src/meili/tasks.py` | the daily index sync (named `core.tasks.sync_meilisearch_indexes`) |
 | `src/tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
 | `src/order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment |
 | `src/agent/tasks.py` | the agent gateway's order events: `deliver_agent_order_event` (an event's first attempt), `deliver_due_agent_order_events` (the sweep), `purge_expired_agent_order_events` |
@@ -344,7 +349,9 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 | `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `holding_store`, `hold_store_for_destroy`, `run_for_all_tenants`, `dispatch_on_commit` |
 | `grooveshop-django-api/src/settings/database.py` | `_release_session_locks`: the pool's reset, `pg_advisory_unlock_all()` on every returned connection |
 | `grooveshop-django-api/src/tenant/tasks.py` | Fan-out wrappers |
-| `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask`, system tasks |
+| `grooveshop-django-api/src/core/monitored_task.py` | `MonitoredTask` |
+| `grooveshop-django-api/src/core/tasks.py` | System tasks |
+| `grooveshop-django-api/src/cart/tasks.py`, `src/user/tasks.py`, `src/meili/tasks.py` | The cart cleanups, the inactive-user mail and the index sync, which keep their `core.tasks.*` task names |
 | `grooveshop-django-api/src/order/signals/handlers.py` | On-commit dispatch of order side effects |
 | `grooveshop-django-api/tests/conftest.py` | Eager mode, immediate on_commit |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` | Worker, beat and Flower Deployments; broker URL assembly |

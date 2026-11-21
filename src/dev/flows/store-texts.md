@@ -197,8 +197,8 @@ admin's language; the storefront's English detail travels in
   is cached under `texts:overrides:<cache_generation>:<language>`
   (`src/texts/views.py: overrides_cache_key`), so Django serves the new value at
   once.
-- `src/core/cache/surfaces.py` registers the `store_texts` surface with
-  `invalidated_by=("texts.TextOverride",)`: `_nuxt("textOverrides")` (the
+- `src/texts/cache_surfaces.py` registers the `store_texts` surface with
+  `invalidated_by=("texts.TextOverride",)`: `nuxt_handlers("textOverrides")` (the
   storefront handler's Redis keys `cache:nitro:handlers:textOverrides…`),
   every cached route of the store (`cache:nitro:routes:_:*`), and
   `invalidates_tenant_config=True`, which moves the storefront's tenant
@@ -287,7 +287,7 @@ ships to browsers.
   merge, not Django, drops locked and unknown keys.
 - **The public read never calls the storefront** (`src/texts/views.py`).
 - **The handler name `textOverrides` is a contract.** Django's purge names it
-  (`src/core/cache/surfaces.py`, `_nuxt("textOverrides")`). Renaming the cached
+  (`src/texts/cache_surfaces.py`, `nuxt_handlers("textOverrides")`). Renaming the cached
   route without changing the surface leaves edits invisible until the TTL
   runs out.
 - **A namespace is the component's own path**, enforced by the source rule;
@@ -362,6 +362,6 @@ ships to browsers.
 | `grooveshop-django-api/src/admin/navigation.py` | Sidebar entry under Content |
 | `grooveshop-django-api/src/tenant/role_scopes.py` | `STORE_SETTINGS_APP_LABELS`, `STAFF_READ_ONLY_APP_LABELS` |
 | `grooveshop-django-api/src/tenant/signals.py` | `bump_generation_on_text_override_change` |
-| `grooveshop-django-api/src/core/cache/surfaces.py` | `store_texts` surface |
+| `grooveshop-django-api/src/texts/cache_surfaces.py` | `store_texts` surface |
 | `grooveshop-django-api/src/core/cache/invalidation.py` | Batched purge after commit |
 | `grooveshop-django-api/src/settings/domain.py` | `TEXTS_*` settings |
