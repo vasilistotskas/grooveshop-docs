@@ -359,6 +359,10 @@ row of the id and sends under an advisory lock on the event
 (`core.db.locks.held_across_calls`), so two copies at the same moment send
 once. A copy whose wait for the lock runs out retries and then finds the
 event sent; the request to Meta is bounded by `META_CAPI_TIMEOUT_SECONDS`.
+The lock does not close one window: a worker lost after Meta accepted the
+event and before the `SENT` row is written leaves the copy delivered again
+to send it once more, under the same id. Whether Meta drops a server event
+repeated under one id is not something its documentation settles.
 
 `app/composables/useCheckoutSubmit.ts: buildMetaPayload` mints them at
 checkout and returns **`null` when `ad_storage` is not granted**, so no dedup

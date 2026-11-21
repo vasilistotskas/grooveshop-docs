@@ -101,8 +101,11 @@ interrupt. The task claims the row before it pushes, by stamping
 `NotificationUser.pushed_at` where it is empty (a compare-and-set), and gives
 the claim back when the push raises, so the retry pushes it: a copy that
 finds the row claimed pushes nothing, because the storefront shows a toast
-for every frame. A worker that dies between the claim and the push loses
-that toast; the notification stays in the user's list.
+for every frame. Two windows remain. A worker that dies between the claim
+and the push loses that toast; the notification stays in the user's list.
+A push that raises after some of the user's sockets already got the frame
+gives the claim back too, and its retry shows those sockets the toast a
+second time.
 
 **The group name is `tenant_{schema_name}_user_{user_id}`.** The schema
 segment is what stops tenant A's user 42 receiving tenant B's user 42's
@@ -283,7 +286,9 @@ delivery id, derived from the task id plus the type, the recipient's hash
 and the subject (`src/emails/log.py: delivery_id`), so every copy of one
 dispatch (a retry, a message delivered again, the sweep's copy of a
 publish) finds the row the first one wrote: a row the provider has is not
-sent again, any other goes back to `queued` and is sent. `log.delivering`
+sent again. Any other goes back to `queued` and is sent, once the copy has
+passed the same gates as the first: an opt-out, a suppression or a switch
+that holds now ends it with a skip row of its own. `log.delivering`
 reads the row, and the transport sends, under an advisory lock on the
 delivery (`core.db.locks.held_across_calls`), so a copy that starts while
 another is sending waits for its answer and then finds the row `sent`. A
@@ -728,9 +733,13 @@ so a staging refresh cannot email real customers. See
   write into another store.
 - **A send leaves an `EmailLog` row whatever happens**, and no column of it
   holds an address, a body or a provider's error text.
-- **A dispatch mails, notifies and pushes once, however many copies of its
-  task run.** The mail's row and `Idempotency-Key` come from the task id, the
-  notification from its `dispatch_key`, the push from its `pushed_at` claim.
+- **A copy of a dispatch repeats no effect that is recorded as done.** The
+  mail's row and `Idempotency-Key` come from the task id, the notification
+  from its `dispatch_key`, the push from its `pushed_at` claim. A worker lost
+  between an effect and its record is the window that stays: a toast claimed
+  and never pushed is lost, and a mail that left before its row was marked is
+  sent again by the next copy, which Resend drops by its `Idempotency-Key`
+  and SMTP does not.
 - **A store with its own verified domain never sends with the platform's
   Resend key.** `emails.sender.own_sender()` decides, and a missing store key
   is `ResendNotConfigured`, not a fallback.
@@ -776,7 +785,9 @@ so a staging refresh cannot email real customers. See
 - **A row stays `queued`.** The process died between creating the row and the
   transport answering; the mail may or may not have left. The copy of the
   task that runs next (its message is delivered again) finds the row and
-  sends it under the same `Idempotency-Key`.
+  sends it under the same `Idempotency-Key`. Resend answers that repeat with
+  the first send's response and sends nothing (a key is kept 24 hours); SMTP
+  has no such key, so over SMTP the mail can arrive twice.
 - **Plain-text mail shows raw markup.** An admin-authored HTML field was
   rendered into a `.txt` template without the strip-and-unescape step.
 - **A notification task fails on the same error every time.** Only a

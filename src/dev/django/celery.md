@@ -312,7 +312,7 @@ copy finds it done:
 |---|---|---|
 | A row the task creates | A key from `tenant.celery.dispatch_key(namespace, *parts)`, the task id plus what tells the task's effects apart, in a column unique when set | `Notification.dispatch_key`, `RecommendationEvent.event_key` |
 | A state of a row | A compare-and-set on that state | `NotificationUser.pushed_at` |
-| A call to another service | An id fixed before the task runs again (the provider's idempotency key, the event id), and the check, the call and the mark under `core.db.locks.held_across_calls`, so a copy that starts while another is calling waits and then finds it done; a mark set before the call would lose it with a worker that dies mid-call | Email delivery (`emails.log.delivering`), Meta CAPI events, gift card delivery, product alerts (`ProductAlert.notified_at`) |
+| A call to another service | An id fixed before the task runs again (the provider's idempotency key, the event id), and the check, the call and the mark under `core.db.locks.held_across_calls`, so a copy that starts while another is calling waits and then finds it done; a mark set before the call would lose it with a worker that dies mid-call. A worker that dies after the call and before the mark leaves the next copy to call again, which repeats nothing only where the service honours the fixed id (Resend's `Idempotency-Key`, kept 24 hours; SMTP has none) | Email delivery (`emails.log.delivering`), Meta CAPI events, gift card delivery, product alerts (`ProductAlert.notified_at`) |
 
 `held_across_calls` holds a PostgreSQL advisory lock on the session, outside
 any transaction, because a transaction open across a network call is ended
