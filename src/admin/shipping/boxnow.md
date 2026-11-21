@@ -102,7 +102,7 @@ BoxNow also delivers to lockers in Cyprus, with the same account and the same lo
 3. Check that there are Cypriot lockers: filter **Country Code** CY. If there are none, click **Sync lockers from BoxNow API**.
 4. Place a test order to a Cypriot locker.
 
-At checkout, the customer sees the Cyprus map once they choose Cyprus. The phone field has a country picker, so it accepts both a Cypriot and a Greek number. A Greek locker is refused for a Cypriot address, and the other way round.
+At checkout, the customer sees the Cyprus map once they choose Cyprus. The phone field has a country picker, so it accepts both a Cypriot and a Greek number. A Greek locker is refused when the customer chose Cyprus as the country, and the other way round. A locker order needs no street address from the customer: it is delivered to the locker's address, which you see in the order's **Shipping Address** tab.
 
 ## Things to know
 
