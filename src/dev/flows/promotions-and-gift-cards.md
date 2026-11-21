@@ -12,7 +12,7 @@ A gift card is a **payment instrument**: an accounting liability with an
 append-only ledger, redeemed against the amount due, never against the goods
 value.
 
-The order they apply in is fixed and stated in `src/promotion/services.py`:
+The order they apply in is fixed and stated in `src/promotion/engine/__init__.py`:
 product markdown (already inside `Product.final_price`) → promotions →
 loyalty redemption → gift-card payment.
 
@@ -24,16 +24,16 @@ flowchart TD
   Bind --> Eval["PromotionEngine.evaluate"]
   Eval --> Gate{"is_enabled: plan AND setting"}
   Gate -- "no" --> Empty["empty result"]
-  Gate -- "yes" --> Cand["_collect_candidates: automatic + attached codes"]
-  Cand --> Elig["_check_eligibility per candidate"]
+  Gate -- "yes" --> Cand["collect_candidates: automatic + attached codes"]
+  Cand --> Elig["check_eligibility per candidate"]
   Elig --> Amt["benefit amount / BXGY / gift / free shipping"]
-  Amt --> Stack["_resolve_stacking"]
+  Amt --> Stack["resolve_stacking"]
   Stack --> Clamp["clamp to items total"]
   Clamp --> Result["CartDiscountResult"]
 
   Result --> Preview["cart read + payment intent"]
   Result --> Create["order create with lock"]
-  Create --> Rec["PromotionEngine.record: redemption rows"]
+  Create --> Rec["record_redemptions: redemption rows"]
 
   Due["amount due"] --> Plan["GiftCardService.plan_redemption"]
   Plan --> Ledger["REDEEM rows, negative"]
@@ -114,14 +114,14 @@ gateway reports them as `discount_code_invalid`
 
 **A code is accepted only when it changes the outcome.** Every way a code
 could be attached for nothing is a refusal, decided once in
-`PromotionEngine._classify` (and the clamp step of `evaluate`) and mirrored
+`PromotionEngine.classify` (`src/promotion/engine/evaluation.py`, and the clamp step of `evaluate`) and mirrored
 by the picker:
 
 | Situation | Reason |
 |---|---|
-| Nothing in the cart is in the code's scope (after exclusions), checked by `_check_eligibility` before any minimum | `not_applicable` |
-| A buy-X-get-Y short of its group, or a reward-pool offer whose reward is not in the cart (`_bxgy_shortfall`) | `minimum_not_met` |
-| Worth nothing for any other reason, e.g. a reward-pool offer whose rewards cannot be bought (`_worthless_code_reason`) | `not_applicable` |
+| Nothing in the cart is in the code's scope (after exclusions), checked by `check_eligibility` before any minimum | `not_applicable` |
+| A buy-X-get-Y short of its group, or a reward-pool offer whose reward is not in the cart (`bxgy_shortfall`) | `minimum_not_met` |
+| Worth nothing for any other reason, e.g. a reward-pool offer whose rewards cannot be bought (`worthless_code_reason`) | `not_applicable` |
 | A monetary code the clamp leaves with 0, because earlier promotions already took the items total | `combination_disallowed` |
 | A free-shipping code on a cart an automatic promotion already ships free | `combination_disallowed` |
 | A gift code whose gift is inactive or out of stock | `gift_unavailable` |
@@ -143,7 +143,7 @@ follows too).
 
 ### Stacking and priority
 
-`_resolve_stacking` is short and total:
+`resolve_stacking` (`src/promotion/engine/stacking.py`) is short and total:
 
 - Stackable promotions combine, ordered by `priority` then primary key
   (lower priority applies first).
@@ -158,7 +158,7 @@ Free shipping never takes part: it has no amount to conflict over, so
 refused when an automatic promotion already waives shipping, see above).
 Free gifts are likewise non-monetary. A gift is an entitlement only while
 the lowest-pk active gift product has the stock to hand over
-(`_gift_entitlement`); a sold-out gift pauses the offer silently, and only
+(`gift_entitlement`); a sold-out gift pauses the offer silently, and only
 "no active gift at all" is logged, as a misconfiguration.
 
 After stacking, the chosen entries are clamped so the running discount never
@@ -166,7 +166,7 @@ exceeds the items total; a code the clamp leaves with 0 is refused.
 
 ### Recording
 
-`PromotionEngine.record(order, result)` must run in the same transaction and
+`record_redemptions(order, result)` (`src/promotion/engine/redemptions.py`) must run in the same transaction and
 under the same locks as the `evaluate(lock=True)` that produced the result.
 It writes a `PromotionRedemption` per applied promotion — **including
 zero-amount rows for free shipping and free gifts**, without which their
@@ -190,16 +190,16 @@ An **automatic** promotion short of exactly one minimum is reported as a
 (`app/components/Cart/Banners.vue`). Exactly one distance is set:
 
 - `remaining_amount`: only the minimum subtotal is missing
-  (`_minimum_near_miss`).
+  (`minimum_near_miss`).
 - `remaining_quantity`: only units are missing. That is a `min_quantity`, or
-  what a buy-X-get-Y still needs (`_bxgy_shortfall`): "buy 2 get 1" with two
+  what a buy-X-get-Y still needs (`bxgy_shortfall`): "buy 2 get 1" with two
   eligible units in the cart reports 1; a reward-pool offer reports its
   missing buy units, or — once the buy side is met — 1 with
   `reward_products` set to the sellable reward products (one reward unit
   already earns the offer).
 
 **A teaser is a promise, so the engine checks it.** `_teaser_holds` rebuilds
-the cart as it would be after following the teaser (`_items_after_teaser`:
+the cart as it would be after following the teaser (`items_after_teaser`:
 units onto the cheapest counted line, or one unit of the cheapest reward)
 and runs the full classification, stacking and clamp over it. Only a teaser
 whose promotion is then granted is shown. That removed "-5% from 3 items" on
@@ -244,8 +244,8 @@ flowchart TD
   cart), usage limits, and the wholesale gate (no retail promotion reaches a
   B2B cart unless `B2B_ALLOW_PROMOTIONS` is on). An amount teaser's distance
   is its `remaining_amount`, measured on the products before discounts as the
-  engine judges a minimum; a units teaser costs what `PromotionEngine.teaser_cost`
-  adds, the engine's own `_items_after_teaser` simulation, so "2 more items"
+  engine judges a minimum; a units teaser costs what `teaser_cost`
+  (`src/promotion/engine/teasers.py`) adds, the engine's own `items_after_teaser` simulation, so "2 more items"
   can be weighed against euros.
 - **Threshold routes** are `ShippingService.free_threshold_rates`: the
   `active_rate` gate (active provider, registered adapter, the provider
@@ -313,7 +313,7 @@ every tenant an empty list).
 
 `GET /api/v1/promotion/product/{productId}`
 (`src/promotion/views.py: ProductPromotionListView` →
-`src/promotion/services.py: ProductPromotionService`) answers the narrower
+`src/promotion/product_offers.py: ProductPromotionService`) answers the narrower
 question a shopper actually has: what is running **for this item**. Each row
 carries a `relation` (`src/promotion/enum.py: ProductPromotionRelation`) saying
 why it is relevant, because `target_scope` alone cannot express it:
@@ -326,12 +326,12 @@ why it is relevant, because `target_scope` alone cannot express it:
 | `ORDER` | Store-wide; true of every product |
 
 Scope and exclusions are resolved with the same rules
-`PromotionEngine._matching_items` uses at cart time — excluded products,
+`matching_items` (`src/promotion/engine/scope.py`) uses at cart time — excluded products,
 excluded categories (descendants included) and `exclude_discounted_products`
 all suppress the buy-side claim — so an excluded product never advertises
 the offer that skips it. The exclusions constrain what must be **bought**,
 so they do not suppress a `REWARD` claim. `FREE_GIFT` mirrors
-`_gift_entitlement` exactly (lowest-pk **active** gift product with the stock
+`gift_entitlement` exactly (lowest-pk **active** gift product with the stock
 to hand over), so a promotion with two gifts never promises the one nobody
 would receive, and a sold-out gift is not advertised.
 
@@ -345,7 +345,7 @@ shopper.
 #### The checkout coupon picker
 
 `GET /api/v1/cart/coupons` (`src/cart/views/cart.py: list_coupons` →
-`src/promotion/services.py: CouponPickerService`) lists the advertisable codes
+`src/promotion/coupon_picker.py: CouponPickerService`) lists the advertisable codes
 **plus the personal coupons assigned to a signed-in customer** — the one
 code a shopper is most likely to be holding is the one `/offers`
 deliberately never shows them. Guests get only the public set: a guest cart
@@ -362,8 +362,8 @@ as it stands:
 | `freeShipping` | It would newly waive shipping |
 | `applied` | It is the code already on the cart |
 
-The verdicts come from the same helpers `_classify` uses (`_bxgy_shortfall`,
-`_worthless_code_reason`, `_gift_entitlement`), and `_stacked_total` counts
+The verdicts come from the same helpers `classify` uses (`bxgy_shortfall`,
+`worthless_code_reason`, `gift_entitlement`), and `_stacked_total` counts
 a code the clamp leaves with 0 as a loser, so every refusal in the table
 above reads the same here as at `apply`.
 
@@ -371,7 +371,7 @@ Two subtleties, both load-bearing:
 
 - **`apply` raises on `COMBINATION_DISALLOWED` too.** A non-stackable coupon
   that loses the stacking comparison to the automatic offers is rejected by
-  `_resolve_stacking`, and `CouponService.apply` raises on *any* rejection —
+  `resolve_stacking`, and `CouponService.apply` raises on *any* rejection —
   so such a row must be `eligible: false`, not an enabled button that
   answers 400. (`blocking_rejections` excludes the same reason, but that is
   about aborting order creation, not about accepting a code.)
@@ -379,7 +379,7 @@ Two subtleties, both load-bearing:
   the cart's current total, because applying a coupon *replaces* the
   attached one (one coupon per cart in v1).
 
-Cost: ONE `_collect_candidates` pass, then the pure stacking/clamp maths
+Cost: ONE `collect_candidates` pass, then the pure stacking/clamp maths
 re-run per candidate — not an `evaluate()` per code, which would have made
 the checkout page pay ~15 queries for every code the store publishes.
 `tests/unit/promotion/test_coupon_picker.py` pins both the apply-parity
@@ -422,7 +422,7 @@ builds on, because only some promotions put a price offer on a product:
 - **AUTOMATIC only.** A code promotion offers nothing until the shopper types
   the code.
 - **`target_scope` PRODUCTS or CATEGORIES.** Category scope includes the MPTT
-  subtree, as in `PromotionEngine._matching_items`. ORDER scope is cart-level
+  subtree, as in `matching_items`. ORDER scope is cart-level
   and never marks a product.
 - **Every benefit type except FREE_SHIPPING.** Free shipping is a shipping
   perk, not a price offer.
@@ -625,8 +625,8 @@ step.
 The quote, the payment intent and order creation each say what a card settles
 (or that the code is no card), so each could be used to guess codes. A request
 that carries `giftCardCodes` therefore gets a `GiftCardCodeThrottle`, added by
-the one helper `core.api.throttling.gift_card_code_throttles` that the three
-views call from `get_throttles` (`src/core/api/throttling.py`):
+the one helper `giftcard.throttles.gift_card_code_throttles` that the three
+views call from `get_throttles` (`src/giftcard/throttles.py`):
 
 - **Only a code new to the cart counts.** The cart keeps the codes it has been
   allowed to try for `GIFT_CARD_CODES_SEEN_TTL_SECONDS` (default 1800) as keyed
@@ -795,7 +795,7 @@ whose plan enables it, and Django still gates the data.
   exact (`_teaser_holds` simulates it).
 
 - **The offers page is stale after editing a promotion.** The `promotions`
-  cache surface in `src/core/cache/surfaces.py` declares **no `invalidated_by` at
+  cache surface in `src/promotion/cache_surfaces.py` declares **no `invalidated_by` at
   all**, so it takes the `CacheSurface` default of an empty tuple. Signal
   wiring in `src/core/cache/invalidation.py` only ever connects the models a
   surface lists, so no signal, admin hook or save purges it. The signals in
@@ -868,7 +868,18 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/promotion/models/redemption.py` | `PromotionRedemption`, the usage ledger |
 | `grooveshop-django-api/src/promotion/enum.py` | Trigger, benefit, scope, rejection vocabulary |
 | `grooveshop-django-api/src/promotion/managers/promotion.py` | `publicly_listable`, `publishable_code_q` — the ONE advertisability rule |
-| `grooveshop-django-api/src/promotion/services.py` | `PromotionEngine`, `CouponService`, `ProductPromotionService`, `CouponPickerService` |
+| `grooveshop-django-api/src/promotion/engine/evaluation.py` | `PromotionEngine`: `evaluate`, `classify`, `single_unit_discount`, `is_enabled` |
+| `grooveshop-django-api/src/promotion/engine/eligibility.py` | `collect_candidates`, `check_eligibility` |
+| `grooveshop-django-api/src/promotion/engine/benefits.py` | `benefit_amount`, `gift_entitlement`, `gift_pairs` |
+| `grooveshop-django-api/src/promotion/engine/stacking.py` | `resolve_stacking`, `clamp` |
+| `grooveshop-django-api/src/promotion/engine/bxgy.py` | `bxgy_amount`, `bxgy_discounted_units` |
+| `grooveshop-django-api/src/promotion/engine/scope.py` | `matching_items`, category scope expansion |
+| `grooveshop-django-api/src/promotion/engine/teasers.py` | `teaser_cost`, `items_after_teaser`, `minimum_near_miss`, `bxgy_shortfall`, `worthless_code_reason` |
+| `grooveshop-django-api/src/promotion/engine/redemptions.py` | `record_redemptions` |
+| `grooveshop-django-api/src/promotion/engine/results.py` | `CartDiscountResult` and the other value types an evaluation returns |
+| `grooveshop-django-api/src/promotion/coupons.py` | `CouponService`, `CouponError` |
+| `grooveshop-django-api/src/promotion/product_offers.py` | `ProductPromotionService` |
+| `grooveshop-django-api/src/promotion/coupon_picker.py` | `CouponPickerService` |
 | `grooveshop-django-api/src/promotion/offers.py` | `offer_kind_expression`, `live_offer_promotions`, `price_reducing_promotions`, `scope_product_ids` — the ONE on-offer rule |
 | `grooveshop-django-api/src/promotion/offer_sync.py` | Coalesced refresh queue (price records, then `on_offer` reindex) and the window sweep |
 | `grooveshop-django-api/src/promotion/signals.py` | Promotion, scope and usage-limit changes that queue the reindex |
@@ -882,7 +893,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/search/views/product.py` | The `onOffer` search filter |
 | `grooveshop-django-api/src/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
 | `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, `quote`, payment-intent evaluation |
-| `grooveshop-django-api/src/core/api/throttling.py` | `GiftCardCheckThrottle`, `GiftCardCodeThrottle`, `gift_card_code_throttles` |
+| `grooveshop-django-api/src/giftcard/throttles.py` | `GiftCardCheckThrottle`, `GiftCardCodeThrottle`, `gift_card_code_throttles` |
 | `grooveshop-django-api/src/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService.quote`, `threshold_value`, `free_shipping_progress`, `FreeShippingProgress` |
 | `grooveshop-django-api/src/shipping/services.py` | `free_threshold_rates`, `initial_country_code` |
@@ -898,7 +909,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/giftcard/tasks.py` | Delivery, receipts, reminders, expiry, refund credit |
 | `grooveshop-django-api/src/giftcard/admin.py` | `save_model` issuing, Resend delivery action |
 | `grooveshop-django-api/src/giftcard/views.py` | `check`, `purchase`, `purchase_status`, `mine` |
-| `grooveshop-django-api/src/core/cache/surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
+| `grooveshop-django-api/src/promotion/cache_surfaces.py` | The `promotions` surface, which declares no `invalidated_by` |
 | `grooveshop-django-api/src/tenant/permissions.py` | The plan and runtime permission classes |
 | `grooveshop-django-api/src/tenant/switches.py` | `on_switch_change`: reprice on the promotions switch, pause sync on the gift-cards switch |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/offers/index.vue` | The offers page |

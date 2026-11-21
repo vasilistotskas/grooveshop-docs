@@ -598,7 +598,7 @@ was removed with it as redundant against the SHIPPED toast.
 ### Celery delivery and retries
 
 Every email and live-notification task extends
-`src/core/tasks.py: MonitoredTask`, which extends
+`src/core/monitored_task.py: MonitoredTask`, which extends
 `src/tenant/celery.py: TenantTask`. `TenantTask.apply_async` stamps a
 `_schema_name` header (preferring an explicit one from the caller) and
 `__call__` re-enters that schema — via `tenant_context` with the real
@@ -806,7 +806,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-django-api/src/emails/models.py` | `EmailLog`, `EmailEvent`, `EmailSuppression`, `EmailSwitch`, `EmailOptOut` |
 | `grooveshop-django-api/src/emails/preview.py` | The admin preview of any registered email |
 | `grooveshop-django-api/src/emails/admin.py`, `src/emails/switches.py`, `src/emails/figures.py`, `src/emails/testsend.py` | The Emails pages of the store admin and the platform admin: grouping, figures, test send |
-| `grooveshop-django-api/src/tenant/emails.py`, `src/core/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
+| `grooveshop-django-api/src/tenant/emails.py` | The platform's own email types (billing, staff reset, health, backup) |
 | `grooveshop-django-api/src/core/utils/email_context.py` | `build_email_context`, tenant logo resolution |
 | `grooveshop-django-api/src/core/utils/i18n.py` | `get_order_language`, `get_user_language` |
 | `grooveshop-django-api/src/core/utils/tenant_urls.py` | `STOREFRONT_LOCALES`, `STOREFRONT_DEFAULT_LOCALE`, `storefront_locale_prefix`, `get_tenant_frontend_url`, `localize_storefront_url`, `storefront_path` |
@@ -829,7 +829,7 @@ so a staging refresh cannot email real customers. See
 | `grooveshop-storefront-ui-node-nuxt/server/api/user/email-preferences.patch.ts` | Proxy for `PATCH /api/v1/user/email-preferences` |
 | `grooveshop-django-api/src/order/models/refund_notification.py` | `RefundNotification`, the claim on one refund's email |
 | `grooveshop-django-api/src/order/communications/notifications.py` | `_ORDER_STATUS_COPY` and the five live-notification tasks |
-| `grooveshop-django-api/src/core/tasks.py` | `MonitoredTask` |
+| `grooveshop-django-api/src/core/monitored_task.py` | `MonitoredTask` |
 | `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `dispatch_on_commit` |
 | `grooveshop-django-api/src/core/templates/emails/` | Every template pair and `base/email_base.html` |
 | `grooveshop-storefront-ui-node-nuxt/app/plugins/websocket.client.ts` | Connect, heartbeat, reconnect, cross-tab broadcast |

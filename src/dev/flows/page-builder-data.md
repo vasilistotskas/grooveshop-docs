@@ -112,7 +112,7 @@ repointed.
 
 `src/tenant/signals.py: bump_generation_on_builder_release` moves
 `Tenant.cache_generation` in the release's transaction.
-`src/core/cache/surfaces.py` registers the `builder` surface
+`src/builder/cache_surfaces.py` registers the `builder` surface
 (`invalidated_by=("builder.BuilderRelease",)`): the storefront's
 `builderPage` handler (a handler name the storefront's cached route must
 carry), every cached route of the store, and `invalidates_tenant_config=True`,
@@ -322,7 +322,7 @@ anonymiser deletes the table: a link is a credential.
 | `grooveshop-django-api/src/builder/admin_views.py` | `Edit storefront` |
 | `grooveshop-django-api/src/tenant/api_tokens.py` | Token scope enforcement |
 | `grooveshop-django-api/src/core/storefront.py` | `base_url`, `StorefrontUnavailable` shared with `texts` |
-| `grooveshop-django-api/src/core/cache/surfaces.py` | The `builder` surface |
+| `grooveshop-django-api/src/builder/cache_surfaces.py` | The `builder` surface |
 | `grooveshop-django-api/src/tenant/signals.py` | `bump_generation_on_builder_release` |
 | `grooveshop-django-api/src/tenant/role_scopes.py` | Roles |
 | `grooveshop-django-api/src/settings/domain.py` | `BUILDER_*` settings |

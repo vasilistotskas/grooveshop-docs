@@ -411,7 +411,7 @@ drawer and in webside's strip); the cached body is anonymous.
 | `grooveshop-django-api/src/recommendation/management/commands/backfill_recommendation_slots.py` | PreSync seeding |
 | `grooveshop-django-api/src/product/enum/relation.py` | `RelationType` |
 | `grooveshop-django-api/src/cart/models/item.py`, `src/order/models/item.py` | The carried impression id |
-| `grooveshop-django-api/src/core/cache/surfaces.py` | The `recommendations` surface |
+| `grooveshop-django-api/src/recommendation/cache_surfaces.py` | The `recommendations` surface |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Product/Suggestions.vue` | The strip |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useRecommendationTracking.ts` | Impression and click reporting |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useRecommendationAttribution.ts` | Per-tab carry of the impression |
