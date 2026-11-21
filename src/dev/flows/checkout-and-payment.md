@@ -307,7 +307,7 @@ and what the order stores).
   gift-card plan, `amount_due`) are `None` with them.
 - **`lock=True` is order creation.** It locks the candidate `Promotion` rows,
   the customer's row (when points are redeemed) and the gift cards until
-  commit, so what was quoted is what `PromotionEngine.record`,
+  commit, so what was quoted is what `record_redemptions`,
   `LoyaltyService.redeem_points` and `GiftCardService.record_plan` write. A
   refused attached coupon raises `InvalidCouponError`; without the lock it is
   reported on the quote (`blockingCoupon`). Both paths take the
@@ -391,7 +391,7 @@ and what the order stores).
   by the agent gateway, so it has its own throttle scopes, `cart_quote`
   (signed-in callers) and `cart_quote_anon` (guests; per cart for a request
   that carries the gateway's secret), not the cart's write budget
-  (`src/core/api/throttling.py: CartQuoteThrottle`, `CartQuoteAnonThrottle`).
+  (`src/cart/throttles.py: CartQuoteThrottle`, `CartQuoteAnonThrottle`).
   Guessing a gift-card code is budgeted on the quote, the payment intent and
   order creation alike (`gift_card_code_throttles`): only a code new to the
   cart counts, the cart remembering the codes it was allowed to try for
@@ -936,7 +936,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/order/serializers/quote.py` | `CartQuoteSerializer`, the quote's response |
 | `grooveshop-django-api/src/order/enum/create_error.py` | `TOTAL_CHANGED_CODE`, `OrderCreateErrorType` |
 | `grooveshop-django-api/src/shipping/enum/refusal.py` | `ShippingRefusal`: the quote's coded delivery refusals |
-| `grooveshop-django-api/src/core/api/throttling.py` | `CartQuoteThrottle`, `CartQuoteAnonThrottle`, `gift_card_code_throttles`, `GiftCardCodeThrottle` |
+| `grooveshop-django-api/src/cart/throttles.py`, `src/giftcard/throttles.py` | `CartQuoteThrottle`, `CartQuoteAnonThrottle`; `gift_card_code_throttles`, `GiftCardCodeThrottle` |
 | `grooveshop-django-api/src/shipping_acs/carrier.py` | `AcsCarrier._fetch_live_quote`: the cached live price |
 | `grooveshop-agent-gateway/internal/checkout/pricing.go` | The gateway's checkout pricing, from the quote |
 | `grooveshop-django-api/src/order/managers/order.py` | `holding_stock_for_online_payment`, the set the unpaid-order limit counts |

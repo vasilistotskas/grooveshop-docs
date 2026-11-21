@@ -408,7 +408,7 @@ are the bugs it exists to catch.
 | `grooveshop-django-api/src/tenant/credentials.py` | Credential helpers and the no-fallback rule |
 | `grooveshop-django-api/src/tenant/permissions.py` | Plan and runtime feature gates |
 | `grooveshop-django-api/src/tenant/membership.py` | `get_current_tenant`, `tenant_plan_allows`, `is_store_staff` |
-| `grooveshop-django-api/src/core/api/views.py` | `PUBLIC_SETTING_KEYS`, settings endpoints |
+| `grooveshop-django-api/src/core/store_settings.py`, `src/core/api/settings_api.py` | `PUBLIC_SETTING_KEYS`, settings endpoints |
 | `grooveshop-django-api/src/meili/models.py`, `src/meili/_client.py` | Per-schema index names and search clients |
 | `grooveshop-django-api/tests_mt/conftest.py` | The multi-tenant test lane |
 | `grooveshop-storefront-ui-node-nuxt/server/middleware/0.tenant.ts` | Host resolution and bypass list |

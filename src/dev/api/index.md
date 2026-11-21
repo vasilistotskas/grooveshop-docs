@@ -124,7 +124,8 @@ a Django change followed by a regeneration; see
 | `grooveshop-django-api/src/core/urls.py` | Schema, Swagger UI, ReDoc, health, every `/api/v1/` mount |
 | `grooveshop-django-api/src/settings/api.py`, `grooveshop-django-api/src/settings/auth.py` | `SPECTACULAR_SETTINGS`, `REST_FRAMEWORK` (api); `REST_KNOX` (auth) |
 | `grooveshop-django-api/src/core/pagination/` | The three paginators and the envelope |
-| `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet`, `paginate_and_serialize` and `unpaginated_actions`, settings endpoints |
+| `grooveshop-django-api/src/core/api/views.py` | `BaseModelViewSet`, `paginate_and_serialize` and `unpaginated_actions` |
+| `grooveshop-django-api/src/core/api/settings_api.py`, `src/core/api/health_api.py` | The settings and health endpoints |
 | `grooveshop-django-api/src/core/utils/serializers.py` | `create_schema_view_config`, `PAGINATION_PARAMETER` |
 | `grooveshop-django-api/src/core/utils/views.py` | `process_translations_data` for multipart translations |
 | `grooveshop-django-api/src/core/api/serializers.py` | `ErrorResponseSerializer`, `RequiredDefaultTranslationMixin` |
