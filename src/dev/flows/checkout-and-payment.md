@@ -414,7 +414,7 @@ and what the order stores).
     cart's `totalVatValue` is the goods only.
 - **The cart digest** (Django #765, refined by #770; it is not part of the pickup change). A quote with a delivery chosen also returns
   `cartDigest`, an HMAC over what the order would be made of (each line, the
-  promotions with their codes and amounts, the delivery with its pickup point);
+  promotions with their codes and amounts, the delivery with its pickup point; not the pay way, so a changed pay way does not change it, and not the shipping charge, fee, loyalty or gift-card amounts, which `expectedTotal` holds);
   `POST /api/v1/order` takes an optional `expectedCartDigest` and, on a
   difference, creates nothing and answers 409 `cart_changed` with the fresh
   quote. It catches what the total cannot, such as a line swapped for one at
