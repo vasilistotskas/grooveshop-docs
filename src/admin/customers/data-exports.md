@@ -48,7 +48,7 @@ One file (JSON format) with only the customer's own data:
 
 - profile and contact details
 - saved addresses
-- orders, with products, prices and delivery details: the account's own and the guest orders placed with one of the customer's verified email addresses (an address they never verified does not count). For each order the file lists the contact details (name, email, phone), the delivery address including **Address line 2**, the note the customer left, the billing details, the reason given when the order was cancelled, the browser details stored with the order (IP address, user agent and the browser and click ids Meta uses for conversion tracking), and what the courier (ACS or BOX NOW) reported about the recipient (tracking notes, who received a cash-on-delivery parcel)
+- orders, with products, prices and delivery details: the account's own and the guest orders placed with one of the customer's verified email addresses (an address they never verified does not count). For each order the file lists the contact details (name, email, phone), the delivery address including **Address line 2**, the note the customer left, the billing details, the reason given when the order was cancelled, the browser details stored with the order (IP address, user agent and the browser and click ids Meta uses for conversion tracking), and what the courier (ACS or BOX NOW) reported about the delivery: tracking notes, who received a cash-on-delivery parcel, and the recipient details and notes BOX NOW sent (name, email, phone and its event texts)
 - favourite products
 - product reviews
 - blog comments and liked blog posts
