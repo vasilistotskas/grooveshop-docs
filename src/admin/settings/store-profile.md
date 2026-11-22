@@ -37,6 +37,14 @@ The logo also appears on the sign-in and permission pages a customer sees when c
 
 Your store's colours, corners and fonts are its theme, which you change in the [page builder](/admin/content/page-builder#change-the-colours-corners-and-fonts).
 
+### Link your social profiles
+
+1. Open the **Branding** tab.
+2. Paste the full address of each profile, starting with `https://`, in its field: **Discord URL**, **Facebook URL**, **Instagram URL**, **LinkedIn URL**, **Pinterest URL**, **Reddit URL**, **TikTok URL**, **Twitter / X URL** and **YouTube URL**.
+3. Click **Save**.
+
+Every store design shows them as icons in the footer, X included. A field left empty shows nothing. The order of the icons belongs to the store's design, not to this form.
+
 ### Verify the store with Bing
 1. In Bing Webmaster Tools, add your store and choose to verify it with an HTML tag. Copy only the code from the tag's `content` part.
 2. Open the **Marketing** tab.
