@@ -257,10 +257,10 @@ structured data for every design:
 
 Every og:image of an uploaded image (blog posts, blog categories, blog authors
 and products, in every design; `useOgImage`) and each Article ImageObject
-states the size the media service serves it at, never the box asked for. The
-service never enlarges a source: it scales the box down until it fits inside
-the source, keeping its shape, so a 1080×720 cover asked for at 1200×630 is
-served 1080×567. `servedCoverSize` (`shared/utils/servedImageSize.ts`)
+states the size the media service serves it at, which is the box asked for
+only when the source covers it. The service never enlarges a source: it scales
+the box down until it fits inside the source, keeping its shape, so a 1600×900
+cover asked for at 1200×630 is served 1200×630 and a 1080×720 one 1080×567. `servedCoverSize` (`shared/utils/servedImageSize.ts`)
 computes it from the size Django stores for the file (`mainImageWidth` /
 `mainImageHeight`, EXIF orientation applied) with the same expression as the
 media service's `boxWithinSource`, in the same order of evaluation, so a .5
