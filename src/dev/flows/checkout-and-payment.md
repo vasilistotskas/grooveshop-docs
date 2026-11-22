@@ -544,7 +544,10 @@ follows from the ledger's sums (`src/order/payments/payment_ledger.py:
 PaymentLedger.refund_status`). A refund that leaves a never-confirmed
 PENDING order holding none of the customer's money (`PaymentLedger.held`)
 cancels it; one that leaves part held flags the order
-(`OrderService.flag_payment_mismatch`) unless it is flagged already. The
+(`OrderService.flag_payment_mismatch`). An order already waiting for review
+is left to the store. A reversal whose parent cannot be read or is not the
+order's is answered 200 and recorded nowhere, so Viva's own event still
+applies. The
 `ParentId` is read from Viva only once the refund is on one of the order's
 codes. Every
 Retrieve Transaction an event needs is made before the order row is locked

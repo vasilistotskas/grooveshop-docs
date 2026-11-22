@@ -167,7 +167,7 @@ When Viva Wallet or Stripe takes an amount that is not the order's total (most o
 The order keeps its stock until you decide it. Agree with the customer, then:
 
 - **Keep the order**: settle the difference with the customer, then move the order forward by hand (see [Move an order forward by hand](#move-an-order-forward-by-hand)).
-- **Give the money back**: refund the payment in your Viva Wallet or Stripe account. The refund reaches the order on its own (see [Refunds and disputes](/admin/sales/refunds-and-disputes)); once nothing is held, the order is cancelled and its stock freed. The customer places a new order.
+- **Give the money back**: refund the payment in your Viva Wallet or Stripe account. The refund reaches the order on its own (see [Refunds and disputes](/admin/sales/refunds-and-disputes)), and the order stays on the list: then cancel it (see [Cancel an order](#cancel-an-order)), which frees its stock. The customer places a new order.
 
 The order leaves the list once it is no longer **Pending**, or its payment is **Completed**. There is nothing to tick off.
 
