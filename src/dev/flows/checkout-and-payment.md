@@ -542,8 +542,11 @@ Viva places it, captured, on one of the order's codes
 (`_viva_charge_for`). The payment status, PARTIALLY_REFUNDED or REFUNDED,
 follows from the ledger's sums (`src/order/payments/payment_ledger.py:
 PaymentLedger.refund_status`). A refund that leaves a never-confirmed
-PENDING order holding nothing cancels it; a part refund of a payment it
-booked itself flags the order (`OrderService.flag_payment_mismatch`). Every
+PENDING order holding none of the customer's money (`PaymentLedger.held`)
+cancels it; one that leaves part held flags the order
+(`OrderService.flag_payment_mismatch`) unless it is flagged already. The
+`ParentId` is read from Viva only once the refund is on one of the order's
+codes. Every
 Retrieve Transaction an event needs is made before the order row is locked
 (`viva_settlement.apply_event` with the event's `EventRead`). The handler
 records its real outcome on `VivaWebhookEvent.outcome`, so a refused event

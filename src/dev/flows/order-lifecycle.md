@@ -1001,7 +1001,8 @@ whose webhook never landed (`src/order/payments/settlement.py:
 settle_landed_payment`). Viva lists the payment order's transactions
 (`VivaWalletPaymentProvider.landed_charges`): a finished one is applied as
 its 1796 (`viva_settlement.apply_event`), and one refunded or disputed since
-(`StatusId` `R` or `M…`) keeps the order for a person. Stripe reads the
+(`StatusId` `R` or `M…`) flags the order once for the store's review
+(`viva_settlement._flag_taken_since`), never a cancel. Stripe reads the
 PaymentIntent, then the recorded Checkout Session
 (`src/order/payments/stripe_settlement.py: settle_landed_payment`). A paid
 order is settled through its webhook's code and counted `settled`; a
