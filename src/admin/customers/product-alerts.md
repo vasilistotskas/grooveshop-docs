@@ -15,7 +15,7 @@ On the store, the customer sees:
 
 | Alert | Where it appears | When the email goes out |
 |---|---|---|
-| **Back in stock** | A **Notify me** button on the page of a sold-out product, and **Notify me when it's back** on its card in product lists. | When the product's stock goes from zero to more than zero. |
+| **Back in stock** | A **Notify me** button on the page of a sold-out product, and a small **Notify me** button with a bell on its card in product lists, in the place of the buy button. When the customer already has the alert on, the card's button reads **Alert on**. | When the product's stock goes from zero to more than zero. |
 | **Price drop** | A **Price-drop alert** button on the product page, only if you have switched it on for that product. | When the final price falls to the price the customer chose, or lower. |
 
 In the window that opens, the customer enters their email. If they are signed in, their account email is used. For a price drop they also enter a **Target price**, which must be below today's price.
@@ -38,7 +38,7 @@ If you untick it later, customers cannot request new alerts. Alerts already requ
 
 ### Remove an alert on request
 
-1. If the customer has an account, they sign in, open the product and click the alert button again. They see the alert is active and click **Turn the alert off**.
+1. If the customer has an account, they sign in, open the product and click the alert button again (or **Alert on** on its card). They see the alert is active and click **Turn the alert off**.
 2. If they requested it as a visitor, with only an email, ask the platform team to remove it. Send the email and the product. See [When to contact support](/admin/help/contact-support).
 
 ## Things to know
