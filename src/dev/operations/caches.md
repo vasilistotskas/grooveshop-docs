@@ -112,15 +112,25 @@ can never wipe security state, and writes a `CachePurgeLog` row
 `src/core/cache/invalidation.py` connects `post_save` / `post_delete` for every
 model named in a surface's `invalidated_by`: the merchant-edited models of
 products, categories, blog, content pages, the page builder's releases,
-promotions, tags, pay-ways and recommendations. User-generated rows
-(reviews, comments, favourites, stock alerts) are left out. A commit only
+promotions, tags, pay-ways and recommendations. Reviews and blog comments are
+declared, because approving or hiding one is a moderator's edit (a customer's
+new one is pending and costs one batched purge). The `blog` and `products`
+surfaces also declare `user.UserAccount`: authors, commenters and reviewers
+show an account's public identity (`UserPublicSerializer`: name, username,
+avatar and the avatar's size), so a change to it purges them. Favourites and
+stock alerts stay out. A commit only
 adds its stale surfaces to a per-schema Redis set and queues one
 `invalidate_cache_surfaces_task` 10 seconds later, which every commit in
 that window rides, so a catalogue import costs one purge and an edit shows
 within about ten seconds (plus the edge purge that follows it). A save
 whose `update_fields` fall inside the surface's `ignored_update_fields` is
 skipped: every order's `save(update_fields=["stock", "updated_at"])` would
-otherwise empty the store's product cache on each sale. A Nitro handler name in a surface must be
+otherwise empty the store's product cache on each sale, and the account's
+bookkeeping saves (`ACCOUNT_BOOKKEEPING_FIELDS` in `src/core/cache/surfaces.py`:
+a sign-in's `last_login`, the locale sync's `language_code`, loyalty's
+`total_xp` and `loyalty_tier`) would purge the blog and the products on every
+sign-in. A full save of an account (a signup, a profile or password change, an
+avatar import) purges both. A Nitro handler name in a surface must be
 the handler's exact `name:`; a shorter pattern once purged zero keys and
 reported success, which is why the surface file carries the exact names.
 
@@ -750,6 +760,7 @@ PageSpeed runs while Traefik's counters never moved.
 | `grooveshop-django-api/src/core/cache_backend.py` | `CustomCache`, resilience options, SCAN helpers |
 | `grooveshop-django-api/src/tenant/cache.py`, `src/tenant/signals.py`, `src/tenant/models/tenant.py` | `make_tenant_key`, `tenant_resolve_key`, `tenant_domains_key`, `bump_cache_generation`, `Tenant.cache_generation` |
 | `grooveshop-django-api/src/core/cache/registry.py`, `surfaces.py`, `service.py`, `invalidation.py`, `protected.py`, `nuxt.py`, `gateway.py`, `models.py` | Surface registry, purge service, signal wiring, Nuxt and gateway clients, `CachePurgeLog` |
+| `grooveshop-django-api/src/blog/cache_surfaces.py`, `src/product/cache_surfaces.py`, `src/user/serializers/account.py` (`UserPublicSerializer`) | The surfaces that show an account's public identity, and what it is |
 | `grooveshop-django-api/src/admin/admin.py`, `src/core/admin.py` | Cache tool and purge log admin |
 | `grooveshop-django-api/src/core/management/commands/clear_cache.py` | Command |
 | `grooveshop-django-api/src/core/cache/edge.py`, `src/core/tasks.py` (`purge_edge_cache_task`), `src/core/management/commands/purge_edge_cache.py` | Cloudflare purge by tag, per edit and per deploy; by prefix for a tenant's media (`tenant_media_purges`, `purge_media`) |
