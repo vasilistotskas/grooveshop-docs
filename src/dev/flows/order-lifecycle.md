@@ -986,11 +986,28 @@ whose `pay_way` is null; they legitimately sit PENDING until the carrier
 remits. The failed-payment bucket carries no such filter, but an offline
 order has nothing that can report a FAILED payment, so it does not select
 one in practice. Orders carrying `AMOUNT_MISMATCH_FLAG` that are still undecided
-(`payment_review_orders`: PENDING, payment not COMPLETED, REFUNDED,
-PARTIALLY_REFUNDED or CANCELED) are excluded from both buckets and listed
-in a warning — a charged customer must not be auto-cancelled without a
-refund. The flag is never cleared, so a flagged order the store has since
-marked paid, canceled or refunded is no longer excluded or listed. The sweep
+(`payment_review_orders`: PENDING, and the charge not accepted, payment not
+COMPLETED, a refund in full or in part included) are excluded from both
+buckets and listed in a warning — a charged customer must not be
+auto-cancelled without a refund. The same set is the store's worklist: the
+admin's `payment_review=yes` filter (`src/order/admin.py:
+PaymentReviewFilter`) and the dashboard's `payments_to_review` count
+(`src/admin/dashboard/store/queries.py: attention_counts`). The flag is
+never cleared, so a flagged order the store has since accepted, fulfilled
+or canceled is no longer excluded or listed.
+
+Before either bucket cancels an order, the provider is read for a payment
+whose webhook never landed (`src/order/payments/settlement.py:
+settle_landed_payment`). Viva lists the payment order's transactions
+(`VivaWalletPaymentProvider.landed_charges`): a finished one is applied as
+its 1796 (`viva_settlement.apply_event`), and one refunded or disputed since
+(`StatusId` `R` or `M…`) keeps the order for a person. Stripe reads the
+PaymentIntent, then the recorded Checkout Session
+(`src/order/payments/stripe_settlement.py: settle_landed_payment`). A paid
+order is settled through its webhook's code and counted `settled`; a
+provider that cannot be read keeps the order for the next run. The cancel
+then happens only while the order still records the payment that was read
+(`OpenPayment`, compared under the row lock). The sweep
 selects through `payment_hold.swept_orders`, the definition
 `paymentDecidedBy` on the order detail is computed from, so the two cannot
 drift. `paymentDecidedBy` is null when nothing will decide the order: it is

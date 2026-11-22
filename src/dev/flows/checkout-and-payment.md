@@ -522,9 +522,9 @@ the order and refuses to mark it paid. From then on the order detail serves
 `paymentAwaitsReview: true` (`src/order/payments/payment_hold.py:
 awaits_payment_review`, `src/order/serializers/order.py:
 OrderDetailSerializer.payment_awaits_review`) while the order is still
-undecided, that is PENDING with a payment that is not final (COMPLETED,
-REFUNDED, PARTIALLY_REFUNDED and CANCELED are final). The flag is never
-cleared: an order the store marks paid, cancels or refunds leaves the set
+undecided, that is PENDING with the charge not accepted (payment not
+COMPLETED, a refund in full or in part included). The flag is never
+cleared: an order the store accepts, fulfils or cancels leaves the set
 through its own state. A charge that passes every check
 is recorded on the payment ledger as a CHARGE row keyed on the
 transaction id, before the canceled-order and settled guards, so a second
@@ -536,9 +536,16 @@ Event 1798 marks the payment failed. Event 1797 books a refund: its
 `TransactionId` is the refund itself, verified through Retrieve
 Transaction (`_verify_viva_reversal`: one of the order's codes, status `F`,
 a refund or void type, a negative amount), and it is recorded as a REFUND
-row against the order's CHARGE row that its `ParentId` names. The payment
-status, PARTIALLY_REFUNDED or REFUNDED, follows from the ledger's sums
-(`src/order/payments/payment_ledger.py: PaymentLedger.refund_status`). The handler
+row against the order's CHARGE row that its `ParentId` names. A parent the
+ledger does not hold yet (its 1796 is late or lost) is booked first when
+Viva places it, captured, on one of the order's codes
+(`_viva_charge_for`). The payment status, PARTIALLY_REFUNDED or REFUNDED,
+follows from the ledger's sums (`src/order/payments/payment_ledger.py:
+PaymentLedger.refund_status`). A refund that leaves a never-confirmed
+PENDING order holding nothing cancels it; a part refund of a payment it
+booked itself flags the order (`OrderService.flag_payment_mismatch`). Every
+Retrieve Transaction an event needs is made before the order row is locked
+(`viva_settlement.apply_event` with the event's `EventRead`). The handler
 records its real outcome on `VivaWebhookEvent.outcome`, so a refused event
 reads `skipped`, not `processed`. Refunds and the ledger are covered in
 [Order lifecycle](/dev/flows/order-lifecycle).
