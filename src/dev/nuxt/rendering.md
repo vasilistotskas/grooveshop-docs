@@ -246,13 +246,33 @@ structured data for every design:
 
 - `Article.image` names three ImageObject nodes of the cover, in the shapes
   Google's Article documentation lists (16:9, 4:3, 1:1; `ARTICLE_IMAGE_SIZES`,
-  1200 wide), each with an `@id` under the page's URL
-  (`#/schema/image/cover-1200x675`). No width or height is stated: the
-  documentation asks for none, and the media service never enlarges a source,
-  so a cover narrower than 1200 is served narrower.
+  the boxes asked for, 1200 wide), each with an `@id` under the page's URL
+  (`#/schema/image/cover-1200x675`) and the size it is served at.
 - `WebPage.primaryImageOfPage` is a reference to the 16:9 node, not a second
   copy, and the Article's `thumbnailUrl` is its URL.
-- `og:image` stays the 1200×630 social card (`OG_IMAGE_SIZE`).
+- `og:image` is the social card asked for at `OG_IMAGE_BOX` (1200×630), and
+  `og:image:width`/`height` state the size it is served at.
+
+## The size an og or Article image states
+
+Every og:image of an uploaded image (blog posts, blog categories, blog authors
+and products, in every design; `useOgImage`) and each Article ImageObject
+states the size the media service serves it at, which is the box asked for
+only when the source covers it. The service never enlarges a source: it scales
+the box down until it fits inside the source, keeping its shape, so a 1600×900
+cover asked for at 1200×630 is served 1200×630 and a 1080×720 one 1080×567. `servedCoverSize` (`shared/utils/servedImageSize.ts`)
+computes it from the size Django stores for the file (`mainImageWidth` /
+`mainImageHeight`, EXIF orientation applied) with the same expression as the
+media service's `boxWithinSource`, in the same order of evaluation, so a .5
+case rounds the same way (675 × (440 / 1200) is 247.49999999999997, served
+247). It holds only for the media service's contract sizes
+(`renditions.sizes.contract`: 1200×630, 1200×675, 1200×900, 1200×1200), which
+it answers exactly instead of snapping them up its width ladder. A change to
+`boxWithinSource` changes this helper in the same release.
+
+No size is stated when the source has none (an SVG, a file not measured yet),
+nor on a product category page, whose og:image comes from a search result,
+which carries no image size, or is the store's logo.
 
 The `@id`s are absolute because `@unhead/schema-org` resolves a relative
 reference by looking the node up when the referring node is resolved, so the
@@ -274,4 +294,6 @@ result depended on the order the nodes were registered in.
 | `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/image-sizes-are-breakpoint-lists.spec.ts`, `nuxt.config.ts` (`image.screens`) | `sizes` is a breakpoint list |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/BlogPost.vue`, `app/components/variants/webside/Storefront/BlogPost.vue`, `app/composables/useMediaStreamImage.ts` | The blog cover of each design |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useBlogPostPage.ts`, `shared/constants/index.ts` | The post's structured data, `og:image`, the crop position and the Article's image shapes |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/servedImageSize.ts`, `app/composables/useOgImage.ts` | The served size of an og or Article image |
+| `grooveshop-media-stream/src/MediaStream/Processing/jobs/webp-image-manipulation.job.ts` (`boxWithinSource`), `src/MediaStream/common/utils/config-schema.util.ts` (`renditions.sizes.contract`) | The box the media service serves, and the sizes it answers exactly |
 | `grooveshop-media-stream/src/MediaStream/common/constants/rendition-presets.constant.ts` | The rendition ladder the cover's widths are steps of |
