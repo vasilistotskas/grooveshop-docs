@@ -803,6 +803,9 @@ so a staging refresh cannot email real customers. See
 
 | File | Role |
 |---|---|
+| `grooveshop-django-api/src/order/lifecycle/service.py` | `OrderLifecycleService.confirm`: the once-per-order claim of `Order.confirmed_at`, never for a canceled order; `_cancel_order_locked` silences the cancel of an unconfirmed order |
+| `grooveshop-django-api/src/order/lifecycle/confirmation.py` | `confirmed_at_creation`, `paid_online`, `backfill_confirmed_at` |
+| `grooveshop-django-api/src/order/signals/handlers.py` | `handle_order_created`, `handle_order_confirmed` (the emails and the one toast) |
 | `grooveshop-django-api/src/notification/models/notification.py` | `Notification` fields, expiry |
 | `grooveshop-django-api/src/notification/models/user.py` | `NotificationUser`, seen state |
 | `grooveshop-django-api/src/notification/enum.py` | Kind, category, priority, `NotificationTypeEnum` |

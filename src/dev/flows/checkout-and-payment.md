@@ -57,7 +57,7 @@ sequenceDiagram
     D->>C: Dispatch voucher on commit
   end
   D->>C: Dispatch voucher on commit
-  D->>S: Confirmation email and toast
+  D->>S: Confirmation email and toast (once confirmed: at creation offline, when the payment settles for a card)
 ```
 
 ## How it works
