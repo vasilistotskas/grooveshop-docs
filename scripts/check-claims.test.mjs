@@ -17,7 +17,8 @@ after(() => {
 /**
  * Runs the real gate over a throwaway site and workspace: the script reads its
  * pages from the repository it sits in, so it is copied beside a `src/` of one
- * page. `repos` maps a repository name to the files it holds; a repository that
+ * page. `repos` maps a repository name to the files it holds (a list of empty
+ * files, or an object of file to content); a repository that
  * is not listed is not checked out, which is what CI looks like for the private
  * grooveshop-infrastructure.
  */
@@ -30,10 +31,12 @@ function runGate({ page, repos }) {
   mkdirSync(join(docs, 'src', 'dev'), { recursive: true })
   writeFileSync(join(docs, 'src', 'dev', 'page.md'), page)
   for (const [repo, files] of Object.entries(repos)) {
-    for (const file of files) {
+    // A list names empty files; an object maps each file to its content.
+    const contents = Array.isArray(files) ? Object.fromEntries(files.map(f => [f, ''])) : files
+    for (const [file, content] of Object.entries(contents)) {
       const full = join(root, repo, file)
       mkdirSync(dirname(full), { recursive: true })
-      writeFileSync(full, '')
+      writeFileSync(full, content)
     }
   }
   // The run's own environment, minus any GROOVESHOP_<REPO>_DIR the caller has
@@ -106,4 +109,81 @@ test('a shell script citation is checked like any other path', () => {
   assert.equal(missing.status, 1)
   assert.match(missing.output, /path does not exist: grooveshop-media-stream\/scripts\/missing\.sh/)
   assert.equal(runGate({ page: 'See `scripts/missing.sh`.\n', repos }).status, 1)
+})
+
+/**
+ * A Django checkout whose Shipping section lists the carriers' screens the way
+ * navigation.py does: spread into the section, and as a sub-menu's children.
+ */
+const CARRIER_SIDEBAR = {
+  'grooveshop-django-api': {
+    'src/admin/navigation.py': [
+      'def store_sidebar(request):',
+      '    def carrier_pages(section, *, in_use_only=False):',
+      '        return []',
+      '',
+      '    shipping = _group(',
+      '        _("Shipping"),',
+      '        [',
+      '            *carrier_pages("shipments", in_use_only=True),',
+      '            _menu(',
+      '                _("Pickup Points"),',
+      '                "location_on",',
+      '                carrier_pages("pickup_points", in_use_only=True),',
+      '            ),',
+      '        ],',
+      '    )',
+      '    system = _group(',
+      '        _("System"),',
+      '        [_menu(_("Logs"), "history", [*carrier_pages("audit")])],',
+      '    )',
+      '    return [shipping, system]',
+      '',
+      'def platform_sidebar(request):',
+      '    return [{"title": _("Tenants"), "items": [page("tenant.Tenant", _("Stores"))]}]',
+      '',
+    ].join('\n'),
+    'src/shipping_acs/carrier.py': [
+      'class AcsCarrier:',
+      '    def admin_pages(self):',
+      '        """Returns AdminPages(shipments=(...)) for the sidebar."""',
+      '        return AdminPages(',
+      '            shipments=(AdminPage("shipping_acs.AcsShipment", _("ACS Shipments"), "local_shipping"),),',
+      '            pickup_points=(AdminPage("shipping_acs.AcsStation", _("ACS Stations"), rank=1),),',
+      '            audit=(AdminPage("shipping_acs.AcsApiCall", _("ACS API Calls")),),',
+      '        )',
+      '',
+    ].join('\n'),
+    'src/locale/el/LC_MESSAGES/django.po': 'msgid "Shipping"\r\nmsgstr "Μεταφορικά"\r\n',
+  },
+}
+
+test('a carrier screen placed by carrier_pages is a real sidebar path', () => {
+  const page = '<span class="sidebar-path">Shipping → ACS Shipments</span> and '
+    + '<span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span> and '
+    + '<span class="sidebar-path">System → Logs → ACS API Calls</span>\n'
+  const { status, output } = runGate({ page, repos: CARRIER_SIDEBAR })
+  assert.equal(status, 0, output)
+})
+
+test('a carrier screen no carrier declares fails', () => {
+  const page = '<span class="sidebar-path">Shipping → Pickup Points → BoxNow Lockers</span>\n'
+  const { status, output } = runGate({ page, repos: CARRIER_SIDEBAR })
+  assert.equal(status, 1)
+  assert.match(output, /"BoxNow Lockers" is not under "Shipping → Pickup Points"/)
+})
+
+test('a carrier screen is only under the slot its carrier declares it in', () => {
+  const page = '<span class="sidebar-path">Shipping → Pickup Points → ACS Shipments</span>\n'
+  const { status, output } = runGate({ page, repos: CARRIER_SIDEBAR })
+  assert.equal(status, 1)
+  assert.match(output, /"ACS Shipments" is not under "Shipping → Pickup Points"/)
+})
+
+test('a slot the sidebar places that no carrier declares fails as unreadable', () => {
+  const { 'src/shipping_acs/carrier.py': _carrier, ...django } = CARRIER_SIDEBAR['grooveshop-django-api']
+  const page = '<span class="sidebar-path">Shipping → ACS Shipments</span>\n'
+  const { status, output } = runGate({ page, repos: { 'grooveshop-django-api': django } })
+  assert.equal(status, 1)
+  assert.match(output, /could not read the carriers' "shipments" admin pages/)
 })

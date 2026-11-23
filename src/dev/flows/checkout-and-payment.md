@@ -12,6 +12,8 @@ and whether its **provider** can mint a client-confirmed intent
 (`src/order/payments/payment.py: PaymentProvider.supports_payment_intent`). Never by a
 provider name. Intent-first means the money is verified before the order
 row exists; order-first means the order exists before any money moves.
+The storefront takes the order-first way for every online payment, Stripe
+included; intent-first is reached only by API callers until its removal.
 Everything else on this page follows from that split.
 
 For the exhaustive status tables and the audit history, read
@@ -35,7 +37,15 @@ sequenceDiagram
   N->>D: GET pay_way (provider + kind)
   N->>D: POST cart/quote
   D-->>N: Total and expectedTotal
-  alt Intent-first (Stripe)
+  alt Order-first, hosted page (Viva, Stripe)
+    N->>D: POST order with expectedTotal, no intent
+    D-->>N: Order PENDING
+    N->>D: POST order/id/create_checkout_session
+    D->>P: Create hosted order or Checkout Session
+    S->>P: Pay on hosted page
+    P->>D: Webhook (Viva 1796, Stripe checkout.session.completed)
+    P->>N: Redirect back to the store
+  else Intent-first (Stripe, API callers only)
     N->>D: POST cart/create-payment-intent
     D->>P: Create PaymentIntent
     D-->>N: client_secret
@@ -44,14 +54,6 @@ sequenceDiagram
     D-->>N: Order PENDING
     S->>P: Confirm card
     P->>D: payment_intent.succeeded
-  else Order-first (Viva)
-    N->>D: POST order with expectedTotal, no intent
-    D-->>N: Order PENDING
-    N->>D: POST order/id/create_checkout_session
-    D->>P: Create hosted order
-    S->>P: Pay on hosted page
-    P->>D: Webhook 1796
-    P->>N: Redirect to viva-return
   else Order-first (collected on delivery)
     N->>D: POST order with expectedTotal, no intent
     D->>C: Dispatch voucher on commit
@@ -646,11 +648,16 @@ creation. That page keeps the order in the browser and replaces itself with the
 plain `/checkout/success`, so the uuid never reaches a tracker: see
 [Addresses that hold a secret](/dev/flows/analytics-and-consent#addresses-that-hold-a-secret).
 
-**Stripe — secondary, intent-first.** `POST /api/v1/cart/create-payment-intent`
-computes the charge with exactly the inputs order creation will
-re-verify, then mints the intent. The card is confirmed in the browser
-(`app/components/StripePayment.vue`) against the tenant's own
-publishable key. dj-stripe receives webhooks on a per-tenant, UUID-routed
+**Stripe — secondary, order-first like Viva.** The storefront creates the
+order first, then `POST /api/v1/order/{id}/create_checkout_session` opens a
+Stripe Checkout Session and the shopper pays on Stripe's hosted page
+(`app/components/StripeCheckout.vue`, `app/composables/useOrderCheckoutSession.ts`).
+The session settles on `checkout.session.completed`
+(`src/order/payments/stripe_settlement.py`). The intent-first path —
+`POST /api/v1/cart/create-payment-intent` mints an intent with exactly the
+inputs order creation re-verifies, and the order is posted with its
+`payment_intent_id` — is no longer used by the storefront and stays only for
+API callers until its removal (Django #818). dj-stripe receives webhooks on a per-tenant, UUID-routed
 endpoint, so django-tenants selects the schema and dj-stripe verifies
 against that schema's `WebhookEndpoint` secret. Handlers live in
 `src/order/signals/handlers.py`: `payment_intent.succeeded`,
