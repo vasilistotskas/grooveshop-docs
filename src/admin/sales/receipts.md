@@ -90,7 +90,16 @@ Once the receipt has a MARK, **VAT Rate** is read-only.
 You rarely need it for a document AADE never answered: the platform sends a receipt or a credit document whose send got no answer again by itself, about every 15 minutes, until AADE registers it. A send still waiting for AADE's answer is never sent over: it is sent again only once its time to answer has passed. A rejected document waits for you, because AADE refused its content or the store's credentials.
 
 ### Cancel a document issued in error
-Use **Cancel receipt in myDATA (issued in error)** on the order, or **Cancel in myDATA (issued in error)** on the credit documents list. AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, so in practice the right tool is almost always a credit document.
+A receipt is cancelled from its order, a credit document from its own page, one document at a time:
+
+- **Receipt:** open the order and press **Cancel receipt in myDATA (issued in error)**.
+- **Credit document:** open it from <span class="sidebar-path">Sales → Credit Documents</span> and press **Cancel in myDATA (issued in error)**. There is no button on the list, so a filter or a selection can never cancel several documents at once.
+
+Both buttons first show a confirmation: it cancels the document at AADE, it cannot be undone, and it is only for a document issued in error and never used. Nothing is sent to AADE until you confirm.
+
+A credit document that AADE has not registered yet (it has no MARK), or one already cancelled in myDATA, is refused with a message, and nothing is sent.
+
+AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, so in practice the right tool is almost always a credit document.
 
 ### A receipt is waiting for a refund
 A receipt is due when the order ships. A refund still waiting for the provider's answer does not hold the receipt back on its own: its place on the receipt was fixed when you made it. The receipt waits only when another refund reached the order meanwhile, for example one made in your Viva Wallet or Stripe account, whose share depends on that answer: until the first refund is settled, the receipt cannot know how much to show. The [Dashboard](/admin/getting-started/dashboard#alerts) lists these orders as **Receipts waiting for a refund**, each with the refund it waits for.
