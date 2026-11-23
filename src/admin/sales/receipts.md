@@ -99,7 +99,7 @@ Both buttons first show a confirmation: it cancels the document at AADE, it cann
 
 A credit document that AADE has not registered yet (it has no MARK), or one already cancelled in myDATA, is refused with a message, and nothing is sent.
 
-AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, so in practice the right tool is almost always a credit document.
+AADE allows it only for a document that never reached the customer. The platform emails each document as soon as AADE registers it, except a receipt for a courier or locker order, which waits until the parcel leaves. Before that, such a receipt has not reached the customer yet. In practice the right tool is almost always a credit document.
 
 ### A receipt is waiting for a refund
 A receipt is due when the order ships. A refund still waiting for the provider's answer does not hold the receipt back on its own: its place on the receipt was fixed when you made it. The receipt waits only when another refund reached the order meanwhile, for example one made in your Viva Wallet or Stripe account, whose share depends on that answer: until the first refund is settled, the receipt cannot know how much to show. The [Dashboard](/admin/getting-started/dashboard#alerts) lists these orders as **Receipts waiting for a refund**, each with the refund it waits for.
