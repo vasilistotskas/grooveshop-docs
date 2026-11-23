@@ -341,8 +341,11 @@ provider-reported payment status.
 `OrderQuoteService.quote` (`src/order/checkout/quote.py`) is the one
 computation of what checkout charges: a rule added there reaches every
 caller. It returns a frozen `CheckoutQuote`: the cart's lines as priced
-(`lines`, `QuoteLine`: read once by `OrderQuoteService.priced_lines`, the read
-the subtotal, the parcel and the cart digest all come from), the products, the
+(`lines`, `QuoteLine`, `OrderQuoteService.priced_lines`: the quote reads the
+lines once and evaluates the promotions over that same read,
+`PromotionEngine.evaluate(..., items=...)` in
+`src/promotion/engine/evaluation.py`, so the promotions, the subtotal, the
+parcel and the cart digest all come from it), the products, the
 promotions with each attached coupon's verdict (`coupons`,
 `CartDiscountResult.coupon_verdicts` in `src/promotion/engine/results.py`, the
 computation the cart's `appliedCoupons` uses too), the parcel (free gifts included), the delivery (`ShippingCharge`: price and
@@ -402,7 +405,9 @@ and what the order stores).
   `productName` in the request's language, `mainImagePath`, `quantity`,
   `unitPrice`, `totalPrice` before promotions and `promotionDiscount`, which add
   up to `itemsSubtotal` and `discountTotal`), each attached coupon's verdict
-  (`appliedCoupons`, in the cart's shape: `code`, `amount`, `freeShipping`,
+  (`appliedCoupons`, the cart's own: one serializer and one schema
+  declaration, `AppliedCouponSerializer` and `APPLIED_COUPONS_SCHEMA` in
+  `src/order/serializers/quote.py`: `code`, `amount`, `freeShipping`,
   `gift`, `rejection`), the rows (`itemsSubtotal`, `discountTotal`,
   `appliedPromotions`, `blockingCoupon`, `freeThresholdValue`, `shipping`, `paymentMethodFee`,
   `loyaltyDiscount`, `giftCardAmount`, `grandTotal`, `amountDue`,
