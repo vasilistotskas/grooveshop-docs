@@ -269,12 +269,13 @@ If you receive an email that ACS paid money matching none of your parcels (usual
 
 The list of ACS shops and Smartpoints refreshes by itself every night at 03:00, for the countries that have an active ACS rate. There is no button to refresh it now. Customers are offered only **Smartpoint (no locker)** and **Smartpoint locker**, never plain shops. A point that ACS removes becomes inactive; it is not deleted. How to open Smartpoints at checkout is in [Shipping providers](/admin/settings/shipping-providers).
 
-At checkout the customer chooses a Smartpoint on a map that starts near the postcode of their address. They can search by area, street or postcode, or type their own address (for example «Καλαμά 25 Αθήνα») to see the points nearest it, in Greek or Latin letters, or tap **My location** (on a phone, the target icon beside the search box) to see the points nearest to them. The browser asks for their location only when they tap it. A customer who has already allowed your store to use their location sees the map open on it straight away.
+At checkout the customer chooses a Smartpoint on a map. A pickup order needs no street address from the customer: it is delivered to the Smartpoint's address, which you see in the order's **Shipping Address** tab. They can search by area, street or postcode, or type their own address (for example «Καλαμά 25 Αθήνα») to see the points nearest it, in Greek or Latin letters, or tap **My location** (on a phone, the target icon beside the search box) to see the points nearest to them. The browser asks for their location only when they tap it. A customer who has already allowed your store to use their location sees the map open on it straight away.
 
 When BoxNow is switched off, the menu shows **ACS Stations** directly under **Shipping**.
 
 ## Things to know
 
+- **What the voucher's notes hold.** The notes printed on the voucher start with the order's **Floor**, when one is set (checkout does not ask for it), then its **Address line 2** (a flat or a building), then the customer's own note, within ACS's 500 characters. Only the customer's note is ever cut. The street line carries nothing else, because ACS reads it as the street alone.
 - **ACS sometimes rejects a request.** The platform retries by itself, as long as the request never reached ACS. A request that may have reached it without an answer is never sent again by itself: see [A voucher request that got no answer](#a-voucher-request-that-got-no-answer). If the problem stays, tell the platform team.
 - **When ACS keeps failing,** the voucher requests wait and are sent by themselves once ACS answers again: see [Voucher requests waiting for ACS](#voucher-requests-waiting-for-acs).
 - **A wrong address or Smartpoint** is not retried. You receive an email at once and a note is written on the order. The email can be [switched off](/admin/help/automatic-tasks#stop-an-email-to-the-store); the note is always written.
