@@ -1403,4 +1403,4 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-storefront-ui-node-nuxt/app/utils/checkoutOrder.ts` | `PICKUP_FORM_KEYS`, `clearPickupPoint`, the pickup-point refusals told in the storefront's words |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useShopperLocation.ts` | The shopper's position, asked for on a click or with a granted permission |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/lockerSearch.ts` | Search folding (accents, Greeklish), matching, distance, a postcode's centre |
-| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/lockers/[provider].get.ts` | The bulk catalogue route, cached per store, country and BOX NOW size, refusing to cache an empty answer |
+| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/lockers/[provider].get.ts` | The bulk catalogue route, cached per store, country and BOX NOW size; an empty list of one size is answered, an empty unfiltered catalogue is a 503 that is never cached |

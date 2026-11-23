@@ -7,7 +7,7 @@ description: BoxNow locker deliveries in Greece and Cyprus, the locker list, par
 
 BoxNow delivers to automated lockers. The customer picks a locker on the checkout map, the platform sends the order to BoxNow, and BoxNow updates the store automatically about every movement of the parcel. You print the voucher (the BoxNow shipping label) and hand the parcel over.
 
-At checkout, the map and the list show only the lockers that have a compartment the order fits in, and mark the ones BoxNow expects to be nearly full (**Few free compartments**). If a locker can no longer take the order when it is placed, the customer is told why and asked to choose another.
+At checkout, the map and the list show only the lockers that have a compartment the order fits in, and mark the ones BoxNow expects to be nearly full (**Few free compartments**). A store still on BoxNow's test network has no compartment sizes, so there every locker is listed. If a locker can no longer take the order when it is placed, the customer is told why and asked to choose another.
 
 <span class="sidebar-path">Shipping → BoxNow Shipments</span>
 
