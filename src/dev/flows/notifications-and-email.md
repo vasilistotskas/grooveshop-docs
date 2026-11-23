@@ -573,15 +573,21 @@ An order is announced once, when it is confirmed
 (`src/order/lifecycle/service.py: OrderLifecycleService.confirm`, which
 claims `Order.confirmed_at` with one `UPDATE ... WHERE confirmed_at IS
 NULL` and sends `order_confirmed`; the receiver is
-`src/order/signals/handlers.py: handle_order_confirmed`). An order with
-nothing left to pay online (cash or card on delivery, BOX NOW pay on the
-go, bank transfer, an online payment already taken) is confirmed at
-creation (`src/order/lifecycle/confirmation.py: confirmed_at_creation`); a
-card order by whichever path settles its payment first (Stripe
-`payment_intent.succeeded` or a poll, `checkout.session.completed`, the
-Viva 1796, its return page, the sweep's read-back, a payment taken at
-once). A card order nobody paid is never announced, and its cancel is
-silent to the customer.
+`src/order/signals/handlers.py: handle_order_confirmed`). The claim takes
+only an order that is due and not canceled: nothing is left to pay online,
+or the online payment is COMPLETED
+(`src/order/lifecycle/confirmation.py: due_for_confirmation`). An order
+with nothing left to pay online (cash or card on delivery, BOX NOW pay on
+the go, bank transfer, an online payment already taken) is confirmed at
+creation; a card order by whichever path sees its payment settled first
+(Stripe `payment_intent.succeeded` or a poll, `checkout.session.completed`,
+the Viva 1796, its return page, the sweep's read-back, a payment taken at
+once). The claim and the signal run in one atomic block, so a failed
+announcement rolls the claim back; the order then heals itself, because
+every sight of a settled payment calls `confirm`, also one that applies
+nothing (a repeated or stale event, a session settled again, a Viva 1796
+already applied, a poll that finds the payment completed). A card order
+nobody paid is never announced, and its cancel is silent to the customer.
 
 | Event | Email | Live notification |
 |---|---|---|
@@ -804,7 +810,7 @@ so a staging refresh cannot email real customers. See
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/order/lifecycle/service.py` | `OrderLifecycleService.confirm`: the once-per-order claim of `Order.confirmed_at`, never for a canceled order; `_cancel_order_locked` silences the cancel of an unconfirmed order |
-| `grooveshop-django-api/src/order/lifecycle/confirmation.py` | `confirmed_at_creation`, `paid_online`, `backfill_confirmed_at` |
+| `grooveshop-django-api/src/order/lifecycle/confirmation.py` | `due_for_confirmation`, `paid_online`, `backfill_confirmed_at` |
 | `grooveshop-django-api/src/order/signals/handlers.py` | `handle_order_created`, `handle_order_confirmed` (the emails and the one toast) |
 | `grooveshop-django-api/src/notification/models/notification.py` | `Notification` fields, expiry |
 | `grooveshop-django-api/src/notification/models/user.py` | `NotificationUser`, seen state |
