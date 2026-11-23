@@ -37,6 +37,14 @@ The logo also appears on the sign-in and permission pages a customer sees when c
 
 Your store's colours, corners and fonts are its theme, which you change in the [page builder](/admin/content/page-builder#change-the-colours-corners-and-fonts).
 
+### Link your social profiles
+
+1. Open the **Branding** tab.
+2. Paste the full address of each profile, starting with `https://`, in its field: **Discord URL**, **Facebook URL**, **Instagram URL**, **LinkedIn URL**, **Pinterest URL**, **Reddit URL**, **TikTok URL**, **Twitter / X URL** and **YouTube URL**.
+3. Click **Save**.
+
+Every store design shows them as icons in the footer, X included. A field left empty shows nothing. The order of the icons belongs to the store's design, not to this form.
+
 ### Verify the store with Bing
 1. In Bing Webmaster Tools, add your store and choose to verify it with an HTML tag. Copy only the code from the tag's `content` part.
 2. Open the **Marketing** tab.
@@ -59,6 +67,10 @@ This email receives the contact-form messages and shows at the bottom of the sto
 2. Copy each credential from your Viva Wallet, Stripe, ACS or BoxNow account into the matching field.
 3. Click **Save**.
 4. Switch the method or courier on. See [Payment methods](/admin/settings/payment-methods) and [Shipping providers](/admin/settings/shipping-providers).
+
+### When Viva Wallet is offered at checkout
+
+Viva Wallet is offered to customers only when all four of its credentials are filled in on the **Payments** tab: **Viva Wallet Client ID**, **Viva Wallet Client Secret**, **Viva Wallet Merchant ID** and **Viva Wallet API Key**. If any one of them is empty, Viva Wallet is hidden at checkout, with no error shown. There is no platform default to fall back on, so a store that leaves one empty takes no Viva Wallet payments. See [Payment methods](/admin/settings/payment-methods).
 
 ### Take Viva Wallet or BoxNow live
 

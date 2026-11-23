@@ -38,6 +38,7 @@ The filters panel lets you combine:
 
 - **Status** and **Payment Status** (you may pick several values)
 - **Document Type** (receipt or invoice) and **Wholesale**
+- **Payment review**: **Charge waiting for a decision** (see [A payment that does not match its order](#a-payment-that-does-not-match-its-order))
 - **Refund**: **Cancelled but still paid** (see [Refunds and disputes](/admin/sales/refunds-and-disputes))
 - **Overcharge**: **Paid more than the order is for** (see [A customer paid twice](#a-customer-paid-twice))
 - **Refund books**: **Receipt waiting for a refund** and **Beyond or short of the receipt** (see [Receipts and credit documents](/admin/sales/receipts#clear-a-receipt-difference))
@@ -155,6 +156,21 @@ The refund goes back against the order's payments oldest first; you cannot choos
 
 Once the refunds bring what you hold back to the order's total, the flag clears by itself and the order leaves the dashboard row. There is nothing to tick off.
 
+## A payment that does not match its order
+
+When Viva Wallet or Stripe takes an amount that is not the order's total (most often a customer paying on an old checkout tab after the total changed), the order is not marked paid and is never cancelled automatically: a charged customer must not lose their order without a refund. Two more cases land here, both with Viva Wallet, before the payment's confirmation reached the order: a payment you refund in part in your Viva Wallet account, and a payment the platform finds already refunded or disputed at Viva Wallet when it checks before cancelling (see [What happens automatically](#what-happens-automatically)). The order shows:
+
+- on the [Dashboard](/admin/getting-started/dashboard) as **Payments to review**;
+- in the order list filter **Payment review → Charge waiting for a decision**;
+- in the order's history, with what was collected against what the order is for, and by an email to your team.
+
+The order keeps its stock until you decide it. Agree with the customer, then:
+
+- **Keep the order**: settle the difference with the customer, then move the order forward by hand (see [Move an order forward by hand](#move-an-order-forward-by-hand)).
+- **Give the money back**: refund the payment in your Viva Wallet or Stripe account. The refund reaches the order on its own (see [Refunds and disputes](/admin/sales/refunds-and-disputes)), and the order stays on the list: then cancel it (see [Cancel an order](#cancel-an-order)), which frees its stock. The customer places a new order.
+
+The order leaves the list once it is no longer **Pending**, or its payment is **Completed**. There is nothing to tick off.
+
 ## Orders to follow up
 
 A customer who ordered a week ago and still has no parcel is about to contact you. The platform flags those orders so you can contact them first.
@@ -176,7 +192,7 @@ The flag disappears by itself once the order is delivered, completed, returned, 
 
 A customer who placed a card order and left the payment page, or whose card was declined, does not have to order again. While the order is **Pending** and its payment window is open:
 
-- On their account's order page, and on the order page the payment-failed email links to, they see **Payment pending** with the amount due, the time until which they can pay, and a **Pay now** button. It opens a new payment page for the same order.
+- On their account's order page, and on the order page they landed on after checkout, they see **Payment pending** with the amount due, the time until which they can pay, and a **Pay now** button. It opens a new payment page for the same order.
 - On their cart and checkout, in the browser they ordered from, they see **Order #N is waiting for your payment** with **Pay now** and **View order**, so they do not order the same items again.
 
 The button is not shown while Viva Wallet or Stripe is still working on a charge (**Processing**), or when the provider took an amount that did not match the total, so nobody is charged twice. Once the order is paid, or the time has run out, it gives way to a message: **This order can no longer be paid** or **The time to pay has run out**, and the order is cancelled automatically (see [What happens automatically](#what-happens-automatically)).
@@ -184,10 +200,10 @@ The button is not shown while Viva Wallet or Stripe is still working on a charge
 What to tell a customer who says they could not pay:
 
 1. Open the order and check **Payment** and **Status**. **Pending** with payment **Pending** or **Failed** can still be paid; **Processing** means wait; **Completed** means it was paid.
-2. If it can be paid, ask them to open the order from their account (or from the payment-failed email) and press **Pay now**, before the time shown there.
+2. If it can be paid, ask them to open the order from their account, or to return to their cart in the browser they ordered from, and press **Pay now** before the time shown there.
 3. If the time has run out, the order is cancelled and its stock freed. They place a new order from their cart. The time to pay can be extended only by a new payment link, and never beyond the limit in [What happens automatically](#what-happens-automatically).
 4. If they say they were charged once but the order still shows unpaid, do not ask them to pay again until you know why:
-   - Read the order's history. A note such as "Viva Wallet payment … collected 40.00 but the order is for 45.00. It was not marked paid: reconcile it with the customer." means the provider took an amount that did not match the total. The platform does not mark the order paid and never cancels it automatically, your team gets an email, and **Pay now** is not offered. Agree with the customer: refund the charge in your Viva Wallet or Stripe account (the refund reaches the order on its own, see [Refunds and disputes](/admin/sales/refunds-and-disputes)) and have them pay again, or settle the difference another way.
+   - Read the order's history. A note such as "Viva Wallet payment … collected 40.00 but the order is for 45.00. It was not marked paid: reconcile it with the customer." means the provider took an amount that did not match the total. The platform does not mark the order paid and never cancels it automatically, your team gets an email, and **Pay now** is not offered. See [A payment that does not match its order](#a-payment-that-does-not-match-its-order).
    - With no such note and the payment **Processing**, the provider is still confirming. Wait a few minutes and look the payment up in your Viva Wallet or Stripe account. If the money was taken there and the order stays unpaid, [contact support](/admin/help/contact-support) with the order number.
    - A customer who was charged twice is a different case: see [A customer paid twice](#a-customer-paid-twice).
 
@@ -203,10 +219,13 @@ A customer can cancel an order from their account while it is **Pending** or **P
 
 - **Stock.** Checkout holds the stock for `STOCK_RESERVATION_TTL_MINUTES` minutes (30 by default). A failed card payment does not free it; the automatic cancellation below does.
 - **Unpaid card orders are cancelled.** Every 15 minutes the platform cancels a **Pending** order whose card payment failed more than `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES` minutes ago (30). It also cancels a card order still unpaid once its payment window has passed: the payment link stays payable for `ORDER_ONLINE_PAYMENT_HOLD_MINUTES` (30), plus `ORDER_ONLINE_PAYMENT_GRACE_MINUTES` (5) for a confirmation still on its way. A new payment link can extend the window, but never past `ORDER_ONLINE_PAYMENT_MAX_HOLD_MINUTES` (60) from when the order was placed; after that the customer places a new order from their cart. Cash on delivery and bank transfer orders are never cancelled this way.
+- **A payment whose confirmation never arrived is not lost.** Before it cancels an unpaid card order, the platform asks Viva Wallet or Stripe whether the customer paid. A payment of the order's total marks the order paid, as the confirmation would have, and the confirmation that arrives later changes nothing. A payment of another amount is not marked paid: the order goes to **Payments to review**. So does an order whose Viva Wallet payment the check finds already refunded or disputed there (only Viva Wallet is checked for that). None of these is cancelled; see [A payment that does not match its order](#a-payment-that-does-not-match-its-order). If the provider cannot be reached, the order waits for the next check.
+- **A refund made before the order was confirmed.** When Viva Wallet reports a refund you made in your account before the payment's confirmation reached the order, the payment is recorded with its refund. Refunded in full, so that you hold none of the customer's money, the order is cancelled, its stock freed and any gift card or points it used given back; refunded in part, it goes to **Payments to review**. An order already in **Payments to review** is never cancelled this way: the refund is recorded and the order stays on the list for you to close (see [A payment that does not match its order](#a-payment-that-does-not-match-its-order)).
 - **A limit on unpaid card orders.** Checkout refuses a new card order from a customer who already has `ORDER_MAX_UNPAID_ONLINE_ORDERS` card orders waiting for payment (5 by default), with a message saying why. An order whose card payment failed counts too, until it is paid or cancelled automatically. The customer pays for or cancels one first. The check is made when the order is placed, so a card payment taken before the order exists (as some Stripe checkouts do) is not checked, and checkouts at the very same moment can each get through and go over the limit. Raise it if genuine customers hit the limit; `0` switches it off.
 - **Courier voucher.** Created right after checkout for cash on delivery, and after the payment for card orders. The order then moves to **Processing**.
 - **With ACS, cash on delivery stays payment-Pending until ACS pays you.** ACS pays out days later. A nightly check matches the payout to the order and marks it **Completed**, without emailing the customer. With BoxNow, the payment is marked **Completed** as soon as the parcel is delivered.
-- **Emails to the customer**: order received, payment failed, shipped, out for delivery (ACS) or at the locker (BoxNow), delivered, cancelled, returned, one per refund, and the receipt when the platform issues it. A **Completed** set automatically sends nothing: the customer has just had the "delivered" email.
+- **A card order is announced only once it is paid.** The customer's "order received" or "payment confirmed" email, your team's new-order email and the customer's notification go out when the payment goes through; a cash-on-delivery, BoxNow pay-on-the-go or bank-transfer order is announced as soon as it is placed. A failed card payment sends nothing, and a card order nobody pays is cancelled without telling the customer, who never heard of it.
+- **Emails to the customer**: order received or payment confirmed, shipped, out for delivery (ACS) or at the locker (BoxNow), delivered, cancelled, returned, one per refund, and the receipt when the platform issues it. A **Completed** set automatically sends nothing: the customer has just had the "delivered" email.
 
 ## Things to know
 

@@ -242,7 +242,7 @@ What does not exist:
 | `grooveshop-django-api/src/tenant/tasks.py`, `src/tenant/emails.py` | `scheduled_database_backup`, `monitor_system_health` and the platform alert emails they send |
 | `grooveshop-django-api/src/core/tasks.py` | `backup_database_task`, `cleanup_old_backups` |
 | `grooveshop-django-api/src/core/management/commands/backup_database.py` | `pg_dump` invocation |
-| `grooveshop-django-api/src/core/caches.py` | `failing_persistence_statuses()` |
+| `grooveshop-django-api/src/core/cache_backend.py` | `failing_persistence_statuses()` |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend.yaml` | Backups, media, media-private and static PVCs and mounts |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/backend-database.yaml` | Postgres CR, logical backup disabled, the gap statement |
 | `grooveshop-infrastructure/manifests/app-constructs/grooveshop/base/redis.yaml`, `backend-message-broker.yaml` | Redis and RabbitMQ volumes |

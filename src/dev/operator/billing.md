@@ -20,7 +20,7 @@ schema is entered and a half-provisioned store cannot break the cycle
 
 ## The fields
 
-All six live on `Tenant` (`src/tenant/models.py`). Open a store from
+All six live on `Tenant` (`src/tenant/models/tenant.py`). Open a store from
 <span class="sidebar-path">Control plane → Tenants</span>: the first four
 are in the **Plan & Billing** section of the change form and the two
 suspension fields are in the unnamed section at the top
@@ -45,7 +45,7 @@ which a merchant may set for themselves".
 
 ## Plan tiers
 
-`TenantPlan` (`src/tenant/models.py`) has four values, and it is worth being
+`TenantPlan` (`src/tenant/enum.py`) has four values, and it is worth being
 precise about what the tier actually decides today.
 
 | Plan | Where the value is read |
@@ -337,7 +337,7 @@ it are in [Scheduled work & platform data](/dev/operator/background-jobs).
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/tenant/billing.py` | `billing_config`, `billing_state`, `target_stage`, `_STAGES`, `_send_stage_email`, `run_billing_cycle` |
-| `grooveshop-django-api/src/tenant/models.py` | `TenantPlan`, `SuspendedReason`, the six billing fields and their `help_text` |
+| `grooveshop-django-api/src/tenant/models/tenant.py`, `grooveshop-django-api/src/tenant/enum.py` | The six billing fields and their `help_text` (`Tenant`); `TenantPlan` and `SuspendedReason` (`enum.py`) |
 | `grooveshop-django-api/src/tenant/lifecycle.py` | `suspend_tenant`, `activate_tenant`, `is_protected_tenant`, `SUSPEND_COOLDOWN` |
 | `grooveshop-django-api/src/tenant/signals.py` | `reactivate_on_renewal` |
 | `grooveshop-django-api/src/tenant/tasks.py` | `process_tenant_billing` |

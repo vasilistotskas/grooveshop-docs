@@ -63,7 +63,7 @@ Click **Purge all** and confirm. Every area is cleared. Right after, the storefr
 
 ## Things to know
 
-- **Updated on their own** as soon as you save: products, categories, tags, payment methods, shipping providers and prices, VAT rates, promotions (also when one starts or ends on its dates), coupon codes, reviews you approve or reject, blog posts and comments (also when a scheduled post's date passes), pages, layouts and menus, the sitemap and the RSS feeds. The same goes for bulk actions on a list, such as activating many products at once.
+- **Updated on their own** as soon as you save: products, categories, tags, payment methods, shipping providers and prices, VAT rates, promotions (also when one starts or ends on its dates), coupon codes, reviews you approve or reject, blog posts and comments (also when a scheduled post's date passes), the name and profile picture an author, commenter or reviewer shows, pages, layouts and menus, the sitemap and the RSS feeds. The same goes for bulk actions on a list, such as activating many products at once.
 - When you switch a feature on or off in [Store settings](/admin/settings/store-settings), every storefront page is updated on its own.
 - **Need a few minutes or a clear:** the other Store Settings values, loyalty, and a sync of lockers or ACS stations.
 - When an order lowers the stock, the product page is not refreshed right away. Checkout always checks the real stock, though, so you never sell something that ran out.
