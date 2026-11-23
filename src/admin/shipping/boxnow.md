@@ -7,6 +7,8 @@ description: BoxNow locker deliveries in Greece and Cyprus, the locker list, par
 
 BoxNow delivers to automated lockers. The customer picks a locker on the checkout map, the platform sends the order to BoxNow, and BoxNow updates the store automatically about every movement of the parcel. You print the voucher (the BoxNow shipping label) and hand the parcel over.
 
+At checkout, the map and the list show only the lockers that have a compartment the order fits in, and mark the ones BoxNow expects to be nearly full (**Few free compartments**). If a locker can no longer take the order when it is placed, the customer is told why and asked to choose another.
+
 <span class="sidebar-path">Shipping → BoxNow Shipments</span>
 
 The BoxNow screens appear only while BoxNow is active under [Shipping providers](/admin/settings/shipping-providers). The detailed history of every parcel is visible to the platform team only; one parcel's history is on its own page.
@@ -19,7 +21,7 @@ The BoxNow screens appear only while BoxNow is active under [Shipping providers]
 | **State** | Where the parcel is (table below). |
 | **Locker External ID** | The destination locker. |
 | **Order** | Link to the order. |
-| **Compartment Size** | Small, medium or large (shown as Μικρό, Μεσαίο, Μεγάλο). Orders from your store always get small: the customer does not choose a size. |
+| **Compartment Size** | Small, medium or large (shown as Μικρό, Μεσαίο, Μεγάλο). The platform picks it from the order's products: the smallest compartment they all fit in, from each product's dimensions. A product without dimensions counts as the size in the store setting `BOXNOW_DEFAULT_COMPARTMENT_SIZE` (Small unless you change it). The customer does not choose a size. |
 | **Created At** | When the shipment was created. |
 
 Filters: **Parcel State Group**, **Parcel State**, **Payment Mode**, **Compartment Size** and **Created At**. Search finds a parcel number, a locker, an order number or a customer email.

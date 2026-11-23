@@ -1125,31 +1125,33 @@ no default: a destination without a country is skipped and counted as
 payload is unchanged, because `locationId` alone identifies the locker.
 
 `BoxNowCarrier.validate_order_payload` looks the chosen
-`boxnow_locker_id` up by `external_id`. A locker whose country differs
-from the order's country is a field error on `boxnow_locker_id`. A locker
-that is not in the table yet is **accepted** with a WARNING log, because
-the nightly sync lags BoxNow's own map by up to a day.
+`boxnow_locker_id` up by `external_id` (`deliverable_pickup_point`), and
+order creation refuses an unfit locker on that field with a code
+(`OrderCreateFromCartSerializer._deliver_to_pickup_point`): one the table
+does not hold, even after one live resync of the catalogue, is
+`pickup_point_unknown`; one in another country than the order's is
+`pickup_point_in_another_country`; on BOX NOW's live network, one without
+a compartment of the order's size is `pickup_point_too_small`, and one
+whose sizes are not known is `pickup_point_size_unknown`.
 
 Cyprus availability and its 4 kg cap are data, not code: a BoxNow
 pickup-point rate for CY with `max_weight_grams=4000`.
 
-On the storefront, `shared/utils/boxnow-widget.ts` (import-free) is the
-single source for the widget per country: `BOXNOW_WIDGET_COUNTRIES` maps
-GR to `https://widget-v5.boxnow.gr` and CY to `https://widget-v5.boxnow.cy`,
-each with its `countryCode` query value and the lowercase country name
-the widget posts back as `boxnowCountry`. `BOXNOW_FRAME_ORIGINS` (every
-country host plus the redirect origins the iframe hops through),
-`BOXNOW_ALLOWED_ORIGINS` (the postMessage allowlist) and
-`boxNowWidgetCountry(alpha2)` derive from it, and `shared/utils/csp.ts`
-builds `frame-src` from `BOXNOW_FRAME_ORIGINS`. Adding a country is one
-verified line there plus a rate. In the same file,
-`buildBoxNowIframeUrl` builds the host and `countryCode` for the
-delivery country and the page locale, and throws for a country with no
-mapping, so checkout disables BoxNow rather than loading the wrong map.
-`parseBoxNowSelectedLocker` maps `boxnowCountry` case-insensitively to
-`boxnowLockerCountryCode`, and `BoxNowLockerPicker.vue` ignores a locker
-whose map is missing or belongs to another country. Changing the
-delivery country clears the chosen locker.
+On the storefront, a BOX NOW locker is picked in the same picker as an ACS
+Smartpoint (`GenericLockerPicker.vue` in both designs, `useLockerPicker`);
+BOX NOW's own map widget is not used. The carrier adapter
+(`shared/shipping/providers/boxnow.ts`) sets `sizesLockers`, so the picker
+waits for the quote's `compartmentSize` (the size the cart packs into)
+and asks `/api/shipping/lockers/boxnow` for the lockers of that size; the
+route refuses a BOX NOW request without one and caches per store, country
+and size. A new size (the cart changed) loads the list again, and lockers
+of another size never stay on screen. A locker with `limitedAvailability`
+is marked as having few free compartments. When order creation refuses
+the locker (any of the codes above), the checkout goes back to the
+delivery step, shows the reason under the picker and clears the chosen
+point (`clearPickupPoint` in `app/utils/checkoutOrder.ts`), so the
+shopper picks another. Changing the delivery country clears the chosen
+locker too.
 
 The webhook is `POST /boxnow/webhook/`, registered at the URL root rather
 than under `api/v1/` so BoxNow reaches it without a language prefix or
@@ -1391,10 +1393,9 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-storefront-ui-node-nuxt/shared/shipping/index.ts` | Checkout method to carrier mapping |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/StepShipping.vue` | The delivery step, over-cap and error states, locker pickers |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/GenericLockerPicker.vue`, `grooveshop-storefront-ui-node-nuxt/app/components/variants/webside/Checkout/GenericLockerPicker.vue` | The picker modal, default and webside designs: search, location button, map and list |
-| `grooveshop-storefront-ui-node-nuxt/app/composables/useLockerPicker.ts` | The ACS picker's logic: catalogue load, search, origin, distances, map focus |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useLockerPicker.ts` | Every carrier's picker logic: catalogue load per country (and per cart size for BOX NOW), search, origin, distances, map focus |
+| `grooveshop-storefront-ui-node-nuxt/shared/shipping/providers/boxnow.ts` | The BOX NOW adapter: `sizesLockers`, the catalogue fetch by `compartmentSize`, the form fields |
+| `grooveshop-storefront-ui-node-nuxt/app/utils/checkoutOrder.ts` | `PICKUP_FORM_KEYS`, `clearPickupPoint`, the pickup-point refusals told in the storefront's words |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useShopperLocation.ts` | The shopper's position, asked for on a click or with a granted permission |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/lockerSearch.ts` | Search folding (accents, Greeklish), matching, distance, a postcode's centre |
-| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/lockers/[provider].get.ts` | The bulk catalogue route, cached, refusing to cache an empty answer |
-| `grooveshop-storefront-ui-node-nuxt/shared/utils/boxnow-widget.ts` | `BOXNOW_WIDGET_COUNTRIES`, `BOXNOW_FRAME_ORIGINS`, `BOXNOW_ALLOWED_ORIGINS`, `boxNowWidgetCountry`, `buildBoxNowIframeUrl`, `parseBoxNowSelectedLocker` |
-| `grooveshop-storefront-ui-node-nuxt/shared/utils/csp.ts` | `frame-src`, built from `BOXNOW_FRAME_ORIGINS` |
-| `grooveshop-storefront-ui-node-nuxt/app/components/Checkout/BoxNowLockerPicker.vue` | The widget iframe per delivery country and locale; ignores a locker from another country's map |
+| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/lockers/[provider].get.ts` | The bulk catalogue route, cached per store, country and BOX NOW size, refusing to cache an empty answer |
