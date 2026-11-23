@@ -1141,15 +1141,20 @@ On the storefront, a BOX NOW locker is picked in the same picker as an ACS
 Smartpoint (`GenericLockerPicker.vue` in both designs, `useLockerPicker`);
 BOX NOW's own map widget is not used. The carrier adapter
 (`shared/shipping/providers/boxnow.ts`) sets `sizesLockers`, so the picker
-waits for the quote's `compartmentSize` (the size the cart packs into)
-and asks `/api/shipping/lockers/boxnow` for the lockers of that size; the
-route refuses a BOX NOW request without one and caches per store, country
-and size. A new size (the cart changed) loads the list again, and lockers
-of another size never stay on screen. A locker with `limitedAvailability`
-is marked as having few free compartments. When order creation refuses
-the locker (any of the codes above), the checkout goes back to the
-delivery step, shows the reason under the picker and clears the chosen
-point (`clearPickupPoint` in `app/utils/checkoutOrder.ts`), so the
+waits until the quote has a row for the pickup (`awaitingSize`, while
+a new quote is pending too) and asks `/api/shipping/lockers/boxnow` for
+the lockers of that row's `compartmentSize` (the size the cart packs
+into). A row with no size, on a store on BOX NOW's stage network where
+lockers have none, lists every locker. The route caches per store,
+country and size; an empty list of one size is an answer (the picker says
+no locker fits this order), while an empty unfiltered catalogue is a 503
+that is never cached. A new size (the cart changed) loads the list again,
+and lockers of another carrier or size never stay on screen. A locker with
+`limitedAvailability` is marked as having few free compartments. When the
+quote (`POST /api/v1/cart/quote`, top-level `code`) or order creation
+refuses the locker (any of the codes above), the checkout clears the
+chosen point (`clearPickupPoint` in `app/utils/checkoutOrder.ts`), goes
+back to the delivery step and shows the reason under the picker, so the
 shopper picks another. Changing the delivery country clears the chosen
 locker too.
 
