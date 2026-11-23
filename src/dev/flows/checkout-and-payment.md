@@ -645,10 +645,10 @@ placeholder) and a cancel URL on this store.
   (`amountDue`), the deadline (`paymentHoldExpiresAt`) and a **Pay now**
   button on the account's order page
   (`app/components/Storefront/Account/OrderDetail.vue`) and on the order
-  confirmation (`CheckoutSuccess.vue`, both designs), which is also where the
-  payment-failed email links a guest (`order_page_path`,
-  `src/order/storefront_links.py`; a signed-in shopper's link is the account
-  page). A canceled payment returns to the order's page.
+  confirmation (`CheckoutSuccess.vue`, both designs). A failed payment sends
+  no email (`src/order/signals/handlers.py: handle_stripe_payment_failed`,
+  `src/order/views/viva_webhook.py: _handle_payment_failed`). A canceled
+  payment returns to the order's page.
 - **When it is offered** (`app/utils/orderPayment.ts: offersPaymentLink`):
   `paymentHoldExpiresAt` is set (only while the order is PENDING, online and
   not finally paid), `paymentAwaitsReview` is false (the provider took a charge
@@ -687,7 +687,7 @@ placeholder) and a cancel URL on this store.
 | Places a Stripe order | Order created, card form mounts, then `onPaymentSuccess` navigates to the success page |
 | Places a Viva order | "Order created, complete payment" toast, then the hosted page, then back through `viva-return` |
 | Lands on success unpaid | The page polls `GET /api/orders/uuid/{uuid}` every 2s — 15 attempts for Viva, 5 for Stripe — and stops on a settled status |
-| Opens an unpaid online order (account page, or the confirmation from the payment-failed email) | **Pay now** with the amount due and the deadline; a new provider page for the same order |
+| Opens an unpaid online order (account page, or the order confirmation page) | **Pay now** with the amount due and the deadline; a new provider page for the same order |
 | Returns to the cart or checkout with an unpaid online order | "Order #N is waiting for your payment", in this browser only |
 | Lands on success with COD | No polling at all: the kept order says it was placed, which means legitimately unpaid |
 
@@ -909,7 +909,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
   sibling event resolves by `payment_id`, which only `mark_as_paid`
   writes.
 - **Payment fails.** `handle_payment_failed` writes
-  `payment_status=FAILED` and nothing else. The stock this order holds
+  `payment_status=FAILED` and nothing else: no email and no toast, since a
+  card order is announced only once it is confirmed. The stock this order holds
   is **not** returned at that moment; only
   `auto_cancel_stuck_pending_orders` releases it, after
   `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`. See
