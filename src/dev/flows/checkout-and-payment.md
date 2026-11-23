@@ -12,6 +12,8 @@ and whether its **provider** can mint a client-confirmed intent
 (`src/order/payments/payment.py: PaymentProvider.supports_payment_intent`). Never by a
 provider name. Intent-first means the money is verified before the order
 row exists; order-first means the order exists before any money moves.
+The storefront takes the order-first way for every online payment, Stripe
+included; intent-first is reached only by API callers until its removal.
 Everything else on this page follows from that split.
 
 For the exhaustive status tables and the audit history, read

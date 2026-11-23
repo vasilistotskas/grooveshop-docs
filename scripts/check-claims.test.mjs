@@ -133,7 +133,11 @@ const CARRIER_SIDEBAR = {
       '            ),',
       '        ],',
       '    )',
-      '    return [shipping]',
+      '    system = _group(',
+      '        _("System"),',
+      '        [_menu(_("Logs"), "history", [*carrier_pages("audit")])],',
+      '    )',
+      '    return [shipping, system]',
       '',
       'def platform_sidebar(request):',
       '    return [{"title": _("Tenants"), "items": [page("tenant.Tenant", _("Stores"))]}]',
@@ -142,9 +146,11 @@ const CARRIER_SIDEBAR = {
     'src/shipping_acs/carrier.py': [
       'class AcsCarrier:',
       '    def admin_pages(self):',
+      '        """Returns AdminPages(shipments=(...)) for the sidebar."""',
       '        return AdminPages(',
       '            shipments=(AdminPage("shipping_acs.AcsShipment", _("ACS Shipments"), "local_shipping"),),',
       '            pickup_points=(AdminPage("shipping_acs.AcsStation", _("ACS Stations"), rank=1),),',
+      '            audit=(AdminPage("shipping_acs.AcsApiCall", _("ACS API Calls")),),',
       '        )',
       '',
     ].join('\n'),
@@ -154,7 +160,8 @@ const CARRIER_SIDEBAR = {
 
 test('a carrier screen placed by carrier_pages is a real sidebar path', () => {
   const page = '<span class="sidebar-path">Shipping → ACS Shipments</span> and '
-    + '<span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span>\n'
+    + '<span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span> and '
+    + '<span class="sidebar-path">System → Logs → ACS API Calls</span>\n'
   const { status, output } = runGate({ page, repos: CARRIER_SIDEBAR })
   assert.equal(status, 0, output)
 })
@@ -164,4 +171,19 @@ test('a carrier screen no carrier declares fails', () => {
   const { status, output } = runGate({ page, repos: CARRIER_SIDEBAR })
   assert.equal(status, 1)
   assert.match(output, /"BoxNow Lockers" is not under "Shipping → Pickup Points"/)
+})
+
+test('a carrier screen is only under the slot its carrier declares it in', () => {
+  const page = '<span class="sidebar-path">Shipping → Pickup Points → ACS Shipments</span>\n'
+  const { status, output } = runGate({ page, repos: CARRIER_SIDEBAR })
+  assert.equal(status, 1)
+  assert.match(output, /"ACS Shipments" is not under "Shipping → Pickup Points"/)
+})
+
+test('a slot the sidebar places that no carrier declares fails as unreadable', () => {
+  const { 'src/shipping_acs/carrier.py': _carrier, ...django } = CARRIER_SIDEBAR['grooveshop-django-api']
+  const page = '<span class="sidebar-path">Shipping → ACS Shipments</span>\n'
+  const { status, output } = runGate({ page, repos: { 'grooveshop-django-api': django } })
+  assert.equal(status, 1)
+  assert.match(output, /could not read the carriers' "shipments" admin pages/)
 })

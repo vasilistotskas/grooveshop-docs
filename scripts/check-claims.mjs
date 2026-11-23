@@ -177,6 +177,22 @@ function skipString(src, i) {
   return j
 }
 
+/** `src` with every string literal's contents blanked, at the same offsets. */
+function blankStrings(src) {
+  let out = ''
+  for (let i = 0; i < src.length; i++) {
+    if (src[i] === '"' || src[i] === '\'') {
+      const end = skipString(src, i)
+      out += src[i] + ' '.repeat(end - i - 2) + src[end - 1]
+      i = end - 1
+    }
+    else {
+      out += src[i]
+    }
+  }
+  return out
+}
+
 /** Python source with its `#` comments removed and its strings intact. */
 function stripComments(src) {
   let out = ''
@@ -325,7 +341,8 @@ function carrierPages(djangoSrc) {
     const file = join(djangoSrc, app, 'carrier.py')
     if (!existsSync(file)) continue
     const src = stripComments(readFileSync(file, 'utf8'))
-    for (const m of src.matchAll(/\bAdminPages\s*\(/g)) {
+    // Matched outside strings, so a docstring that names the call is not one.
+    for (const m of blankStrings(src).matchAll(/\bAdminPages\s*\(/g)) {
       const open = m.index + m[0].length - 1
       const close = closing(src, open)
       if (close === -1) continue
@@ -404,8 +421,11 @@ function adminSidebar() {
   if (unreadable.length) return { paths: new Set(), sections: new Set(), labels: new Set(), unreadable }
   const navigationSource = stripComments(readFileSync(navigation, 'utf8'))
   const carriers = carrierPages(join(django, 'src'))
-  if (/\bcarrier_pages\s*\(/.test(navigationSource) && ![...carriers.values()].some(pages => pages.length)) {
-    unreadable.push('the carriers\' admin pages (AdminPages in src/<app>/carrier.py)')
+  // Every slot the sidebar places must be declared by some carrier: a slot no
+  // carrier.py fills means the declarations moved or changed shape.
+  const slots = new Set([...navigationSource.matchAll(/\bcarrier_pages\s*\(\s*(?:"(\w+)"|'(\w+)')/g)].map(m => m[1] ?? m[2]))
+  for (const slot of slots) {
+    if (!carriers.get(slot)?.length) unreadable.push(`the carriers' "${slot}" admin pages (AdminPages in src/<app>/carrier.py)`)
   }
   const store = storeSections(navigationSource, carriers)
   if (!store.some(s => s.title && s.children.length)) unreadable.push('the store sidebar in src/admin/navigation.py (store_sidebar)')
