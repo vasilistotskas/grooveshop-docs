@@ -159,6 +159,7 @@ rest is built on it:
 | `free_shipping_info(country_code)` | The store's standing "free shipping from X" promise, for a page with no cart; defaults to `initial_country_code()` and echoes the `country_code` it used |
 | `free_threshold_rates(country_code, weight_grams, items)` | The rates that ship free above a threshold, on the `active_rate` gate, lowest threshold first; with a cart's weight and items, only those that can carry it. Feeds `free_shipping_info` and the cart's `freeShippingProgress` ([Promotions](/dev/flows/promotions-and-gift-cards#free-shipping-one-distance)) |
 | `initial_country_code()` | The first `shippable_country_codes()` entry, the country a caller with no address is judged for |
+| `product_shipping_from(product)` | The cheapest delivery of one product bought on its own, for the product page ([below](#the-product-page-s-shipping-price)) |
 
 The exceptions live in `src/shipping/exceptions.py`.
 
@@ -237,6 +238,54 @@ from the adapter's cache inside it (`ShippingService.resolve_live_price`). A bar
 `resolve_home_delivery_provider`, and `_resolve_shipping_provider` uses
 the **same helper** to set the order's FK — otherwise the order would be
 priced against one carrier's rate and served by another.
+
+### The product page's shipping price
+
+`GET /api/v1/shipping/product/<product_id>` answers what shipping one
+product costs bought on its own, for the product page's assurances box
+(the store preference `productAssurances`, every design).
+`ShippingService.product_shipping_from(product)` prices a cart holding one
+unit of it and nothing else, as checkout would, for a shopper not known
+yet:
+
+1. The country is `initial_country_code()`, the one checkout preselects.
+2. `PromotionEngine.evaluate_single_unit(product)` runs the cart's own
+   classification, stacking and clamp over a one-line cart priced at
+   `final_price`, with the live automatic promotions only (no code; a
+   `first_order_only` promotion is left out, as for any anonymous cart).
+3. The order value is `OrderQuoteService.threshold_value` of that price
+   after the discount, so a carrier's threshold is judged as checkout
+   judges it, and the promotion's `free_shipping` waives every carrier.
+4. `available_options` prices every offered delivery with the parcel the
+   cart would ship (the product plus the promotions' gifts, `gift_pairs`).
+   A row flagged `exceeds_max_weight` or `exceeds_parcel_size` cannot carry
+   it and does not count; a live-priced carrier (ACS) is asked for the
+   parcel's weight bracket.
+
+The response is `{estimate}`: the cheapest `price` with its `currency`,
+`free` (`price` is 0), `countryCode`, and `freeShippingThreshold`, the
+lowest threshold of `free_threshold_rates(country, weight_grams, items)`,
+the carriers that can take the product. `estimate` is `null` when the store
+ships nowhere or no delivery it offers can take the product; a missing or
+inactive product is a 404. It is not a field of the product, which would
+tie the product cache to every rate and promotion.
+
+The Django view (`ProductShippingView`) is cached by `@cache_methods`, and
+the storefront's route by Nitro under the name `shipping.product`, per store
+and product. Three surfaces purge both, since three kinds of edit move the
+answer: `shipping` (a rate or a provider), `products` (the product's price,
+weight or size) and `promotions`. The names are
+`PRODUCT_SHIPPING_VIEW` and `PRODUCT_SHIPPING_HANDLER` in
+`src/shipping/cache_surfaces.py`. A live ACS price can move within the TTL.
+
+On the storefront, `useProductAssurances(productId)` puts the line on the
+delivery row: "Μεταφορικά από 1,99 € · δωρεάν άνω των 39,90 €", the price
+alone when no carrier that takes the product ships free, or "Δωρεάν
+μεταφορικά". It is the note under the delivery days, or the row's own text
+when the store entered no delivery days, and never sits under the ways to
+pay, where it would read as the cash-on-delivery fee. A cart that already
+has a route to free shipping leaves the line out: the product page's
+free-shipping notice shows the cart's own distance instead.
 
 ### Dispatch on transaction commit
 
@@ -1311,7 +1360,12 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping/alerts.py`, `src/shipping/emails.py`, `src/shipping_acs/emails.py` | The two carrier alerts (`alert_admins_*`) and the ops email types they and the ACS tasks send |
 | `grooveshop-django-api/src/shipping/locks.py` | `lock_with_order`: the one lock order for an order and its shipment |
 | `grooveshop-django-api/src/shipping/utils.py` | `compute_total_weight_grams` |
-| `grooveshop-django-api/src/shipping/urls.py` | Options, free-shipping-info, providers |
+| `grooveshop-django-api/src/shipping/urls.py` | Options, free-shipping-info, policy, the product's shipping price, providers |
+| `grooveshop-django-api/src/shipping/views.py` | `ProductShippingView` and the other public shipping reads |
+| `grooveshop-django-api/src/shipping/cache_surfaces.py` | The `shipping` surface, `PRODUCT_SHIPPING_VIEW`, `PRODUCT_SHIPPING_HANDLER` (also purged by the `products` and `promotions` surfaces) |
+| `grooveshop-django-api/src/promotion/engine/evaluation.py` | `PromotionEngine.evaluate_single_unit` |
+| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/product/[productId].get.ts` | The product's shipping price route, cached as `shipping.product` |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useProductAssurances.ts` | The delivery row and its shipping line, for every design |
 | `grooveshop-django-api/src/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
 | `grooveshop-django-api/src/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` and `voucher_held` filter values, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`), `AcsVoucherHoldAdmin` (`allow_one_request`) and the `label_printed_at` empty filter |
 | `grooveshop-django-api/src/shipping/carrier_http.py` | `CARRIER_RETRY` and `carrier_session`: the one HTTP retry rule of both carrier clients |
