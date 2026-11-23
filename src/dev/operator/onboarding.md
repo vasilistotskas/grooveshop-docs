@@ -561,7 +561,7 @@ Applications.
 | `grooveshop-django-api/tests_mt/test_provisioning_in_one_transaction.py` | A store provisioned inside one transaction gets every migration |
 | `grooveshop-django-api/src/tenant/management/commands/bootstrap_stripe.py` | `--schema`, `--all-tenants`, `--dry-run`, `--rotate-endpoint` |
 | `grooveshop-django-api/src/tenant/admin.py` | `TenantAdmin.save_related` provisioning, `provision_stripe_webhook` action |
-| `grooveshop-django-api/src/tenant/models.py` | `Tenant` fields, `TenantPlan`, `StoreVertical`, `TenantDomain`, `available_locales`, `stripe_connect_account_id` |
+| `grooveshop-django-api/src/tenant/models/tenant.py`, `grooveshop-django-api/src/tenant/enum.py`, `grooveshop-django-api/src/tenant/models/domain.py` | `Tenant` fields, `available_locales`, `stripe_connect_account_id`; `TenantPlan` and `StoreVertical` (`enum.py`); `TenantDomain` (`domain.py`) |
 | `grooveshop-django-api/src/tenant/validators.py` | `validate_reserved_schema_name`, `RESERVED_SCHEMA_NAMES` |
 | `grooveshop-django-api/src/tenant/credentials.py` | Fallback policy, `tenant_contact_email` |
 | `grooveshop-django-api/src/emails/sender.py` | `from_address`, the `From` of every email |

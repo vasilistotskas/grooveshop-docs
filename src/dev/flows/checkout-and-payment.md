@@ -39,13 +39,13 @@ sequenceDiagram
     N->>D: POST cart/create-payment-intent
     D->>P: Create PaymentIntent
     D-->>N: client_secret
-    N->>D: POST order with payment_intent_id
+    N->>D: POST order with payment_intent_id and expectedTotal
     D->>P: Verify intent amount
     D-->>N: Order PENDING
     S->>P: Confirm card
     P->>D: payment_intent.succeeded
   else Order-first (Viva)
-    N->>D: POST order, no intent (expectedTotal)
+    N->>D: POST order with expectedTotal, no intent
     D-->>N: Order PENDING
     N->>D: POST order/id/create_checkout_session
     D->>P: Create hosted order
@@ -53,11 +53,11 @@ sequenceDiagram
     P->>D: Webhook 1796
     P->>N: Redirect to viva-return
   else Order-first (collected on delivery)
-    N->>D: POST order, no intent
+    N->>D: POST order with expectedTotal, no intent
     D->>C: Dispatch voucher on commit
   end
   D->>C: Dispatch voucher on commit
-  D->>S: Confirmation email and toast
+  D->>S: Confirmation email and toast (once confirmed: at creation offline, when the payment settles for a card)
 ```
 
 ## How it works
@@ -326,8 +326,9 @@ and what the order stores).
   (the cart changed in between, or the entry expired) rolls the creation back
   with `ShippingPriceUnresolvedError`; the cart is priced again with nothing
   locked and answered as 409 `total_changed` carrying that quote
-  (`OrderService._refuse_unpriced`). This 409 does not depend on
-  `expectedTotal`: a client that sent none gets it too. ACS's live price is cached per country, region and
+  (`OrderService._refuse_unpriced`). This 409 is a separate refusal from the
+  `expectedTotal` comparison below, and its quote is the one the order would
+  have been created at. ACS's live price is cached per country, region and
   weight bracket for five minutes (`src/shipping_acs/carrier.py:
   AcsCarrier._fetch_live_quote`), so a polled quote does not reach the carrier
   each time, and a failed call is remembered for 60 seconds (the stored rate is
@@ -369,8 +370,12 @@ and what the order stores).
   - It has no VAT total: the receipt's VAT taxes shipping and the fee at the
     goods' rates and spreads the loyalty discount over the lines, while the
     cart's `totalVatValue` is the goods only.
-- **The expected total.** `POST /api/v1/order` takes an optional
-  `expectedTotal` (`{amount, currency}`, minor units). Both paths compare it,
+- **The expected total.** `POST /api/v1/order` requires
+  `expectedTotal` (`{amount, currency}`, minor units, as the quote returned it;
+  `OrderCreateFromCartSerializer.expected_total`, `src/order/serializers/order.py`):
+  an order without it is refused 400 on the field, and both `OrderService`
+  creation paths need it, so no order is placed without the total check. Both
+  paths compare it,
   exactly, with the amount due computed under the cart lock and before
   anything is written. A difference creates nothing (no points, card balance,
   stock or cart line is taken) and answers **409**
@@ -382,11 +387,12 @@ and what the order stores).
   evaluated with the checkout email) are each a `total_changed` by design, when
   they change the amount due that is compared; a change that leaves it equal is
   not refused. A live carrier price that left its cache is refused as
-  `total_changed` even without `expectedTotal`. `error.type` is `invalid_order_data` for now: the
+  `total_changed` whatever total the client sent. `error.type` is `invalid_order_data` for now: the
   enum value follows a storefront release, see
   [OpenAPI contract](/dev/django/openapi-contract#a-new-value-in-a-response-enum-ships-consumer-first).
-  The storefront and the gateway send it; the field stays optional in the
-  contract.
+  The storefront and the gateway send it on every order (the gateway since
+  v1.49.0), which is why it could become required; the Django reference is
+  `docs/order/creation.md` §3.0.
 - **Budgets.** The quote is repeated on every change of a checkout and polled
   by the agent gateway, so it has its own throttle scopes, `cart_quote`
   (signed-in callers) and `cart_quote_anon` (guests; per cart for a request
@@ -516,9 +522,9 @@ the order and refuses to mark it paid. From then on the order detail serves
 `paymentAwaitsReview: true` (`src/order/payments/payment_hold.py:
 awaits_payment_review`, `src/order/serializers/order.py:
 OrderDetailSerializer.payment_awaits_review`) while the order is still
-undecided, that is PENDING with a payment that is not final (COMPLETED,
-REFUNDED, PARTIALLY_REFUNDED and CANCELED are final). The flag is never
-cleared: an order the store marks paid, cancels or refunds leaves the set
+undecided, that is PENDING with the charge not accepted (payment not
+COMPLETED, a refund in full or in part included). The flag is never
+cleared: an order the store accepts, fulfils or cancels leaves the set
 through its own state. A charge that passes every check
 is recorded on the payment ledger as a CHARGE row keyed on the
 transaction id, before the canceled-order and settled guards, so a second
@@ -530,9 +536,22 @@ Event 1798 marks the payment failed. Event 1797 books a refund: its
 `TransactionId` is the refund itself, verified through Retrieve
 Transaction (`_verify_viva_reversal`: one of the order's codes, status `F`,
 a refund or void type, a negative amount), and it is recorded as a REFUND
-row against the order's CHARGE row that its `ParentId` names. The payment
-status, PARTIALLY_REFUNDED or REFUNDED, follows from the ledger's sums
-(`src/order/payments/payment_ledger.py: PaymentLedger.refund_status`). The handler
+row against the order's CHARGE row that its `ParentId` names. A parent the
+ledger does not hold yet (its 1796 is late or lost) is booked first when
+Viva places it, captured, on one of the order's codes
+(`_viva_charge_for`). The payment status, PARTIALLY_REFUNDED or REFUNDED,
+follows from the ledger's sums (`src/order/payments/payment_ledger.py:
+PaymentLedger.refund_status`). A refund that leaves a never-confirmed
+PENDING order holding none of the customer's money (`PaymentLedger.held`)
+cancels it; one that leaves part held flags the order
+(`OrderService.flag_payment_mismatch`). An order already waiting for review
+is left to the store. A reversal whose parent cannot be read or is not the
+order's is answered 200 and recorded nowhere, so Viva's own event still
+applies. The
+`ParentId` is read from Viva only once the refund is on one of the order's
+codes. Every
+Retrieve Transaction an event needs is made before the order row is locked
+(`viva_settlement.apply_event` with the event's `EventRead`). The handler
 records its real outcome on `VivaWebhookEvent.outcome`, so a refused event
 reads `skipped`, not `processed`. Refunds and the ledger are covered in
 [Order lifecycle](/dev/flows/order-lifecycle).
@@ -639,10 +658,10 @@ placeholder) and a cancel URL on this store.
   (`amountDue`), the deadline (`paymentHoldExpiresAt`) and a **Pay now**
   button on the account's order page
   (`app/components/Storefront/Account/OrderDetail.vue`) and on the order
-  confirmation (`CheckoutSuccess.vue`, both designs), which is also where the
-  payment-failed email links a guest (`order_page_path`,
-  `src/order/storefront_links.py`; a signed-in shopper's link is the account
-  page). A canceled payment returns to the order's page.
+  confirmation (`CheckoutSuccess.vue`, both designs). A failed payment sends
+  no email (`src/order/signals/handlers.py: handle_stripe_payment_failed`,
+  `src/order/views/viva_webhook.py: _handle_payment_failed`). A canceled
+  payment returns to the order's page.
 - **When it is offered** (`app/utils/orderPayment.ts: offersPaymentLink`):
   `paymentHoldExpiresAt` is set (only while the order is PENDING, online and
   not finally paid), `paymentAwaitsReview` is false (the provider took a charge
@@ -681,7 +700,7 @@ placeholder) and a cancel URL on this store.
 | Places a Stripe order | Order created, card form mounts, then `onPaymentSuccess` navigates to the success page |
 | Places a Viva order | "Order created, complete payment" toast, then the hosted page, then back through `viva-return` |
 | Lands on success unpaid | The page polls `GET /api/orders/uuid/{uuid}` every 2s — 15 attempts for Viva, 5 for Stripe — and stops on a settled status |
-| Opens an unpaid online order (account page, or the confirmation from the payment-failed email) | **Pay now** with the amount due and the deadline; a new provider page for the same order |
+| Opens an unpaid online order (account page, or the order confirmation page) | **Pay now** with the amount due and the deadline; a new provider page for the same order |
 | Returns to the cart or checkout with an unpaid online order | "Order #N is waiting for your payment", in this browser only |
 | Lands on success with COD | No polling at all: the kept order says it was placed, which means legitimately unpaid |
 
@@ -732,7 +751,7 @@ arrived through a real checkout — see
 
 Every order records where the shopper came from, as one
 `OrderAttribution` row written in the creation transaction by
-`OrderAttributionService.record` (`src/order/services.py`), on both paths.
+`OrderAttributionService.record` (`src/order/checkout/attribution_service.py`), on both paths.
 
 **Capture, in the browser.** `app/plugins/attribution.client.ts` runs
 once per page load, synchronously, and reads `window.location` and
@@ -849,10 +868,10 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
   `cart/create-payment-intent` received. Changing a deduction after the
   intent exists is the usual cause, which is why the storefront drops
   the intent whenever loyalty, gift cards or a coupon change.
-- **409 `total_changed` on `POST /order`.** Either the client sent
-  `expectedTotal` and the amount due computed under the cart lock is another (a
+- **409 `total_changed` on `POST /order`.** Either the amount due computed under the cart lock is not the order's
+  `expectedTotal` (a
   price, promotion, rate, fee or live carrier price moved since the last
-  quote), or, whether or not it sent one, the locked quote found no cached
+  quote), or the locked quote found no cached
   carrier price for the parcel (`_refuse_unpriced`). Nothing was created; the
   body's `error.quote` is what the order would have been created at, so the
   client shows it and orders again.
@@ -903,7 +922,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
   sibling event resolves by `payment_id`, which only `mark_as_paid`
   writes.
 - **Payment fails.** `handle_payment_failed` writes
-  `payment_status=FAILED` and nothing else. The stock this order holds
+  `payment_status=FAILED` and nothing else: no email and no toast, since a
+  card order is announced only once it is confirmed. The stock this order holds
   is **not** returned at that moment; only
   `auto_cancel_stuck_pending_orders` releases it, after
   `ORDER_AUTO_CANCEL_FAILED_PAYMENT_MINUTES`. See
@@ -931,7 +951,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/order/views/order.py` | `OrderViewSet.create` (`_named_agent_checkout`), the two `_create_*` helpers, payment-intent / checkout-session / retry actions, `viva_return` |
-| `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `_quote_under_lock`, `_require_quoted_total`, `_resolve_live_shipping`, `_refuse_unpriced`, `validate_shipping_address`, `settle_cod_payment`, `OrderAttributionService` |
+| `grooveshop-django-api/src/order/services.py` | `create_order_from_cart`, `_retrieve_payment_intent`, `_order_created_for_payment`, `_create_order_for_verified_intent`, `create_order_from_cart_offline`, `_enforce_unpaid_order_limit`, `_lock_order_products`, `_consume_stock_for_order`, amount verification, `_quote_under_lock`, `_require_quoted_total`, `_resolve_live_shipping`, `_refuse_unpriced`, `validate_shipping_address`, `settle_cod_payment` |
+| `grooveshop-django-api/src/order/checkout/attribution_service.py` | `OrderAttributionService`: `input_from_request`, `classify_for_store`, `record` |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService`: `quote`, `shipping_cost`, `threshold_value`, `free_shipping_progress`, `calculate_payment_method_fee`, `offered_pay_ways`, `delivery_kind`, `resolve_live_shipping`; `CheckoutQuote`, `ExpectedTotal` |
 | `grooveshop-django-api/src/order/serializers/quote.py` | `CartQuoteSerializer`, the quote's response |
 | `grooveshop-django-api/src/order/enum/create_error.py` | `TOTAL_CHANGED_CODE`, `OrderCreateErrorType` |
@@ -945,10 +966,12 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/order/migrations/0069_order_payment_id_unique.py` | Builds that index, refusing existing duplicates |
 | `grooveshop-django-api/src/core/db/migration_operations.py` | `AddUniqueConstraintAdaptively` |
 | `grooveshop-django-api/src/order/payments/payment_ledger.py` | `PaymentLedger`: CHARGE, COD_COLLECTION, OFFLINE_COLLECTION, REFUND, CHARGEBACK and REFUND_REVERSAL rows, `refund_status` |
-| `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region; `OrderDetailSerializer.payment_awaits_review` |
+| `grooveshop-django-api/src/order/serializers/order.py` | Field-scoped 400s for rate, weight cap and region; the required `expected_total`; `OrderDetailSerializer.payment_awaits_review` |
 | `grooveshop-storefront-ui-node-nuxt/app/components/Order/PayNow.vue`, `app/components/Order/AwaitingPaymentReminder.vue` | **Pay now** and the cart's and checkout's reminder |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/orderPayment.ts`, `app/composables/useOrderCheckoutSession.ts`, `app/composables/useAwaitingPaymentOrder.ts` | When a link is offered, the refusal codes that end the offer, the new link, the remembered order |
 | `grooveshop-django-api/src/order/payments/payment_hold.py` | `payment_review_orders`, `awaits_payment_review`, `swept_orders`, `decided_by` |
+| `grooveshop-django-api/src/order/payments/viva_settlement.py` | `apply_event` and its `EventRead` (Viva read before the order lock), `handle_payment_created`, `ledger_charge` |
+| `grooveshop-django-api/src/order/payments/stripe_settlement.py` | `settle_paid_checkout_session`, `settle_landed_payment` |
 | `grooveshop-django-api/src/product/services.py` | `ProductService.set_discount` and `clear_discount`: the bulk discount, saved in pk order under row locks |
 | `grooveshop-django-api/src/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
 | `grooveshop-django-api/src/shipping/services.py` | `quote`, `assert_available`, `available_options` |
@@ -957,7 +980,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/src/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value`, `CartQuoteRequestSerializer` |
-| `grooveshop-django-api/src/order/payments/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
+| `grooveshop-django-api/src/order/payments/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider` (`landed_charges`), `_PROVIDERS` registry, `money_from_minor_units`, `provider_amount` |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
 | `grooveshop-django-api/src/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/src/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |

@@ -464,7 +464,7 @@ calls send it:
 Django believes `agentProtocol` only alongside the gateway's shared secret,
 which both calls already carry as `X-Internal-Gateway` (`cartHeaders`,
 `internal/django/client_cart.go`; checked by
-`src/order/services.py: OrderAttributionService.input_from_request`). With it,
+`src/order/checkout/attribution_service.py: OrderAttributionService.input_from_request`). With it,
 Django books the source type `agent` ahead of every other signal, so the
 cart and the order read "AI agent (UCP)" or "AI agent (ACP)" in the admin;
 see [Checkout & payment](/dev/flows/checkout-and-payment#_9-acquisition-source).

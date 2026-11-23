@@ -70,6 +70,7 @@ Untick **Is Published** and save, or select posts and choose **Unpublish selecte
 
 ## Things to know
 
+- **The post's image**: the store cuts it to the shape each place needs: the cover over the post, in the shape your store's design draws it, and 16:9, 4:3 and square for search engines, plus the picture a shared link shows. Every cut keeps the same part of the photo, the part that draws the eye most. The store never enlarges an image, so upload it at least 1200 pixels wide; a narrower image is shown at its own size.
 - **SEO Score**: it gets 25% for each of: a title of 11 to 59 characters, a subtitle, an image and at least one tag. It does not read the body or the SEO fields.
 - **Text that is refused**: if you paste something the store cannot show, e.g. code from **Source code**, saving stops with a message saying what is wrong.
 - **Fonts and text size come from the store**: when you save, the font and the text size are removed from the text, so every post uses the typography of your store's theme. This also goes for text pasted from Word or from a web page (Roboto, Calibri, 14pt, ...), and Word's hidden formatting and comment marks go with it. Bold, italics, colours, alignment and spacing stay as you set them. The editor does not offer a font or a text size for the same reason; use a heading for larger text.

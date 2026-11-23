@@ -13,7 +13,7 @@ is made; staging stays on Mailpit. The code wins over this page.
 
 Source: `src/emails/transport.py`, `src/emails/resend.py`, `src/emails/sender.py`
 (`own_sender`), `src/tenant/credentials.py` (`tenant_resend_api_key`),
-`src/tenant/models.py` (`Tenant.resend_api_key`, `Tenant.resend_webhook_secret`),
+`src/tenant/models/tenant.py` (`Tenant.resend_api_key`, `Tenant.resend_webhook_secret`),
 `src/settings/email.py` (`EMAIL_TRANSPORT`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`),
 `src/emails/webhooks.py`, `src/emails/events.py`, `src/emails/suppression.py`, `docs/emails.md` in the
 Django repository, [Secrets](/dev/operations/secrets).

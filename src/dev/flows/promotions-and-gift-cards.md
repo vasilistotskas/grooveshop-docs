@@ -660,6 +660,18 @@ guard. It flips the purchase to `PAID`, mints the card through `issue`,
 queues the buyer's receipt, and queues delivery **only when there is no
 `deliver_at` or it has already passed**.
 
+A card is mailed once however its delivery is queued: the purchase, the
+daily sweep, and every copy of their tasks (a retry, a message delivered
+again) run `src/giftcard/tasks.py: deliver_gift_card_email`, which reads
+`delivered_at` and sends under an advisory lock on the card
+(`core.db.locks.held_across_calls`). A run that waits finds the card
+delivered. A worker that dies mid-send takes the lock with it, and the run
+after it sends the card rather than never; if the mail had already left,
+that run sends it under the same delivery id, which Resend drops by its
+`Idempotency-Key` and SMTP does not. The admin's **Resend delivery email**
+is a new delivery on purpose: it clears `delivered_at`, so the card is
+mailed again.
+
 Refunds go back to the source cards, **whole and once**.
 `src/giftcard/signals.py` listens on `order_canceled` and on `order_refunded`,
 and for a refund acts only when the order's `payment_status` is REFUNDED,

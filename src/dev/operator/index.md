@@ -330,7 +330,7 @@ through `src/tenant/provisioning.py` — see
 | `grooveshop-django-api/src/admin/platform_site.py` | `PlatformAdminSite`, `PLATFORM_APP_LABELS`, `PLATFORM_EXCLUDED_MODELS`, `register_platform_models` |
 | `grooveshop-django-api/src/admin/dashboard/platform.py` | Estate cards and the store table |
 | `grooveshop-django-api/src/core/templates/admin/platform_index.html` | The dashboard layout |
-| `grooveshop-django-api/src/tenant/models.py`, `src/tenant/tasks.py` | `TenantStatsSnapshot`, `refresh_stats_snapshot`, `fanout_refresh_stats_snapshots` |
+| `grooveshop-django-api/src/tenant/models/stats.py`, `src/tenant/tasks.py` | `TenantStatsSnapshot`, `refresh_stats_snapshot`, `fanout_refresh_stats_snapshots` |
 | `grooveshop-django-api/src/tenant/admin_labels.py` | Plan, status and billing badges |
 | `grooveshop-django-api/src/admin/platform_billing.py` | The Plan & Billing page mounted by `get_urls` |
 | `grooveshop-django-api/src/admin/mixins.py` | `WithheldOnTenantHostModelAdmin`, `STORE_SELF_SERVICE_APP_LABELS`, `AdminSiteLoginNextMixin` |

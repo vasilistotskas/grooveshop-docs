@@ -38,7 +38,7 @@ Check the rates in <span class="sidebar-path">Settings → VAT Rates</span>, and
 
 ### 5. Logo, colours and contact email
 
-On the **Branding** tab of the store profile add your logo and colours. On the **Email & Security** tab enter the **Contact Email**. See [Store profile](/admin/settings/store-profile).
+On the **Branding** tab of the store profile add your logo. On the **Email & Security** tab enter the **Contact Email**. See [Store profile](/admin/settings/store-profile). Change the colours in the page builder: see [Change the colours, corners and fonts](/admin/content/page-builder#change-the-colours-corners-and-fonts).
 
 ### 6. A test order
 

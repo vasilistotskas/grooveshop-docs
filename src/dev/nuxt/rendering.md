@@ -1,6 +1,6 @@
 ---
 title: Storefront rendering contracts
-description: "How the storefront draws what depends on the visitor while its pages are cached anonymously: the session after hydration, the favourites hearts, cache keys of list routes, and the phone-target source rules."
+description: "How the storefront draws what depends on the visitor while its pages are cached anonymously: the session after hydration, the favourites hearts, cache keys of list routes, the phone-target source rules, responsive images and the blog post's cover in search."
 ---
 
 # Storefront rendering contracts
@@ -203,6 +203,81 @@ that no `overflow-hidden` ancestor clips.
   line's stepper giving way before its 44px remove button, and the checkout
   header's side columns shrinking.
 
+## Responsive images
+
+An image's HTML is the same for every visitor: which file a screen downloads is
+the browser's choice, from the `srcset` and `sizes` the page gives it, never a
+user-agent branch on the server. The device class the server reads from the
+user agent picked the blog cover's size until 2026-11 and sent a tablet the
+phone's file.
+
+- **`sizes` on an image component is @nuxt/image's list**, `breakpoint:width`
+  pairs over the screens `image.screens` in `nuxt.config.ts` defines
+  (`xs:50vw md:33vw lg:20vw xxl:256px`). @nuxt/image does not read a
+  media-query string: its `parseSizes` keeps the last bare token, so
+  `(max-width: 640px) 400px, 672px` became `sizes="672px"` with one candidate
+  for every screen. A breakpoint the config does not define (`2xl`) is read as
+  a width of that many pixels (`2xl` is 2px) and becomes the size below every
+  other. `test/unit/source-rules/image-sizes-are-breakpoint-lists.spec.ts`
+  checks every value a template hands an image component: a static attribute,
+  a literal binding, a `const` the binding names and the strings a function it
+  calls returns. Native `<img>` and `<source>` take the browser's own syntax.
+- **The default design's blog cover is art-directed**: a 4:3 frame on a phone,
+  21:9 from `sm` (`Storefront/BlogPost.vue`). `<NuxtPicture>` takes no media
+  sources (nuxt/image#309), so each cut is a native `<source>` with a `media`
+  query, a srcset on the media service's rendition ladder (widths it serves as
+  asked) and the browser's `sizes`; the `<img>` inside carries the alt text and
+  the placeholder. Each cut is preloaded with the same `media`, so a screen
+  downloads one file. The container's width is a theme setting, so the wide
+  cut claims the screen's width; the media service never serves more than the
+  original.
+- **Webside's cover** is one cut at the article column's shape
+  (`WEBSIDE_ARTICLE_COLUMN_MAX_WIDTH`), `xs:400px sm:672px`, drawn narrower at
+  the same shape on a phone (`variants/webside/Storefront/BlogPost.vue`).
+- **One crop position**: the page's cover in every design, its `og:image` and
+  its schema.org images are cut at `BLOG_COVER_CROP_POSITION`
+  (`shared/constants/index.ts`), so every rendition shows the same part of the
+  photograph.
+
+## The blog post in search
+
+`useBlogPostPage` (`app/composables/useBlogPostPage.ts`) writes the post's
+structured data for every design:
+
+- `Article.image` names three ImageObject nodes of the cover, in the shapes
+  Google's Article documentation lists (16:9, 4:3, 1:1; `ARTICLE_IMAGE_SIZES`,
+  the boxes asked for, 1200 wide), each with an `@id` under the page's URL
+  (`#/schema/image/cover-1200x675`) and the size it is served at.
+- `WebPage.primaryImageOfPage` is a reference to the 16:9 node, not a second
+  copy, and the Article's `thumbnailUrl` is its URL.
+- `og:image` is the social card asked for at `OG_IMAGE_BOX` (1200×630), and
+  `og:image:width`/`height` state the size it is served at.
+
+## The size an og or Article image states
+
+Every og:image of an uploaded image (blog posts, blog categories, blog authors
+and products, in every design; `useOgImage`) and each Article ImageObject
+states the size the media service serves it at, which is the box asked for
+only when the source covers it. The service never enlarges a source: it scales
+the box down until it fits inside the source, keeping its shape, so a 1600×900
+cover asked for at 1200×630 is served 1200×630 and a 1080×720 one 1080×567. `servedCoverSize` (`shared/utils/servedImageSize.ts`)
+computes it from the size Django stores for the file (`mainImageWidth` /
+`mainImageHeight`, EXIF orientation applied) with the same expression as the
+media service's `boxWithinSource`, in the same order of evaluation, so a .5
+case rounds the same way (675 × (440 / 1200) is 247.49999999999997, served
+247). It holds only for the media service's contract sizes
+(`renditions.sizes.contract`: 1200×630, 1200×675, 1200×900, 1200×1200), which
+it answers exactly instead of snapping them up its width ladder. A change to
+`boxWithinSource` changes this helper in the same release.
+
+No size is stated when the source has none (an SVG, a file not measured yet),
+nor on a product category page, whose og:image comes from a search result,
+which carries no image size, or is the store's logo.
+
+The `@id`s are absolute because `@unhead/schema-org` resolves a relative
+reference by looking the node up when the referring node is resolved, so the
+result depended on the order the nodes were registered in.
+
 ## Source
 
 | File | What |
@@ -216,3 +291,9 @@ that no `overflow-hidden` ancestor clips.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useProductFavouriteToggle.ts`, `app/stores/user.ts`, `app/plugins/auth.ts`, `shared/constants/index.ts` | The favourites hearts |
 | `grooveshop-storefront-ui-node-nuxt/app/components/PageSection/NewsletterSignup.vue`, `app/components/Chrome/FooterNewsletter.vue`, `app/components/variants/webside/Footer/Newsletter.vue`, `app/components/variants/webside/Chrome/Footer.vue`, `app/assets/css/main.css`, `test/unit/source-rules/one-newsletter-form.spec.ts` | The one-newsletter-form rule |
 | `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/product-page-targets.spec.ts`, `test/unit/source-rules/default-design-phone-targets.spec.ts` | Source rules for 44px targets |
+| `grooveshop-storefront-ui-node-nuxt/test/unit/source-rules/image-sizes-are-breakpoint-lists.spec.ts`, `nuxt.config.ts` (`image.screens`) | `sizes` is a breakpoint list |
+| `grooveshop-storefront-ui-node-nuxt/app/components/Storefront/BlogPost.vue`, `app/components/variants/webside/Storefront/BlogPost.vue`, `app/composables/useMediaStreamImage.ts` | The blog cover of each design |
+| `grooveshop-storefront-ui-node-nuxt/app/composables/useBlogPostPage.ts`, `shared/constants/index.ts` | The post's structured data, `og:image`, the crop position and the Article's image shapes |
+| `grooveshop-storefront-ui-node-nuxt/shared/utils/servedImageSize.ts`, `app/composables/useOgImage.ts` | The served size of an og or Article image |
+| `grooveshop-media-stream/src/MediaStream/Processing/jobs/webp-image-manipulation.job.ts` (`boxWithinSource`), `src/MediaStream/common/utils/config-schema.util.ts` (`renditions.sizes.contract`) | The box the media service serves, and the sizes it answers exactly |
+| `grooveshop-media-stream/src/MediaStream/common/constants/rendition-presets.constant.ts` | The rendition ladder the cover's widths are steps of |
