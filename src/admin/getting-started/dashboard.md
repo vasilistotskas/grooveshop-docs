@@ -68,7 +68,7 @@ Work that is waiting. Each row opens its list already filtered to those records.
 | **Orders to process** | Orders in **Pending**. |
 | **Orders to follow up** | Orders placed `ORDER_FOLLOW_UP_DAYS` or more calendar days ago that are still **Pending**, **Processing** or **Shipped**: the customer is still waiting for the parcel. Also a **Pending** or **Processing** order whose BoxNow parcel was canceled, at any age. A card order still waiting for its payment is never counted. |
 | **Canceled orders to refund** | Paid, then canceled, and the customer has not had the money back. |
-| **Payments to review** | A card payment that did not match the order's total, on an order still **Pending**: only you can decide it. See [A payment that does not match its order](/admin/sales/orders#a-payment-that-does-not-match-its-order). |
+| **Payments to review** | Card payments waiting for your decision, on orders still **Pending** whose payment you have not accepted: an amount that did not match the order's total, or a Viva Wallet payment refunded or disputed before it reached the order. Only you can decide them. See [A payment that does not match its order](/admin/sales/orders#a-payment-that-does-not-match-its-order). |
 | **Orders paid twice** | The customer paid more than the order is for: refund the extra payment. See [A customer paid twice](/admin/sales/orders#a-customer-paid-twice). |
 | **Lost disputes to settle** | You lost a card dispute and have not said yet whether the goods came back, so the receipt is not credited. See [Settle a lost dispute](/admin/sales/refunds-and-disputes#settle-a-lost-dispute). |
 | **COD cash ACS has not paid out** | Cash-on-delivery parcels delivered more than 10 days ago with no payout from ACS. |
