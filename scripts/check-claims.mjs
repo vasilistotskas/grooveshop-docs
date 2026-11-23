@@ -150,6 +150,14 @@ for (const repoName of [...present, null]) {
  * whose children are its first list argument (or "items"). Only `_group(`,
  * the section marker, is named. A call with no title argument takes the first
  * `_("…")` in the body of the module function it calls (`_store_profile`).
+ *
+ * The carriers' screens are not in navigation.py: each carrier app declares
+ * them in its `carrier.py`, `admin_pages()` returning
+ * `AdminPages(shipments=(AdminPage("app.Model", _("Title"), …), …), …)`, and
+ * the sidebar places a slot with `carrier_pages("<slot>", …)`, spread into a
+ * list (`*carrier_pages(…)`) or as a sub-menu's children. That call is the
+ * other name the reading knows. Every carrier is listed, whether or not a
+ * given store uses it.
  * If the structure cannot be found, the check FAILS rather than passing
  * quietly with nothing to compare against.
  */
@@ -258,20 +266,26 @@ function dictEntries(body) {
   return entries
 }
 
-/** The entries of a `[…]` list source. */
-function listItems(src, defs) {
+/** `carrier_pages("<slot>", …)`, optionally spread with `*`: the slot name. */
+const CARRIER_SLOT = /^\*?\s*carrier_pages\s*\(\s*(?:"(\w+)"|'(\w+)')/
+
+/** The entries of a `[…]` list source; a spread carrier slot adds its pages. */
+function listItems(src, ctx) {
   const e = unwrap(src)
   if (!e.startsWith('[')) return []
-  return splitTop(e.slice(1, closing(e, 0))).map(item => entry(item, defs)).filter(Boolean)
+  return splitTop(e.slice(1, closing(e, 0))).flatMap((item) => {
+    const slot = CARRIER_SLOT.exec(item.trim())
+    return slot ? ctx.carriers.get(slot[1] ?? slot[2]) ?? [] : [entry(item, ctx)]
+  }).filter(Boolean)
 }
 
 /** A sidebar entry `{ title, children }` from a call or dict source, or null. */
-function entry(src, defs) {
+function entry(src, ctx) {
   const e = unwrap(src)
   if (e.startsWith('{')) {
     const fields = dictEntries(e.slice(1, closing(e, 0)))
     const t = TITLE.exec(fields.get('title') ?? '')
-    return { title: t ? (t[1] ?? t[2]) : null, children: listItems(fields.get('items') ?? '', defs) }
+    return { title: t ? (t[1] ?? t[2]) : null, children: listItems(fields.get('items') ?? '', ctx) }
   }
   const call = /^([A-Za-z_][\w.]*)\s*\(/.exec(e)
   if (!call) return null
@@ -282,9 +296,10 @@ function entry(src, defs) {
     if (/^\*\*|^[A-Za-z_]\w*\s*=[^=]/.test(arg)) continue // **extra, keyword=…
     const t = TITLE.exec(arg)
     if (t && title === null) title = t[1] ?? t[2]
-    else if (arg.startsWith('[') && !children.length) children = listItems(arg, defs)
+    else if (arg.startsWith('[') && !children.length) children = listItems(arg, ctx)
+    else if (!children.length && CARRIER_SLOT.test(arg)) children = listItems(`[${arg}]`, ctx)
   }
-  return { title: title ?? defs.get(call[1]) ?? null, children }
+  return { title: title ?? ctx.titles.get(call[1]) ?? null, children }
 }
 
 /** First `_("…")` in the body of each module-level function. */
@@ -299,18 +314,44 @@ function functionTitles(src) {
   return defs
 }
 
+/**
+ * Each carrier's screens per sidebar slot, from the `AdminPages(…)` its
+ * `src/<app>/carrier.py` returns: slot name → entries.
+ */
+function carrierPages(djangoSrc) {
+  const slots = new Map()
+  const none = { titles: new Map(), carriers: new Map() }
+  for (const app of readdirSync(djangoSrc).sort()) {
+    const file = join(djangoSrc, app, 'carrier.py')
+    if (!existsSync(file)) continue
+    const src = stripComments(readFileSync(file, 'utf8'))
+    for (const m of src.matchAll(/\bAdminPages\s*\(/g)) {
+      const open = m.index + m[0].length - 1
+      const close = closing(src, open)
+      if (close === -1) continue
+      for (const arg of splitTop(src.slice(open + 1, close))) {
+        const kw = /^([A-Za-z_]\w*)\s*=(?!=)/.exec(arg)
+        if (!kw) continue
+        const pages = splitTop(unwrap(arg.slice(kw[0].length))).map(p => entry(p, none)).filter(p => p?.title)
+        slots.set(kw[1], [...(slots.get(kw[1]) ?? []), ...pages])
+      }
+    }
+  }
+  return slots
+}
+
 /** The store sidebar's sections, from `store_sidebar` in navigation.py. */
-function storeSections(src) {
+function storeSections(src, carriers) {
   const start = src.search(/^def\s+store_sidebar\s*\(/m)
   if (start === -1) return []
   const next = src.slice(start + 1).search(/^(?:def|class)\s/m)
   const body = src.slice(start, next === -1 ? src.length : start + 1 + next)
-  const defs = functionTitles(src)
+  const ctx = { titles: functionTitles(src), carriers }
   const sections = []
   for (const m of body.matchAll(/\b_group\s*\(/g)) {
     const open = m.index + m[0].length - 1
     const close = closing(body, open)
-    if (close !== -1) sections.push(entry(body.slice(m.index, close + 1), defs))
+    if (close !== -1) sections.push(entry(body.slice(m.index, close + 1), ctx))
   }
   return sections.filter(Boolean)
 }
@@ -319,7 +360,7 @@ function storeSections(src) {
  * The platform sidebar's sections, from `platform_sidebar` in navigation.py:
  * the list its own `return [` hands back, dicts with "title" and "items".
  */
-function platformSections(src) {
+function platformSections(src, carriers) {
   const start = src.search(/^def\s+platform_sidebar\s*\(/m)
   if (start === -1) return []
   const body = src.slice(start)
@@ -328,7 +369,7 @@ function platformSections(src) {
   const open = ret.index + ret[0].length - 1
   const close = closing(body, open)
   if (close === -1) return []
-  return listItems(body.slice(open, close + 1), functionTitles(src))
+  return listItems(body.slice(open, close + 1), { titles: functionTitles(src), carriers })
 }
 
 /** Greek `msgstr` per English `msgid`, so the el pages are checked too. */
@@ -362,9 +403,13 @@ function adminSidebar() {
   }
   if (unreadable.length) return { paths: new Set(), sections: new Set(), labels: new Set(), unreadable }
   const navigationSource = stripComments(readFileSync(navigation, 'utf8'))
-  const store = storeSections(navigationSource)
+  const carriers = carrierPages(join(django, 'src'))
+  if (/\bcarrier_pages\s*\(/.test(navigationSource) && ![...carriers.values()].some(pages => pages.length)) {
+    unreadable.push('the carriers\' admin pages (AdminPages in src/<app>/carrier.py)')
+  }
+  const store = storeSections(navigationSource, carriers)
   if (!store.some(s => s.title && s.children.length)) unreadable.push('the store sidebar in src/admin/navigation.py (store_sidebar)')
-  const platform = platformSections(navigationSource)
+  const platform = platformSections(navigationSource, carriers)
   if (!platform.some(s => s.title && s.children.length)) unreadable.push('the platform sidebar in src/admin/navigation.py (platform_sidebar)')
 
   const greek = greekLabels(poPath)
