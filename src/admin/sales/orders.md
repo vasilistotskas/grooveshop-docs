@@ -192,7 +192,7 @@ The flag disappears by itself once the order is delivered, completed, returned, 
 
 A customer who placed a card order and left the payment page, or whose card was declined, does not have to order again. While the order is **Pending** and its payment window is open:
 
-- On their account's order page, and on the order page the payment-failed email links to, they see **Payment pending** with the amount due, the time until which they can pay, and a **Pay now** button. It opens a new payment page for the same order.
+- On their account's order page, and on the order page they landed on after checkout, they see **Payment pending** with the amount due, the time until which they can pay, and a **Pay now** button. It opens a new payment page for the same order.
 - On their cart and checkout, in the browser they ordered from, they see **Order #N is waiting for your payment** with **Pay now** and **View order**, so they do not order the same items again.
 
 The button is not shown while Viva Wallet or Stripe is still working on a charge (**Processing**), or when the provider took an amount that did not match the total, so nobody is charged twice. Once the order is paid, or the time has run out, it gives way to a message: **This order can no longer be paid** or **The time to pay has run out**, and the order is cancelled automatically (see [What happens automatically](#what-happens-automatically)).
@@ -200,7 +200,7 @@ The button is not shown while Viva Wallet or Stripe is still working on a charge
 What to tell a customer who says they could not pay:
 
 1. Open the order and check **Payment** and **Status**. **Pending** with payment **Pending** or **Failed** can still be paid; **Processing** means wait; **Completed** means it was paid.
-2. If it can be paid, ask them to open the order from their account (or from the payment-failed email) and press **Pay now**, before the time shown there.
+2. If it can be paid, ask them to open the order from their account, or to return to their cart in the browser they ordered from, and press **Pay now** before the time shown there.
 3. If the time has run out, the order is cancelled and its stock freed. They place a new order from their cart. The time to pay can be extended only by a new payment link, and never beyond the limit in [What happens automatically](#what-happens-automatically).
 4. If they say they were charged once but the order still shows unpaid, do not ask them to pay again until you know why:
    - Read the order's history. A note such as "Viva Wallet payment … collected 40.00 but the order is for 45.00. It was not marked paid: reconcile it with the customer." means the provider took an amount that did not match the total. The platform does not mark the order paid and never cancels it automatically, your team gets an email, and **Pay now** is not offered. See [A payment that does not match its order](#a-payment-that-does-not-match-its-order).
@@ -224,7 +224,8 @@ A customer can cancel an order from their account while it is **Pending** or **P
 - **A limit on unpaid card orders.** Checkout refuses a new card order from a customer who already has `ORDER_MAX_UNPAID_ONLINE_ORDERS` card orders waiting for payment (5 by default), with a message saying why. An order whose card payment failed counts too, until it is paid or cancelled automatically. The customer pays for or cancels one first. The check is made when the order is placed, so a card payment taken before the order exists (as some Stripe checkouts do) is not checked, and checkouts at the very same moment can each get through and go over the limit. Raise it if genuine customers hit the limit; `0` switches it off.
 - **Courier voucher.** Created right after checkout for cash on delivery, and after the payment for card orders. The order then moves to **Processing**.
 - **With ACS, cash on delivery stays payment-Pending until ACS pays you.** ACS pays out days later. A nightly check matches the payout to the order and marks it **Completed**, without emailing the customer. With BoxNow, the payment is marked **Completed** as soon as the parcel is delivered.
-- **Emails to the customer**: order received, payment failed, shipped, out for delivery (ACS) or at the locker (BoxNow), delivered, cancelled, returned, one per refund, and the receipt when the platform issues it. A **Completed** set automatically sends nothing: the customer has just had the "delivered" email.
+- **A card order is announced only once it is paid.** The customer's "order received" or "payment confirmed" email, your team's new-order email and the customer's notification go out when the payment goes through; a cash-on-delivery, BoxNow pay-on-the-go or bank-transfer order is announced as soon as it is placed. A failed card payment sends nothing, and a card order nobody pays is cancelled without telling the customer, who never heard of it.
+- **Emails to the customer**: order received or payment confirmed, shipped, out for delivery (ACS) or at the locker (BoxNow), delivered, cancelled, returned, one per refund, and the receipt when the platform issues it. A **Completed** set automatically sends nothing: the customer has just had the "delivered" email.
 
 ## Things to know
 

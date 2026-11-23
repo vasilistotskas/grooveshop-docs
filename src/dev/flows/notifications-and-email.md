@@ -14,12 +14,8 @@ address a toast to, so they get the email only.
 
 Both channels are asynchronous. Nothing in a request path sends mail or
 pushes a socket message directly; every dispatch is a Celery task, and
-every one of them lands after the creating transaction commits. Most
-reach that through `tenant.celery.dispatch_on_commit`. The two
-order-created emails are the exception in mechanism only: they call
-`.delay()` directly, but `handle_order_post_save` has already deferred the
-`order_created` signal itself to `transaction.on_commit`, so they still
-enqueue post-commit.
+every one of them lands after the creating transaction commits, through
+`tenant.celery.dispatch_on_commit`.
 
 ## Diagram
 
@@ -532,8 +528,7 @@ Both channels dedupe, by different mechanisms, and are suppressed
 together.
 
 - **Per-event reservation flags** on `order.metadata` guard each email
-  task: `confirmation_email_sent_at`, `payment_failed_email_sent`,
-  `invoice_email_sent`, `shipping_notification_email_sent`, and
+  task: `confirmation_email_sent_at`, `invoice_email_sent`, `shipping_notification_email_sent`, and
   `status_update_email_sent_<STATUS>` per transition. Tasks reserve
   before sending and release on permanent failure so an operator can
   retry.
@@ -574,15 +569,31 @@ together.
 
 ### Which events emit what
 
+An order is announced once, when it is confirmed
+(`src/order/lifecycle/service.py: OrderLifecycleService.confirm`, which
+claims `Order.confirmed_at` with one `UPDATE ... WHERE confirmed_at IS
+NULL` and sends `order_confirmed`; the receiver is
+`src/order/signals/handlers.py: handle_order_confirmed`). The claim takes
+only an order that is due and not canceled: nothing is left to pay online,
+or the online payment is COMPLETED
+(`src/order/lifecycle/confirmation.py: due_for_confirmation`). An order
+with nothing left to pay online (cash or card on delivery, BOX NOW pay on
+the go, bank transfer, an online payment already taken) is confirmed at
+creation; a card order by whichever path sees its payment settled first
+(Stripe `payment_intent.succeeded` or a poll, `checkout.session.completed`,
+the Viva 1796, its return page, the sweep's read-back, a payment taken at
+once). The claim and the signal run in one atomic block, so a failed
+announcement rolls the claim back; the order then heals itself, because
+every sight of a settled payment calls `confirm`, also one that applies
+nothing (a repeated or stale event, a session settled again, a Viva 1796
+already applied, a poll that finds the payment completed). A card order
+nobody paid is never announced, and its cancel is silent to the customer.
+
 | Event | Email | Live notification |
 |---|---|---|
-| Order created, offline or already paid | `send_order_confirmation_email` (`order_received`) | `notify_order_created_live` |
-| Order created, online and unpaid | none, deferred to payment | `notify_order_created_live` |
-| Order created, any | `send_admin_new_order_email` to the merchant | — |
-| Payment succeeded (Stripe `payment_intent.succeeded`) | `send_order_confirmation_email` (`order_payment_confirmed`) | `notify_payment_confirmed_live` |
-| Payment succeeded (Stripe `checkout.session.completed`) | `send_order_confirmation_email` | none — this handler dispatches no toast |
-| Payment succeeded (Viva) | `send_order_confirmation_email` | none — the toast is Stripe-specific |
-| Payment failed | `send_payment_failed_email` | `notify_payment_failed_live` |
+| Order confirmed (`order_confirmed`, once per order) | `send_order_confirmation_email` (`order_received` or `order_payment_confirmed`), and `send_admin_new_order_email` to the merchant | `notify_payment_confirmed_live` for an order paid online, `notify_order_created_live` otherwise |
+| Card order created, payment still due | none | none |
+| Card payment failed (Stripe `payment_intent.payment_failed`, Viva 1798) | none: the failure is recorded | none |
 | → PENDING, → PROCESSING | none | none |
 | → SHIPPED with tracking | `send_shipping_notification_email` | SHIPPED toast |
 | → DELIVERED | `send_order_status_update_email` | DELIVERED toast |
@@ -617,8 +628,8 @@ with arguments scrubbed by `_safe_repr`.
 
 Retry policy differs by intent, and no task retries every exception: each
 `autoretry_for` names a transient set from `src/core/retry.py` (see
-[Retry policy](/dev/django/celery#retry-policy)). The six
-**reservation-guarded** customer emails — confirmation, payment failed,
+[Retry policy](/dev/django/celery#retry-policy)). The five
+**reservation-guarded** customer emails — confirmation,
 refund confirmation, status update, shipping notification and invoice — use
 `max_retries=3, default_retry_delay=300` (the status update adds backoff and
 jitter), catch broadly and retry through `MonitoredTask.retry`, which stops
@@ -798,6 +809,9 @@ so a staging refresh cannot email real customers. See
 
 | File | Role |
 |---|---|
+| `grooveshop-django-api/src/order/lifecycle/service.py` | `OrderLifecycleService.confirm`: the once-per-order claim of `Order.confirmed_at`, never for a canceled order; `_cancel_order_locked` silences the cancel of an unconfirmed order |
+| `grooveshop-django-api/src/order/lifecycle/confirmation.py` | `due_for_confirmation`, `paid_online`, `backfill_confirmed_at` |
+| `grooveshop-django-api/src/order/signals/handlers.py` | `handle_order_created`, `handle_order_confirmed` (the emails and the one toast) |
 | `grooveshop-django-api/src/notification/models/notification.py` | `Notification` fields, expiry |
 | `grooveshop-django-api/src/notification/models/user.py` | `NotificationUser`, seen state |
 | `grooveshop-django-api/src/notification/enum.py` | Kind, category, priority, `NotificationTypeEnum` |
