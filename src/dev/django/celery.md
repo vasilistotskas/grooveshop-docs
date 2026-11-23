@@ -256,9 +256,9 @@ The retention periods behind the `purge-*` entries are listed in
 | `src/user/tasks.py` | the inactive-user mail (named `core.tasks.send_inactive_user_notifications`) |
 | `src/meili/tasks.py` | the daily index sync (named `core.tasks.sync_meilisearch_indexes`) |
 | `src/tenant/tasks.py` | every `fanout_*` wrapper, `process_tenant_billing`, `flush_tenant_media_task`, `purge_expired_tenant_archives` |
-| `src/order/tasks.py` | confirmation, status, shipping, payment-failed, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment |
+| `src/order/tasks.py` | confirmation, staff new-order, status, shipping, refund and invoice emails (each guarded so a duplicate signal cannot send twice: a flag on the order's metadata, plus a short Redis lock for the confirmation email, and for the refund email a `RefundNotification` row per refund), invoice PDF, myDATA submit and cancel, `check_pending_orders`, `auto_cancel_stuck_pending_orders`, `reconcile_pending_refunds`, `allocate_credit_sources`, checkout abandonment |
 | `src/agent/tasks.py` | the agent gateway's order events: `deliver_agent_order_event` (an event's first attempt), `deliver_due_agent_order_events` (the sweep), `purge_expired_agent_order_events` |
-| `src/order/communications/notifications.py` | the `notify_*_live` tasks that push order-created, status-changed, payment-confirmed, payment-failed and refunded events over the WebSocket |
+| `src/order/communications/notifications.py` | the `notify_*_live` tasks that push order-placed, status-changed, payment-confirmed and refunded events over the WebSocket |
 | `src/shipping_acs/tasks.py` | voucher creation, station sync, tracking polls, pickup list (and the order notes for a refused one), COD reconciliation and alerts, arrival notification |
 | `src/shipping_boxnow/tasks.py` | shipment creation, locker sync, webhook processing, tracking polls, the uncertain-creation sweep, arrival notification |
 | `src/product/tasks.py` | back-in-stock, price-drop and low-stock alerts |

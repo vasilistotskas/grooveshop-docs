@@ -33,7 +33,7 @@ Only to customers with an account. Guests get email only.
 |---|---|
 | The customer places an order paid on delivery or by bank transfer | We received your order. |
 | The customer's card payment goes through (Viva Wallet or Stripe) | Payment confirmed. A card order sends nothing before that, and nothing when a payment fails. |
-| The order becomes **Shipped**, **Delivered** or **Canceled**, or you set it to **Completed** yourself | The new status. |
+| The order becomes **Shipped**, **Delivered** or **Canceled**, or you set it to **Completed** yourself | The new status. Not sent when a card order nobody paid is cancelled: the customer was never told about that order. |
 | Money is refunded, in full or in part | The refund. |
 | The ACS parcel goes out for delivery | The parcel arrives today. |
 | The BoxNow parcel reaches the locker or is collected | The parcel is at the locker / delivered. |
