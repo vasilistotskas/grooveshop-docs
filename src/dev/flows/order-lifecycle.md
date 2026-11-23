@@ -986,11 +986,29 @@ whose `pay_way` is null; they legitimately sit PENDING until the carrier
 remits. The failed-payment bucket carries no such filter, but an offline
 order has nothing that can report a FAILED payment, so it does not select
 one in practice. Orders carrying `AMOUNT_MISMATCH_FLAG` that are still undecided
-(`payment_review_orders`: PENDING, payment not COMPLETED, REFUNDED,
-PARTIALLY_REFUNDED or CANCELED) are excluded from both buckets and listed
-in a warning — a charged customer must not be auto-cancelled without a
-refund. The flag is never cleared, so a flagged order the store has since
-marked paid, canceled or refunded is no longer excluded or listed. The sweep
+(`payment_review_orders`: PENDING, and the charge not accepted, payment not
+COMPLETED, a refund in full or in part included) are excluded from both
+buckets and listed in a warning — a charged customer must not be
+auto-cancelled without a refund. The same set is the store's worklist: the
+admin's `payment_review=yes` filter (`src/order/admin.py:
+PaymentReviewFilter`) and the dashboard's `payments_to_review` count
+(`src/admin/dashboard/store/queries.py: attention_counts`). The flag is
+never cleared, so a flagged order the store has since accepted, fulfilled
+or canceled is no longer excluded or listed.
+
+Before either bucket cancels an order, the provider is read for a payment
+whose webhook never landed (`src/order/payments/settlement.py:
+settle_landed_payment`). Viva lists the payment order's transactions
+(`VivaWalletPaymentProvider.landed_charges`): a finished one is applied as
+its 1796 (`viva_settlement.apply_event`), and one refunded or disputed since
+(`StatusId` `R` or `M…`) flags the order once for the store's review
+(`viva_settlement._flag_for_review`), never a cancel. Stripe reads the
+PaymentIntent, then the recorded Checkout Session
+(`src/order/payments/stripe_settlement.py: settle_landed_payment`). A paid
+order is settled through its webhook's code and counted `settled`; a
+provider that cannot be read keeps the order for the next run. The cancel
+then happens only while the order still records the payment that was read
+(`OpenPayment`, compared under the row lock). The sweep
 selects through `payment_hold.swept_orders`, the definition
 `paymentDecidedBy` on the order detail is computed from, so the two cannot
 drift. `paymentDecidedBy` is null when nothing will decide the order: it is
@@ -1287,6 +1305,11 @@ flight. See [Checkout & payment](/dev/flows/checkout-and-payment).
 | `grooveshop-django-api/src/order/models/history.py` | `OrderHistory.log_status_change`, `log_payment_update`, `log_refund`, `log_note` |
 | `grooveshop-django-api/src/order/communications/notifications.py` | `_ORDER_STATUS_COPY` and the live-notification tasks |
 | `grooveshop-django-api/src/order/payments/payment_events.py` | Redis pub/sub payment-status publish |
+| `grooveshop-django-api/src/order/payments/settlement.py` | `settle_landed_payment`: the sweep's read-back, per provider |
+| `grooveshop-django-api/src/order/payments/viva_settlement.py` | `settle_landed_payment` (Viva), `_flag_for_review`, `apply_event` and its `EventRead`, `handle_payment_created` |
+| `grooveshop-django-api/src/order/payments/stripe_settlement.py` | `settle_landed_payment` (Stripe: the PaymentIntent, then the recorded Checkout Session), `_what_settled` |
+| `grooveshop-django-api/src/admin/dashboard/store/queries.py` | `attention_counts`: the `payments_to_review` count |
+| `grooveshop-django-api/src/order/admin.py` | `PaymentReviewFilter` (`payment_review=yes`) |
 | `grooveshop-django-api/src/order/payments/payment_hold.py` | The hold and sweep definitions: `expired_unpaid_online_orders`, `payment_review_orders`, `awaits_payment_review`, `swept_orders`, `decided_by` |
 | `grooveshop-django-api/src/loyalty/signals.py` | Earn on COMPLETED; reverse on CANCELED, on REFUNDED reached through `order_refunded` or `order_stored_value_returned`, on the REFUNDED status, and on `order_charged_back` once everything received is returned |
 | `grooveshop-django-api/src/settings/store_settings.py` | `EXTRA_SETTINGS_DEFAULTS`: the merchant-editable order windows and thresholds |

@@ -522,9 +522,9 @@ the order and refuses to mark it paid. From then on the order detail serves
 `paymentAwaitsReview: true` (`src/order/payments/payment_hold.py:
 awaits_payment_review`, `src/order/serializers/order.py:
 OrderDetailSerializer.payment_awaits_review`) while the order is still
-undecided, that is PENDING with a payment that is not final (COMPLETED,
-REFUNDED, PARTIALLY_REFUNDED and CANCELED are final). The flag is never
-cleared: an order the store marks paid, cancels or refunds leaves the set
+undecided, that is PENDING with the charge not accepted (payment not
+COMPLETED, a refund in full or in part included). The flag is never
+cleared: an order the store accepts, fulfils or cancels leaves the set
 through its own state. A charge that passes every check
 is recorded on the payment ledger as a CHARGE row keyed on the
 transaction id, before the canceled-order and settled guards, so a second
@@ -536,9 +536,22 @@ Event 1798 marks the payment failed. Event 1797 books a refund: its
 `TransactionId` is the refund itself, verified through Retrieve
 Transaction (`_verify_viva_reversal`: one of the order's codes, status `F`,
 a refund or void type, a negative amount), and it is recorded as a REFUND
-row against the order's CHARGE row that its `ParentId` names. The payment
-status, PARTIALLY_REFUNDED or REFUNDED, follows from the ledger's sums
-(`src/order/payments/payment_ledger.py: PaymentLedger.refund_status`). The handler
+row against the order's CHARGE row that its `ParentId` names. A parent the
+ledger does not hold yet (its 1796 is late or lost) is booked first when
+Viva places it, captured, on one of the order's codes
+(`_viva_charge_for`). The payment status, PARTIALLY_REFUNDED or REFUNDED,
+follows from the ledger's sums (`src/order/payments/payment_ledger.py:
+PaymentLedger.refund_status`). A refund that leaves a never-confirmed
+PENDING order holding none of the customer's money (`PaymentLedger.held`)
+cancels it; one that leaves part held flags the order
+(`OrderService.flag_payment_mismatch`). An order already waiting for review
+is left to the store. A reversal whose parent cannot be read or is not the
+order's is answered 200 and recorded nowhere, so Viva's own event still
+applies. The
+`ParentId` is read from Viva only once the refund is on one of the order's
+codes. Every
+Retrieve Transaction an event needs is made before the order row is locked
+(`viva_settlement.apply_event` with the event's `EventRead`). The handler
 records its real outcome on `VivaWebhookEvent.outcome`, so a refused event
 reads `skipped`, not `processed`. Refunds and the ledger are covered in
 [Order lifecycle](/dev/flows/order-lifecycle).
@@ -956,6 +969,8 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-storefront-ui-node-nuxt/app/components/Order/PayNow.vue`, `app/components/Order/AwaitingPaymentReminder.vue` | **Pay now** and the cart's and checkout's reminder |
 | `grooveshop-storefront-ui-node-nuxt/app/utils/orderPayment.ts`, `app/composables/useOrderCheckoutSession.ts`, `app/composables/useAwaitingPaymentOrder.ts` | When a link is offered, the refusal codes that end the offer, the new link, the remembered order |
 | `grooveshop-django-api/src/order/payments/payment_hold.py` | `payment_review_orders`, `awaits_payment_review`, `swept_orders`, `decided_by` |
+| `grooveshop-django-api/src/order/payments/viva_settlement.py` | `apply_event` and its `EventRead` (Viva read before the order lock), `handle_payment_created`, `ledger_charge` |
+| `grooveshop-django-api/src/order/payments/stripe_settlement.py` | `settle_paid_checkout_session`, `settle_landed_payment` |
 | `grooveshop-django-api/src/product/services.py` | `ProductService.set_discount` and `clear_discount`: the bulk discount, saved in pk order under row locks |
 | `grooveshop-django-api/src/core/validators/address.py` | `address_errors`, `ADDRESS_FIELDS`, the region-in-country check |
 | `grooveshop-django-api/src/shipping/services.py` | `quote`, `assert_available`, `available_options` |
@@ -964,7 +979,7 @@ is section 3.4 of [Order system: what an order records when it is created](/dev/
 | `grooveshop-django-api/src/country/phone.py` | Phone metadata from `phonenumbers` |
 | `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/src/cart/serializers/cart.py` | Required `country_id`, `free_threshold_value`, `CartQuoteRequestSerializer` |
-| `grooveshop-django-api/src/order/payments/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider`, `_PROVIDERS` registry, `money_from_minor_units` |
+| `grooveshop-django-api/src/order/payments/payment.py` | `PaymentProvider` capabilities, `StripePaymentProvider`, `VivaWalletPaymentProvider` (`landed_charges`), `_PROVIDERS` registry, `money_from_minor_units`, `provider_amount` |
 | `grooveshop-django-api/src/order/views/viva_webhook.py` | Verification handshake, tenant candidate resolution, event handlers 1796/1797/1798 and the dispute event 2054 (`_handle_account_transaction_event`), `_verify_viva_reversal` |
 | `grooveshop-django-api/src/order/models/viva_webhook_event.py` | Viva idempotency table |
 | `grooveshop-django-api/src/order/signals/handlers.py` | Every dj-stripe receiver and the order signal chain |
