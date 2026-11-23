@@ -491,6 +491,16 @@ answered `201` with its order; the rules are the Django
 repo's `docs/order/creation.md` §3.2. The response carries `agentCheckout`,
 and the order-event body carries it as `agentCheckoutId` (see Order events).
 
+An open checkout renders from one Django quote (`checkout.ComputePricing`,
+`grooveshop-agent-gateway/internal/checkout/pricing.go`): `POST /cart/quote`
+with the choices the order will be placed with returns the lines it priced
+(`django.Quote.Lines`), every amount, the cart digest and each attached coupon's
+verdict (`Quote.AppliedCoupons`). No cart is read beside it, so the lines, the
+total and the digest a render shows are one snapshot of the cart (gateway
+#205), and a render makes one Django call fewer. The session lock is sized for
+that: `admitPricingSteps` in `internal/checkout/store.go` counts the quote and
+the pay way, no cart read.
+
 A checkout with an order renders from that order, not from the cart.
 `checkout.ComputePricing` reads the order once the session has one, because
 Django deletes the cart with the order (on payment, for an online method) and a
@@ -1620,7 +1630,7 @@ yourself, then bumping the pin in the infrastructure repo.
 | `grooveshop-agent-gateway/internal/httpsig/httpsig.go` | RFC 9421 request signing and RFC 9530 `Content-Digest` |
 | `grooveshop-agent-gateway/internal/acp/handler.go`, `grooveshop-agent-gateway/internal/acp/types.go` | ACP routes, bearer auth, `API-Version`, errors, idempotency, `acp.Version` |
 | `grooveshop-agent-gateway/internal/checkout/region.go` | `ResolveRegion`, shared by UCP and ACP |
-| `grooveshop-agent-gateway/internal/checkout/pricing.go` | `ComputePricing`, from the cart or, once placed, the order |
+| `grooveshop-agent-gateway/internal/checkout/pricing.go` | `ComputePricing`, from one quote (its lines, amounts, digest and coupon verdicts) or, once placed, the order |
 | `grooveshop-agent-gateway/internal/mcpsrv/account_challenge.go` | `RequireLinkedAccount`, the challenge on an anonymous account tool |
 | `grooveshop-agent-gateway/internal/acp/render.go` | Session rendering, `capabilitiesOf` |
 | `grooveshop-agent-gateway/internal/feeds/rss.go` | `g:id`, charged and prior prices, skip rules, field limits |

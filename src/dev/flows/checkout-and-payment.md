@@ -340,8 +340,12 @@ provider-reported payment status.
 
 `OrderQuoteService.quote` (`src/order/checkout/quote.py`) is the one
 computation of what checkout charges: a rule added there reaches every
-caller. It returns a frozen `CheckoutQuote`: the products, the promotions,
-the parcel (free gifts included), the delivery (`ShippingCharge`: price and
+caller. It returns a frozen `CheckoutQuote`: the cart's lines as priced
+(`lines`, `QuoteLine`: read once by `OrderQuoteService.priced_lines`, the read
+the subtotal, the parcel and the cart digest all come from), the products, the
+promotions with each attached coupon's verdict (`coupons`,
+`CartDiscountResult.coupon_verdicts` in `src/promotion/engine/results.py`, the
+computation the cart's `appliedCoupons` uses too), the parcel (free gifts included), the delivery (`ShippingCharge`: price and
 `waived_by`), the pay-way fee (amount and `waived`), the loyalty discount,
 the gift-card plan, `grand_total` (the goods after promotions plus shipping
 and the fee) and `amount_due` (what is left after loyalty and gift cards,
@@ -393,14 +397,21 @@ and what the order stores).
   optional (`CartQuoteRequestSerializer`). A delivery is priced once
   `shippingKind` and `countryId` are both given (order creation prices a
   missing kind as a home delivery; a quote does not assume one). It returns
-  the rows (`itemsSubtotal`, `discountTotal`, `appliedPromotions`,
-  `blockingCoupon`, `freeThresholdValue`, `shipping`, `paymentMethodFee`,
+  the lines it priced (`lines`, `QuoteLineSerializer` in
+  `src/order/serializers/quote.py`: the cart item `id`, `productId`,
+  `productName` in the request's language, `mainImagePath`, `quantity`,
+  `unitPrice`, `totalPrice` before promotions and `promotionDiscount`, which add
+  up to `itemsSubtotal` and `discountTotal`), each attached coupon's verdict
+  (`appliedCoupons`, in the cart's shape: `code`, `amount`, `freeShipping`,
+  `gift`, `rejection`), the rows (`itemsSubtotal`, `discountTotal`,
+  `appliedPromotions`, `blockingCoupon`, `freeThresholdValue`, `shipping`, `paymentMethodFee`,
   `loyaltyDiscount`, `giftCardAmount`, `grandTotal`, `amountDue`,
   `currency`), `expectedTotal` (`{amount, currency}` in minor units, to send
   back with the order) and the priced lists `shippingOptions` (each priced
   as an order would be, with `waivedBy`; null without a country) and `payWays`
   (each with its fee and `waived`). A row that depends on a choice the request
-  did not make is null.
+  did not make is null. A client renders a checkout from this one answer: the
+  agent gateway reads no cart beside it.
   - The cart is found as order creation finds it (`get_existing_cart`): 404
     `cart_not_found`, never a new cart; an empty one is 400 `cart_empty`.
   - Refusals are `{detail, reason, code}`. A delivery that cannot be priced
@@ -423,7 +434,7 @@ and what the order stores).
     goods' rates and spreads the loyalty discount over the lines, while the
     cart's `totalVatValue` is the goods only.
 - **The cart digest** (Django #765, refined by #770; it is not part of the pickup change). A quote with a delivery chosen also returns
-  `cartDigest`, an HMAC over what the order would be made of (each line, the
+  `cartDigest`, an HMAC over what the order would be made of (each of the quote's `lines`, the
   promotions with their codes and amounts, the delivery with its pickup point; not the pay way, so a changed pay way does not change it, and not the shipping charge, fee, loyalty or gift-card amounts, which `expectedTotal` holds);
   `POST /api/v1/order` takes an optional `expectedCartDigest` and, on a
   difference, creates nothing and answers 409 `cart_changed` with the fresh
