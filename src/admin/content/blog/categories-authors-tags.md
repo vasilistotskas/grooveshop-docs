@@ -25,7 +25,8 @@ Blog categories are separate from product categories, and blog tags are separate
 1. Open <span class="sidebar-path">Content → Blog → Blog Categories</span> and click **Add**.
 2. Write the **Name** and, if you like, a **Description** in every language. For a subcategory, pick a **Parent**.
 3. Upload an **Image** if it should show in the blog's category list. In store designs whose header and phone menus show category pictures, a photo is cropped to a square and an SVG is drawn as an icon: whole, never cropped or stretched, on the theme's **Secondary colour** (see [Change the colours, corners and fonts](/admin/content/page-builder#change-the-colours-corners-and-fonts)). Use a single-colour glyph that stands out from that colour in both the light and the dark scheme.
-4. Save. To change the order, drag the rows in the list.
+4. Pick an **Icon** if the category should show one. The list holds the icons the page builder offers, each by its name. Where a category has an icon, the store shows it instead of the image in the blog's category rail, on the blog's category list pages, in the **Blog categories** tiles of a page and, in store designs whose header menu shows category pictures, in that menu. Every design draws it in its own colours. A category without an icon shows its image. If the storefront can't be reached for a moment, the **Icon** list is greyed out; the rest of the category still saves.
+5. Save. To change the order, drag the rows in the list.
 
 ### Add an author
 1. The author needs a user account. If they have none, create it first; see [Customers & addresses](/admin/customers/users-and-addresses).
