@@ -133,7 +133,12 @@ it, for platform superusers, only when `ADMIN_FLOWER_URL` is set.
 ## Tenant fan-out
 
 Beat fires in `public`. A task that reads store tables is registered under
-a `fanout_*` wrapper in `src/tenant/tasks.py`:
+a `fanout_*` wrapper in `src/tenant/tasks.py`, or, for a carrier's task, in
+the carrier app's own `tasks.py` (`src/shipping_acs/tasks.py`,
+`src/shipping_boxnow/tasks.py`) under the name
+`tenant.tasks.fanout_<name>` (`@shared_task(base=TenantTask,
+name="tenant.tasks.fanout_<name>")`), so `src/tenant/tasks.py` names no
+carrier:
 
 ```python
 @celery_app.task(base=TenantTask)
@@ -163,8 +168,9 @@ From `src/settings/schedule.py: get_celery_beat_schedule()`, one row per entry i
 order the settings declare them. Times are Athens local. A cadence marked
 † falls back to hourly when `DEBUG` is on; the others run on the same
 schedule everywhere. **Runs in** says where the work happens: `public` (beat
-calls the task directly), every store (a `fanout_*` wrapper in
-`src/tenant/tasks.py` re-dispatches the task named in the notes into each active,
+calls the task directly), every store (a `tenant.tasks.fanout_*` wrapper,
+in `src/tenant/tasks.py` or a carrier's `tasks.py`, re-dispatches the task
+named in the notes into each active,
 non-suspended store), or every store including suspended ones
 (`include_suspended=True`).
 
@@ -350,9 +356,11 @@ callbacks immediately. A test therefore sees the full signal cascade of an
    keyword arguments only, JSON-serialisable, and safe to run twice for
    one dispatch ([Copies of one dispatch](#copies-of-one-dispatch)).
 2. If it reads store tables and should run on a schedule, add a
-   `fanout_<name>` wrapper in `src/tenant/tasks.py` that calls
+   `fanout_<name>` wrapper that calls
    `run_for_all_tenants("<app>.tasks.<name>")`, and schedule the wrapper in
-   `get_celery_beat_schedule()`, not the task.
+   `get_celery_beat_schedule()`, not the task. The wrapper goes in
+   `src/tenant/tasks.py`, except a carrier's, which goes in the carrier
+   app's own `tasks.py` with `name="tenant.tasks.fanout_<name>"`.
 3. If a request triggers it, dispatch with `dispatch_on_commit()` from a
    signal handler or service, never inline.
 4. Write the unit test against the task function; eager mode means no

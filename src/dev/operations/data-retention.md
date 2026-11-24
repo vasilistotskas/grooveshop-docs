@@ -13,7 +13,8 @@ ORM so cascades and file-removal signals still run. The code wins over this
 page.
 
 Source: `src/core/retention.py`, `src/core/tasks.py`, `src/core/history.py`,
-`src/tenant/tasks.py` (the `fanout_purge_*` wrappers), `src/settings/schedule.py`
+`src/tenant/tasks.py` (the `fanout_purge_*` wrappers; a carrier's are in its
+own `tasks.py`), `src/settings/schedule.py`
 (`CELERY_BEAT_SCHEDULE`), `src/settings/domain.py` and `src/settings/integrations.py` (the retention constants), `src/settings/store_settings.py` (`EXTRA_SETTINGS_DEFAULTS`),
 `src/shipping_acs/tasks.py`, `src/shipping_acs/models/voucher_hold.py`,
 `src/shipping_acs/voucher_hold.py`, `src/shipping_boxnow/tasks.py`,
@@ -107,7 +108,8 @@ are the record of each outage.
 
 1. A task in the owning app, a batched delete through `delete_in_batches`,
    `MonitoredTask` or `TenantTask` as its neighbours.
-2. A `fanout_purge_*` wrapper in `src/tenant/tasks.py` with
+2. A `fanout_purge_*` wrapper in `src/tenant/tasks.py` (a carrier's in its
+   own `tasks.py`, named `tenant.tasks.fanout_purge_<name>`) with
    `include_suspended=True` when the table is per store; a public-schema table
    gets its own beat entry and an entry in
    `PUBLIC_SCHEMA_TASKS` (`tests/unit/tenant/test_celery_fanout.py`).
