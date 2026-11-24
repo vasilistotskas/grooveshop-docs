@@ -68,7 +68,7 @@ The same tab is on the payment method's own page, see [Payment methods](/admin/s
 ## Things to know
 
 - **No rate, no option.** A courier appears for a destination only when the [shipping zone](/admin/settings/shipping-zones) of that destination has an active rate line for it and that kind. There is no general price for every country.
-- **The countries a customer can choose are the countries you have a rate for**, and the regions those where you deliver at home. That holds for checkout and for the addresses in the customer's account.
+- **The countries a customer can choose at checkout are the countries you have a rate for**, and the regions those where you deliver at home. The addresses in the customer's account offer only the countries and regions you deliver to at home: a country you serve only with lockers is not offered there.
 - **A region is required for Greece and Cyprus** (a prefecture in Greece, a district in Cyprus). It must belong to the country the customer chose. Other countries have no regions, so the field stays empty.
 - **Heavy carts.** When the cart is over **Max Weight (grams)**, the option is shown greyed out with the reason, so the customer understands why it cannot be chosen.
 - **What each courier can collect.** Cash to a courier is never offered on a BoxNow locker, because nobody meets the customer there. BoxNow's PAY ON THE GO is not offered with Standard delivery. Exclusions do not change these.

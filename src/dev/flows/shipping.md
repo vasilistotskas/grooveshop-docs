@@ -153,7 +153,7 @@ Resolution is one module, `src/shipping/zones.py`:
 |---|---|
 | `zone_for(country, region)` | The region zone holding the region, else the base zone; without a region, the base zone |
 | `destination_rates(country, region)` | The rates that apply: home delivery from `zone_for`, pickup point from the base zone (a pickup point has no `Region`, so it is judged by country) |
-| `HomeCoverage` | Where home delivery reaches, read in one pass: backs `?shippable=` on the region lists and `UserAddress.shippable` |
+| `HomeCoverage` | Where home delivery reaches, read in one pass, counting a rate only when its carrier passes the quote's gate (`carrier_offers`): backs `?shippable=` on the region lists, `?homeDelivery=` on the countries and `UserAddress.shippable` |
 | `destination_errors(...)` | `region_not_served` / `country_not_served` for a home address no home delivery reaches |
 | `zone_errors`, `rate_kind_errors` | The admin's rules: one base zone per country, regions of the zone's country, a region in one zone, pickup rates on base zones only |
 
@@ -175,6 +175,10 @@ API additions:
   `GET /region/<alpha2>/get_regions_by_country_alpha_2`
   (`src/region/filters.py`): the regions home delivery reaches; on the
   platform host `true` lists none;
+- `?homeDelivery=true` on `GET /country` (`src/country/filters.py`): the
+  countries a home delivery reaches (`HomeCoverage.reached`), the address
+  book's picker; `shippable` also counts pickup points, so a lockers-only
+  country is shippable but takes no saved address;
 - `UserAddress.shippable` (read-only, `src/user/serializers/address.py`). A
   write that moves an address where no home delivery reaches is a 400
   (`region_not_served` on `region`, `country_not_served` on `country`); an

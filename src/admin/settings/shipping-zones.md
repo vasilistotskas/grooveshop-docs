@@ -94,7 +94,7 @@ To stop shipping to a country, untick **Is Active** on the rate lines of its zon
 - **One whole-country zone per country, and a region in one zone only.** The form says so when you try a second one.
 - **A zone's regions belong to its country.** The form refuses a region of another country.
 - **No rate, no option.** A courier appears for a destination only when the zone of that destination has an active line for it and that kind.
-- **Customers see only the regions you deliver to at home**, at checkout and in the addresses of their account. A region a zone covers with no home-delivery rate is not offered.
+- **Customers see only the regions you deliver to at home**, at checkout and in the addresses of their account. A region a zone covers with no home-delivery rate is not offered. The addresses of their account also offer only the countries you deliver to at home: a country you serve only with lockers is offered at checkout, for a locker, but not for a saved address.
 - **A saved address you no longer deliver to** stays in the customer's account, marked "We no longer deliver to this address". At checkout it is listed but cannot be chosen. The customer can still rename it, or change it to a region you deliver to.
 - **Before the customer chooses a region**, checkout shows the whole-country zone's prices. Once they choose one, the prices are those of the region's zone.
 - **The product page and the cart's free-shipping line** are judged for the whole-country zone of the first country in the list, the one checkout picks first. A country you cover only with region zones shows nothing there until the customer gives an address.
