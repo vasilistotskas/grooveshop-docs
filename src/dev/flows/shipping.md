@@ -1371,7 +1371,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping/views.py` | `ProductShippingView` and the other public shipping reads |
 | `grooveshop-django-api/src/shipping/cache_surfaces.py` | The `shipping` surface, `PRODUCT_SHIPPING_VIEW`, `PRODUCT_SHIPPING_HANDLER` (also purged by the `products` and `promotions` surfaces) |
 | `grooveshop-django-api/src/promotion/engine/evaluation.py` | `PromotionEngine.evaluate_single_unit` |
-| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/product/[productId].get.ts` | The product's shipping price route, cached as `shipping.product` |
+| `grooveshop-storefront-ui-node-nuxt/server/api/shipping/product/[product_id].get.ts` | The product's shipping price route, cached as `shipping.product` |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useProductAssurances.ts` | The delivery row and its shipping line, for every design |
 | `grooveshop-django-api/src/shipping_acs/services.py` | Voucher mint, cancel and `can_cancel_voucher`, pickup list, polling, COD reconcile (`_mark_cod_order_paid_if_pending`, `record_cod_received_outside_acs`), status mapping, `fetch_label_bytes` / `fetch_labels_pdf` |
 | `grooveshop-django-api/src/shipping_acs/admin.py` | `bulk_print_labels`, `issue_pickup_list_now`, `retire_shipments`, `record_cod_received_outside_acs`, `adopt_voucher`, `request_voucher_again`, `close_voucher_request`, the `voucher_unknown` and `voucher_held` filter values, `AcsUnrecognisedVoucherAdmin` (`delete_at_acs`, `mark_checked`), `AcsVoucherHoldAdmin` (`allow_one_request`) and the `label_printed_at` empty filter |

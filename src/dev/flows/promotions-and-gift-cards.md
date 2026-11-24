@@ -311,7 +311,7 @@ every tenant an empty list).
 
 #### The product page panel
 
-`GET /api/v1/promotion/product/{productId}`
+`GET /api/v1/promotion/product/{product_id}`
 (`src/promotion/views.py: ProductPromotionListView` →
 `src/promotion/product_offers.py: ProductPromotionService`) answers the narrower
 question a shopper actually has: what is running **for this item**. Each row
@@ -926,7 +926,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/promotions-enabled.ts` | Two-tier route gate |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/gift-cards-enabled.ts` | Two-tier route gate |
 | `grooveshop-storefront-ui-node-nuxt/server/api/promotions/index.get.ts` | Cached offers proxy |
-| `grooveshop-storefront-ui-node-nuxt/server/api/promotions/product/[productId].get.ts` | Cached per-product offers proxy |
+| `grooveshop-storefront-ui-node-nuxt/server/api/promotions/product/[product_id].get.ts` | Cached per-product offers proxy |
 | `grooveshop-storefront-ui-node-nuxt/server/api/cart/coupons.get.ts` | Coupon picker proxy — deliberately uncached |
 | `grooveshop-storefront-ui-node-nuxt/server/api/giftcard/` | Check, purchase, status, mine |
 | `grooveshop-storefront-ui-node-nuxt/server/plugins/sitemap-tenant-gate.ts` | `/offers` sitemap gating |
