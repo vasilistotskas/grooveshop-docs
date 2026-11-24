@@ -180,7 +180,7 @@ Details, domain families and configuration conventions are in
   (`src/tenant/membership.py: tenant_plan_allows`), so the feature stays off.
 - A suspended store keeps being hit by a client with a warm config (the
   gateway, a mobile app): `SuspendedTenantMiddleware` answers 503, so no
-  order or payment intent is created.
+  order or payment link is created.
 - The billing task finds a store deep past due: it sends one email for the
   highest newly reached stage, never a catch-up burst.
 

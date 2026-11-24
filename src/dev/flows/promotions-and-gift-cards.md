@@ -31,7 +31,7 @@ flowchart TD
   Stack --> Clamp["clamp to items total"]
   Clamp --> Result["CartDiscountResult"]
 
-  Result --> Preview["cart read + payment intent"]
+  Result --> Preview["cart read + checkout quote"]
   Result --> Create["order create with lock"]
   Create --> Rec["record_redemptions: redemption rows"]
 
@@ -45,15 +45,16 @@ flowchart TD
 ### One engine, four callers, one answer
 
 `PromotionEngine.evaluate(cart)` is the only place a discount is computed.
-Four surfaces call it: the cart serializer (preview), the payment-intent
-amount, `CouponService.apply` when a code is attached, and
-`OrderService._evaluate_promotions` — which both order-create paths, the
-intent-first one and the offline one, go through. The verification guard and
-the recorded discount are not two calls: they are one locked evaluation
-inside `create_order_from_cart`, whose result feeds both the
-`PaymentAmountMismatchError` check and `record`. The
-module docstring states the contract — **all of them must agree to the cent**,
-and `PaymentAmountMismatchError` is the alarm that fires when they do not.
+Four surfaces call it: the cart serializer (preview), the cart's parcel for
+the shipping reads (`src/cart/services.py`), `CouponService.apply` when a
+code is attached, and the checkout quote (`OrderQuoteService.quote` in
+`src/order/checkout/quote.py`), which `POST /cart/quote` runs unlocked and
+`create_order_from_cart` runs with `lock=True`. The order's total and the
+recorded discount are not two calls: they are one locked evaluation, whose
+result feeds both `OrderService._require_quoted_total` and
+`record_redemptions`. **All of them must agree to the cent**: an order whose
+locked total is not the client's `expectedTotal` is refused 409
+`total_changed`, and one whose own sum is not the quote's is rolled back.
 
 `lock=True` takes `select_for_update` on the candidate `Promotion` rows and
 is used **only** inside the order-create transaction, so usage-limit
@@ -601,9 +602,9 @@ help text notes the Greek five-year rule); empty means never.
 cards can settle, **smallest balance first** so near-empty cards drain, and
 returns a `RedemptionPlan`. `OrderQuoteService.quote` calls it
 (`src/order/checkout/quote.py`), against what is due after loyalty, so the same
-maths runs in `POST /cart/quote`, at payment-intent creation, at order-create
-verification and at the actual redemption — parity or
-`PaymentAmountMismatchError`.
+maths runs in `POST /cart/quote`, in the locked quote of order creation and
+at the actual redemption, and `OrderService._require_quoted_total` refuses an
+order whose own sum is not the quote's.
 
 Two refusals are worth knowing:
 
@@ -622,11 +623,11 @@ step.
 
 ### Guessing a code is budgeted, using one is not
 
-The quote, the payment intent and order creation each say what a card settles
-(or that the code is no card), so each could be used to guess codes. A request
-that carries `giftCardCodes` therefore gets a `GiftCardCodeThrottle`, added by
-the one helper `giftcard.throttles.gift_card_code_throttles` that the three
-views call from `get_throttles` (`src/giftcard/throttles.py`):
+The quote and order creation each say what a card settles (or that the code
+is no card), so each could be used to guess codes. A request that carries
+`giftCardCodes` therefore gets a `GiftCardCodeThrottle`, added by the one
+helper `giftcard.throttles.gift_card_code_throttles` that the two views
+call from `get_throttles` (`src/giftcard/throttles.py`):
 
 - **Only a code new to the cart counts.** The cart keeps the codes it has been
   allowed to try for `GIFT_CARD_CODES_SEEN_TTL_SECONDS` (default 1800) as keyed
@@ -839,10 +840,10 @@ whose plan enables it, and Django still gates the data.
   personal coupon, and then stacking — a code that lost to a better automatic
   promotion is reported as `combination_disallowed` and is deliberately
   non-blocking.
-- **Payment amount mismatch at order create.** Something repriced between the
-  intent and the order: a promotion's window closed, a usage limit filled, a
+- **409 `total_changed` at order create.** Something repriced between the
+  quote and the order: a promotion's window closed, a usage limit filled, a
   gift card was spent elsewhere, or a wholesale binding changed. The locked
-  recomputation is right and the intent is stale.
+  recomputation is right; the client shows the new total and orders again.
 - **A partial refund put nothing back on the gift card.** By design: the
   redemption comes back with the refund that makes the order REFUNDED, or
   with a cancel. A card that needs value back before then gets a manual
@@ -896,7 +897,7 @@ whose plan enables it, and Django still gates the data.
 | `grooveshop-django-api/src/product/models/product.py` | `Product.offer_kind`, the indexed `on_offer` field, `get_meilisearch_queryset` |
 | `grooveshop-django-api/src/search/views/product.py` | The `onOffer` search filter |
 | `grooveshop-django-api/src/promotion/views.py` | `PublicPromotionListView`, `ProductPromotionListView`, and their two gates |
-| `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, `quote`, payment-intent evaluation |
+| `grooveshop-django-api/src/cart/views/cart.py` | `apply_coupon`, `remove_coupon`, `list_coupons`, `quote` |
 | `grooveshop-django-api/src/giftcard/throttles.py` | `GiftCardCheckThrottle`, `GiftCardCodeThrottle`, `gift_card_code_throttles` |
 | `grooveshop-django-api/src/order/services.py` | Locked evaluation, `record`, `clear_after_order` |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService.quote`, `threshold_value`, `free_shipping_progress`, `FreeShippingProgress` |

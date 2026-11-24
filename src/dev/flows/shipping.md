@@ -219,10 +219,9 @@ sort by `(priority, provider_code)`.
 
 Order pricing goes through the same service. `OrderQuoteService.shipping_cost`
 (`src/order/checkout/quote.py`) is the single entry point for every caller
-(`POST /cart/quote`, both order-creation paths, the payment-intent
-computation in `src/cart/views/cart.py`) and calls `ShippingService.quote`;
-`OrderQuoteService.quote` hands it the threshold value, so the quote, the
-intent and the order agree for the same pricing inputs. The inputs can change
+(`POST /cart/quote` in `src/cart/views/cart.py`, and order creation) and
+calls `ShippingService.quote`; `OrderQuoteService.quote` hands it the
+threshold value, so the quote and the order agree for the same pricing inputs. The inputs can change
 between two requests (a price, a promotion, a rate), and then the later total
 differs: every order is created with the quote's `expectedTotal`, which is
 required, and only at that total (409 `total_changed`
@@ -231,8 +230,8 @@ The `shippingOptions` of the quote are the `available_options` rows priced as an
 order would be, each with `waivedBy`. A delivery that cannot be priced is a
 `ShippingRefusedError` (an `InvalidOrderDataError`): the quote answers it with
 a code of its own (`shipping_unavailable`, `shipping_parcel_too_large`,
-`shipping_weight_exceeded`, `src/shipping/enum/refusal.py`), the payment
-intent and order creation with `invalid_order_data` and `fieldErrors`. A
+`shipping_weight_exceeded`, `src/shipping/enum/refusal.py`), order creation
+with `invalid_order_data` and `fieldErrors`. A
 live carrier price is resolved before the order-create transaction and read
 from the adapter's cache inside it (`ShippingService.resolve_live_price`). A bare `home_delivery` request resolves through
 `resolve_home_delivery_provider`, and `_resolve_shipping_provider` uses

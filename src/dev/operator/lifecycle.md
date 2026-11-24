@@ -123,8 +123,8 @@ The `SuspendedTenantMiddleware` docstring records why it exists: before
 it, `django_tenants` resolved the host with a bare `domain=hostname`
 lookup that never consulted `is_active`, so a suspended merchant went
 dark on the storefront while their API kept serving in full — catalogue
-reads, cart mutations, **order creation** and payment-intent creation
-against their own live provider keys.
+reads, cart mutations, **order creation** and payment links against
+their own live provider keys.
 
 ::: tip Retention sweeps also stop
 `run_for_all_tenants` takes an `include_suspended` flag, used by the
