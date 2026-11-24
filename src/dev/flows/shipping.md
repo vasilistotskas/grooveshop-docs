@@ -55,8 +55,10 @@ even as no-ops. The abstract ones are `create_shipment`,
 `cancel_shipment`, `has_label`, `fetch_label_bytes`, `fetch_tracking_events`,
 `serialize_shipment` and `validate_order_payload`.
 The optional hooks are where a carrier states what it is, so no code
-outside the carrier apps names a carrier (the import contract "a carrier
-app is reached only through shipping" holds with no exception):
+outside the carrier apps imports one (the import contract "a carrier app is
+reached only through shipping" holds with no exception). Settings still name
+a carrier where they configure it: its beat entries in
+`src/settings/schedule.py` and its API settings in `src/settings/integrations.py`.
 
 | Hook | Purpose |
 |---|---|
@@ -1358,7 +1360,7 @@ move `Order.status`, which the carrier events drive separately.
 | File | Role |
 |---|---|
 | `grooveshop-django-api/src/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment` and `checkout_fields`), `_REGISTRY`, `register_provider`, `providers_by_field_rank` |
-| `grooveshop-django-api/src/shipping/urls.py`, `grooveshop-django-api/src/shipping/webhook_urls.py` | Every registered carrier's `api_urlconf` and `webhook_urlconf`, mounted by `src/core/urls.py` |
+| `grooveshop-django-api/src/shipping/urls.py`, `grooveshop-django-api/src/shipping/webhook_urls.py`, `grooveshop-django-api/src/shipping_boxnow/webhook_urls.py` | Every registered carrier's `api_urlconf` and `webhook_urlconf`, mounted by `src/core/urls.py` |
 | `grooveshop-django-api/src/shipping/demo.py` | `ShipmentRow` and `event_times`, what each carrier's `demo.py` writes a demo shipment from |
 | `grooveshop-django-api/src/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
 | `grooveshop-django-api/src/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError`, `CarrierBusyError` |

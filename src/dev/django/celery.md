@@ -401,6 +401,7 @@ callbacks immediately. A test therefore sees the full signal cascade of an
 | `grooveshop-django-api/src/tenant/celery.py` | `TenantTask`, `holding_store`, `hold_store_for_destroy`, `run_for_all_tenants`, `dispatch_on_commit` |
 | `grooveshop-django-api/src/settings/database.py` | `_release_session_locks`: the pool's reset, `pg_advisory_unlock_all()` on every returned connection |
 | `grooveshop-django-api/src/tenant/tasks.py` | Fan-out wrappers |
+| `grooveshop-django-api/src/shipping_acs/tasks.py`, `grooveshop-django-api/src/shipping_boxnow/tasks.py` | The carriers' own fan-out wrappers, under `tenant.tasks.fanout_<name>` |
 | `grooveshop-django-api/src/core/monitored_task.py` | `MonitoredTask` |
 | `grooveshop-django-api/src/core/tasks.py` | System tasks |
 | `grooveshop-django-api/src/cart/tasks.py`, `src/user/tasks.py`, `src/meili/tasks.py` | The cart cleanups, the inactive-user mail and the index sync, which keep their `core.tasks.*` task names |
