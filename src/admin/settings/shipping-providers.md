@@ -1,11 +1,11 @@
 ---
 title: Shipping providers
-description: Which couriers appear at checkout, which countries you ship to, what shipping costs, when it is free and which payment methods each courier offers.
+description: Which couriers you ship with, what each supports, their order at checkout and logos, and which payment methods each courier offers.
 ---
 
 # Shipping providers
 
-Here you decide which couriers you ship with, to which countries and at what price. Everything a customer sees in the delivery step of checkout comes from this screen.
+Here you decide which couriers you ship with, what each one supports and which payment methods it offers. Where they deliver and at what price is set in [Shipping zones](/admin/settings/shipping-zones).
 
 <span class="sidebar-path">Settings → Shipping Providers</span>
 
@@ -21,25 +21,14 @@ One row per courier: **ACS Courier** (home delivery and Smartpoint lockers), **B
 | **Supports Pickup Point** | Delivers to a locker or pickup shop. |
 | **Live Mode** | Only a marker for you: that the courier runs on real credentials. It changes nothing. |
 | **Priority** | Order at checkout. The lowest number comes first. |
-| **Rates** | How many rate lines the courier has. |
+| **Rates** | How many rate lines the courier has, across all your shipping zones. |
 
-Each courier's form has three tabs:
+Each courier's form has two tabs:
 
 - **General**: the name, the on/off switch, the priority, what the courier supports and the logos.
-- **Rates**: one line per country and shipping kind (see the table below).
 - **Payment-method exclusions**: payment methods you do not want offered with this courier.
 
-The fields of a line under **Rates**:
-
-| Field | Meaning |
-|---|---|
-| **Country** | The delivery country. |
-| **Shipping Kind** | **Home delivery** or **Pickup point / locker**. The courier must support that kind. |
-| **Price** | What the customer pays for shipping. |
-| **Free Shipping Threshold** | From this amount up, shipping is free. Empty means never free. |
-| **Max Weight (grams)** | The heaviest cart it accepts. Empty means no limit. |
-| **Delivery Days (min)** / **Delivery Days (max)** | Delivery time in working days after dispatch. Fill in both or neither. Customers see it on the product page and at checkout. |
-| **Is Active** | Untick to stop offering this option without losing the price. |
+Where a courier delivers and at what price are its rates, set on each place you deliver to in [Shipping zones](/admin/settings/shipping-zones).
 
 ## Tasks
 
@@ -51,35 +40,14 @@ The fields of a line under **Rates**:
 
 ACS and BoxNow also need the login details the courier gave you. They go in the [Store profile](/admin/settings/store-profile), not here. Without them the courier does not appear at checkout, even when **Is Active** is on.
 
-### Change a shipping price
+### Prices, delivery times and countries
 
-1. Open the courier and go to the **Rates** tab.
-2. On the country's line, change **Price**, **Free Shipping Threshold** or **Max Weight (grams)**.
-3. Save. Checkout uses the new values straight away.
-
-Example: **Price** €3.50 and **Free Shipping Threshold** €50. A cart with €42 of products pays €3.50 shipping. If the customer adds another product and reaches €55, shipping becomes free. The threshold is measured on the products after discounts, without shipping.
-
-### Set a delivery time
-
-1. On the country's line, fill in **Delivery Days (min)** and **Delivery Days (max)**, for example 1 and 3.
-2. Save. Checkout shows the customer the delivery time, and every new order gets an estimated delivery date.
-
-The date counts from the day the parcel leaves, working days only (no weekends or Greek public holidays). The latest time an order still leaves the same day is the `DISPATCH_CUTOFF` setting under <span class="sidebar-path">Settings → Store Settings</span>. The default is 15:00: an order after 15:00 leaves the next working day. The same time is shown on the product page. Leave the setting empty if you do not want a time shown.
-
-### Ship to a new country
-
-Every country is already in the **Country** list. You do not need the platform team.
-
-1. Open each courier that will deliver there and add a line under **Rates**: the country, the kind, the price and, if you want, a free-shipping threshold and a maximum weight.
-2. Leave **Is Active** ticked and save.
-3. Try it at checkout. The country now appears in the country list, with the couriers you gave it a rate.
-
-To stop shipping to a country, untick **Is Active** on its lines. Once no active line is left, the country leaves checkout.
+Prices, free-shipping thresholds, weight limits, delivery times, the countries and the regions you deliver to are set in [Shipping zones](/admin/settings/shipping-zones), one zone for each place you deliver to.
 
 ### ACS Smartpoint lockers
 
-1. On the ACS courier, tick **Supports Pickup Point** and add a line with **Shipping Kind** **Pickup point / locker**.
-2. Make sure the line is active.
+1. On the ACS courier, tick **Supports Pickup Point**.
+2. In the country's whole-country zone under [Shipping zones](/admin/settings/shipping-zones), add an ACS line with **Shipping Kind** **Pickup point / locker**.
 3. Lockers appear at checkout for a country once its ACS stations have been fetched. The store fetches them every night, for the countries that have an active ACS rate, so a new setup shows lockers the day after. Check the list in <span class="sidebar-path">Shipping → Pickup Points → ACS Stations</span>. When BoxNow is switched off, **ACS Stations** sits directly under **Shipping**.
 
 ### Hide a payment method for one courier
@@ -99,8 +67,8 @@ The same tab is on the payment method's own page, see [Payment methods](/admin/s
 
 ## Things to know
 
-- **No rate, no option.** A courier appears for a country only when it has an active rate line for that country and kind. There is no general price for every country.
-- **The countries a customer can choose are the countries you have a rate for.** That holds for the country list at checkout and for the addresses in the customer's account.
+- **No rate, no option.** A courier appears for a destination only when the [shipping zone](/admin/settings/shipping-zones) of that destination has an active rate line for it and that kind. There is no general price for every country.
+- **The countries a customer can choose are the countries you have a rate for**, and the regions those where you deliver at home. That holds for checkout and for the addresses in the customer's account.
 - **A region is required for Greece and Cyprus** (a prefecture in Greece, a district in Cyprus). It must belong to the country the customer chose. Other countries have no regions, so the field stays empty.
 - **Heavy carts.** When the cart is over **Max Weight (grams)**, the option is shown greyed out with the reason, so the customer understands why it cannot be chosen.
 - **What each courier can collect.** Cash to a courier is never offered on a BoxNow locker, because nobody meets the customer there. BoxNow's PAY ON THE GO is not offered with Standard delivery. Exclusions do not change these.
@@ -109,11 +77,12 @@ The same tab is on the payment method's own page, see [Payment methods](/admin/s
 - **How far a cart is from free shipping.** The cart shows one line, such as "Add €30.01 more for free shipping". It is the cheapest way this cart can get free shipping: the lowest **Free Shipping Threshold** of a courier that can carry the cart, or an automatic free-shipping promotion with a lower minimum. Rates are judged for the first country in the list, the one checkout picks first. A free-shipping promotion is not shown a second time beside it. See [Promotions](/admin/marketing/promotions).
 - **The "free shipping over…" line** on a product page, for a customer whose cart is empty, is the lowest free-shipping threshold among the active rates of the first country in the list.
 - **Switching a courier off** does not touch shipments that already exist. Its screens under **Shipping** are hidden until you switch it back on.
-- **Do not delete a courier.** Its rates go with it. Switch it off instead.
+- **Do not delete a courier.** Its rates in every zone go with it. Switch it off instead.
 - **Metadata**: the courier's technical settings. Leave it as it is. If you need a change, for example printing vouchers on a laser printer instead of a thermal one, ask the [platform team](/admin/help/contact-support).
 
 ## Related
 
+- [Shipping zones](/admin/settings/shipping-zones)
 - [Daily shipping routine](/admin/shipping/daily-routine)
 - [ACS Courier](/admin/shipping/acs)
 - [BoxNow](/admin/shipping/boxnow)

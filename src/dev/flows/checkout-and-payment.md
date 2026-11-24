@@ -423,10 +423,12 @@ and what the order stores).
     `cart_not_found`, never a new cart; an empty one is 400 `cart_empty`.
   - Refusals are `{detail, reason, code}`. A delivery that cannot be priced
     has a code of its own (`src/shipping/enum/refusal.py: ShippingRefusal`:
-    `shipping_unavailable`, `shipping_parcel_too_large`,
+    `shipping_unavailable`, `shipping_region_unavailable` (the delivery
+    reaches the country but not the region's [shipping
+    zone](/dev/flows/shipping#shipping-zones)), `shipping_parcel_too_large`,
     `shipping_weight_exceeded`) so a client drops the selection instead of
     matching translated text; the payment intent and order creation keep
-    `invalid_order_data` with `fieldErrors` for the same three. The rest are
+    `invalid_order_data` with `fieldErrors` for the same four. The rest are
     the payment intent's: `pay_way_unavailable`, `pay_way_not_found`,
     `loyalty_requires_authentication`, `loyalty_redemption_invalid`,
     `loyalty_redemption_too_small` and the gift card's own reason.

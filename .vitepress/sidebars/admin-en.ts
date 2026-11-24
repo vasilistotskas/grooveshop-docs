@@ -101,6 +101,7 @@ export const adminSidebarEn: DefaultTheme.SidebarItem[] = [
       { text: 'Store settings', link: '/admin/settings/store-settings' },
       { text: 'Payment methods', link: '/admin/settings/payment-methods' },
       { text: 'Shipping providers', link: '/admin/settings/shipping-providers' },
+      { text: 'Shipping zones', link: '/admin/settings/shipping-zones' },
       { text: 'VAT rates', link: '/admin/settings/vat-rates' },
       { text: 'Emails', link: '/admin/settings/emails' },
       { text: 'Languages & translations', link: '/admin/settings/languages-and-translations' },

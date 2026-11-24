@@ -27,10 +27,10 @@ See [Store profile](/admin/settings/store-profile) and [Payment methods](/admin/
 ### 3. Shipping
 
 1. Enter your ACS or BoxNow credentials on the **Shipping** tab of the store profile.
-2. Switch the couriers on and set their rates in <span class="sidebar-path">Settings → Shipping Providers</span>.
+2. Switch the couriers on in <span class="sidebar-path">Settings → Shipping Providers</span>, and set their rates for each place you deliver to in <span class="sidebar-path">Settings → Shipping Zones</span>.
 3. Set the same-day dispatch time (`DISPATCH_CUTOFF`) in Store Settings.
 
-See [Shipping providers](/admin/settings/shipping-providers).
+See [Shipping providers](/admin/settings/shipping-providers) and [Shipping zones](/admin/settings/shipping-zones).
 
 ### 4. VAT
 

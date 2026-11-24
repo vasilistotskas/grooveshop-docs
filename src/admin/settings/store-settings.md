@@ -222,7 +222,7 @@ Set the myDATA settings together with your accountant. See [Receipts](/admin/sal
 
 ### Shipping
 
-Shipping costs, free-shipping thresholds and countries are not here. They are on each courier's rates: see [Shipping providers](/admin/settings/shipping-providers).
+Shipping costs, free-shipping thresholds and countries are not here. They are the rates of your shipping zones: see [Shipping zones](/admin/settings/shipping-zones).
 
 | Setting | What it does | Default |
 |---|---|---|

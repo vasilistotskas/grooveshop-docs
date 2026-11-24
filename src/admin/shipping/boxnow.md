@@ -99,7 +99,7 @@ When BoxNow is the only active courier with lockers, the menu shows **BoxNow Loc
 
 BoxNow also delivers to lockers in Cyprus, with the same account and the same login details.
 
-1. In [Shipping providers](/admin/settings/shipping-providers), open BoxNow and add a line under **Rates**: **Country** Cyprus, **Shipping Kind** **Pickup point / locker**, a price, and in **Max Weight (grams)** the weight limit BoxNow gave you for Cyprus.
+1. In [Shipping zones](/admin/settings/shipping-zones), open the whole-country zone of Cyprus (add one if it has none) and add a line under **Rates**: **Shipping Provider** BoxNow, **Shipping Kind** **Pickup point / locker**, a price, and in **Max Weight (grams)** the weight limit BoxNow gave you for Cyprus.
 2. Save. Cyprus appears at checkout, with only the couriers that have a rate for it.
 3. Check that there are Cypriot lockers: filter **Country Code** CY. If there are none, click **Sync lockers from BoxNow API**.
 4. Place a test order to a Cypriot locker.

@@ -97,6 +97,7 @@ export const adminSidebarEl: DefaultTheme.SidebarItem[] = [
       { text: 'Ρυθμίσεις καταστήματος', link: '/el/admin/settings/store-settings' },
       { text: 'Μέθοδοι πληρωμής', link: '/el/admin/settings/payment-methods' },
       { text: 'Πάροχοι αποστολών', link: '/el/admin/settings/shipping-providers' },
+      { text: 'Ζώνες αποστολής', link: '/el/admin/settings/shipping-zones' },
       { text: 'Συντελεστές ΦΠΑ', link: '/el/admin/settings/vat-rates' },
       { text: 'Email', link: '/el/admin/settings/emails' },
       { text: 'Γλώσσες & μεταφράσεις', link: '/el/admin/settings/languages-and-translations' },
