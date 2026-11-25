@@ -84,8 +84,8 @@ Immediately after resolution:
   store whose `is_active` is false. django-tenants resolves the host with a
   bare `domain=` lookup that ignores `is_active`, so without this a
   suspended store kept serving its API in full — catalogue reads, cart
-  mutations, order creation and payment-intent creation against its own
-  live provider keys. 503 rather than 404 because the domain is known and
+  mutations, order creation and payment links against its own live
+  provider keys. 503 rather than 404 because the domain is known and
   the condition is temporary.
 - `src/tenant/middleware.py: TenantCookieDomainMiddleware` rewrites the
   `Domain` attribute of the session and CSRF cookies from the request host:

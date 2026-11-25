@@ -59,10 +59,11 @@ stateDiagram-v2
   PARTIALLY_REFUNDED --> [*]
 ```
 
-The edges back into PENDING are real: `payment_intent.requires_action`
-relaxes PROCESSING or PENDING back to PENDING, and
-`POST /api/v1/order/{id}/retry-payment` accepts FAILED, PENDING or
-CANCELED and mints a fresh intent. Nothing leaves COMPLETED except a
+The edge back into PENDING is real: `payment_intent.requires_action`
+relaxes PROCESSING or PENDING back to PENDING. A FAILED payment stays FAILED
+until a new attempt settles it: the shopper opens a new hosted link for the
+same order (`POST /api/v1/order/{id}/create_checkout_session`, Pay now), and
+its webhook moves the payment on. Nothing leaves COMPLETED except a
 refund, and PARTIALLY_REFUNDED leaves only through further refunds, any
 number of them, until nothing is left to refund.
 
@@ -830,7 +831,7 @@ order lines (`src/order/services.py: OrderService._snapshot_line_discounts`), an
 the loyalty redemption, being order-wide, is spread over the value left on
 every line (`src/order/checkout/discounts.py: spread_by_remaining_value`). One rule
 (`src/order/checkout/discounts.py: allocate_capped`, largest remainder to the cent)
-serves the cart preview, the payment intent and order creation. Orders that
+serves the cart preview, the checkout quote and order creation. Orders that
 predate the column, or were created by the previous release during its
 rollout, get the proportional allocation from `heal_discount_allocation`
 (`src/order/discount_snapshot.py`, migration `src/order/migrations/0073_backfill_orderitem_discount_allocation.py`
@@ -939,8 +940,8 @@ clear the flag by refunding the excess as a goodwill amount with the order's
 
 A second Stripe intent is booked through its order binding:
 `payment_intent.succeeded` finds the order by `payment_id`, and an intent the
-order no longer names (a second tab, or an older intent paid after a retry
-opened a newer one) is found by the binding metadata the server wrote on it
+order does not name (a second payment, made through a link the order no
+longer records) is found by the binding metadata the server wrote on it
 (`OrderService._bound_order_uuid`: purpose `order`, this order's uuid, this
 tenant), so it is booked and flagged like any second payment. The staff **Return and refund** action plans a refund against the order's payments oldest
 first (`PaymentLedger.plan_refund`), so it cannot target the second payment
@@ -966,13 +967,13 @@ Note which timestamp each bucket reads: the failed bucket measures the
 grace window from `updated_at`, so it runs from the failure, while the
 never-completed bucket reads the payment's own expiry. Every path that
 opens a payment (the hosted Viva payment order or Stripe Checkout Session,
-and `PayWayService.process_payment` for `create_payment_intent` and
-`retry-payment`) hands the provider the hold as its expiry and stores the
-expiry the provider reports in `Order.payment_hold_expires_at`, so the
-stock is released only once the payment can no longer succeed. A retry
+`OrderViewSet.create_checkout_session`) hands the provider the hold as its
+expiry and stores the expiry the provider reports in `Order.payment_hold_expires_at`, so the
+stock is released only once the payment can no longer succeed. A new link
 can move the hold later, never past `created_at` plus
 `ORDER_ONLINE_PAYMENT_MAX_HOLD_MINUTES` (default 60). A Stripe
-PaymentIntent has no expiry of its own, so the sweep cancels it at Stripe
+PaymentIntent the order holds (an agent's delegated card awaiting its
+confirmation) has no expiry of its own, so the sweep cancels it at Stripe
 first; one Stripe will not cancel (processing, succeeded) keeps the order
 open for its webhook. After each sweep, `ORDER_UNPAID_ONLINE_ALERT_THRESHOLD`
 (default 25, `0` off) or more still-unpaid online orders log
@@ -1029,7 +1030,7 @@ online payment. Nothing happens at the moment the payment fails.
 Because an unpaid online order holds stock for the whole never-completed
 window, how many one customer can have waiting is bounded per store:
 `OrderService._enforce_unpaid_order_limit`, step 2.3 of
-`create_order_from_cart_offline`, refuses a new order with an online
+`create_order_from_cart`, refuses a new order with an online
 settlement when the account (or, for a guest, the email, compared
 case-insensitively among guest orders) already has
 `ORDER_MAX_UNPAID_ONLINE_ORDERS` orders holding stock for an online

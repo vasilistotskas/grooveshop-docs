@@ -165,20 +165,19 @@ was received **and** the gift cards and points are back.
 ### Redeeming
 
 `_validate_and_price_redemption` is the single validator behind both the
-preview and the write, so the amount a payment intent is created for and the
-amount later persisted on the order cannot drift. It checks that the program
+preview and the write, so the amount quoted and the amount later persisted
+on the order cannot drift. It checks that the program
 is enabled, the points amount is positive, the currency is supported (EUR or
 USD), the balance covers it, and the resulting discount does not exceed
 `max_discount` — which every caller sets to the **goods after promotions**
 (`OrderQuoteService.threshold_value`), excluding shipping and payment fees.
 Points pay for goods, never for shipping or a fee, and the cap is one value
-for the quote, the payment intent, both order-creation paths and
+for the quote, order creation and
 `POST /api/v1/loyalty/redeem` (which reads it from the order's stored items
 total less its discount).
 The rate is `LOYALTY_REDEMPTION_RATIO_<CURRENCY>`: points divided by the
 ratio give the discount, **rounded half up to the cent** where it is priced
-(`CENT`, `ROUND_HALF_UP`). It is the one figure the quote, the payment
-intent, `redeem_points`, the order's `loyalty_discount` and the per-line
+(`CENT`, `ROUND_HALF_UP`). It is the one figure the quote, `redeem_points`, the order's `loyalty_discount` and the per-line
 snapshots the receipt reads all hold; left unrounded, 103 points at a ratio of
 200 priced 0.515, which was 0.52 on the order and 0.51 over its lines, and the
 order's VAT lines could not be written. A store whose ratio gives sub-cent
@@ -190,8 +189,8 @@ after the rounding above: at a ratio of 200, one point is 0.005 and rounds up
 to 0.01, so it is accepted; a ratio of 1000 prices 4 points at 0.004, which
 rounds to 0.00. Points that price at 0.00 would be spent for nothing, so `_validate_and_price_redemption` raises a
 `ValidationError` coded `loyalty_redemption_too_small` (`REDEMPTION_TOO_SMALL`)
-whose message states the fewest points that round to a cent. The quote and the
-payment intent answer 400 with that `code`, `/loyalty/redeem` passes the code
+whose message states the fewest points that round to a cent. The quote
+answers 400 with that `code`, `/loyalty/redeem` passes the code
 on, and order creation answers its `invalid_order_data` with the message under
 `fieldErrors.loyaltyPointsToRedeem` (its own `code` must stay the enum value
 in the contract); nothing is created and no points are spent. Order creation
@@ -199,8 +198,8 @@ puts every loyalty refusal's message there, for the signed-in owner only.
 
 `preview_redemption` prices without writing and is what
 `OrderQuoteService.quote` (`src/order/checkout/quote.py`) prices with, so
-`POST /api/v1/cart/quote`, `src/cart/views/cart.py: create_payment_intent`
-and the order-create verification agree. A cart token is not the signed-in
+`POST /api/v1/cart/quote` (`src/cart/views/cart.py: quote`) and order
+creation agree. A cart token is not the signed-in
 owner: a quote made with `X-Cart-Token` that asks to redeem points is refused
 `loyalty_requires_authentication`. `redeem_points` takes the lock (`lock=True` inside the
 order-create transaction means a later redeem in the same transaction cannot
@@ -309,9 +308,9 @@ It is enforced in two places:
   stamps that marker whenever group pricing applied.
 - **Redeeming**: `B2BService.suppresses_loyalty(cart)` is true for a cart
   actually bound to wholesale pricing while the switch is off, and the
-  requested points are zeroed at payment-intent creation and at the top of
-  both order-create paths — before any pricing maths, so the verified intent
-  amount, the order total and the redemption all agree.
+  requested points are zeroed in the checkout quote
+  (`src/order/checkout/quote.py`) before any total, so the quoted total, the
+  order total and the redemption all agree.
 
 ### Storefront
 
@@ -435,7 +434,7 @@ storefront never advertises a reward the backend will not grant.
 | `grooveshop-django-api/src/b2b/services.py` | `loyalty_allowed`, `suppresses_loyalty` |
 | `grooveshop-django-api/src/order/services.py` | Redemption at order create, wholesale suppression |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService._loyalty_discount`, `_redeemable_points`: the cap and the one price of a redemption |
-| `grooveshop-django-api/src/cart/views/cart.py` | Preview redemption at payment-intent creation |
+| `grooveshop-django-api/src/cart/views/cart.py` | `quote`: the redemption priced before the order |
 | `grooveshop-django-api/src/settings/store_settings.py`, `grooveshop-django-api/src/settings/schedule.py` | `LOYALTY_*` defaults (`LOYALTY_REFUND_ALLOWS_NEGATIVE_BALANCE` included), beat schedule |
 | `grooveshop-storefront-ui-node-nuxt/app/middleware/loyalty-enabled.ts` | Fail-open two-tier gate |
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useLoyalty.ts` | Summary, transactions, tiers, settings |
