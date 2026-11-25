@@ -189,8 +189,8 @@ What does not show:
 
 | Line | Reads like | Comes from |
 |---|---|---|
-| Delivery | "Delivered in 2–4 business days", with "Orders placed by 15:00 leave the same business day" under it | The delivery days of your rates in the whole-country [shipping zone](/admin/settings/shipping-zones) of the country checkout picks first, the first in the platform's order of countries with an active rate (from the lowest **Delivery Days (min)** to the highest **Delivery Days (max)**), and the `DISPATCH_CUTOFF` setting |
-| Free shipping | "Free shipping from €50.00", with what each courier charges below that under it | The lowest **Free Shipping Threshold** of your shipping providers for that country, and each courier's cheapest price there. A courier that already ships free is not listed. |
+| Delivery | "Delivered in 2–4 business days", with "Orders placed by 15:00 leave the same business day" under it | The delivery days of your rates in the whole-country [shipping zone](/admin/settings/shipping-zones) of the country checkout picks first, the first in the platform's order of countries with an active rate (from the lowest **Delivery Days (min)** to the highest **Delivery Days (max)**), and the `DISPATCH_CUTOFF` setting. A country you deliver to only with region zones uses their rates, and the line names the regions: "Delivered in 2–4 business days to Attica". |
+| Free shipping | "Free shipping from €50.00", with what each courier charges below that under it | The lowest **Free Shipping Threshold** of your [shipping zones](/admin/settings/shipping-zones)' rates for that country, and each courier's cheapest price there. A courier that already ships free is not listed. A courier with rates only in region zones is listed with the regions its price is for. |
 | Returns | "30-day returns", linked to your return policy once that page is published | The `RETURN_WINDOW_DAYS` setting. At 0 the line is left out. |
 | Ways to pay | "Card or cash on delivery" | Your active [payment methods](/admin/settings/payment-methods) |
 
