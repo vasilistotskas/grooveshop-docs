@@ -227,11 +227,14 @@ which prices by it alone: a base zone's rate carries the zone's country, a
 region zone's none (`ShippingZone.rate_country_id`).
 
 The agent gateway lists regions with `shippable=true`
-(`grooveshop-agent-gateway/internal/django/client_shipping.go`), treats
-`shipping_region_unavailable` as a refusal of the delivery
-(`internal/checkout/pricing.go`) and `region_not_served` on `regionId` as a
-refusal of the destination (`internal/django/client_checkout.go`), named at
-UCP's `address_region` and ACP's `state`.
+(`grooveshop-agent-gateway/internal/django/client_shipping.go`) and quotes a
+home address with its region before a carrier is chosen, so the options are
+the region's zone's. It treats `shipping_region_unavailable` as a refusal of
+the delivery (`internal/checkout/pricing.go`), and `region_not_served` or
+`region_required` on `regionId` as a refusal of the destination
+(`internal/django/client_checkout.go`), named at UCP's `address_region` and
+ACP's `state`. A country whose regions the store serves none of is refused
+at the country (`internal/checkout/region.go`).
 
 The move from `ShippingRate.country` to `zone` ships in two releases
 (`src/shipping/migrations/0022_shipping_zone.py` to
