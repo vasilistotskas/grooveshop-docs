@@ -63,7 +63,7 @@ a carrier where they configure it: its beat entries in
 
 | Hook | Purpose |
 |---|---|
-| `checkout_fields` | The request fields the checkout takes for the carrier, by name. Those in `location_keys` are its pickup point (`boxnow_locker_id`, `acs_station_external_id`, …), on the quote, the payment intent and the order; the rest are order options (`acs_charge_type`). The order view hands what the body sent to the carrier as the payload |
+| `checkout_fields` | The request fields the checkout takes for the carrier, by name. Those in `location_keys` are its pickup point (`boxnow_locker_id`, `acs_station_external_id`, …), on the quote and the order; the rest are order options (`acs_charge_type`). The order view hands what the body sent to the carrier as the payload |
 | `field_rank` | Where the carrier's fields sit among the carriers' in every API body (BOX NOW, then ACS) |
 | `shipment_relation`, `order_detail_prefetches` | The reverse one-to-one from `Order` to its shipment row, which `shipment_for_order` reads and the order lists join, and what the order detail prefetches below it |
 | `order_shipment_field` | Its own typed field on the order detail (`boxnowShipment`, `acsShipment`), next to the generic `shipment` |
@@ -165,14 +165,18 @@ Resolution is one module, `src/shipping/zones.py`:
 |---|---|
 | `zone_for(country, region)` | The region zone holding the region, else the base zone; without a region, the base zone |
 | `destination_rates(country, region)` | The rates that apply: home delivery from `zone_for`, pickup point from the base zone (a pickup point has no `Region`, so it is judged by country) |
+| `standing_destinations(countries)` | Where a read that knows no region judges each country, every country in two queries: its base zone for the deliveries it offers, and, for a home delivery it does not offer, each region zone that does (offered rates only, `offered`) |
 | `HomeCoverage` | Where home delivery reaches, read in one pass, counting a rate only when its carrier passes the quote's gate (`carrier_offers`): backs `?shippable=` on the region lists, `?homeDelivery=` on the countries and `UserAddress.shippable` |
 | `destination_errors(...)` | `region_not_served` / `country_not_served` for a home address no home delivery reaches |
 | `zone_errors`, `rate_kind_errors` | The admin's rules: one base zone per country, regions of the zone's country, a region in one zone, pickup rates on base zones only |
 
-Every gate below reads `destination_rates`, and the quote, both
-order-creation paths and the payment intent pass the order's region for a
-home delivery, so the price charged and the carrier assigned come from the
-same zone. A carrier that has the rate elsewhere in the country but not in
+Every gate below reads `destination_rates`, and the quote and both
+order-creation paths pass the order's region for a home delivery. The quote
+resolves the carrier once and hands it to the order
+(`CheckoutQuote.shipping_choice`, `OrderService._assign_shipping_provider`),
+so the price charged and the carrier assigned come from the same zone, and
+the automatic pick considers only carriers the quote's gate takes
+(`carrier_offers`). A carrier that has the rate elsewhere in the country but not in
 the region's zone raises `ShippingRegionUnavailableError` (a
 `ShippingUnavailableError`), answered as the quote refusal
 `shipping_region_unavailable`. A home delivery that names no carrier, to a
@@ -198,15 +202,29 @@ API additions:
   in place, and the storefront marks it and does not let checkout choose it;
 - order creation refuses a region no home delivery reaches with
   `region_not_served` on `regionId`
-  (`OrderCreateFromCartSerializer._validate_home_address`).
+  (`OrderCreateFromCartSerializer._validate_home_address`);
+- `regionCodes` on each `GET /shipping/policy` row: the regions it applies
+  to, empty for a whole-country row.
 
 The surfaces with no address (`/shipping/policy`, `/shipping/free-shipping-info`,
 `/shipping/product/<id>`, the cart's `freeShippingProgress`) are judged for
-the base zone of `initial_country_code()`; a country served only by region
-zones advertises nothing there. The `shipping` and `regions_countries` cache
-surfaces declare `ShippingZone` and `ShippingZoneRegion`, and
-`src/shipping/signals.py: zone_regions_changed` marks them on `m2m_changed`,
-since the region set is written with `bulk_create`.
+`initial_country_code()` at its `standing_destinations`, so a country served
+at home only in some regions advertises those regions' prices, each policy
+row naming its regions. The `shipping` and `regions_countries` cache
+surfaces both declare `ShippingZone`, `ShippingZoneRegion`,
+`ShippingProvider` and `AcsStation`. A write no signal reports marks every
+surface that declares its model (`core.cache.invalidation.mark_model_stale`):
+`src/shipping/signals.py` marks a region-set change, which is written with
+`bulk_create`, and the station and locker syncs mark their deactivating
+`update`. A change to a carrier credential on `Tenant`
+(`tenant.credentials.CARRIER_CREDENTIAL_FIELDS`) queues
+`shipping.tasks.purge_carrier_gate_surfaces` in the store's schema.
+
+A zone's regions are written by `ShippingZone.set_regions`, which refuses a
+set the zones' rules refuse and rewrites its rates' `country` once. The
+expand release keeps writing `ShippingRate.country` for the release before,
+which prices by it alone: a base zone's rate carries the zone's country, a
+region zone's none (`ShippingZone.rate_country_id`).
 
 The agent gateway lists regions with `shippable=true`
 (`grooveshop-agent-gateway/internal/django/client_shipping.go`), treats
