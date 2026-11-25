@@ -54,12 +54,24 @@ sequenceDiagram
 `ShippingCarrierInterface` declares the methods every carrier must have,
 even as no-ops. The abstract ones are `create_shipment`,
 `cancel_shipment`, `has_label`, `fetch_label_bytes`, `fetch_tracking_events`,
-`shipment_for_order`, `serialize_shipment` and `validate_order_payload`.
-The optional hooks are where a carrier states what it is:
+`serialize_shipment` and `validate_order_payload`.
+The optional hooks are where a carrier states what it is, so no code
+outside the carrier apps imports one (the import contract "a carrier app is
+reached only through shipping" holds with no exception). Settings still name
+a carrier where they configure it: its beat entries in
+`src/settings/schedule.py` and its API settings in `src/settings/integrations.py`.
 
 | Hook | Purpose |
 |---|---|
-| `payload_keys` | Which non-`Order` keys the carrier reads out of the create-order body (`boxnow_locker_id`, `acs_station_external_id`, …) |
+| `checkout_fields` | The request fields the checkout takes for the carrier, by name. Those in `location_keys` are its pickup point (`boxnow_locker_id`, `acs_station_external_id`, …), on the quote, the payment intent and the order; the rest are order options (`acs_charge_type`). The order view hands what the body sent to the carrier as the payload |
+| `field_rank` | Where the carrier's fields sit among the carriers' in every API body (BOX NOW, then ACS) |
+| `shipment_relation`, `order_detail_prefetches` | The reverse one-to-one from `Order` to its shipment row, which `shipment_for_order` reads and the order lists join, and what the order detail prefetches below it |
+| `order_shipment_field` | Its own typed field on the order detail (`boxnowShipment`, `acsShipment`), next to the generic `shipment` |
+| `shipment_state`, `last_reported_at` | The state the order changelist labels; the last report the follow-up rule reads |
+| `admin_order_inline`, `admin_order_search_fields`, `admin_order_list_filters` | What the order admin adds for the carrier |
+| `tracking_url_template` | Its public tracking page, the order's `trackingUrl` |
+| `api_urlconf`, `webhook_urlconf` | Its storefront API, mounted by `shipping.urls`, and the endpoints its courier calls, mounted at the root by `shipping.webhook_urls` |
+| `create_demo_shipment` | The shipment a demo account's order shipped under (`shipping.demo`) |
 | `live_quote` | Optional live price for a rate (`rate`, `country_code`, `region_id`, `weight_grams`, `currency`). The default returns `None`, meaning "charge the rate's `price`". Only ACS overrides it |
 | `is_kind_enabled` | Per-kind gate a carrier controls itself, e.g. ACS Smartpoint |
 | `create_shipment_row` | Persist the child row synchronously during checkout |
@@ -299,10 +311,9 @@ sort by `(priority, provider_code)`.
 
 Order pricing goes through the same service. `OrderQuoteService.shipping_cost`
 (`src/order/checkout/quote.py`) is the single entry point for every caller
-(`POST /cart/quote`, both order-creation paths, the payment-intent
-computation in `src/cart/views/cart.py`) and calls `ShippingService.quote`;
-`OrderQuoteService.quote` hands it the threshold value, so the quote, the
-intent and the order agree for the same pricing inputs. The inputs can change
+(`POST /cart/quote` in `src/cart/views/cart.py`, and order creation) and
+calls `ShippingService.quote`; `OrderQuoteService.quote` hands it the
+threshold value, so the quote and the order agree for the same pricing inputs. The inputs can change
 between two requests (a price, a promotion, a rate), and then the later total
 differs: every order is created with the quote's `expectedTotal`, which is
 required, and only at that total (409 `total_changed`
@@ -311,8 +322,8 @@ The `shippingOptions` of the quote are the `available_options` rows priced as an
 order would be, each with `waivedBy`. A delivery that cannot be priced is a
 `ShippingRefusedError` (an `InvalidOrderDataError`): the quote answers it with
 a code of its own (`shipping_unavailable`, `shipping_parcel_too_large`,
-`shipping_weight_exceeded`, `src/shipping/enum/refusal.py`), the payment
-intent and order creation with `invalid_order_data` and `fieldErrors`. A
+`shipping_weight_exceeded`, `src/shipping/enum/refusal.py`), order creation
+with `invalid_order_data` and `fieldErrors`. A
 live carrier price is resolved before the order-create transaction and read
 from the adapter's cache inside it (`ShippingService.resolve_live_price`). A bare `home_delivery` request resolves through
 `resolve_home_delivery_provider`, and `_resolve_shipping_provider` uses
@@ -1240,7 +1251,8 @@ locker too.
 
 The webhook is `POST /boxnow/webhook/`, registered at the URL root rather
 than under `api/v1/` so BoxNow reaches it without a language prefix or
-auth headers (`src/core/urls.py`). Its only gate is HMAC-SHA256:
+auth headers (`src/shipping_boxnow/webhook_urls.py`, mounted by
+`src/shipping/webhook_urls.py`). Its only gate is HMAC-SHA256:
 
 - The signed payload is the **raw bytes of the top-level `data` object**,
   extracted from the request body by brace-walking without any JSON
@@ -1426,7 +1438,9 @@ move `Order.status`, which the carrier events drive separately.
 
 | File | Role |
 |---|---|
-| `grooveshop-django-api/src/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment`), `_REGISTRY`, `register_provider`, `all_payload_keys` |
+| `grooveshop-django-api/src/shipping/interfaces.py` | `ShippingCarrierInterface` (including `can_cancel_shipment` and `checkout_fields`), `_REGISTRY`, `register_provider`, `providers_by_field_rank` |
+| `grooveshop-django-api/src/shipping/urls.py`, `grooveshop-django-api/src/shipping/webhook_urls.py`, `grooveshop-django-api/src/shipping_boxnow/webhook_urls.py` | Every registered carrier's `api_urlconf` and `webhook_urlconf`, mounted by `src/core/urls.py` |
+| `grooveshop-django-api/src/shipping/demo.py` | `ShipmentRow` and `event_times`, what each carrier's `demo.py` writes a demo shipment from |
 | `grooveshop-django-api/src/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
 | `grooveshop-django-api/src/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingRegionUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError`, `CarrierBusyError` |
 | `grooveshop-django-api/src/shipping/api_errors.py` | `CarrierUnavailable` (503 `carrier_unavailable`), `CarrierBusy` (409 `carrier_request_in_progress`), `unanswered` |

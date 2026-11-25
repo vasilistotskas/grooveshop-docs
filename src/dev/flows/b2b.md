@@ -180,8 +180,8 @@ that carry an existing context onto a re-materialised instance:
 
 | Where | What it does |
 |---|---|
-| `src/cart/services.py: CartService._bind_pricing` | Both materialisation methods route through here, so every instance a cart view receives is bound: retrieve, update, destroy, coupon apply and remove, payment-intent creation |
-| `src/order/services.py` (both order-create paths) | `bind_cart(cart, user)` at the top of the transaction, before any pricing maths |
+| `src/cart/services.py: CartService._bind_pricing` | Both materialisation methods route through here, so every instance a cart view receives is bound: retrieve, update, destroy, coupon apply and remove, the quote |
+| `src/order/services.py: create_order_from_cart` | `bind_cart(cart, user)` at the top of the transaction, before any pricing maths |
 | `src/cart/views/cart.py: _carry_b2b_pricing` (three call sites) | The `for_detail()` reloads exist for prefetching; a fresh instance would price at retail, so the context is transplanted when the primary keys match — and the prefetched items are re-pointed at the bound cart, because `CartItem.objects.for_list()`'s `select_related("cart")` hands every line its own unbound cart |
 | `src/cart/views/item.py: _repoint_to_bound_cart` (two call sites) | Same problem on the item endpoints, for `get_object` and `list`; only items of the request's own cart are re-pointed, so staff listings of other carts stay untouched |
 
@@ -196,8 +196,8 @@ wholesale buyer's reordered lines are snapshotted at **retail** — and
 Treat this as a known gap in the invariant below, not as a counter-example
 to it.
 
-**The buyer is still charged correctly.** Both order-creation paths bind
-before any pricing maths, and the cart views bind on read, so the price the
+**The buyer is still charged correctly.** Order creation binds before any
+pricing maths, and the cart views bind on read, so the price the
 buyer sees and pays is the wholesale one. Only the frozen `price_at_add`
 snapshot is retail, which makes the resulting drift warning noise rather
 than evidence of a mispriced order. The symptom is a log full of false
@@ -220,7 +220,7 @@ binding is invisible until someone compares a preview to a charge.
 |---|---|---|
 | Promotions | Dropped for a bound cart; attached codes surface as `COMBINATION_DISALLOWED`, wire value `discount_code_combination_disallowed` (non-blocking) | `B2B_ALLOW_PROMOTIONS` |
 | Loyalty | Earning **and** redeeming dropped | `B2B_LOYALTY_ENABLED` |
-| Minimum order value | Order create and payment-intent creation both refuse below the group's minimum | `CustomerGroup.min_order_value` |
+| Minimum order value | Order create refuses below the group's minimum, before any payment is opened | `CustomerGroup.min_order_value` |
 
 `PromotionEngine.evaluate` checks `cart_pricing_active(cart) and not
 B2BService.promotions_allowed()` in one place, which covers every caller
@@ -231,17 +231,14 @@ Loyalty is covered on its own page; the short version is that
 `B2BService.loyalty_allowed()` is **one switch for both halves**, because the
 points basis is the retail price. `suppresses_loyalty(cart)` is true only for
 a cart actually bound to wholesale pricing while the merchant keeps wholesale
-out of the program, and it is applied at payment-intent creation
-(`src/cart/views/cart.py`) and at the top of both order-create paths
-(`src/order/services.py`). On the order-create paths it runs before any pricing
-maths; at payment-intent creation it runs after promotions, shipping and the
-pay-way fee, but still before the loyalty maths. Either way the verified
-intent amount, the order total and the redemption agree.
+out of the program, and it is applied in the checkout quote before any total
+(`src/order/checkout/quote.py: OrderQuoteService.quote`), which the quote
+endpoint and order creation both run, so the quoted total, the order total
+and the redemption agree.
 
 The minimum-order gate is `min_order_value_unmet(cart)`, one authority for
-three consumers: the cart payload's `belowMinimum` flag,
-`create_payment_intent` (which refuses to mint an intent order create would
-then reject after capture), and both order-create paths.
+both consumers: the cart payload's `belowMinimum` flag and order creation,
+which refuses the order before any payment is opened for it.
 
 ### Invoice at checkout
 
@@ -351,8 +348,8 @@ points-earned promise and the redemption widget.
   transplant. Start at `src/cart/services.py: _bind_pricing` and the two
   re-pointing helpers.
 - **Preview and charge disagree for a wholesale cart.** Same cause, one step
-  later: the preview was bound and the intent was not, or the reverse. Both
-  order-create paths bind before any pricing maths for exactly this reason.
+  later: the preview was bound and the order was not, or the reverse. Order
+  creation binds before any pricing maths for exactly this reason.
 - **A coupon is accepted and then ignored.** The cart is bound and
   `B2B_ALLOW_PROMOTIONS` is off. `evaluate` reports every attached code as
   `COMBINATION_DISALLOWED`, which is non-blocking, so order create proceeds
@@ -360,8 +357,8 @@ points-earned promise and the redemption widget.
   the input when `allowPromotions` is false; a direct API caller will not see
   that.
 - **Checkout refuses just before payment.** The group's `min_order_value` is
-  unmet. The same check runs at payment-intent creation, so an online payment
-  can never be captured for an order this would reject.
+  unmet. Every order is created before its payment, so an online payment can
+  never be captured for an order this would reject.
 - **VIES says `UNAVAILABLE`.** The service was unreachable or timed out. The
   snapshot records it and the reviewer decides; it is not a rejection.
 - **A bulk price import reports unknown SKUs.** `import_price_lines` matches

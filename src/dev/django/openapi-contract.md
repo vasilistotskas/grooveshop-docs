@@ -187,7 +187,7 @@ started at the workspace root; subproject sessions do not see the root
 | `grooveshop-django-api/api-contract/README.md` | The direction of a verdict: what ships consumer first |
 | `grooveshop-django-api/src/order/enum/create_error.py` | `OrderCreateErrorType` and `TOTAL_CHANGED_CODE` |
 | `grooveshop-django-api/src/order/serializers/order.py` | `OrderCreateFromCartSerializer.expected_total`, the required field |
-| `grooveshop-django-api/src/order/services.py` | The comparison with the quote under the cart lock, on both creation paths |
+| `grooveshop-django-api/src/order/services.py` | The comparison with the quote under the cart lock, in `create_order_from_cart` |
 | `grooveshop-storefront-ui-node-nuxt/scripts/fetch-schema.mjs` | `pnpm generate:schema` |
 | `grooveshop-storefront-ui-node-nuxt/scripts/sync-schema-yml.mjs` | `pnpm sync:schema` |
 | `grooveshop-storefront-ui-node-nuxt/openapi-ts.config.ts` | `pnpm openapi-ts` |
