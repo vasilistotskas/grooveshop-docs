@@ -232,7 +232,17 @@ delivery, shipping, returns and payment facts) as well as what is typed in.
   `returnWindowDays` of 0, no active pay way), its row is left out, and the
   section draws nothing when no row is left. The block declares
   `feature: 'cart'`, so a store without the cart does not get it, and the facts
-  make no request for such a store.
+  make no request for such a store. A promise rests on the country-wide rates
+  of `/shipping/policy` (its rows whose `regionCodes` is empty); only a country
+  the store reaches just in some regions falls to those regions' rates, and a
+  delivery or carrier promise that holds there names them ("ACS 3,50 € για
+  Αττική και Κρήτη"; `promisedRates` and `regionNames` in
+  `app/composables/useStoreAssuranceFacts.ts`, the region records from
+  `server/api/shipping/policy.get.ts`). The Organization `hasShippingService`
+  markup (`shippingServicesSchema` in `app/utils/organizationPolicies.ts`)
+  states country-wide rows only: a destination without `addressRegion` is the
+  whole country, and Google reads `addressRegion` only as an ISO 3166-2 code in
+  the US, Australia and Japan.
 - **`newsletter_signup`** (`app/blocks/newsletter_signup.block.ts`,
   `app/components/PageSection/NewsletterSignup.vue`) takes an optional
   `headingColor` (`z.enum(['accent'])`): `accent` paints the h2 with
