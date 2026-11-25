@@ -842,8 +842,11 @@ whose plan enables it, and Django still gates the data.
   non-blocking.
 - **409 `total_changed` at order create.** Something repriced between the
   quote and the order: a promotion's window closed, a usage limit filled, a
-  gift card was spent elsewhere, or a wholesale binding changed. The locked
-  recomputation is right; the client shows the new total and orders again.
+  gift card was spent elsewhere, or a wholesale binding changed. It is also
+  answered, whatever total the client sent, when a live carrier price left its
+  cache before the locked quote ran ([Checkout and payment](checkout-and-payment.md)):
+  then nothing was repriced. The locked recomputation is right; the client
+  shows the new total and orders again.
 - **A partial refund put nothing back on the gift card.** By design: the
   redemption comes back with the refund that makes the order REFUNDED, or
   with a cancel. A card that needs value back before then gets a manual

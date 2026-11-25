@@ -485,8 +485,10 @@ concurrent checkout locks too) and leaving the connection idle in a
 transaction that `idle_in_transaction_session_timeout` kills.
 
 **Not idempotent for the storefront.** An online order keeps the cart, so
-a repeated submit creates a second PENDING order, which the stuck-order
-sweep cancels once its payment hold ends. The agent gateway names its
+a new checkout attempt (a new `Idempotency-Key`: the shopper submits again
+after the first attempt was answered) creates a second PENDING order, which
+the stuck-order sweep cancels once its payment hold ends. An automatic retry
+of one attempt reuses its key and replays the first answer (section 8). The agent gateway names its
 checkout instead and gets the same order back (section 8).
 `Order.payment_id` still carries a partial unique index over non-empty ids
 (`order_payment_id_unique`, migration
