@@ -1,6 +1,6 @@
 ---
 title: Shipping
-description: "The carrier abstraction, provider rows and the factory trap, per-tenant ShippingRate pricing and availability, dispatch on commit, and the full ACS and BoxNow flows including Cyprus lockers and COD reconciliation."
+description: "The carrier abstraction, provider rows and the factory trap, per-tenant shipping zones and ShippingRate pricing and availability, dispatch on commit, and the full ACS and BoxNow flows including Cyprus lockers and COD reconciliation."
 ---
 
 # Shipping
@@ -14,8 +14,9 @@ the pay-way filter and the pricing calculator all go through
 `src/shipping/services.py: ShippingService`, which resolves the row and then
 the adapter. Price, availability and weight cap live in a third piece,
 the per-tenant `src/shipping/models/rate.py: ShippingRate` table, one row per
-(provider, country, kind). Adding a courier is one app plus one provider
-row plus its rates.
+(provider, zone, kind), where a zone (`src/shipping/models/zone.py:
+ShippingZone`) is a whole country or some of its regions. Adding a courier is
+one app plus one provider row plus its rates.
 
 Three adapters exist today: ACS Courier (`shipping_acs/`, REST, polled),
 BoxNow (`shipping_boxnow/`, REST plus webhook) and the merchant-fulfilled
@@ -62,7 +63,7 @@ a carrier where they configure it: its beat entries in
 
 | Hook | Purpose |
 |---|---|
-| `checkout_fields` | The request fields the checkout takes for the carrier, by name. Those in `location_keys` are its pickup point (`boxnow_locker_id`, `acs_station_external_id`, …), on the quote, the payment intent and the order; the rest are order options (`acs_charge_type`). The order view hands what the body sent to the carrier as the payload |
+| `checkout_fields` | The request fields the checkout takes for the carrier, by name. Those in `location_keys` are its pickup point (`boxnow_locker_id`, `acs_station_external_id`, …), on the quote and the order; the rest are order options (`acs_charge_type`). The order view hands what the body sent to the carrier as the payload |
 | `field_rank` | Where the carrier's fields sit among the carriers' in every API body (BOX NOW, then ACS) |
 | `shipment_relation`, `order_detail_prefetches` | The reverse one-to-one from `Order` to its shipment row, which `shipment_for_order` reads and the order lists join, and what the order detail prefetches below it |
 | `order_shipment_field` | Its own typed field on the order detail (`boxnowShipment`, `acsShipment`), next to the generic `shipment` |
@@ -122,25 +123,125 @@ no longer read by anything.
 | Field | Meaning |
 |---|---|
 | `provider` | FK to `ShippingProvider`, `related_name="rates"` |
-| `country` | FK to the shared `country.Country` (`PROTECT`, `related_name="+"`), the same cross-schema shape as `Order.country` |
+| `zone` | FK to the store's `ShippingZone` (`CASCADE`, `related_name="rates"`): the destination the price applies to ([Shipping zones](#shipping-zones)) |
 | `kind` | `ShippingKind` |
 | `price` | `MoneyField` |
 | `free_shipping_threshold` | `MoneyField`, nullable: `NULL` means never free |
 | `max_weight_grams` | Nullable: `NULL` means no cap |
+| `delivery_days_min` / `delivery_days_max` | Nullable, both or neither: the delivery estimate in business days after dispatch |
 | `is_active` | Pauses the rate without losing the price |
 
-It is unique on `(provider, country, kind)` and indexed on
-`(country, is_active)`. `clean()` rejects a kind the provider does not
-support, a currency other than the tenant's `default_currency`, and a
-negative price. `HistoricalRecords` keeps the price audit trail. The
-admin edits rates through an Unfold `ShippingRateInline` on
-`ShippingProviderAdmin` with a plain country select: an autocomplete
-would 403, because the country admin is platform-only.
+It is unique on `(provider, zone, kind)`. `clean()` rejects a kind the
+provider does not support, a currency other than the tenant's
+`default_currency`, and a negative price. `HistoricalRecords` keeps the
+price audit trail. The admin edits rates through an Unfold
+`ShippingRateInline` on `ShippingZoneAdmin`, the page where the destination
+is (<span class="sidebar-path">Settings → Shipping Zones</span>);
+`ShippingProviderAdmin` keeps only the pay-way exclusions inline.
 
 Countries and regions stay global reference data (`SHARED_APPS`). Every
 ISO 3166-1 country is seeded (`src/country/migrations/0012_seed_iso_countries.py`),
-so every country is *selectable* in the rate inline, and only a rate
-makes it *shippable* for one store.
+so every country is *selectable* for a zone, and only a rate in one of its
+zones makes it *shippable* for one store.
+
+### Shipping zones
+
+A store's `ShippingZone` (`src/shipping/models/zone.py`) has a staff-facing
+`name` (unique), one `country` (cross-schema FK, `PROTECT`,
+`related_name="+"`) and `regions` through `ShippingZoneRegion`, whose
+`region` is unique: in one store a region is in one zone at most.
+
+- A zone with no regions is the country's **base zone** (one per country,
+  `shipping.zones.zone_errors`).
+- A zone with regions covers only those, and **overrides the base zone for
+  them**. "The islands cost more" is a region zone with its own rates;
+  "no delivery to Crete" is a region zone with no home-delivery rate. There
+  is no surcharge: a zone's rates carry the price, threshold, weight cap and
+  delivery days, so a price has one source.
+
+Resolution is one module, `src/shipping/zones.py`:
+
+| Function | Role |
+|---|---|
+| `zone_for(country, region)` | The region zone holding the region, else the base zone; without a region, the base zone |
+| `destination_rates(country, region)` | The rates that apply: home delivery from `zone_for`, pickup point from the base zone (a pickup point has no `Region`, so it is judged by country) |
+| `standing_destinations(countries)` | Where a read that knows no region judges each country, every country in two queries: its base zone for the deliveries it offers, and, for a home delivery it does not offer, each region zone that does (offered rates only, `offered`) |
+| `HomeCoverage` | Where home delivery reaches, read in one pass, counting a rate only when its carrier passes the quote's gate (`carrier_offers`): backs `?shippable=` on the region lists, `?homeDelivery=` on the countries and `UserAddress.shippable` |
+| `destination_errors(...)` | `region_not_served` / `country_not_served` for a home address no home delivery reaches |
+| `zone_errors`, `rate_kind_errors` | The admin's rules: one base zone per country, regions of the zone's country, a region in one zone, pickup rates on base zones only |
+
+Every gate below reads `destination_rates`, and the quote and both
+order-creation paths pass the order's region for a home delivery. The quote
+resolves the carrier once and hands it to the order
+(`CheckoutQuote.shipping_choice`, `OrderService._assign_shipping_provider`),
+so the price charged and the carrier assigned come from the same zone, and
+the automatic pick considers only carriers the quote's gate takes
+(`carrier_offers`). A carrier that has the rate elsewhere in the country but not in
+the region's zone raises `ShippingRegionUnavailableError` (a
+`ShippingUnavailableError`), answered as the quote refusal
+`shipping_region_unavailable`. A home delivery that names no carrier, to a
+region no carrier's zone reaches, is refused the same way:
+`resolve_home_delivery_provider` then names the country's carrier.
+
+API additions:
+
+- `GET /shipping/options?regionId=`: the region's zone; without it, the base
+  zone (a checkout before the shopper picks a region);
+- `?shippable=true|false` on `GET /region` and
+  `GET /region/<alpha2>/get_regions_by_country_alpha_2`
+  (`src/region/filters.py`): the regions home delivery reaches; on the
+  platform host `true` lists none;
+- `?homeDelivery=true` on `GET /country` (`src/country/filters.py`): the
+  countries a home delivery reaches (`HomeCoverage.reached`), the address
+  book's picker; `shippable` also counts pickup points, so a lockers-only
+  country is shippable but takes no saved address;
+- `UserAddress.shippable` (read-only, `src/user/serializers/address.py`). A
+  write that moves an address where no home delivery reaches is a 400
+  (`region_not_served` on `region`, `country_not_served` on `country`); an
+  address kept from before a zone change reads `false`, can still be edited
+  in place, and the storefront marks it and does not let checkout choose it;
+- order creation refuses a region no home delivery reaches with
+  `region_not_served` on `regionId`
+  (`OrderCreateFromCartSerializer._validate_home_address`);
+- `regionCodes` on each `GET /shipping/policy` row: the regions it applies
+  to, empty for a whole-country row.
+
+The surfaces with no address (`/shipping/policy`, `/shipping/free-shipping-info`,
+`/shipping/product/<id>`, the cart's `freeShippingProgress`) are judged for
+`initial_country_code()` at its `standing_destinations`, so a country served
+at home only in some regions advertises those regions' prices, each policy
+row naming its regions. The `shipping` and `regions_countries` cache
+surfaces both declare `ShippingZone`, `ShippingZoneRegion`,
+`ShippingProvider` and `AcsStation`. A write no signal reports marks every
+surface that declares its model (`core.cache.invalidation.mark_model_stale`):
+`src/shipping/signals.py` marks a region-set change, which is written with
+`bulk_create`, and the station and locker syncs mark their deactivating
+`update`. A change to a carrier credential on `Tenant`
+(`tenant.credentials.CARRIER_CREDENTIAL_FIELDS`) queues
+`shipping.tasks.purge_carrier_gate_surfaces` in the store's schema.
+
+A zone's regions are written by `ShippingZone.set_regions`, which refuses a
+set the zones' rules refuse and rewrites its rates' `country` once. The
+expand release keeps writing `ShippingRate.country` for the release before,
+which prices by it alone: a base zone's rate carries the zone's country, a
+region zone's none (`ShippingZone.rate_country_id`).
+
+The agent gateway lists regions with `shippable=true`
+(`grooveshop-agent-gateway/internal/django/client_shipping.go`) and quotes a
+home address with its region before a carrier is chosen, so the options are
+the region's zone's. It treats `shipping_region_unavailable` as a refusal of
+the delivery (`internal/checkout/pricing.go`), and `region_not_served` or
+`region_required` on `regionId` as a refusal of the destination
+(`internal/django/client_checkout.go`), named at UCP's `address_region` and
+ACP's `state`. A country whose regions the store serves none of is refused
+at the country (`internal/checkout/region.go`).
+
+The move from `ShippingRate.country` to `zone` ships in two releases
+(`src/shipping/migrations/0022_shipping_zone.py` to
+`0025_shipping_rate_country_out_of_state.py`): the expand release creates
+one base zone per country a store had rates for and takes `country` out of
+the state; the contract release drops it. The reference of the move is the
+Django repository's `docs/order/shipping-zones.md`.
 
 **Destination VAT and customs are not handled.** VAT is one rate per
 product with no country dimension (`src/vat/`), so a rate to another EU
@@ -156,8 +257,8 @@ a GR `flat_rate` home-delivery rate.
 ### The single gate: `active_rate`
 
 Every availability decision goes through
-`ShippingService.active_rate(provider_code, kind, country_code)`: an
-active rate, on an active provider, with a registered adapter, for a kind
+`ShippingService.active_rate(provider_code, kind, country_code, region_id)`:
+an active rate in the destination's zone, on an active provider, with a registered adapter, for a kind
 the provider supports and the adapter's `is_kind_enabled` allows. The
 rest is built on it:
 
@@ -165,9 +266,9 @@ rest is built on it:
 |---|---|
 | `quote(...) -> Money` | Price, evaluated in a fixed order: availability (`ShippingUnavailableError`), weight cap (`ShippingWeightExceededError`), free-shipping threshold (judged on `OrderQuoteService.threshold_value`, see [Checkout and payment](/dev/flows/checkout-and-payment#_4-shipping-method-decides-which-pay-ways-exist)), then the adapter's `live_quote` or the rate's `price` |
 | `assert_available(...)` | Availability and cap without a price; used when a free-shipping promotion zeroes the cost, so a promo can never ship to a country the store does not serve |
-| `shippable_country_codes()` | Countries with at least one active rate, ordered by `Country.sort_order`; backs `GET /api/v1/country?shippable=true` (`src/country/filters.py`), which returns nothing on the platform host |
-| `resolve_home_delivery_provider(country_code)` | The active home-delivery carrier with the lowest `priority` for that country |
-| `available_options(country_code)` | Checkout options; the country is required (400 without it) |
+| `shippable_country_codes()` | Countries with at least one active rate whose carrier passes the quote's gate (`shipping.zones.offered`; one adapter answer per carrier and kind, `kind_enabled_countries`), ordered by `Country.sort_order`; backs `GET /api/v1/country?shippable=true` (`src/country/filters.py`), which returns nothing on the platform host |
+| `resolve_home_delivery_provider(country_code, weight_grams, region_id)` | The active home-delivery carrier with the lowest `priority` in the destination's zone; when none is in the region's zone, the country's, so the refusal names the region |
+| `available_options(country_code, region_id)` | Checkout options; the country is required (400 without it), the region picks the zone |
 | `free_shipping_info(country_code)` | The store's standing "free shipping from X" promise, for a page with no cart; defaults to `initial_country_code()` and echoes the `country_code` it used |
 | `free_threshold_rates(country_code, weight_grams, items)` | The rates that ship free above a threshold, on the `active_rate` gate, lowest threshold first; with a cart's weight and items, only those that can carry it. Feeds `free_shipping_info` and the cart's `freeShippingProgress` ([Promotions](/dev/flows/promotions-and-gift-cards#free-shipping-one-distance)) |
 | `initial_country_code()` | The first `shippable_country_codes()` entry, the country a caller with no address is judged for |
@@ -217,8 +318,8 @@ shipment alone. BoxNow and ACS use the same function.
 
 ### Method offering at checkout
 
-`ShippingService.available_options` iterates the active rates for the
-requested country and emits one row per rate that passes
+`ShippingService.available_options` iterates the active rates of the
+requested destination (`destination_rates`) and emits one row per rate that passes
 `active_rate`. Each row carries the quoted price, `country_code`,
 `max_weight_grams` and `exceeds_max_weight`, the kind-aware logo URL,
 and the pay-ways that combination can settle — resolved by calling the
@@ -1362,7 +1463,7 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping/urls.py`, `grooveshop-django-api/src/shipping/webhook_urls.py`, `grooveshop-django-api/src/shipping_boxnow/webhook_urls.py` | Every registered carrier's `api_urlconf` and `webhook_urlconf`, mounted by `src/core/urls.py` |
 | `grooveshop-django-api/src/shipping/demo.py` | `ShipmentRow` and `event_times`, what each carrier's `demo.py` writes a demo shipment from |
 | `grooveshop-django-api/src/shipping/services.py` | `ShippingService` dispatcher, `active_rate`, `quote`, `assert_available`, `shippable_country_codes`, `resolve_home_delivery_provider`, `available_options`, `free_shipping_info`, `free_threshold_rates`, `initial_country_code`, `sanitize_delivery_notes`, `cancel_shipment`, `can_cancel_shipment` |
-| `grooveshop-django-api/src/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError`, `CarrierBusyError` |
+| `grooveshop-django-api/src/shipping/exceptions.py` | `ShippingUnavailableError`, `ShippingRegionUnavailableError`, `ShippingWeightExceededError`, `CarrierError`, `CarrierUnavailableError`, `CarrierBusyError` |
 | `grooveshop-django-api/src/shipping/api_errors.py` | `CarrierUnavailable` (503 `carrier_unavailable`), `CarrierBusy` (409 `carrier_request_in_progress`), `unanswered` |
 | `grooveshop-django-api/src/shipping_acs/exceptions.py` | ACS errors on the carrier hierarchy, including `AcsOutcomeUnknownError`, `AcsVoucherRequestUnknownError`, `AcsVoucherResolutionError`, `AcsUndocumentedHttpError`, `AcsVoucherRequestNotSentError` and `AcsVoucherRequestHeldError` |
 | `grooveshop-django-api/src/shipping_acs/voucher_hold.py` | The voucher hold's state machine and the rule table: `admit`, `allow_trial`, `record_voucher`, `record_refusal`, `record_no_answer`, `record_not_sent`, `record_unknown_outcome` |
@@ -1370,8 +1471,14 @@ move `Order.status`, which the carrier events drive separately.
 | `grooveshop-django-api/src/shipping_boxnow/exceptions.py` | BoxNow errors on the carrier hierarchy |
 | `grooveshop-django-api/src/shipping/models/provider.py` | `ShippingProvider` fields and kind-aware logo resolution |
 | `grooveshop-django-api/src/shipping/models/rate.py` | `ShippingRate`: fields, constraints, `clean()` |
+| `grooveshop-django-api/src/shipping/models/zone.py` | `ShippingZone`, `ShippingZoneRegion` |
+| `grooveshop-django-api/src/shipping/zones.py` | `zone_for`, `destination_rates`, `HomeCoverage`, `destination_errors`, `zone_errors`, `rate_kind_errors` |
+| `grooveshop-django-api/src/shipping/signals.py` | `zone_regions_changed` |
+| `grooveshop-django-api/src/region/filters.py` | `?shippable=` on the region lists |
+| `grooveshop-django-api/src/user/serializers/address.py` | `UserAddress.shippable` and the write refusal |
+| `grooveshop-django-api/src/shipping/migrations/0024_shipping_rate_zone_backfill.py` | One base zone per country, each rate put in it |
 | `grooveshop-django-api/src/shipping/migrations/0011_convert_legacy_pricing_to_rates.py` | Settings-to-rates conversion per tenant |
-| `grooveshop-django-api/src/shipping/admin.py` | `ShippingRateInline` on `ShippingProviderAdmin` |
+| `grooveshop-django-api/src/shipping/admin.py` | `ShippingZoneAdmin` with `ShippingRateInline`; `ShippingProviderAdmin` |
 | `grooveshop-django-api/src/shipping/carriers/flat_rate.py` | Merchant-fulfilled, lifecycle-only adapter |
 | `grooveshop-django-api/src/country/filters.py` | `?shippable=true` |
 | `grooveshop-django-api/src/order/checkout/quote.py` | `OrderQuoteService.shipping_cost`, `threshold_value`, `delivery_kind`, `resolve_live_shipping` |

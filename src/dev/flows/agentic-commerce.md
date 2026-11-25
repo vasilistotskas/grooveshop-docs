@@ -349,7 +349,7 @@ refused there leaves no cart in Django and an update leaves the cart as the
 stored session knows it. A line sync that fails partway still leaves what it
 wrote.
 
-UCP takes the region as `fulfillment.regionId` and ACP as the address's `state`.
+UCP takes the region as the destination's `address_region` and ACP as the address's `state`.
 Until one is chosen a checkout stays `incomplete` on UCP and
 `not_ready_for_payment` on ACP, and its message lists the codes, because a
 store may hold its region names in one language only.
