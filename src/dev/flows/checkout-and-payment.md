@@ -14,9 +14,7 @@ provider's hosted page for the order that already exists. So the locked
 quote runs every refusal (stock, total, cart digest, the wholesale minimum)
 before any money moves. What follows the order differs by the pay way's
 **settlement** (`src/pay_way/enum/settlement.py: PaySettlement`), never by a
-provider name. Until Django #818 a Stripe card could also be paid first
-(`cart/create-payment-intent`, then the order posted with its intent); that
-path is removed.
+provider name.
 
 For the exhaustive status tables and the audit history, read
 [Order system](/dev/django/reference/order/) — this page is the
