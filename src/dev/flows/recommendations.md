@@ -32,7 +32,7 @@ flowchart TD
   Tier --> Div["filler cap, category cap"]
   Div --> Fill{"reached min_fill?"}
   Fill -- "no" --> Nothing["return nothing"]
-  Fill -- "yes" --> Resp["items + impression_id"]
+  Fill -- "yes" --> Resp["items"]
 
   Resp --> Strip["Nuxt Product/Suggestions.vue"]
   Strip --> Imp["POST impression"]
