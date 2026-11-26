@@ -92,10 +92,10 @@ more than once under the autoreloader.
   read from the tenant's own schema. Nothing running in the public schema
   reads `Setting` at all, so a section here only materialised meaningless
   public rows and invited edits that silently changed nothing for any store.
-- **`allauth_idp_oidc`** — `allauth.idp.oidc` is in `TENANT_APPS` only, so
-  its tables do not exist in the public schema. The sections rendered and
-  then raised `ProgrammingError` the moment they were opened. OIDC agent
-  clients and tokens are per-store and belong in the merchant admin.
+- **`allauth_idp_oidc`** — `allauth.idp.oidc` is in `SHARED_APPS` and
+  `TENANT_APPS` (`src/settings/application.py`): its public tables hold only
+  the staff issuer's clients and tokens (`src/agent/staff.py`), and a store's
+  agent clients and tokens live in its own schema and its merchant admin.
 
 `PLATFORM_EXCLUDED_MODELS` strips four models that `user` drags in —
 `SubscriptionTopic`, `UserSubscription`, `UserAddress`, `UserDataExport` —
@@ -134,9 +134,9 @@ merchant self-service surface — see
 [The tenant record](/dev/operator/tenants).
 
 `role_scopes.PLATFORM_ONLY_APP_LABELS` looks like the tenant-host set and is
-not; do not substitute it. It also names `allauth_idp_oidc`, whose tables are
-tenant-only, so withholding on it would hide OIDC clients a store genuinely
-owns. It also names `auth`, which is dual-listed and therefore absent from
+not; do not substitute it. It also names `allauth_idp_oidc`, which every store
+has its own copy of, so withholding on it would hide OIDC clients a store
+genuinely owns. It also names `auth`, which is dual-listed and therefore absent from
 `shared_only_app_labels()`: `Group` is **not** withheld on a store host, only
 unlinked from that sidebar and denied to every store role — see
 [Platform staff & access](/dev/operator/team). The two sets answer different

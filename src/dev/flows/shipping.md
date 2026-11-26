@@ -221,10 +221,9 @@ surface that declares its model (`core.cache.invalidation.mark_model_stale`):
 `shipping.tasks.purge_carrier_gate_surfaces` in the store's schema.
 
 A zone's regions are written by `ShippingZone.set_regions`, which refuses a
-set the zones' rules refuse and rewrites its rates' `country` once. The
-expand release keeps writing `ShippingRate.country` for the release before,
-which prices by it alone: a base zone's rate carries the zone's country, a
-region zone's none (`ShippingZone.rate_country_id`).
+set the zones' rules refuse. Where region zones hold every region of a country,
+no home address is priced by its base zone, so the base zone's home rates count
+nowhere (`shipping.zones.reaching`); its pickup points still apply.
 
 The agent gateway lists regions with `shippable=true`
 (`grooveshop-agent-gateway/internal/django/client_shipping.go`) and quotes a
@@ -236,12 +235,13 @@ the delivery (`internal/checkout/pricing.go`), and `region_not_served` or
 ACP's `state`. A country whose regions the store serves none of is refused
 at the country (`internal/checkout/region.go`).
 
-The move from `ShippingRate.country` to `zone` ships in two releases
+The move from `ShippingRate.country` to `zone` shipped in three releases
 (`src/shipping/migrations/0022_shipping_zone.py` to
-`0025_shipping_rate_country_out_of_state.py`): the expand release creates
-one base zone per country a store had rates for and takes `country` out of
-the state; the contract release drops it. The reference of the move is the
-Django repository's `docs/order/shipping-zones.md`.
+`src/shipping/migrations/0028_shipping_rate_drop_country_column.py`): the first
+created one base zone per country a store had rates for and wrote both columns,
+the second made `zone` required and took `country` out of the code, the third
+dropped the column. The reference of the move is the Django repository's
+`docs/order/shipping-zones.md`.
 
 **Destination VAT and customs are not handled.** VAT is one rate per
 product with no country dimension (`src/vat/`), so a rate to another EU
