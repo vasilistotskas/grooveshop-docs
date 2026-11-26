@@ -240,10 +240,14 @@ each read `useStoreFeature('productSuggestions')`.
 
 ### Impressions are client-reported
 
-`GET /api/v1/recommendations` **writes nothing**. It mints an
-`impression_id` per response as a correlation id; the impression itself is
+`GET /api/v1/recommendations` **writes nothing**, and its body names no
+impression: while a body is cached it is every viewer's. The impression is
 reported by the client through `POST /api/v1/recommendations/events` when the
-strip actually becomes visible. The view's docstring gives the reason:
+strip actually becomes visible, with no id of its own
+(`impression_id_minted` otherwise). That beacon mints the showing's id, records
+the impression with the request's own session, cart and customer, and its
+`202` names the id; the showing's clicks (`impression_id_required`) and the add
+to cart that follows one carry it. The view's docstring gives the reason:
 "served" is not "shown" — a strip below the fold that nobody scrolls to must
 not count against a strategy's click-through rate. It also lets the storefront
 cache the response body per (surface, seed) without cache fills inflating the
@@ -335,8 +339,9 @@ drawer and in webside's strip); the cached body is anonymous.
   (`engine.py: _Merged.curated`).
 - **Below `min_fill`, show nothing.** The engine returns an empty list and
   the storefront renders nothing.
-- **The read endpoint writes no events.** `impression_id` is a correlation
-  id; the impression is a separate client call.
+- **The read endpoint writes no events** and names no impression. An
+  impression is one showing, and its id is minted by the beacon that reports
+  it.
 - **`attach` is server-side only.** `record_events` drops it; only
   `record_attach_events` writes it.
 - **Every event is written once per task.** `attach` through its partial

@@ -776,6 +776,12 @@ arrived through a real checkout — see
   replays instead of running twice.
 - **One order per provider payment.** The `order_payment_id_unique` index
   (section 5); order creation itself takes no payment.
+- **The same checkout again.** A shopper who goes back and orders the same
+  thing again gets the cart's unpaid online order back, `201`, instead of a
+  second order holding the same stock: `OrderService._resume_same_checkout`,
+  under the cart lock and before the cart is validated, compares the
+  checkout's fingerprint (`src/order/checkout/resume.py`) with the order's. A
+  changed checkout places a new order.
 - **Agent checkout.** One order per agent checkout: the gateway names its
   checkout session as `agentCheckout` on order creation, and a repeat is
   answered with the order that checkout placed (`Order.agent_checkout`, the

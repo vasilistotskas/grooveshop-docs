@@ -49,6 +49,7 @@ to the public schema; see [Suspend, export & destroy](/dev/operator/lifecycle#de
 | Expired Django sessions | public and per store | session expiry | none (weekly Monday 04:00) |
 | allauth user-session rows whose Django session is gone | public and per store | by state | none (same task as above) |
 | Expired knox API tokens | per store | the token's own expiry | none (same task as above) |
+| Expired OAuth tokens and authorization codes (`allauth_idp_oidc.Token`) | public and per store | the token's own expiry | none (same task as above) |
 | Notifications | per store, suspended stores included | 365 days | code (`fanout_clear_expired_notifications`, `include_suspended=True`) |
 | Simple-history rows (every audited model) | per store | 365 days, plus a nightly sweep of identical consecutive rows | code (`fanout_clear_old_history`, `fanout_clear_duplicate_history`) |
 | Celery task failures | public | 30 days | `CELERY_RESULT_EXPIRES` |
@@ -75,9 +76,11 @@ meets its row, because a row lives at least that period from the event.
 The sessions task (`core.tasks.clear_expired_sessions_task`) runs
 `clearsessions`, then deletes allauth `UserSession` rows with no
 `django_session` row (allauth purges them only when the same user signs in
-again), then expired knox tokens (knox deletes a user's expired tokens only
-when that user authenticates again, and has no sweep). Knox exists in the
-store schemas only, so the public pass skips it.
+again), then expired tokens (`core.retention.purge_expired_auth_tokens`): the
+identity provider's, which allauth never deletes (an authorization code is a
+row of the same table), and knox's, which knox deletes only when that user
+authenticates again. Knox exists in the store schemas only, so the public pass
+skips it.
 
 ## What is never deleted
 
