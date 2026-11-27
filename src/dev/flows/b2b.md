@@ -339,7 +339,11 @@ points-earned promise and the redemption widget.
 - **Wholesale is retail-only on the agent gateway.** Every gateway catalog,
   cart and checkout call is anonymous and forwards no bearer, so MCP tools,
   UCP/ACP checkout and the feeds always see retail prices and totals stay
-  self-consistent (`grooveshop-agent-gateway/AGENTS.md`).
+  self-consistent. The one exception is a chat turn's cart calls that carry
+  the shopper's cart token: Django prices that cart for its owner, so a
+  wholesale shopper's cart shows their prices
+  (`grooveshop-agent-gateway/internal/django/client_cart.go`: `cartTarget`;
+  `grooveshop-agent-gateway/AGENTS.md`).
 
 ## Failure modes
 
