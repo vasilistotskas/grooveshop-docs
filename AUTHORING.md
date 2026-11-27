@@ -1,6 +1,6 @@
 # Authoring brief for grooveshop-docs
 
-Read `CLAUDE.md` in this repo first; it holds the rules. This file adds the
+Read `AGENTS.md` in this repo first; it holds the rules. This file adds the
 page templates and the list of facts to verify.
 
 ## Ground rules for writers

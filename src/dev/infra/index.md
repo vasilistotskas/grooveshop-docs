@@ -46,7 +46,7 @@ pins until the root app refreshes.
 ## Status of this section
 
 The infrastructure section of these docs is not written yet. The
-repository's `CLAUDE.md` and the runbooks under `docs/` are the guide
+repository's `AGENTS.md` and the runbooks under `docs/` are the guide
 until then; the operator-facing procedures already have pages under
 [Deploying](/dev/operations/deploying), [Staging](/dev/operations/staging),
 [Secrets](/dev/operations/secrets) and [Backups](/dev/operations/backups),

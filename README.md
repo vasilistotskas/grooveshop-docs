@@ -57,7 +57,7 @@ pnpm check:claims    # fails if a page cites a file that no longer exists (needs
 
 ## Writing docs
 
-`CLAUDE.md` holds the rules and `AUTHORING.md` the page templates. In short:
+`AGENTS.md` holds the rules and `AUTHORING.md` the page templates. In short:
 
 - Every developer page names the source files it describes; the code wins over the page.
 - The admin guide names nothing from the codebase. It uses the sidebar paths

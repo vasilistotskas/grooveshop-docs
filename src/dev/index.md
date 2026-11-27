@@ -20,14 +20,14 @@ Pages are of three kinds:
 | Kind | Where | What it is |
 |---|---|---|
 | Platform and flows | `/dev/platform/`, `/dev/flows/` | Cross-service narratives written for this site. Each ends with a **Source** table of file paths. |
-| Service guides | `/dev/django/`, `/dev/operations/` | How one service is built and operated, distilled from that repository's `CLAUDE.md` and code. |
+| Service guides | `/dev/django/`, `/dev/operations/` | How one service is built and operated, distilled from that repository's `AGENTS.md` and code. |
 | Reference | `/dev/<service>/reference/` | Copied verbatim at build time from the owning repository's `docs/` folder. Read-only here. |
 | Operator runbooks | `/dev/operator/` | Running the platform itself rather than building on it: onboarding a store, the tenant record, domains and certificates, billing and dunning, suspension and destruction, platform staff, and the control plane's scheduled work. |
 
 ## Repositories
 
 The platform is five repositories checked out side by side in one workspace
-folder. Each is deployed independently and has its own `CLAUDE.md`.
+folder. Each is deployed independently and has its own `AGENTS.md`.
 
 | Repository | Service | Port |
 |---|---|---|
@@ -54,11 +54,11 @@ tree sits behind basic auth at the ingress.
 
 - `/dev/llms.txt` lists every developer page with a one-line description; `/dev/llms-full.txt` is the whole tree in one file. Both require the same credentials as this page.
 - `/llms.txt` and `/llms-full.txt` cover the public admin guide only.
-- Prefer the repository checkout over this site when you have it: the synced reference pages are copies, and `CLAUDE.md` in each repository carries the coding conventions this site does not repeat.
+- Prefer the repository checkout over this site when you have it: the synced reference pages are copies, and `AGENTS.md` in each repository carries the coding conventions this site does not repeat.
 - Never act on a version number found in prose; read `pyproject.toml`, `package.json`, `go.mod` or the manifests.
 
 ## Other services
 
 The storefront, agent gateway, media stream and infrastructure sections are
-placeholders for now; their repositories' `CLAUDE.md` files remain the guide
+placeholders for now; their repositories' `AGENTS.md` files remain the guide
 until those sections are written.

@@ -83,7 +83,7 @@ it later means the slot admin's **Reset to preset**
 
 Point three A records at the cluster's ingress IP — the apex, `www.` and
 `api.`. The value is the master node's public address, recorded in
-`grooveshop-infrastructure/CLAUDE.md` and repeated in the tenant template
+`grooveshop-infrastructure/AGENTS.md` and repeated in the tenant template
 README; Traefik runs one pod per node (a 2-replica Deployment spread across
 both), so either node answers, but pinning to the master avoids surprises
 when a node drains.

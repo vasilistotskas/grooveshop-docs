@@ -1595,7 +1595,7 @@ yourself, then bumping the pin in the infrastructure repo.
 
 | File | Role |
 |---|---|
-| `grooveshop-agent-gateway/CLAUDE.md` | Surface map, conventions, cross-repo contracts |
+| `grooveshop-agent-gateway/AGENTS.md` | Surface map, conventions, cross-repo contracts |
 | `grooveshop-agent-gateway/internal/server/routes.go` | Mux assembly and middleware order |
 | `grooveshop-agent-gateway/internal/server/internalapi.go` | Order events, feed invalidation, token check |
 | `grooveshop-agent-gateway/internal/tenant/` | Resolver, middleware, feature requirements |
