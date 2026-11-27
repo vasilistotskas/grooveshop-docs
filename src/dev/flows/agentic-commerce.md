@@ -71,7 +71,7 @@ string. It sends `X-Internal-Token`, which is what makes Django include the
 tenant's secret fields.
 
 Secrets are kept **out of the shared Redis tier** on purpose, so a config
-served from there arrives with `ChatAPIKey` and `ACPBearerToken` empty —
+served from there arrives with no `AIProfile` and an empty `ACPBearerToken` —
 indistinguishable, to a handler, from a tenant that never configured the
 feature. Routes that need one (`/chat`, `/acp`) use
 `MiddlewareWithSecrets`, which tops them up through `EnsureSecrets` before the
@@ -974,10 +974,12 @@ emits.
 ### The chatbot
 
 `POST /chat` is a first-party shopping assistant over SSE, speaking the
-OpenAI-compatible chat-completions protocol (`CHAT_BASE_URL` selects the
-provider). The credential is **per tenant**: `chatApiKey` from
-`tenant/resolve`, attached per turn. A tenant without one gets a localized
-404, so the route is always mounted and the handler rejects keyless tenants.
+OpenAI-compatible chat-completions protocol. Provider, model and key are
+**per tenant**: the store's `aiProfile` from `tenant/resolve` (provider, base
+URL, model, key; Django takes the base URL from its fixed provider list,
+`grooveshop-django-api/src/tenant/ai_providers.py`, never from a typed
+address), applied per turn. A tenant without one gets a localized 404, so the
+route is always mounted and the handler rejects tenants with no profile.
 Chat pays per token, so its spend is bounded in three layers before a model is
 called, and again inside the turn:
 
@@ -1494,8 +1496,8 @@ yourself, then bumping the pin in the infrastructure repo.
   discount code is refused.** The store has that feature off at one of its
   tiers; check `features` on the resolve payload. Right after a switch,
   allow twice `TENANT_CACHE_TTL`.
-- **`/chat` 404s with a localized message.** The tenant has no `chatApiKey`.
-  Remember that the key only arrives on an internally-authenticated resolve,
+- **`/chat` 404s with a localized message.** The tenant has no `aiProfile`.
+  Remember that the profile only arrives on an internally-authenticated resolve,
   so a config served from the Redis tier has it empty — `/chat` uses the
   secrets middleware for exactly that reason.
 - **`/chat` or `/acp/*` answers 503, not 404.** The gateway holds no credentials

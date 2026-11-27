@@ -1,6 +1,6 @@
 ---
 title: Store profile
-description: Your store's name, logo, colours, emails and the credentials that connect it to Viva Wallet, Stripe, ACS, BoxNow and myDATA.
+description: Your store's name, logo, colours, emails, the credentials that connect it to Viva Wallet, Stripe, ACS, BoxNow and myDATA, and your AI provider.
 ---
 
 # Store profile
@@ -11,7 +11,7 @@ This is your store's identity: name, logo, colours, contact email and the creden
 
 ## What you see
 
-A form with tabs. Some fields are read-only: the platform team sets those, such as the plan, billing, the plan's features and the currency. A few keys belong to the platform, such as the chat assistant's key and the Cloudflare token: for those you see only a tick or a cross, saying whether they are set, never the key itself.
+A form with tabs. Some fields are read-only: the platform team sets those, such as the plan, billing, the plan's features and the currency. A few keys belong to the platform, such as the Cloudflare token: for those you see only a tick or a cross, saying whether they are set, never the key itself.
 
 | Tab | What you change |
 |---|---|
@@ -24,6 +24,7 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 | **Payments** | Your Viva Wallet and Stripe credentials. |
 | **Shipping** | Your ACS and BoxNow credentials. |
 | **Invoicing & myDATA** | Your AADE myDATA credentials. |
+| **AI** | The AI provider, model and API key of your store's chat assistant and the page builder's AI tools. |
 
 ## Tasks
 
@@ -80,6 +81,21 @@ Both have separate credentials for testing and for real sales.
 - **BoxNow**: tick **BoxNow Live Mode** when you enter the live credentials. While it is off, the store talks to BoxNow's test environment. BoxNow works only when the client ID, client secret, partner ID and **BoxNow Warehouse ID** are all filled in; the **BoxNow Notify Phone** is optional.
 
 The switch must always match the credentials you entered.
+
+### Set up the AI assistant
+
+The store's chat assistant, and the page builder's AI tools as they arrive, run on an AI provider you choose, with your own key. Usage is billed to your account at that provider.
+
+1. Create an API key in your account with the provider.
+2. Open the **AI** tab.
+3. Choose the **AI Provider**, type the **AI Model** exactly as the provider names it, and paste the key in **AI API Key**.
+4. Click **Save**.
+
+- **All three together.** Saving refuses a provider without a model and a key, or a key without the other two.
+- **The key is never shown again.** After saving, the key field stays empty. Leave it empty to keep the saved key, or paste a new one to replace it. Someone who can only view the store sees whether a key is saved, never the key.
+- **Changing the provider needs that provider's key.** Saving refuses a new provider with the old key, so your key is never sent to another company.
+- **To switch AI off**, clear **AI Provider** and **AI Model** and click **Save**. The saved key is removed with them.
+- **There is no platform key.** Without your own, the store has no chat assistant.
 
 ## Things to know
 
