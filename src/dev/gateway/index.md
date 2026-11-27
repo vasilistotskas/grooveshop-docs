@@ -97,7 +97,7 @@ production and staging accept, so it boots only under `ENV=development` or
 
 | File | Role |
 |---|---|
-| `grooveshop-agent-gateway/CLAUDE.md`, `grooveshop-agent-gateway/.claude/rules/ucp.md` | The surface map and the conventions the code keeps |
+| `grooveshop-agent-gateway/AGENTS.md`, `grooveshop-agent-gateway/.claude/rules/ucp.md` | The surface map and the conventions the code keeps |
 | `grooveshop-agent-gateway/cmd/gateway/serve.go` | The shutdown windows and the timeouts |
 | `grooveshop-agent-gateway/internal/mcpsrv/signature.go` | Platform signature verification on `/mcp` |
 | `grooveshop-agent-gateway/internal/mcptool/mcptool.go` | The `tool call` log line and `gateway_tool_calls_total` |
@@ -106,5 +106,5 @@ production and staging accept, so it boots only under `ENV=development` or
 ## Status of this section
 
 The gateway section of these docs is not written yet. The repository's
-`CLAUDE.md` is the guide until then, and the end-to-end flow is described
+`AGENTS.md` is the guide until then, and the end-to-end flow is described
 under [Agentic commerce](/dev/flows/agentic-commerce).

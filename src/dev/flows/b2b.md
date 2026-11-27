@@ -339,7 +339,7 @@ points-earned promise and the redemption widget.
 - **Wholesale is retail-only on the agent gateway.** Every gateway catalog,
   cart and checkout call is anonymous and forwards no bearer, so MCP tools,
   UCP/ACP checkout and the feeds always see retail prices and totals stay
-  self-consistent (`grooveshop-agent-gateway/CLAUDE.md`).
+  self-consistent (`grooveshop-agent-gateway/AGENTS.md`).
 
 ## Failure modes
 
@@ -402,4 +402,4 @@ points-earned promise and the redemption widget.
 | `grooveshop-storefront-ui-node-nuxt/app/composables/useB2BPricing.ts` | Post-hydration price swap |
 | `grooveshop-storefront-ui-node-nuxt/app/pages/account/business/index.vue` | Profile page |
 | `grooveshop-storefront-ui-node-nuxt/server/api/b2b/` | Profile and price proxies |
-| `grooveshop-agent-gateway/CLAUDE.md` | Why the gateway is retail-only |
+| `grooveshop-agent-gateway/AGENTS.md` | Why the gateway is retail-only |

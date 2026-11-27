@@ -81,6 +81,6 @@ The repository's own `docs/` folder is copied in at build time under
 the metrics and the LogsQL / PromQL queries that use them
 (`docs/observability.md` in `grooveshop-media-stream`), and how renditions are
 bounded, stored and pre-generated (`docs/renditions.md`). The repository's
-`CLAUDE.md` covers the rest until more of it is written; the URL contract
+`AGENTS.md` covers the rest until more of it is written; the URL contract
 with the storefront is described under
 [Architecture](/dev/platform/architecture).

@@ -15,6 +15,7 @@ node_modules
 .vitepress/cache
 
 # Repo-level docs about the repo, not site content
+AGENTS.md
 CLAUDE.md
 README.md
 CHANGELOG.md

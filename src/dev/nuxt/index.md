@@ -63,7 +63,7 @@ what the environment already sets. It is not a CI-only variable.
 ## Status of this section
 
 The storefront section of these docs is not written yet. Until it is, the
-repository's `CLAUDE.md` and the rule files under `.claude/rules/` are the
+repository's `AGENTS.md` and the rule files under `.claude/rules/` are the
 guide; the cross-service behaviour is covered under
 [Architecture](/dev/platform/architecture) and
 [Multi-tenancy](/dev/platform/multi-tenancy).

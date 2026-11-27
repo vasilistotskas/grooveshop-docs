@@ -185,7 +185,7 @@ the sealed `frontend-secrets`
 - The PreSync hook tag is bumped without the kustomize pin, or the other
   way round: the first direction migrates tables out from under old pods,
   the second fails safe but deletes the failed Job's logs
-  (`grooveshop-infrastructure/CLAUDE.md`).
+  (`grooveshop-infrastructure/AGENTS.md`).
 - A child Application reports "Synced" against old pins after a push: the
   root app has not refreshed yet; force a hard refresh and verify the
   running images, not the sync status (`docs/deploying.md`).
