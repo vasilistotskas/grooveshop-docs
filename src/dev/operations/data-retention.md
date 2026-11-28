@@ -92,6 +92,12 @@ by the platform. The simple-history sweep above does reach
 `HistoricalProduct`; the legal price record is `ProductPriceSpell`, not that
 table.
 
+AI usage (`AIUsage`, `grooveshop-django-api/src/tenant/models/ai_usage.py`):
+one row per store, day, feature and model with token counts only, no prompt
+text. Kept while the store exists: it is the record a store's monthly budget
+is held to, and the basis for billing later. Destroying the store deletes its
+rows with it (`on_delete=CASCADE` on `AIUsage.tenant`).
+
 ACS voucher holds (`AcsVoucherHold`): one row per span in which a store's
 voucher requests waited for ACS, holding times, a counter and the text of the
 last failure. No personal data and a handful of rows a year, so no sweep; they
