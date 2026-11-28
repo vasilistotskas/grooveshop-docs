@@ -102,6 +102,7 @@ production and staging accept, so it boots only under `ENV=development` or
 | `grooveshop-agent-gateway/internal/mcptool/mcptool.go` | The `tool call` log line and `gateway_tool_calls_total` |
 | `grooveshop-agent-gateway/internal/config/config.go`, `grooveshop-agent-gateway/.env.example` | Every setting and what `Load` refuses |
 | `grooveshop-agent-gateway/internal/django/tenant_config.go`, `grooveshop-agent-gateway/internal/chat/handler.go`, `grooveshop-agent-gateway/internal/chat/turn.go` | The `aiProfile` wire shape, the `/chat` 404 for a store without a valid profile, and the turn that sends its reasoning effort |
+| `grooveshop-agent-gateway/internal/ai/budget.go`, `grooveshop-django-api/src/tenant/ai_usage.py` | The store's monthly AI token budget: Django records every turn's tokens (`/api/v1/tenant/ai-usage`), the gateway checks a 60-second Redis copy of "exhausted" before a turn and answers 403 once it is |
 
 ## Status of this section
 
