@@ -93,7 +93,7 @@ The store's chat assistant, and the page builder's AI tools as they arrive, run 
 5. Optionally set an **AI Monthly Token Budget**: the most tokens (what is sent to the model and what it answers, together) the AI features may spend with your key in a calendar month. Leave it empty for no cap.
 6. Click **Save**.
 
-- **The budget.** **AI tokens this month** on the same tab shows what your key has spent since the 1st. Once it reaches the budget, the chat assistant tells shoppers it is not available right now, until the next month starts or you raise the budget (it answers again within about a minute). The answer that crosses the budget is still given in full, so the month can end slightly above it. Your provider's own spending limits apply as well.
+- **The budget.** **AI tokens this month** on the same tab shows what the store's AI features have spent since the 1st, with every key you used this month. Once it reaches the budget, the chat assistant tells shoppers it is not available right now, until the next month starts or you raise the budget above what was already spent (it answers again within about a minute). The answer that crosses the budget is still given in full, so the month can end slightly above it. Your provider's own spending limits apply as well.
 - **All three together.** Saving refuses a provider without a model and a key, or a key without the other two.
 - **The key is never shown again.** After saving, the key field stays empty. Leave it empty to keep the saved key, or paste a new one to replace it. Someone who can only view the store sees whether a key is saved, never the key.
 - **Changing the provider needs that provider's key.** Saving refuses a new provider with the old key, so your key is never sent to another company.
