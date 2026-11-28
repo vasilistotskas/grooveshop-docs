@@ -22,7 +22,7 @@ secrets.
 | `GET /mcp/server-card`, `/.well-known/ard.json`, `/.well-known/ai-catalog.json` | Agent discovery: the MCP Server Card, the ARD manifest and the AI Catalog, the last two cut from one entry (`internal/mcpsrv/discovery.go`); see [Agentic commerce](/dev/flows/agentic-commerce) |
 | `/acp/checkout_sessions*` | ACP agentic checkout REST (create, get, update, complete, cancel), gated per tenant by the tenant's own `acpBearerToken` |
 | `/feeds/*` | Product feeds: `google.xml`, `meta.xml`, `tiktok.xml`, `acp.json` |
-| `POST /chat` | First-party shopping chatbot (SSE) over an OpenAI-compatible provider; the model key is per tenant |
+| `POST /chat` | First-party shopping chatbot (SSE) over an OpenAI-compatible provider; provider, model, key and reasoning effort come from the store's AI profile |
 | `/internal/*` | Cluster-only: Django's order-event push and feed invalidation, shared-secret header |
 | `/healthz`, `/readyz`, `/metrics` | Process-only liveness, readiness gated on Redis and the startup check of the signing keys (Django health is reported in the body but never flips it), Prometheus |
 
@@ -76,7 +76,6 @@ and then misbehave stops the pod at start instead:
 | `DJANGO_BASE_URL` | not an absolute http or https URL with a host, or one carrying user info, a query or a fragment |
 | `DJANGO_PUBLIC_HOST`, `ASSETS_HOST`, `STAFF_CONNECT_HOST` | not a bare host: holding any of `/ ? # @` or a blank, as a scheme or a path would |
 | `STOREFRONT_DEFAULT_LOCALE` | not a lowercase language code such as `el` |
-| `CHAT_EFFORT` | not one of the chat-completions API's `reasoning_effort` values (`none` to `max`) |
 | `MEDIA_IMAGE_URL_TEMPLATE`, `FEED_IMAGE_URL_TEMPLATE` | missing `{assets_host}` or `{path}`, holding a placeholder other than those and `{schema}`, or not expanding (with `ASSETS_HOST`) to an absolute http or https URL |
 | `INTERNAL_EVENTS_SECRET` | not a valid header value (a control character, a leading or trailing blank), or, in production and staging, shorter than 32 characters |
 | `SIGNING_KEY_ENCRYPTION_KEY` | missing (in every `ENV`), or not standard base64 of exactly 32 bytes (`openssl rand -base64 32`). It seals each store's UCP signing key in Redis. Once Redis answers, a key that opens none of the sealed keys it holds ends the process, rather than let a new key replace a published one |

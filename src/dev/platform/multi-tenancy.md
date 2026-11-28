@@ -92,7 +92,8 @@ serializer's field names (`src/tenant/cache.py: tenant_resolve_key`), so a
 release that adds a field never serves the old shape. When the caller
 proves it is the gateway with `X-Internal-Token`
 (`AGENT_GATEWAY_INTERNAL_SECRET`), the response also carries
-`aiProfile` (the store's AI provider, base URL, model and key, or null)
+`aiProfile` (the store's AI provider, base URL, model, key and reasoning
+effort, or null)
 and `acpBearerToken`; that variant is never cached and is
 marked `Cache-Control: private, no-store` with `Vary: X-Internal-Token`.
 

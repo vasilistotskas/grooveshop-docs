@@ -310,7 +310,7 @@ Meta CAPI and Resend fields, and it draws a hard line through them:
 | BoxNow | `box_now_partner_id` (public, digits only), `box_now_client_id`, `box_now_client_secret`, `box_now_warehouse_id`, `box_now_notify_phone`, `box_now_webhook_secret` |
 | Meta CAPI | `meta_capi_access_token` |
 | Agentic commerce | `acp_bearer_token` |
-| AI profile (chat, builder AI) | `ai_provider`, `ai_model`, `ai_api_key` (the store's own; write-only in the admin) |
+| AI profile (chat, builder AI) | `ai_provider`, `ai_model`, `ai_api_key` (the store's own; write-only in the admin), `ai_reasoning_effort` (optional; empty sends none) |
 | myDATA invoicing | `mydata_user_id`, `mydata_subscription_key` |
 
 Three of these deserve their own warning:

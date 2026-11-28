@@ -974,11 +974,13 @@ emits.
 ### The chatbot
 
 `POST /chat` is a first-party shopping assistant over SSE, speaking the
-OpenAI-compatible chat-completions protocol. Provider, model and key are
-**per tenant**: the store's `aiProfile` from `tenant/resolve` (provider, base
-URL, model, key; Django takes the base URL from its fixed provider list,
+OpenAI-compatible chat-completions protocol. Provider, model, key and
+reasoning effort are **per tenant**: the store's `aiProfile` from
+`tenant/resolve` (provider, base URL, model, key, reasoning effort; Django
+takes the base URL from its fixed provider list,
 `grooveshop-django-api/src/tenant/ai_providers.py`, never from a typed
-address), applied per turn. A tenant without one gets a localized 404, so the
+address), applied per turn. The effort reaches the provider as
+`reasoning_effort` unchanged, and an empty one sends none. A tenant without one gets a localized 404, so the
 route is always mounted and the handler rejects tenants with no profile.
 Chat pays per token, so its spend is bounded in three layers before a model is
 called, and again inside the turn:

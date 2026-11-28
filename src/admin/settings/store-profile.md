@@ -24,7 +24,7 @@ A form with tabs. Some fields are read-only: the platform team sets those, such 
 | **Payments** | Your Viva Wallet and Stripe credentials. |
 | **Shipping** | Your ACS and BoxNow credentials. |
 | **Invoicing & myDATA** | Your AADE myDATA credentials. |
-| **AI** | The AI provider, model and API key of your store's chat assistant and the page builder's AI tools. |
+| **AI** | The AI provider, model, API key and reasoning effort of your store's chat assistant and the page builder's AI tools. |
 
 ## Tasks
 
@@ -89,12 +89,13 @@ The store's chat assistant, and the page builder's AI tools as they arrive, run 
 1. Create an API key in your account with the provider.
 2. Open the **AI** tab.
 3. Choose the **AI Provider**, type the **AI Model** exactly as the provider names it, and paste the key in **AI API Key**.
-4. Click **Save**.
+4. Optionally choose an **AI Reasoning Effort**: how much the model thinks before it answers. Leave it empty to use the model's own default. Pick a value the provider lists for your model; a value the model does not accept makes the chat answer with an error.
+5. Click **Save**.
 
 - **All three together.** Saving refuses a provider without a model and a key, or a key without the other two.
 - **The key is never shown again.** After saving, the key field stays empty. Leave it empty to keep the saved key, or paste a new one to replace it. Someone who can only view the store sees whether a key is saved, never the key.
 - **Changing the provider needs that provider's key.** Saving refuses a new provider with the old key, so your key is never sent to another company.
-- **To switch AI off**, clear **AI Provider** and **AI Model** and click **Save**. The saved key is removed with them.
+- **To switch AI off**, clear **AI Provider**, **AI Model** and **AI Reasoning Effort** and click **Save**. The saved key is removed with them.
 - **There is no platform key.** Without your own, the store has no chat assistant.
 
 ## Things to know
