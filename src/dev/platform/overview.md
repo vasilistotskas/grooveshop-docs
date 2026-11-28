@@ -79,7 +79,7 @@ that matter to the business model:
 | Feature flags | `loyalty_enabled`, `blog_enabled`, `promotions_enabled`, `gift_cards_enabled`, `b2b_enabled`, `recommendations_enabled`, `agent_commerce_enabled`, `agent_hosted_payment_enabled`, `agent_stripe_delegated_enabled` | The plan tier of each two-tier gate |
 | Branding and locale | `store_name`, `default_locale`, `available_locales`, `default_currency`, logo and favicon URLs, theme colours, `vertical` | `vertical` selects the recommendation preset a store starts from |
 | Platform storefront | `is_platform_storefront` | At most one row may carry this (database constraint `tenant_single_platform_storefront`); it renders the bundled brand and the platform-only AI discovery surfaces |
-| Credentials | Stripe, Viva Wallet, ACS, BoxNow, Meta CAPI, `acp_bearer_token`, `chat_api_key` | Tenant-only; excluded from the audit history (`HistoricalRecords(excluded_fields=...)`) |
+| Credentials | Stripe, Viva Wallet, ACS, BoxNow, Meta CAPI, `acp_bearer_token`, `ai_api_key` | Tenant-only; excluded from the audit history (`HistoricalRecords(excluded_fields=...)`) |
 
 A tenant's domains are `TenantDomain` rows (`src/tenant/models/domain.py`, a
 django-tenants `DomainMixin`). The primary row is the storefront host;

@@ -287,8 +287,8 @@ store name.
 
 ### Per-tenant credentials
 
-`src/tenant/credentials.py` is the only reader of these fields, and it draws a
-hard line through them:
+`src/tenant/credentials.py` reads the configuration, payment, carrier, myDATA,
+Meta CAPI and Resend fields, and it draws a hard line through them:
 
 - **Configuration** helpers fall back to a platform setting
   (`_get_tenant_field(name, settings_fallback=...)`): store name, contact
@@ -309,7 +309,8 @@ hard line through them:
 | ACS | `acs_api_key`, `acs_company_id`, `acs_company_password`, `acs_user_id`, `acs_user_password`, `acs_billing_code`, `acs_station_origin` |
 | BoxNow | `box_now_partner_id` (public, digits only), `box_now_client_id`, `box_now_client_secret`, `box_now_warehouse_id`, `box_now_notify_phone`, `box_now_webhook_secret` |
 | Meta CAPI | `meta_capi_access_token` |
-| Agentic commerce | `chat_api_key`, `acp_bearer_token` |
+| Agentic commerce | `acp_bearer_token` |
+| AI profile (chat, builder AI) | `ai_provider`, `ai_model`, `ai_api_key` (the store's own; write-only in the admin) |
 | myDATA invoicing | `mydata_user_id`, `mydata_subscription_key` |
 
 Three of these deserve their own warning:
@@ -321,8 +322,9 @@ Three of these deserve their own warning:
 - `viva_wallet_live_mode` is a **nullable** boolean with **no settings
   fallback**, and unset reads as *demo*. A live merchant must set it
   explicitly or real payments go to the Viva demo environment.
-- `chat_api_key` and `acp_bearer_token` are served only to the agent
-  gateway, and only on the internal-token-gated variant of the resolve
+- The AI profile (built by `serialize_ai_profile` in
+  `src/tenant/ai_providers.py`) and `acp_bearer_token` are read by no
+  credential helper: they are served only to the agent gateway, and only on the internal-token-gated variant of the resolve
   endpoint, which is never cached and is marked
   `Cache-Control: private, no-store`.
 

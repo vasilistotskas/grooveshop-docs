@@ -73,7 +73,7 @@ and then misbehave stops the pod at start instead:
 |---|---|
 | `ENV` | not `production`, `staging`, `development` or `test`. It also sets the UCP payment handler's environment (only `production` reads as production), whether local webhook endpoints are allowed, and the secret's minimum length |
 | `LOG_LEVEL` | not a level `slog` parses |
-| `DJANGO_BASE_URL`, `CHAT_BASE_URL` | not an absolute http or https URL with a host, or one carrying user info, a query or a fragment |
+| `DJANGO_BASE_URL` | not an absolute http or https URL with a host, or one carrying user info, a query or a fragment |
 | `DJANGO_PUBLIC_HOST`, `ASSETS_HOST`, `STAFF_CONNECT_HOST` | not a bare host: holding any of `/ ? # @` or a blank, as a scheme or a path would |
 | `STOREFRONT_DEFAULT_LOCALE` | not a lowercase language code such as `el` |
 | `CHAT_EFFORT` | not one of the chat-completions API's `reasoning_effort` values (`none` to `max`) |
