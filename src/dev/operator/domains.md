@@ -123,7 +123,7 @@ tenant's `cache_generation`. The domain lookup runs on every call, cache
 hit or not, because the generation comes from that row.
 
 When the caller proves it is the gateway with `X-Internal-Token`, the
-response also carries `ai_profile` and `acp_bearer_token`; that variant
+response also carries `aiProfile` and `acpBearerToken`; that variant
 is never cached, is marked `Cache-Control: private, no-store`, and the
 response always sets `Vary: X-Internal-Token`.
 

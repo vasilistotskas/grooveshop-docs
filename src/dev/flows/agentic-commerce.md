@@ -1496,7 +1496,9 @@ yourself, then bumping the pin in the infrastructure repo.
   discount code is refused.** The store has that feature off at one of its
   tiers; check `features` on the resolve payload. Right after a switch,
   allow twice `TENANT_CACHE_TTL`.
-- **`/chat` 404s with a localized message.** The tenant has no `aiProfile`.
+- **`/chat` 404s with a localized message.** The tenant has no `aiProfile`,
+  or has one the gateway rejects (`ai.ValidateProfile`); the second case also
+  logs the warning `invalid tenant AI profile; chat disabled` with the reason.
   Remember that the profile only arrives on an internally-authenticated resolve,
   so a config served from the Redis tier has it empty — `/chat` uses the
   secrets middleware for exactly that reason.

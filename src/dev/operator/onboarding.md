@@ -280,7 +280,7 @@ naming convention:
 | Class | Examples | Served where |
 |---|---|---|
 | Public-safe | `store_name`, `favicon_url`, `logo_light_url`/`logo_dark_url`, `default_locale`, `available_locales`, `ga_tracking_id`, `meta_pixel_id`, `tiktok_pixel_id`, `clarity_project_id`, `box_now_partner_id`, the `socials_*` fields, `seo_author`, `google_site_verification` | `GET /api/v1/tenant/resolve` — in every browser (`src/tenant/views.py: tenant_resolve`) |
-| Internal-only | `ai_profile`, `acp_bearer_token` | Only on a resolve response authenticated with the internal token, never cached (`Cache-Control: private, no-store`) |
+| Internal-only | `aiProfile`, `acpBearerToken` | Only on a resolve response authenticated with the internal token, never cached (`Cache-Control: private, no-store`) |
 | Secret | Viva Wallet, Stripe, ACS and BoxNow credentials, `meta_capi_access_token`, webhook secrets | Never serialised to any API response; read server-side through `src/tenant/credentials.py` |
 
 Two traps:

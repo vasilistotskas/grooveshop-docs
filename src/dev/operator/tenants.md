@@ -287,8 +287,8 @@ store name.
 
 ### Per-tenant credentials
 
-`src/tenant/credentials.py` is the only reader of these fields, and it draws a
-hard line through them:
+`src/tenant/credentials.py` reads the configuration, payment, carrier, myDATA,
+Meta CAPI and Resend fields, and it draws a hard line through them:
 
 - **Configuration** helpers fall back to a platform setting
   (`_get_tenant_field(name, settings_fallback=...)`): store name, contact
@@ -322,8 +322,9 @@ Three of these deserve their own warning:
 - `viva_wallet_live_mode` is a **nullable** boolean with **no settings
   fallback**, and unset reads as *demo*. A live merchant must set it
   explicitly or real payments go to the Viva demo environment.
-- The AI profile and `acp_bearer_token` are served only to the agent
-  gateway, and only on the internal-token-gated variant of the resolve
+- The AI profile (built by `serialize_ai_profile` in
+  `src/tenant/ai_providers.py`) and `acp_bearer_token` are read by no
+  credential helper: they are served only to the agent gateway, and only on the internal-token-gated variant of the resolve
   endpoint, which is never cached and is marked
   `Cache-Control: private, no-store`.
 
