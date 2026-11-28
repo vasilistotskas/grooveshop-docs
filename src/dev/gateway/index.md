@@ -101,6 +101,7 @@ production and staging accept, so it boots only under `ENV=development` or
 | `grooveshop-agent-gateway/internal/mcpsrv/signature.go` | Platform signature verification on `/mcp` |
 | `grooveshop-agent-gateway/internal/mcptool/mcptool.go` | The `tool call` log line and `gateway_tool_calls_total` |
 | `grooveshop-agent-gateway/internal/config/config.go`, `grooveshop-agent-gateway/.env.example` | Every setting and what `Load` refuses |
+| `grooveshop-agent-gateway/internal/django/tenant_config.go`, `grooveshop-agent-gateway/internal/chat/handler.go`, `grooveshop-agent-gateway/internal/chat/turn.go` | The `aiProfile` wire shape, the `/chat` 404 for a store without a valid profile, and the turn that sends its reasoning effort |
 
 ## Status of this section
 
